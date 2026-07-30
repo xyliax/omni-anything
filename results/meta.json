@@ -1,0 +1,62 @@
+{
+  "calib": {
+    "source": "Qwen3-1.7B x1.0",
+    "scale": 1.0,
+    "files": {
+      "T1": "/home/yuxing/omni-anything/calibration/data/T1_decode_Qwen3-1.7B.csv",
+      "T2": "/home/yuxing/omni-anything/calibration/data/T2_prefill_Qwen3-1.7B.csv",
+      "T3": "/home/yuxing/omni-anything/calibration/data/T3_mixed_Qwen3-1.7B.csv",
+      "T4": "/home/yuxing/omni-anything/calibration/data/T4_chunk_Qwen3-1.7B.csv"
+    },
+    "cells": {
+      "T1": 21,
+      "T2": 40,
+      "T3": 42,
+      "T4": 12
+    },
+    "decode_ms": {
+      "B1_ctx4k": 7.16,
+      "B8_ctx4k": 12.26,
+      "B16_ctx2k": 13.34
+    },
+    "eager_toll_ms": {
+      "solo": {
+        "0": 17.86,
+        "1024": 17.98,
+        "4096": 19.37,
+        "16384": 33.31
+      },
+      "fused": {
+        "2048": 14.86,
+        "4096": 14.03,
+        "8192": 13.01
+      }
+    },
+    "prefill_step_ms": {
+      "L8_ctx4k": 19.37,
+      "L2048_ctx4k": 154.65,
+      "L8192_ctx4k": 719.76
+    },
+    "prefill_ms": {
+      "L8_ctx4k": 26.53,
+      "L512_ctx4k": 53.66,
+      "L2048_ctx4k": 161.81,
+      "L8192_ctx4k": 726.92
+    },
+    "mixed_extra_ms": {
+      "p64_ctx4k": 14.03,
+      "p512_ctx4k": 30.41,
+      "p2048_ctx4k": 112.15
+    }
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "sim_ms": 60000,
+  "N_used": 8,
+  "tool_rate_per_min": 6.0
+}

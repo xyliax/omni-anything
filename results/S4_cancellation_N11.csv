@@ -1,0 +1,5 @@
+scenario,L,N,cancel_fraction,cancelled_in_flight,cancelled_returned,cancelled_spliced,cancelled_tools,interrupt_prob,invalid_ctx_pct_of_pool,invalid_ctx_tokens,kv_overflow_step_frac,kv_residency_ms_max,kv_residency_ms_mean,miss_rate,stale_splices,total_tools,wasted_KV_GiB,wasted_gpu_ms,wasted_gpu_pct,wasted_tokens,wasted_tokens_sd
+S4,2048,11,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.7176,0.0,0.0,0.0144,0.0,76.2,0.0,0.0,0.0,0.0,0.0
+S4,2048,11,0.142,1.6,0.2,8.4,10.2,0.4,46.19,20480.0,0.7192,41429.58,30815.78,0.0093,1.4,71.8,0.35,247.244,0.4121,3276.8,2088.5584
+S4,8192,11,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.4101,0.0,0.0,0.7018,0.0,75.2,0.0,0.0,0.0,0.0,0.0
+S4,8192,11,0.143,1.6,3.4,5.2,10.2,0.4,136.73,60620.8,0.2985,40857.68,29370.3,0.7108,1.4,71.2,1.925,2156.654,3.5944,18022.4,9553.4316

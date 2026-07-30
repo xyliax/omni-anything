@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Run transcripts (reproducible noise; traceable evidence lives in
+# calibration/data/, results/, simulator/validation_runs/)
+*.log
+
+# OS / editor
+.DS_Store
+*.swp

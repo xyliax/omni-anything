@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-07-27 18:49:08",
+  "gpu_name": "NVIDIA GeForce RTX 3090",
+  "visible_devices": "3",
+  "driver": "580.95.05",
+  "cuda_runtime": "12.6",
+  "torch": "2.7.0+cu126",
+  "vllm": "0.9.2",
+  "engine": "V0 LLMEngine (VLLM_USE_V1=0), CUDA graphs ON, paged attn",
+  "transformers": "4.53.2",
+  "model": "/home/yuxing/.cache/huggingface/hub/models--Qwen--Qwen3-1.7B/snapshots/70d244cc86ccca08cf5af4e1e306ecf908b1ad5e/",
+  "tag": "smoke2",
+  "dtype": "float16",
+  "python": "3.12.4",
+  "kv_tokens_available": 39920,
+  "kv_KB_per_token": 112.0,
+  "block_size": 16,
+  "max_num_batched_tokens": 2048,
+  "gpu_memory_utilization": 0.34,
+  "note": "SHARED GPU (other tenants resident); GPU chosen for lowest contention. Decode steps are CUDA-graph replays, matching a production serving path."
+}

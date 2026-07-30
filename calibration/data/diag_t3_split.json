@@ -1,0 +1,132 @@
+[
+  {
+    "p_total": 64,
+    "k": 1,
+    "per_req": 64,
+    "base_decode_ms": 12.02,
+    "p50_ms": 21.21,
+    "extra_ms": 9.18,
+    "n_done_median": 0.0,
+    "k_expected": 1
+  },
+  {
+    "p_total": 64,
+    "k": 8,
+    "per_req": 8,
+    "base_decode_ms": 11.8,
+    "p50_ms": 22.05,
+    "extra_ms": 10.25,
+    "n_done_median": 0.0,
+    "k_expected": 8
+  },
+  {
+    "p_total": 256,
+    "k": 1,
+    "per_req": 256,
+    "base_decode_ms": 11.86,
+    "p50_ms": 25.51,
+    "extra_ms": 13.65,
+    "n_done_median": 0.0,
+    "k_expected": 1
+  },
+  {
+    "p_total": 256,
+    "k": 4,
+    "per_req": 64,
+    "base_decode_ms": 11.78,
+    "p50_ms": 25.65,
+    "extra_ms": 13.87,
+    "n_done_median": 0.0,
+    "k_expected": 4
+  },
+  {
+    "p_total": 256,
+    "k": 8,
+    "per_req": 32,
+    "base_decode_ms": 11.81,
+    "p50_ms": 22.76,
+    "extra_ms": 10.96,
+    "n_done_median": 0.0,
+    "k_expected": 8
+  },
+  {
+    "p_total": 512,
+    "k": 1,
+    "per_req": 512,
+    "base_decode_ms": 11.82,
+    "p50_ms": 39.79,
+    "extra_ms": 27.97,
+    "n_done_median": 0.0,
+    "k_expected": 1
+  },
+  {
+    "p_total": 512,
+    "k": 2,
+    "per_req": 256,
+    "base_decode_ms": 11.82,
+    "p50_ms": 30.06,
+    "extra_ms": 18.24,
+    "n_done_median": 0.0,
+    "k_expected": 2
+  },
+  {
+    "p_total": 512,
+    "k": 4,
+    "per_req": 128,
+    "base_decode_ms": 11.82,
+    "p50_ms": 30.39,
+    "extra_ms": 18.57,
+    "n_done_median": 0.0,
+    "k_expected": 4
+  },
+  {
+    "p_total": 512,
+    "k": 8,
+    "per_req": 64,
+    "base_decode_ms": 11.95,
+    "p50_ms": 30.68,
+    "extra_ms": 18.74,
+    "n_done_median": 0.0,
+    "k_expected": 8
+  },
+  {
+    "p_total": 1024,
+    "k": 1,
+    "per_req": 1024,
+    "base_decode_ms": 11.92,
+    "p50_ms": 67.78,
+    "extra_ms": 55.87,
+    "n_done_median": 0.0,
+    "k_expected": 1
+  },
+  {
+    "p_total": 1024,
+    "k": 2,
+    "per_req": 512,
+    "base_decode_ms": 11.99,
+    "p50_ms": 66.5,
+    "extra_ms": 54.51,
+    "n_done_median": 0.0,
+    "k_expected": 2
+  },
+  {
+    "p_total": 1024,
+    "k": 4,
+    "per_req": 256,
+    "base_decode_ms": 11.89,
+    "p50_ms": 66.06,
+    "extra_ms": 54.17,
+    "n_done_median": 0.0,
+    "k_expected": 4
+  },
+  {
+    "p_total": 1024,
+    "k": 8,
+    "per_req": 128,
+    "base_decode_ms": 11.93,
+    "p50_ms": 66.06,
+    "extra_ms": 54.13,
+    "n_done_median": 0.0,
+    "k_expected": 8
+  }
+]
