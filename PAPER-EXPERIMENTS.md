@@ -248,7 +248,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 | 8 | 0.001 → 0.543(136s) → 0.923+wait=6(256s) → **0.949, run=0/wait=8（376s 起到结束）** | **~256–376s** | 全员永久饥饿，零 eviction，池钉死 |
 | 6 | → 0.886+wait=2(403s)，**此后 stat 停更**（引擎无步可跑） | **~370–400s** | 2 路饥饿 + 其余触 MML 上限成僵尸 |
 
-- **池容量实测 M ≈ 90k token ≈ 5.1GB**（kv 占比 × 会话 token 数反推，N=6/8 两点交叉一致）；t_wall ≈ M/(N×~40.5 tok/s) 闭式吻合两点。
+- **池容量实测 M ≈ 90k token ≈ 5.1GB**（kv 占比 × 会话 token 数反推，N=6/8 两点交叉一致）；t_wall ≈ M/(N×~40.5 tok/s) 闭式吻合两点。**[订正，见 perreq 重跑节]** 每请求粒度直接标定给出 M ≈ 74–79k token ≈ 4.3–4.5GB；90k 是间接反推的高估。显存账目（gpu_mem=0.9 → 21.6GiB 预算）：thinker 权重 16.64GiB（LLM 13.17 + vision tower 1.26**（本负载纯浪费）** + audio tower 1.19 + lm_head 1.02，safetensors 头逐张量实算）+ 激活/图 ~0.5 + KV 池 ~4.4。
 - **GPU 空转铁证**：N=8 崩溃后 `nvidia-smi` 采样 **105/123（85%）为 SM util 0%**——池满 → 全员排队 → 计算完全闲置。C1 在 24GB/7B 上成立。
 - **Harness 陷阱 ①（假 REAL-TIME）**：worker `wait_budget=0.8×拍=1.6s` 截断了观测延迟，1.6s < 2s 预算 → **崩溃状态下 miss 恒为 0%、客户端判 REAL-TIME**。Metronome Experiment A 的 1601ms 签名即此上限。我们的 E1 正式口径改用**饥饿判据**（该拍零新 token = miss）+ KV stat 轨迹，不能只信 sustained_fd 的 verdict。
 - **Harness 陷阱 ②（MML 僵尸）**：MML=16384 在 ~81 token/拍下 ≈400s 触顶，会话 generate 结束、后续拍 0-1ms"稳定"是**死会话假象**（N=6 后半段即此）。600s 运行需 MML≥32768。
