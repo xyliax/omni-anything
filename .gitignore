@@ -6,6 +6,9 @@ __pycache__/
 # Run transcripts (reproducible noise; traceable evidence lives in
 # calibration/data/, results/, simulator/validation_runs/)
 *.log
+# Exception: results/paper logs ARE the evidence (KV-pool trajectories,
+# run/wait queue states, SM-util samples backing the E1 crash analysis)
+!results/paper/**/*.log
 
 # OS / editor
 .DS_Store

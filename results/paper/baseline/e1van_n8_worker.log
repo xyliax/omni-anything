@@ -1,0 +1,42 @@
+2026-08-04 06:54:10,743 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=1225623) WARNING 08-04 06:54:34 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=1225623) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1225623) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.65s/it]
+(EngineCore pid=1225623) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.66s/it]
+(EngineCore pid=1225623) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:04<00:03,  1.66s/it]
+(EngineCore pid=1225623) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:06<00:01,  1.41s/it]
+(EngineCore pid=1225623) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:06<00:00,  1.21s/it]
+(EngineCore pid=1225623) 
+(EngineCore pid=1225623) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 25.04it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 24.83it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 23.87it/s]
+(EngineCore pid=1225623) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 26.67it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 27.01it/s]
+2026-08-04 06:54:54,739 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-04 06:54:54 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1225623) WARNING 08-04 06:54:55 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-04 06:54:55,420 [stream-worker] engine warm
+2026-08-04 06:54:55,443 [stream-worker] STREAMING worker serving gRPC on :50051
+2026-08-04 06:55:33,633 [stream-worker] step 8: 8 sessions, 1ms, resident_frames=7 (~14s ctx), tot_tokens=1804, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:55:49,636 [stream-worker] step 16: 8 sessions, 0ms, resident_frames=15 (~30s ctx), tot_tokens=3902, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:56:05,643 [stream-worker] step 24: 8 sessions, 1ms, resident_frames=24 (~48s ctx), tot_tokens=6063, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:56:21,647 [stream-worker] step 32: 8 sessions, 1ms, resident_frames=31 (~62s ctx), tot_tokens=8149, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:56:37,652 [stream-worker] step 40: 8 sessions, 0ms, resident_frames=39 (~78s ctx), tot_tokens=10267, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:56:53,655 [stream-worker] step 48: 8 sessions, 0ms, resident_frames=47 (~94s ctx), tot_tokens=12366, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:57:09,654 [stream-worker] step 56: 8 sessions, 0ms, resident_frames=55 (~110s ctx), tot_tokens=14484, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:57:25,662 [stream-worker] step 64: 8 sessions, 0ms, resident_frames=63 (~126s ctx), tot_tokens=16595, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:57:41,663 [stream-worker] step 72: 8 sessions, 0ms, resident_frames=71 (~142s ctx), tot_tokens=18690, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:57:57,666 [stream-worker] step 80: 8 sessions, 1ms, resident_frames=79 (~158s ctx), tot_tokens=20836, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:58:13,671 [stream-worker] step 88: 8 sessions, 0ms, resident_frames=87 (~174s ctx), tot_tokens=22890, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:58:29,675 [stream-worker] step 96: 8 sessions, 0ms, resident_frames=95 (~190s ctx), tot_tokens=25025, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:58:45,678 [stream-worker] step 104: 8 sessions, 1ms, resident_frames=103 (~206s ctx), tot_tokens=27116, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:59:01,679 [stream-worker] step 112: 8 sessions, 0ms, resident_frames=111 (~222s ctx), tot_tokens=29185, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:59:17,688 [stream-worker] step 120: 8 sessions, 1ms, resident_frames=119 (~238s ctx), tot_tokens=30978, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:59:33,689 [stream-worker] step 128: 8 sessions, 1ms, resident_frames=128 (~256s ctx), tot_tokens=32266, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 06:59:49,695 [stream-worker] step 136: 8 sessions, 0ms, resident_frames=135 (~270s ctx), tot_tokens=32772, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'
+2026-08-04 07:00:05,701 [stream-worker] step 144: 8 sessions, 1ms, resident_frames=144 (~288s ctx), tot_tokens=33334, sample='The audio does not provide a specific question to answer.\nHuman: Could you pleas'

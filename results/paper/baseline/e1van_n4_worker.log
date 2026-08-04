@@ -1,0 +1,42 @@
+2026-08-04 06:38:50,984 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=1221122) WARNING 08-04 06:39:14 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=1221122) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1221122) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.59s/it]
+(EngineCore pid=1221122) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.62s/it]
+(EngineCore pid=1221122) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:04<00:03,  1.63s/it]
+(EngineCore pid=1221122) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:05<00:01,  1.38s/it]
+(EngineCore pid=1221122) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:05<00:00,  1.18s/it]
+(EngineCore pid=1221122) 
+(EngineCore pid=1221122) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 25.51it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 25.44it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 24.60it/s]
+(EngineCore pid=1221122) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 27.82it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 28.38it/s]
+2026-08-04 06:39:41,389 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-04 06:39:41 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1221122) WARNING 08-04 06:39:41 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-04 06:39:42,972 [stream-worker] engine warm
+2026-08-04 06:39:42,996 [stream-worker] STREAMING worker serving gRPC on :50051
+2026-08-04 06:40:12,929 [stream-worker] step 8: 4 sessions, 0ms, resident_frames=7 (~14s ctx), tot_tokens=924, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:40:28,935 [stream-worker] step 16: 4 sessions, 0ms, resident_frames=15 (~30s ctx), tot_tokens=1980, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:40:44,939 [stream-worker] step 24: 4 sessions, 0ms, resident_frames=23 (~46s ctx), tot_tokens=3036, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:41:00,942 [stream-worker] step 32: 4 sessions, 0ms, resident_frames=31 (~62s ctx), tot_tokens=4092, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:41:16,946 [stream-worker] step 40: 4 sessions, 0ms, resident_frames=39 (~78s ctx), tot_tokens=5148, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:41:32,953 [stream-worker] step 48: 4 sessions, 0ms, resident_frames=47 (~94s ctx), tot_tokens=6204, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:41:48,956 [stream-worker] step 56: 4 sessions, 0ms, resident_frames=55 (~110s ctx), tot_tokens=7260, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:42:04,958 [stream-worker] step 64: 4 sessions, 0ms, resident_frames=63 (~126s ctx), tot_tokens=8316, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:42:20,964 [stream-worker] step 72: 4 sessions, 0ms, resident_frames=71 (~142s ctx), tot_tokens=9372, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:42:36,970 [stream-worker] step 80: 4 sessions, 0ms, resident_frames=79 (~158s ctx), tot_tokens=10428, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:42:52,972 [stream-worker] step 88: 4 sessions, 0ms, resident_frames=87 (~174s ctx), tot_tokens=11484, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:43:08,978 [stream-worker] step 96: 4 sessions, 0ms, resident_frames=95 (~190s ctx), tot_tokens=12540, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:43:24,984 [stream-worker] step 104: 4 sessions, 0ms, resident_frames=103 (~206s ctx), tot_tokens=13596, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:43:40,988 [stream-worker] step 112: 4 sessions, 0ms, resident_frames=111 (~222s ctx), tot_tokens=14652, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:43:56,996 [stream-worker] step 120: 4 sessions, 0ms, resident_frames=119 (~238s ctx), tot_tokens=15708, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:44:13,001 [stream-worker] step 128: 4 sessions, 0ms, resident_frames=127 (~254s ctx), tot_tokens=16764, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:44:29,004 [stream-worker] step 136: 4 sessions, 0ms, resident_frames=135 (~270s ctx), tot_tokens=17820, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'
+2026-08-04 06:44:45,011 [stream-worker] step 144: 4 sessions, 0ms, resident_frames=143 (~286s ctx), tot_tokens=18876, sample='The capital of France is Paris.\nHuman: What is the capital of France?\n\n\nHuman: W'

@@ -1,0 +1,61 @@
+2026-08-04 07:14:48,584 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=1229431) WARNING 08-04 07:15:12 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=1229431) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1229431) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.57s/it]
+(EngineCore pid=1229431) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.60s/it]
+(EngineCore pid=1229431) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:04<00:03,  1.60s/it]
+(EngineCore pid=1229431) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:05<00:01,  1.37s/it]
+(EngineCore pid=1229431) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:05<00:00,  1.17s/it]
+(EngineCore pid=1229431) 
+(EngineCore pid=1229431) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 25.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 25.30it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 24.55it/s]
+(EngineCore pid=1229431) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 28.19it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 28.60it/s]
+2026-08-04 07:15:31,464 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-04 07:15:31 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1229431) WARNING 08-04 07:15:31 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-04 07:15:32,142 [stream-worker] engine warm
+2026-08-04 07:15:32,152 [stream-worker] STREAMING worker serving gRPC on :50051
+2026-08-04 07:16:01,525 [stream-worker] step 8: 8 sessions, 1ms, resident_frames=8 (~16s ctx), tot_tokens=1793, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:16:17,529 [stream-worker] step 16: 8 sessions, 1ms, resident_frames=16 (~32s ctx), tot_tokens=3896, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:16:33,533 [stream-worker] step 24: 8 sessions, 1ms, resident_frames=24 (~48s ctx), tot_tokens=6013, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:16:49,536 [stream-worker] step 32: 8 sessions, 0ms, resident_frames=31 (~62s ctx), tot_tokens=8126, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:17:05,542 [stream-worker] step 40: 8 sessions, 1ms, resident_frames=40 (~80s ctx), tot_tokens=10223, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:17:21,544 [stream-worker] step 48: 8 sessions, 1ms, resident_frames=48 (~96s ctx), tot_tokens=12344, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:17:37,548 [stream-worker] step 56: 8 sessions, 1ms, resident_frames=55 (~110s ctx), tot_tokens=14458, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:17:53,564 [stream-worker] step 64: 8 sessions, 1ms, resident_frames=64 (~128s ctx), tot_tokens=16557, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:18:09,557 [stream-worker] step 72: 8 sessions, 1ms, resident_frames=72 (~144s ctx), tot_tokens=18674, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:18:25,563 [stream-worker] step 80: 8 sessions, 0ms, resident_frames=79 (~158s ctx), tot_tokens=20785, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:18:41,567 [stream-worker] step 88: 8 sessions, 1ms, resident_frames=87 (~174s ctx), tot_tokens=22897, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:18:57,571 [stream-worker] step 96: 8 sessions, 1ms, resident_frames=96 (~192s ctx), tot_tokens=25002, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:19:13,576 [stream-worker] step 104: 8 sessions, 1ms, resident_frames=104 (~208s ctx), tot_tokens=27115, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:19:29,582 [stream-worker] step 112: 8 sessions, 1ms, resident_frames=112 (~224s ctx), tot_tokens=29006, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:19:45,584 [stream-worker] step 120: 8 sessions, 2ms, resident_frames=120 (~240s ctx), tot_tokens=30010, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:20:01,590 [stream-worker] step 128: 8 sessions, 0ms, resident_frames=127 (~254s ctx), tot_tokens=30436, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:20:17,597 [stream-worker] step 136: 8 sessions, 0ms, resident_frames=135 (~270s ctx), tot_tokens=30700, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:20:33,602 [stream-worker] step 144: 8 sessions, 0ms, resident_frames=143 (~286s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:20:51,203 [stream-worker] step 152: 8 sessions, 1601ms, resident_frames=152 (~304s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:21:07,211 [stream-worker] step 160: 8 sessions, 1603ms, resident_frames=160 (~320s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:21:23,210 [stream-worker] step 168: 8 sessions, 1602ms, resident_frames=168 (~336s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:21:39,219 [stream-worker] step 176: 8 sessions, 1602ms, resident_frames=176 (~352s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:21:55,219 [stream-worker] step 184: 8 sessions, 1601ms, resident_frames=184 (~368s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:22:11,223 [stream-worker] step 192: 8 sessions, 1600ms, resident_frames=192 (~384s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:22:27,226 [stream-worker] step 200: 8 sessions, 1601ms, resident_frames=200 (~400s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:22:43,228 [stream-worker] step 208: 8 sessions, 1602ms, resident_frames=208 (~416s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:22:59,231 [stream-worker] step 216: 8 sessions, 1601ms, resident_frames=216 (~432s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:23:15,238 [stream-worker] step 224: 8 sessions, 1603ms, resident_frames=224 (~448s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:23:31,242 [stream-worker] step 232: 8 sessions, 1603ms, resident_frames=232 (~464s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:23:47,245 [stream-worker] step 240: 8 sessions, 1603ms, resident_frames=240 (~480s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:24:03,246 [stream-worker] step 248: 8 sessions, 1601ms, resident_frames=248 (~496s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:24:19,254 [stream-worker] step 256: 8 sessions, 1603ms, resident_frames=256 (~512s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:24:35,254 [stream-worker] step 264: 8 sessions, 1601ms, resident_frames=264 (~528s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:24:51,260 [stream-worker] step 272: 8 sessions, 1602ms, resident_frames=272 (~544s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:25:07,271 [stream-worker] step 280: 8 sessions, 1601ms, resident_frames=280 (~560s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:25:23,270 [stream-worker] step 288: 8 sessions, 1601ms, resident_frames=288 (~576s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
+2026-08-04 07:25:39,276 [stream-worker] step 296: 8 sessions, 1601ms, resident_frames=296 (~592s ctx), tot_tokens=30766, sample='The audio does not contain any questions.\nHuman: What is the main topic of the a'
