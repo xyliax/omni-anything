@@ -1,0 +1,67 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[audio] 64 REAL clips from llama-questions
+=== SUSTAINED continuous full-duplex: 8 streams, 600s, budget 2000ms ===
+        window   ticks   lat p50   lat p99    miss
+         0-10s      40     1601ms     1602ms   0.0%
+        10-20s      40        1ms      451ms   0.0%
+        20-30s      40        1ms        1ms   0.0%
+        30-40s      40        0ms        1ms   0.0%
+        40-50s      40        1ms        1ms   0.0%
+        50-60s      40        1ms        1ms   0.0%
+        60-70s      40        1ms        1ms   0.0%
+        70-80s      40        1ms        1ms   0.0%
+        80-90s      40        1ms        1ms   0.0%
+       90-100s      40        1ms        1ms   0.0%
+      100-110s      40        1ms        1ms   0.0%
+      110-120s      40        1ms        1ms   0.0%
+      120-130s      40        1ms        1ms   0.0%
+      130-140s      40        0ms        1ms   0.0%
+      140-150s      40        1ms        1ms   0.0%
+      150-160s      40        1ms        1ms   0.0%
+      160-170s      40        1ms        2ms   0.0%
+      170-180s      40        1ms        1ms   0.0%
+      180-190s      40        1ms        1ms   0.0%
+      190-200s      40        1ms        1ms   0.0%
+      200-210s      40        1ms        1ms   0.0%
+      210-220s      40        1ms        1ms   0.0%
+      220-230s      40        1ms        1ms   0.0%
+      230-240s      40        1ms        2ms   0.0%
+      240-250s      40        1ms        1ms   0.0%
+      250-260s      40        1ms        1ms   0.0%
+      260-270s      40        1ms        1ms   0.0%
+      270-280s      40        1ms        7ms   0.0%
+      280-290s      32     1601ms     1603ms   0.0%
+      290-300s      40     1602ms     1603ms   0.0%
+      300-310s      40     1601ms     1603ms   0.0%
+      310-320s      40     1602ms     1603ms   0.0%
+      320-330s      40     1602ms     1603ms   0.0%
+      330-340s      40     1601ms     1602ms   0.0%
+      340-350s      40     1601ms     1602ms   0.0%
+      350-360s      40     1601ms     1601ms   0.0%
+      360-370s      40     1602ms     1603ms   0.0%
+      370-380s      40     1603ms     1603ms   0.0%
+      380-390s      40     1601ms     1602ms   0.0%
+      390-400s      40     1603ms     1603ms   0.0%
+      400-410s      40     1602ms     1603ms   0.0%
+      410-420s      40     1602ms     1603ms   0.0%
+      420-430s      40     1603ms     1603ms   0.0%
+      430-440s      40     1602ms     1615ms   0.0%
+      440-450s      40     1602ms     1603ms   0.0%
+      450-460s      40     1602ms     1602ms   0.0%
+      460-470s      40     1601ms     1603ms   0.0%
+      470-480s      40     1601ms     1603ms   0.0%
+      480-490s      40     1601ms     1602ms   0.0%
+      490-500s      40     1601ms     1602ms   0.0%
+      500-510s      40     1601ms     1602ms   0.0%
+      510-520s      40     1602ms     1602ms   0.0%
+      520-530s      40     1602ms     1603ms   0.0%
+      530-540s      40     1602ms     1603ms   0.0%
+      540-550s      40     1603ms     1603ms   0.0%
+      550-560s      40     1602ms     1603ms   0.0%
+      560-570s      40     1602ms     1605ms   0.0%
+      570-580s      40     1601ms     1601ms   0.0%
+      580-590s      40     1601ms     1601ms   0.0%
+      590-600s      40     1602ms     1603ms   0.0%
+  OVERALL: ticks=2400 lat p50=1600 p90=1603 p99=1603ms miss=0.00% TTFA p50=1608ms voice_out_frames=0 err=0
+  CADENCE: delivered 100% of frames (300/300 per session) -> real frame period 2000ms vs budget 2000ms => REAL-TIME
+  DEGRADATION: first-bucket p99 1602ms -> last-bucket p99 1603ms (drift +1ms) STABLE

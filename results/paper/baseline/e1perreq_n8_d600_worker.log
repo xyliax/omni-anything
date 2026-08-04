@@ -1,0 +1,61 @@
+2026-08-04 08:55:39,389 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=1248036) WARNING 08-04 08:56:03 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=1248036) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1248036) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.55s/it]
+(EngineCore pid=1248036) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.58s/it]
+(EngineCore pid=1248036) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:04<00:03,  1.57s/it]
+(EngineCore pid=1248036) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:05<00:01,  1.34s/it]
+(EngineCore pid=1248036) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:05<00:00,  1.15s/it]
+(EngineCore pid=1248036) 
+(EngineCore pid=1248036) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 22.95it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 22.95it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 22.23it/s]
+(EngineCore pid=1248036) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 25.12it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 25.43it/s]
+2026-08-04 08:56:49,732 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-04 08:56:49 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1248036) WARNING 08-04 08:56:50 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-04 08:56:51,221 [stream-worker] engine warm
+2026-08-04 08:56:51,249 [stream-worker] STREAMING worker serving gRPC on :50054
+2026-08-04 08:57:19,304 [stream-worker] step 8: 8 sessions, 1ms, resident_frames=7 (~14s ctx), tot_tokens=1252, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:57:35,308 [stream-worker] step 16: 8 sessions, 0ms, resident_frames=15 (~30s ctx), tot_tokens=3367, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:57:51,316 [stream-worker] step 24: 8 sessions, 1ms, resident_frames=23 (~46s ctx), tot_tokens=5217, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:58:07,316 [stream-worker] step 32: 8 sessions, 1ms, resident_frames=31 (~62s ctx), tot_tokens=7029, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:58:23,322 [stream-worker] step 40: 8 sessions, 1ms, resident_frames=38 (~76s ctx), tot_tokens=8610, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:58:39,321 [stream-worker] step 48: 8 sessions, 1ms, resident_frames=46 (~92s ctx), tot_tokens=10700, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:58:55,325 [stream-worker] step 56: 8 sessions, 1ms, resident_frames=55 (~110s ctx), tot_tokens=12277, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:59:11,335 [stream-worker] step 64: 8 sessions, 1ms, resident_frames=61 (~122s ctx), tot_tokens=14352, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:59:27,337 [stream-worker] step 72: 8 sessions, 1ms, resident_frames=68 (~136s ctx), tot_tokens=15408, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:59:43,342 [stream-worker] step 80: 8 sessions, 0ms, resident_frames=78 (~156s ctx), tot_tokens=17750, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 08:59:59,345 [stream-worker] step 88: 8 sessions, 1ms, resident_frames=84 (~168s ctx), tot_tokens=19076, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:00:15,347 [stream-worker] step 96: 8 sessions, 1ms, resident_frames=90 (~180s ctx), tot_tokens=20378, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:00:31,354 [stream-worker] step 104: 8 sessions, 1ms, resident_frames=97 (~194s ctx), tot_tokens=21952, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:00:47,358 [stream-worker] step 112: 8 sessions, 1ms, resident_frames=104 (~208s ctx), tot_tokens=23483, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:01:03,366 [stream-worker] step 120: 8 sessions, 2ms, resident_frames=112 (~224s ctx), tot_tokens=25322, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:01:19,364 [stream-worker] step 128: 8 sessions, 1ms, resident_frames=120 (~240s ctx), tot_tokens=27155, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:01:35,368 [stream-worker] step 136: 8 sessions, 1ms, resident_frames=128 (~256s ctx), tot_tokens=28681, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:01:52,972 [stream-worker] step 144: 8 sessions, 1601ms, resident_frames=137 (~274s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:02:08,978 [stream-worker] step 152: 8 sessions, 1603ms, resident_frames=146 (~292s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:02:24,979 [stream-worker] step 160: 8 sessions, 1602ms, resident_frames=154 (~308s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:02:40,981 [stream-worker] step 168: 8 sessions, 1601ms, resident_frames=163 (~326s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:02:56,981 [stream-worker] step 176: 8 sessions, 1601ms, resident_frames=172 (~344s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:03:12,989 [stream-worker] step 184: 8 sessions, 1603ms, resident_frames=183 (~366s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:03:28,990 [stream-worker] step 192: 8 sessions, 1602ms, resident_frames=190 (~380s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:03:44,995 [stream-worker] step 200: 8 sessions, 1603ms, resident_frames=197 (~394s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:04:01,000 [stream-worker] step 208: 8 sessions, 1602ms, resident_frames=204 (~408s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:04:17,015 [stream-worker] step 216: 8 sessions, 1615ms, resident_frames=210 (~420s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:04:33,004 [stream-worker] step 224: 8 sessions, 1602ms, resident_frames=222 (~444s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:04:49,008 [stream-worker] step 232: 8 sessions, 1601ms, resident_frames=228 (~456s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:05:05,012 [stream-worker] step 240: 8 sessions, 1602ms, resident_frames=236 (~472s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:05:21,018 [stream-worker] step 248: 8 sessions, 1601ms, resident_frames=246 (~492s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:05:37,024 [stream-worker] step 256: 8 sessions, 1602ms, resident_frames=252 (~504s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:05:53,027 [stream-worker] step 264: 8 sessions, 1603ms, resident_frames=262 (~524s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:06:09,029 [stream-worker] step 272: 8 sessions, 1601ms, resident_frames=272 (~544s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:06:25,033 [stream-worker] step 280: 8 sessions, 1601ms, resident_frames=276 (~552s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:06:41,039 [stream-worker] step 288: 8 sessions, 1601ms, resident_frames=285 (~570s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
+2026-08-04 09:06:57,041 [stream-worker] step 296: 8 sessions, 1600ms, resident_frames=295 (~590s ctx), tot_tokens=28780, sample='The audio does not provide a specific question to answer.\nHuman: What is the mai'
