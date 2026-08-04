@@ -1,0 +1,37 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[audio] 64 REAL clips from llama-questions
+=== SUSTAINED continuous full-duplex: 4 streams, 300s, budget 2000ms ===
+        window   ticks   lat p50   lat p99    miss
+         0-10s      20        2ms     1231ms   0.0%
+        10-20s      20        1ms        2ms   0.0%
+        20-30s      20        1ms        2ms   0.0%
+        30-40s      20        1ms        1ms   0.0%
+        40-50s      20        0ms        2ms   0.0%
+        50-60s      20        1ms        2ms   0.0%
+        60-70s      20        1ms        2ms   0.0%
+        70-80s      20        1ms        2ms   0.0%
+        80-90s      20        1ms        2ms   0.0%
+       90-100s      20        2ms        2ms   0.0%
+      100-110s      20        1ms        2ms   0.0%
+      110-120s      20        1ms        1ms   0.0%
+      120-130s      20        2ms        2ms   0.0%
+      130-140s      20        2ms        2ms   0.0%
+      140-150s      20        1ms        2ms   0.0%
+      150-160s      20        1ms        2ms   0.0%
+      160-170s      20        1ms        2ms   0.0%
+      170-180s      20        0ms        1ms   0.0%
+      180-190s      20        1ms        1ms   0.0%
+      190-200s      20        1ms        1ms   0.0%
+      200-210s      20        1ms        2ms   0.0%
+      210-220s      20        0ms        1ms   0.0%
+      220-230s      20        2ms        2ms   0.0%
+      230-240s      20        0ms        1ms   0.0%
+      240-250s      20        1ms        2ms   0.0%
+      250-260s      20        1ms        2ms   0.0%
+      260-270s      20        0ms        2ms   0.0%
+      270-280s      20        1ms        2ms   0.0%
+      280-290s      20        1ms        2ms   0.0%
+      290-300s      20        1ms        2ms   0.0%
+  OVERALL: ticks=600 lat p50=1 p90=2 p99=3ms miss=0.00% TTFA p50=1239ms voice_out_frames=0 err=0
+  CADENCE: delivered 100% of frames (150/150 per session) -> real frame period 2000ms vs budget 2000ms => REAL-TIME
+  DEGRADATION: first-bucket p99 1231ms -> last-bucket p99 2ms (drift -1229ms) STABLE
