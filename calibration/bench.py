@@ -160,7 +160,7 @@ class Bench:
         and contribute 1 real query token; the prefill row contributes p.
         Padding rows are masked out of attention but still occupy query slots,
         which is the same shape-driven cost structure a fused varlen kernel
-        pays. Deviation from vLLM's flattened batch is noted in FINDINGS.
+        pays. Deviation from vLLM's flattened batch is noted in EVIDENCE.md.
         """
         if p == 0:
             return self.t1_decode(B, ctx, iters, warmup)

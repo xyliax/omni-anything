@@ -1,8 +1,8 @@
 # 双工模型 + 后台 Agent 的 Serving 问题
 
-*写给熟悉 LLM serving（continuous batching / chunked prefill / PagedAttention / KV 管理）、但对"双工语音前台 + 后台 agent"这一产品形态陌生的读者。目标：讲清这个负载会让现有 serving 产生哪些问题、为什么这些问题用现有手段修不掉。*
+*写给熟悉 LLM serving（continuous batching / chunked prefill / PagedAttention / KV 管理）、但对"双工语音前台 + 后台 agent"这一产品形态陌生的读者。目标：讲清这个负载为什么是显存绑定的、现有引擎为什么在容量墙远未到时就崩坏、以及由此收敛出的方案方向（`IDEA-KV-CONVEYOR.md`）。*
 
-*所有数字来自真机标定（RTX 3090 + vLLM 0.9.2 V0 + Qwen3-1.7B，`calibration/data/`）与保真度已验证的离散事件模拟（真机对照 5/5 通过 15% 判据、累计误差中位 10.44%，`simulator/validation_runs/`），以及本仓库 `simulator/trace_*.py` 系列可复跑实验。效度前提见 `FINDINGS.md` §五（最重要的一条：模型是 1.7B，所有阈值应读作乐观上界）。*
+*所有数字来自真机标定（RTX 3090 + vLLM 0.9.2 V0 + Qwen3-1.7B，`calibration/data/`）与保真度已验证的离散事件模拟（真机对照 5/5 通过 15% 判据、累计误差中位 10.44%，`simulator/validation_runs/`），以及本仓库 `simulator/trace_*.py` 系列可复跑实验。效度前提见 `EVIDENCE.md` §六（最重要的一条：模型是 1.7B，所有阈值应读作乐观上界）。*
 
 ---
 
@@ -35,69 +35,42 @@
 
 外加一条**组成税**：步里只要掺任何 prefill token，整步掉出 CUDA graph，付 **~13ms 固定税，与掺入量无关**（B=8 纯 decode 12.35ms；掺 64/128/256 token 恒为 ~25.1ms；512 起按 0.054ms/token 线性）。三个推论后文反复用到：**B 摊薄权重项、没有任何东西能摊薄 KV 项、税按步收不按 token 收**。KV 主导区的算力利用率上限 ≈ 309/ctx（%），与 B 无关——decode 引擎本质是显存泵。
 
-## 3. 问题清单：现象、机制、以及为什么现有旋钮修不掉
+## 3. 问题清单：四个实测事实，指向同一个结构
 
-### P1 批靠巧合：调度器对批大小没有话语权
+### P1 显存先绑定一个数量级，而卡大部分时间在空转
 
-**现象**：N=12 随机相位，avgB 只有 1.46；66 对会话里 47 对 60 秒内从未同批；同样的工作比对齐相位多花 **4.96× GPU 时间**，其中**组成税占全卡忙时 64.7%**（每路每拍独开一个 prefill 步、独付 13ms）。
+**现象**（S1 密度）：KV 可行密度 N=12，deadline 墙在 N=192/208（随机/对齐，判据 miss>1%，模拟外推）——**显存先绑定 16×**。单会话占空比仅 4–9%：每拍只有 ~20–45ms 在算，其余 ~440ms 这路对 GPU 无所求。Metronome（arXiv:2607.02640）在真栈（Qwen3-Omni-30B FP8 / 96G / 2s 拍）上独立复现同一墙序：vanilla 常驻 KV 在 N=128 撞显存悬崖时，GPU 时间占用仅 ~13–32%——原话 "memory kills sessions whose compute the GPU could easily carry"。
 
-**机制**：每路占空比仅 4–9%；引擎 work-conserving、从不等待，批大小 = 到达窗口碰巧重叠的量（实测 avgB 与"N×占空比"的排队论预测严丝合缝）——**引擎从不拒绝合并，但可合并量由物理决定，调度器零贡献**。
+**机制**：双工会话的 KV 每拍必被 attend、无轮次间隙可换出重算；KV 常驻单调涨，而每拍只碰每路状态几次。时间占用上限 ≈ 每拍触碰次数 × (容量/带宽) / 拍长 ≈ 20%（H100/480ms）——**卡是先装不下、远没跑满**。这也是 `IDEA-KV-CONVEYOR.md` 的问题定义原文。
 
-**为什么修不掉**：凑批需要"故意等几毫秒"，而 work-conserving 引擎的调度循环里没有"等"这个动作；Triton 式 `max_queue_delay` 旋钮在 LLM 引擎中不存在，且正确的等待量 = f(死线余量)，需要引擎不具备的死线信息。
-**诚实边界**：作为吞吐问题它在高 N 自愈（见 P6）、在低 N 无关紧要（卡本来就闲）。它真正的危害见 P3/P4——**空闲的形状**。
+**顺带的欠批事实**：N=12 随机相位 avgB=1.46；66 对会话里 47 对 60 秒内从未同批；同样的工作比对齐相位多花 **4.96× GPU 时间**，其中组成税占全卡忙时 64.7%（每路每拍独开一个 prefill 步、独付 13ms）。引擎 work-conserving、从不等待，批大小 = 到达碰巧重叠的量——**相位从没被当成资源管理**。这条事实在方案里升级为编排设计的第一对象（相位指派）。
 
-### P2 长尾 × 密度：一次注入打爆全场无关会话
+### P2 整段注入与拍死线正面冲突，伤害由相位 1:1 决定
 
-**现象**：N=8 时 L≤2048 的注入无害（miss ≤0.12%，8/8 干净——**这要如实承认**）；悬崖在 2048→4096（12.18%）；L=8192 时一发注入同时打爆 **7 路无关会话**，60s 跨会话 miss 累计 422.8 次。真实混合分布下，**只加 10% 长尾，干净会话从 8/8 崩到 1.8/8**——miss 率才 1.73%，但长尾事件的爆炸半径罩住全场，"平均每 30 秒卡一下"摊到每个人头上。
+**现象**（S3 注入冲击）：最坏相位下 **L\*=6144** 即打爆死线；同一个 L=8192 落在拍初却完全安全（max beat 257ms）——阈值是相位函数，不是常数。max beat 与注入偏移 **1:1 线性**（L=5120：off=5ms→71.7ms，off=470ms→441.3ms）：纯溢出，不是计算变多。冲击只有一拍宽，下一拍即回基线。
 
-**机制**：L≥4096 的整段 prefill 是 330–720ms 的原子步（步不可抢占 + 成员冻结），死线只有 480ms；伤害与注入落点相位 1:1（落拍头免费搭车、落拍尾整段溢出）。威胁模型是**长尾×密度的乘积**，不是均值。
+**机制**：L≥4096 的整段 prefill 是 330–720ms 的原子步（步不可抢占 + 成员冻结），死线只有 480ms。落拍头免费搭车，落拍尾整段溢出。
 
-**为什么修不掉**：裁尾（后端摘要到 ≤2048）救不了密度轴（全短分布 N=48 照样 4.25% miss、5.8/48 干净），且把调度问题转嫁成内容质量问题；切块见 P4——反向。
+**为什么修不掉**：注入落点相位不受控（工具返回时刻由后台 agent 决定）；切块让每块重付 13ms 组成税（§2）且仍在消耗引擎步。指向的出路是**不让注入的 KV 生成走前台引擎步**：注入 KV 经 DMA 链路搬运、以未提交态停泊 DRAM，只有"说出它"的那一拍才需要引擎（`IDEA-KV-CONVEYOR.md` §3.4）。
 
-### P3 预算管道饿死：8 个 token 排在 8000 个 token 后面等门开
+### P3 作废黑洞：打断的代价以带宽税的形式每拍复利
 
-**现象**：全短注入（每发 prefill ≤160ms，任何单步都远小于死线）在 N=48–64 照样 miss 4–20%。探针定位：**miss 拍的 480ms 预算里，中位 401ms 花在"等自己那 8 个 token 被批准进入某一步"**；预算越小饿得越狠（budget 2048→320，唤醒被完全挤出的步从 3 涨到 380）。再经两级放大：对齐连坐（坏周期 43/64 路同死）、跨拍级联（miss 链中位 2、最长 19 拍）。
-
-**机制**：每步的 token 预算是唤醒（8 token，硬死线）与注入 chunk（数百 token，无死线）共享的 FCFS 管道；**吸了一半的注入按 vLLM 语义常驻 running、每步优先续座、占满管道**。注入到达率高时管道是常驻占领（占用率 ~0.84），不是偶发事件。全系统最荒诞的倒挂：死线最硬、体积最小、成本最低的 token，排在最不急、大三个数量级的字节后面。
-
-**为什么修不掉——这里的排除法最完整**（真实带尾负载、随机相位，`trace_defer.py`/FUSE 系列）：
-
-| 修法 | 结果 | 死因 |
-|---|---|---|
-| 调大预算（2048） | miss 2.5–45%（随 N） | 大块步 124ms+ 直接横在拍前 |
-| 调小预算到免费区（320） | **更糟**（N=12: 2.46→4.74%） | 税按步收，块小 = 交税多 |
-| 预算级拍优先（唤醒先分配，注入吃剩余——"搭便车"的正确形态） | miss 与 naive 打平 | **保的是进门，毒的是时长**：chunk 挤进的每一步都胖 ≥14ms，随机相位下任何胖步几乎必然横在某个 480/N 毫秒后到达的拍前面 |
-| fit-check 隔离（只在装得下的空隙里跑注入） | 拍 0% miss，**答案饿死**（送达 0.60–0.67，p50 4.1s；N≥24 归零） | 随机相位的空隙宽度 = 480/N（N=12 才 40ms），装不下 chunk 步 |
-
-**一条不等式收束**：注入需要宽度 ≥ 一个 chunk 步（20–190ms）的"无毒存放位"；随机相位提供 480/N，对齐提供 480−车队 ≈ 330–400ms（直到 N≈64）。**凑批不是效率优化，是全场唯一制造存放位的手段**——而它本身不可表达（P1）。注意此结论以 13ms 组成税为前提：税→0 的未来引擎（piecewise CUDA graph 方向）上"免费搭车不需对齐"会重新成立——结论对实现的依赖边界在此。
-
-### P4 现成解药全部失效，其中两个方向反转
-
-- **chunked prefill 加重而非缓解**（S3：miss 56.6%→65.9%；干净会话 4.6/11→0.4/11）：每块重付一次税 + 吸收窗口拉长 6 倍，多路注入更易叠加（多肇事 miss 41.7%→76.8%）。它把"一步打死路人"换成"步步给全员放血"——对软 ITL 是好交易，对二值的拍死线是灾难。
-- **Sarathi 的"预算按 SLO 反推"配方被税翻转**：该配方假设混批干扰 ∝ 掺入量；实测干扰 = 固定税 + 免费区，于是预算下调方向恒错（全扫描无一取值 < 3.7% miss，而正确调度是 0.00%）。
-- **priority 旋钮不够**：vLLM 的 priority 只重排队列，不会"扣住不发"，也不豁免税；running 里的半吸收注入要让位只能靠抢占（丢弃已算 KV 重算——用浪费换死线）。
-- **饱和区三种真实语义三种死法**：不可拆拼接语义下大注入永远等不到空批而饿死（答案 0/280——注意这是 #3344 语义的极端角，不是 vLLM 必然行为）；真实 chunked 配置 → 68% miss、beat p99 11.7s 的死亡螺旋；V0 prefill-优先配置 → 答案送达但拍被整段 720ms 大步屠杀。**币种不同，全是灾难。**
-
-### P5 作废黑洞：打断的代价以带宽税的形式每拍复利
-
-**现象**（40% 打断先验，S4）：19.6% 的调用白算；峰值时**引擎常驻 KV 的 24.2% 是已知作废内容**，平均驻留 35.6s；每分钟 2.2 次陈旧拼接——用户已否决的答案照样进上下文，模型会把它说出来（正确性事故，不只是浪费）。
+**现象**（S2 作废，40% 打断先验）：19.6% 的调用白算；峰值时**引擎常驻 KV 的 24.2% 是已知作废内容**，平均驻留 35.6s；每分钟 2.2 次陈旧拼接——用户已否决的答案照样进上下文，模型会把它说出来（正确性事故，不只是浪费）。
 
 **机制**：引擎没有作废语义（结果到达即拼、无检查；KV 只增不减）。按 §2 的定律，死 KV 不只占显存——**该会话之后每个 decode token 都为死字节付 0.155µs/token 的带宽原价**，是持续计税的沉没成本。
 
-**为什么修不掉**：作废信号存在于应用层（打断事件），引擎 API 没有它的入口；PagedAttention 支持按块释放，但没有任何机制知道**哪些块**该释放。
+**为什么修不掉**：作废信号存在于应用层（打断事件），引擎 API 没有它的入口；PagedAttention 支持按块释放，但没有任何机制知道**哪些块**该释放。方案对应：提交语义——未提交注入停 DRAM，确认说出才进常驻池，作废 = DRAM 直接丢，24.2% 的死驻留从源头消灭。
 
-### P6 KV 与"满载"的双重幻觉
+### P4 KV 与"满载"的双重幻觉
 
-**KV 信号全反**：显存吃紧时，逐出按 LRU（"最久没用"），而这个负载里正确信号是"预计下次使用"——且**精确可知**（下拍 = 上拍 + 480ms；静默/播放状态可预测）：LRU 恰好会逐掉马上要用的。恢复默认重算——重算一个 4k 会话 = 330ms 的 prefill = **自己给自己制造一次 L=4096 注入**；而 swap 实测只要 38ms（4k，PCIe3 实测 12.3GB/s）、走 DMA 引擎可与计算重叠、预取可全藏（LiveServe 已在轮级验证）。
+**KV 信号全反**：显存吃紧时，逐出按 LRU（"最久没用"），而这个负载里正确信号是"预计下次使用"——且**精确可知**（下拍 = 上拍 + 480ms；静默/播放状态可预测）：LRU 恰好会逐掉马上要用的。恢复默认重算——重算一个 4k 会话 = 330ms 的 prefill = **自己给自己制造一次 L=4096 注入**；而 swap 实测只要 38.1ms（4k token，pinned H2D 12.33GB/s，`calibration/data/pcie_h2d_bench.json`，2026-08 落盘复测）、走 DMA 引擎可与计算重叠、预取可全藏。**330ms vs 38ms、引擎步 vs 拷贝引擎——这对数字就是"带宽换显存"方案的成本基础，也是其 v1（重算版）被否掉的原因**（`IDEA-KV-CONVEYOR.md` §二）。
 
-**假满载**：util 有三个口径——时间占用 / 带宽（~77%）/ MFU（个位数，≈309/ctx）。N=24 时 util 0.98 里**约一半是自制浪费**（欠批+税），必要需求只有 0.49。更隐蔽的是**排队财政**：高 N 下积压自发凑批（avgB 1.46→59），看似 P1 自愈，但它以排队延迟计价——恰好在最需要 slack 吸收注入的密度区间把 slack 花光。对照：aligned N=96（util 0.51、p99 258ms、零 miss、半张卡待命）与 random N=192（util 1.0、p99 532ms、1.7% miss）到达同一个 2.3–2.5 GPU-ms/拍的摊薄地板——工作点天差地别。**盯着 util 做容量决策，方向全错。**
+**假满载**：util 有三个口径——时间占用 / 带宽（~77%）/ MFU（个位数，≈309/ctx）。N=24 时 util 0.98 里**约一半是自制浪费**（欠批+税），必要需求只有 0.49。更隐蔽的是**排队财政**：高 N 下积压自发凑批（avgB 1.46→59），看似欠批自愈，但它以排队延迟计价。对照：aligned N=96（util 0.51、p99 258ms、零 miss、半张卡待命）与 random N=192（util 1.0、p99 532ms、1.7% miss）到达同一个 ~2.3–2.6 GPU-ms/拍的摊薄地板——工作点天差地别。**盯着 util 做容量决策，方向全错。**
 
-## 4. 为什么难：四个结构性原因
+## 4. 为什么难，以及出路的形状
 
-1. **信息是结构性缺失，不是没调好**。所有决策需要的三个字段——死线、可延性、作废信号——在任何引擎的请求模型里都不存在。调度器眼里 8-token 唤醒和 8192-token 注入是同一种对象。这不是加一个 flag 的事：围绕它们的四个决策（凑批窗口、步内预算保留、defer+容量预定、语义 KV 停泊/回收）每个都要改调度循环的不变量（work-conserving、FCFS、running-first、LRU）。
-2. **参数空间已被排除法扫空**。策略{整段/切块/空闲喂/混批+预算优先/fit-check} × 预算{320–2048} × 块大小 × 相位的全扫描：**参数空间内要么 miss ≥2.5%，要么答案送达 ≤0.67 且延迟 10×；跨出参数空间（加入时间语义）后 0.00% miss、全员干净、送达 0.87**。特别地，两条最符合直觉的路（切块、免费区搭车）都被"税按步收"反杀——同一条铁律三种形态下三次复现。
-3. **机制成环，单腿必败**（全部实测）：只凑批 → 注入挤进车队步，全队连坐（3.31%，干净 1.0/48）；只拍优先不凑批 → 答案在碎片空隙里饿死（送达 0.60）；只预算优先不管时长 → 与 naive 打平；只 fit-check 不凑批 → 同饿死。**凑批制造位宽、拍优先保护准入、fit-check/预定保护时长，三腿是依赖链**——这意味着增量式地给现有引擎打补丁（每次修一条）每一步都看不到收益，这是它在工程上难推进的真正原因。
-4. **跨层耦合**：组成税（kernel 层实现属性）决定调度层"切块是否可行"；KV 逐出（显存层）的恢复路径选择（重算 vs swap）本身制造或不制造注入（调度层问题）；有界窗口（Metronome 式）解 KV 却杀注入驻留。任何单层的局部最优都可能是全局反向。
+1. **信息是结构性缺失，不是没调好**。决策需要的字段——死线、相位、可延性、作废信号——在任何引擎的请求模型里都不存在。调度器眼里 8-token 唤醒和 8192-token 注入是同一种对象；显存管理器眼里已作废的 KV 和马上要 attend 的 KV 是同一种字节。而这些信息物理上全部可得：注入大小到达即知、拍周期精确可预测（下拍=上拍+480ms）、内容按帧冻结、作废信号即时——**缺的从来不是信息或算力，是引擎数据结构里放这些信息的位置，和围绕它们的四个决策**：相位指派（准入时）、H2D 搬运时刻表（释放=内容冻结点、截止=计算槽−提前量）、提交/作废语义（未提交停 DRAM）、静默停泊。这四个决策即 `IDEA-KV-CONVEYOR.md` §3.3–3.4 的编排设计。
+2. **跨层耦合，单层局部最优可能全局反向**：组成税（kernel 层实现属性）决定调度层"切块是否可行"；KV 逐出（显存层）的恢复路径选择（重算 vs swap）本身制造或不制造注入（调度层问题）；有界窗口（Metronome 式）解 KV 却杀注入驻留——几千 token 的工具结果可能还没被说出来就滚出窗外。**KV 方案与注入方案必须联合设计**，这正是传送带方案把"链路调度"与"提交语义"做成一体的原因。
 
 ## 5. 相关工作：为什么说这两列是空白
 
@@ -105,22 +78,38 @@
 
 | | 拍死线 | 凑批 | KV 显存 | **注入调度** | **作废语义** |
 |---|---|---|---|---|---|
-| moshi-server（400 路 STT/H100） | ✓ 锁步 | ✓ | 环形窗口封顶 | ✗ | ✗ |
+| moshi-server（400 路 STT/H100） | ✓ 锁步 | ✓†仅 STT/TTS | 环形窗口封顶 | ✗ | ✗ |
 | Metronome'26（tick+AIMD 准入） | ✓ | ✓ | 滑窗+sink 封顶 | ✗ | ✗ |
 | LiveServe'26（swap+语义预取） | 轮级软目标 | — | ✓ offload+预取 | ✗ | 半（仅输出侧 unheard token） |
 | VoxServe'26（流式调度） | TTFA 级 | ✓ | — | ✗ | ✗ |
 | Sarathi/Niyama | 软 ITL | — | — | ✗ | ✗ |
 | vLLM-Omni（现状 baseline） | ✗ | ✗ | ✗ | ✗（整段拼） | ✗ |
 
-各家分别解决了拍（锁步/tick）、KV（封顶或 swap+预取）、准入（AIMD）——**"注入的死线感知放置"与"输入侧作废回收"两列全场空白**，而 P2/P3/P5 恰好全部落在这两列。另注意 Metronome 的滑窗封顶与注入天然冲突（几千 token 的结果可能还没被说出来就滚出窗外）——KV 方案与注入方案必须联合设计，这本身是个未占领的问题。
+（† 双工 LM 主干在官方栈里 B=1 无批，见下文 (a) 源码证据。）各家分别解决了拍（锁步/tick）、KV（封顶或 swap+预取）、准入（AIMD）——**"注入的死线感知放置"与"输入侧作废回收"两列全场空白**，而 P2/P3 恰好全部落在这两列。另注意 Metronome 的滑窗封顶与注入天然冲突（几千 token 的结果可能还没被说出来就滚出窗外）——KV 方案与注入方案必须联合设计，这本身是个未占领的问题。Metronome（[arXiv:2607.02640](https://arxiv.org/pdf/2607.02640)）的实测数字与本工作的墙序分析同构，可作无注入上界参照：其负载形态为真双工 regime（20ms 音频持续流入、常驻会话、每帧硬死线、KV 常驻单调涨；模型侧 Moshi 为原生真双工，Qwen-Omni/MiniCPM-o 为被 free-running 连续驱动的时间片型），栈为 Qwen3-Omni-30B FP8 等四模型 + RTX PRO 6000 96GB + **2s 帧预算**（比本工作的 480ms 粗 4 倍，比 Moshi 原生 80ms 粗 25 倍）。实测：**vanilla（KV 无界常驻）= 显存悬崖**——N=128 时每帧延迟从几 ms 一步跳至 1.6s 引擎僵死，且亚稳（20 次运行 14 崩）；**W=1024 滑窗绑定状态后墙序反转**——显存上限外推 ~500 路，AIMD 准入实测可调度 N\*≈209，死线先于显存。但其每帧活为恒定形状（chunk 进 τ token 出，无 m_t 异质），且不含注入、不含作废——**它测的是双工 serving regime 里最温顺的负载，两列依旧全空**。
 
-## 6. 空间有多大：反事实上界与三面墙
+### 补充证据：Kyutai 两条线各砍掉了问题的一半（2026-08 调研，源码级核实）
 
-**反事实**（同负载、同硬件、模拟器内构造）：凑批窗口 + 拍优先预算保留 + defer/容量预定三腿齐上，真实带尾负载下 **miss 0.00%、48/48 干净、答案送达 0.82–0.89**，失效形态优雅退化为答案尾延迟。naive 的崩坏点 N≈8 与标定出的容量墙 N≈57–70 之间是 **7× 的密度空间，两头都有测量钉死**。
+**(a) 双工主干"无人批"有源码级证据。** Kyutai 生产服务端 [moshi-server](https://github.com/kyutai-labs/moshi)（Rust）中，batched 推理仅实现于 STT/TTS 模块（`batched_asr.rs` 带 `batch_size` + `StreamMask` 槽位管理；TTS py 模块同）；**全双工 LM 模块的 `LmConfig` 无 `batch_size` 字段，每 websocket 会话独立 clone 流式状态、B=1 串行**（`moshi-server/src/main.rs` 模块枚举、`stream_both.rs` per-session 采样配置/种子）。demo 用的 `moshi-backend` standalone 同样单会话固定缓冲。故上表 moshi-server 行的"✓ 凑批"仅指 STT/TTS；双工主干在官方栈里不可批。
 
-**三面墙全有解析式**（可行域清晰）：摊薄平点 N≳32；注入墙 gap(N) ≥ 注入需求(N)×margin ≈ 57–70；KV 墙 = 池字节/工作集（哪面先到是硬件参数的函数：3090 上 KV 先绑定、80G 卡上注入先绑定）。墙内是调度的领地；墙外只能准入控制——那不是本问题的失败，是它的边界。
+**(b) Kyutai 官方自证"双工+工具"是缺口。** [kyutai.org/unmute](https://kyutai.org/unmute) 原话："While Moshi provides unmatched latency and naturalness, it **doesn't yet match the extended abilities of text models such as function-calling**... Unmute allows us to directly bring all of these from text to real-time voice conversations."——做出双工原生模型的实验室，因工具调用缺位主动退回级联。两条产品线恰好各砍一半：**Moshi 砍工具保双工**（定长环形 KV、无注入、每拍恒定 1 步——靠架构自宫维持锁步可批的前提，却连这个批也没实现）；**Unmute 砍双工保工具**（级联 STT→任意 LLM→TTS，MIT 开源；对话无硬拍，turn-based；工具调用发生在文本 LLM 侧由 vLLM 按普通 chat 负载处理，"注入回拍流"问题不存在）。两半的组合——本工作的负载——无人服务。
 
-**所需信息物理上全部可得**：注入大小到达即知、前缀成本可查标定表（残差 <5%）、拍周期精确可预测、作废信号即时。经典调度理论最大的障碍——作业大小不可观测——在这个负载里天然不存在。**缺的从来不是信息或算力，是引擎数据结构里放这些信息的位置。**
+**(c) Unmute 的拍只存在于组件内部。** STT/TTS 均为 DSM 12.5Hz 锁步（80ms/步，[arXiv:2509.08753](https://arxiv.org/html/2509.08753) §3.1–3.2）：每流每步活恒定 → 可批（H100：ASR batch 256 RTF 1.49/吞吐 380×；TTS batch 64 RTF 2.1、首音频 403ms，Table 6/10）。TTS 文本流设计延迟 16 步=1.28s，B=1 首音频 150ms。级联端到端 sub-second。**这印证凑批可行性的边界：活恒定则 400 路，活不定长（双工主干 m_t、注入）则连 Kyutai 也没批。**
+
+**(d) 双工并发的社区口径只能作 anecdotal 引用。** Moshi 7B 多路并发无任何官方数字（论文全文/README/FAQ 均无）；两个第三方博客给 4–10 路/H100（localaimaster、spheron，均无方法学，其一把 4090 与 H100 并列同一数字——恰说明 no-batching regime 下瓶颈不随硬件档次移动，是软件墙不是硅片墙）。引用时标注来源性质。
+
+**(e) 真双工已于 2026 年上半年双双量产，serving 层均不公开。** ①**Seeduplex**（字节 Seed，[2026-04-09](https://seed.bytedance.com/en/blog/introducing-seed-full-duplex-speech-llm-attentive-listening-robust-interference-suppression-enabling-more-natural-interaction)，全球首个）：native full-duplex speech LLM，"listen while speaking"，模型逐步决策 start replying/continue listening/respond to interruptions；已全量部署豆包 App（数亿用户）。公开数字全为相对值（端点延迟 −250ms、打断响应 −300ms、误响应/误打断减半、抢话 −40%、流畅 MOS +12%）；无拍长/尺寸/API。**工程自述极有价值：投机解码+量化控成本，且明确承认克服了"高并发下的延迟尖刺与稳定性问题"**——双工 serving 之难的第一手产品界证词，解法未公开。②**GPT-Live**（OpenAI，[2026-07-08](https://openai.com/index/introducing-gpt-live/)）：真双工——"continuously processes input while generating output"，每秒多次决策 "whether to speak, continue listening, pause, interrupt, **or invoke a tool**"；**复杂问题委托 GPT-5.5 后台执行、结果送回对话**——"双工前台+后台 frontier 回注"与本负载逐项对应；已取代 AVM 成 ChatGPT 语音默认（每周 1.5 亿语音用户）；[系统卡](https://deploymentsafety.openai.com/gpt-live)零架构数字，API 未开放；社区实测单次会话 ≥1 小时（Simon Willison, HN）。对照组（turn-based 产品面）：gpt-realtime-2（128K ctx，`turn_detection`+truncate 对账，快进生成囤缓冲）、Gemini Live（音频 15min/音视频 2min+滑窗压缩）、Nova 2 Sonic（~8min 流硬上限，生产靠提前轮换）、Qwen3.5-Omni Realtime（120min 会话上限；**上下文只保留最近 480–600s 音频，drop-oldest**——环形封顶上移到 API 语义层；思考模式与音频输出互斥）。结论：闭源两家已跨河（一家把注入做成拍内决策，一家自述高并发尾延迟之痛），开源侧无桥——两列空白的价值被产品事实抬高。
+
+**(f) 负载假设的外部对标（全部实测 config/论文原文核验）。** [DuplexOmni](https://arxiv.org/html/2606.09186v1)（arXiv 2606.09186，Qwen3-Omni 家族）§3.1.2 用**固定 480ms 时间片**——与本工作拍长逐字一致；每片 thinker 产出 "mₜ Assistant tokens"（**符号即 m_t，论文未给数**，上界由"480ms 内必须说完"锁定 ≈1.5–4）；talker 每片 6 个 codec 帧（12.5Hz，第 0 层 AR + MTP），本工作不建模语音头 = 乐观方向（已在效度威胁 3 声明）；输入率继承 Qwen3-Omni config `position_id_per_seconds: 13` → ~6 token/片（本工作取 8，居谱系中位 12.5–25 tok/s）；**thinking 层异步回注是其官方设计**——注入通道已模型侧标准化。权重现实：Qwen3-Omni-30B-A3B bf16 实测 70.5GB（HF 15 shard 加总）——80G 卡上 bf16 权重即近吃满，**FP8 是双工部署的起点而非优化**（Metronome 亦用 FP8）。
+
+**(g) 全场通用的"寿命墙"：现有双工对输入侧 KV 增长的唯一答案是忘掉。** 按各工作官方 config/论文换算成会话时长：hertz-dev 2048 token≈**4.3 min**、Moshi 环形 3000 步≈**4 min**（FAQ 的 5 分钟上限即此）、SyncLLM 8192≈**4.5 min**（论文自认 limitation）、GLM-4-Voice 8192≈**10 min**、Qwen2.5-Omni 32k≈**20 min**——**无一开源双工模型能撑过 20 分钟对话**；产品层同构（Nova 8min 流上限、Qwen Realtime 只留最近 480–600s 音频、Gemini 靠滑窗压缩、GPT-Live 1 小时实测但手段不公开）。墙序的跨工作规律：**每拍 decode 轻且常开摄入（家族一锁步、家族三 thinker）→ 显存先绑定**（Moshi 定长 2GiB/路→96G 卡 ~30 路；7B thinker 增长 ~0.8GiB/10min→80G 卡 64→21 路随时长滑坡）；**decode 重（家族二 SyncLLM ~7 token 串行/160ms）→ 算力墙升至与显存墙同高**（~58 vs ~60）；**VAD 门控摄入（Freeze-Omni）→ 显存最不缺、延迟绑定**——印证"哪面墙先到是负载/硬件参数的函数"。
+
+**(h) 注入问题的三方证词（2026-08 增补）。** ①产品层：GPT-Live 把 invoke a tool 做成每秒多次的拍内决策（见 e）。②模型层：[MoshiRAG](https://arxiv.org/html/2604.12928v3)（Kyutai，ICML 2026）给全双工模型加异步检索——`⟨ret⟩` 触发、检索期间继续生成 pre-RAG 填充内容；**注入机制刻意回避 prefill**：检索文本 4× 压缩后按帧**加法叠进输入嵌入**，附录 B.1.1 明说 insertive 注入精度更好但被弃，"to constrain sequence length"——**模型侧对"注入→KV 增长是要害"的直接供认，现行解法是牺牲精度绕行**；其时序数字首次量化了注入的语义藏身窗：检索预算 ≤2s、关键信息前 ≥1.0s 缓冲、实测 E2E 关键词延迟 3.1s（vanilla 2.1s）——defer 类策略的语义可行性上界。同模式另有 KAME（Sakana，[arXiv:2510.02327](https://arxiv.org/abs/2510.02327)，实时 S2S+后台 frontier 串联）。③serving 层：专项检索（2026-08-01）确认除 Metronome 外**真双工 GPU serving 文献为零**（[Awesome-Full-Duplex-SDM](https://github.com/Ruiqi-Yan/Awesome-Full-Duplex-SDM) 全列表无一 serving 论文）。评测平台展望：[Nemotron 3 VoiceChat](https://build.nvidia.com/nvidia/nemotron-voicechat/modelcard)（NVIDIA 2026-03，12B 开源真双工 + NeMo 官方推理管线/NIM）是本工作走出模拟器时最现实的宿主，其文档同样无并发/批量规格——连 NVIDIA 也未发布双工 serving 数字。
+
+## 6. 空间有多大：三面墙与方案指针
+
+**三面墙全有解析式**（可行域清晰）：摊薄平点 N≳32；注入墙 gap(N) ≥ 注入需求(N) → N≈57（`TIMELINES.md` L1b）；KV 墙 = 池字节/工作集（哪面先到是硬件参数的函数：3090 上 KV 先绑定、80G 卡上注入先绑定）。墙内是调度的领地；墙外只能准入控制——那不是本问题的失败，是它的边界。墙序已获独立实测印证：Metronome 在真栈上测得 vanilla 显存悬崖先到（N=128 亚稳崩溃），windowed-KV 绑定状态后才反转为死线先到（N\*≈209 < 显存外推 ~500）。
+
+**收敛出的方案**（`IDEA-KV-CONVEYOR.md`）：既然显存先绑定一个数量级、而 H2D 链路与计算时间大量闲置，就**用带宽赎回容量**——每路尾部 KV 母本住 DRAM，按时刻表每拍 DMA 搬入、算完即释放；等效 KV 容量 = M + P（P = 一拍能搬入的量），收益比 P/M 是纯硬件比值（PCIe5/480ms 拍 +24%，净 ~20%；3090/PCIe3 +83%；2s 拍 ~+100%）。相位指派把 Metronome 的"刻意错相实验设置"升级为调度资源；提交语义把 P3 的死 KV 从源头消灭；注入 KV 走同一条链路的第二优先级——P1–P4 四个事实在方案里各就其位。
 
 ---
 
@@ -128,13 +117,12 @@
 
 | 主张 | 来源 |
 |---|---|
-| 步时定律/组成税/免费区 | `calibration/data/T1–T4_*.csv`，拟合脚本见对话记录，残差 1.4% |
-| P1 组批巧合/税占比 | `simulator/trace_batches.py`、`trace_injection.py` |
-| P2 长尾×密度 | `results/S3_policies.csv`、`simulator/trace_lmix.py` |
-| P3 管道饿死/排除法 | `simulator/trace_pipe_starve.py`、`trace_defer.py`、FUSE 扫描（对话记录） |
-| P4 切块反向/预算翻转 | `results/S3_policies*.csv`、budget 扫描 |
-| P5 作废黑洞 | `results/S4_cancellation.csv` |
-| P6 swap/重算实测、util 三口径 | PCIe 基准（对话记录）、`trace_density.py`、`trace_saturation.py` |
-| 反事实上界/三腿 | `simulator/trace_defer.py` |
-| 时间线可视化全集 | `TIMELINES.md` L1–L3 |
-| 模拟保真度/效度威胁 | `simulator/validation_runs/summary.json`、`FINDINGS.md` §五 |
+| 步时定律/组成税/免费区 | `calibration/data/T1–T4_*.csv`，EVIDENCE §一 |
+| P1 显存先绑定/占空比/欠批 | `results/S1_density.csv`、`simulator/trace_batches.py`、`trace_density.py` |
+| P2 注入冲击/相位 1:1 | `results/S3_injection.csv`、`S3_injection_timeline.csv`、`simulator/trace_injection.py` |
+| P3 作废黑洞 | `results/S2_cancellation.csv` |
+| P4 swap/重算实测、util 三口径 | `calibration/data/pcie_h2d_bench.json`（H2D 12.33GB/s、4k swap 38.1ms）、`trace_density.py`、`trace_saturation.py` |
+| 三面墙 | `TIMELINES.md` L1b、EVIDENCE §二 |
+| 时间线可视化全集 | `TIMELINES.md` L1–L4 |
+| 模拟保真度/效度威胁 | `simulator/validation_runs/summary.json`、`EVIDENCE.md` §六 |
+| 方案收益闭式/相关工作对比 | `IDEA-KV-CONVEYOR.md` §3.2/§四 |

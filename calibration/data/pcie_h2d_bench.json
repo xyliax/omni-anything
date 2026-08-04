@@ -1,0 +1,36 @@
+{
+ "gpu": "NVIDIA GeForce RTX 3090",
+ "note": "pinned-host <-> device copy bandwidth, GPU3, repeat=20 median",
+ "kv_bytes_per_token": 114688,
+ "sizes": [
+  {
+   "MiB": 64,
+   "h2d_ms": 5.45,
+   "h2d_GBps": 12.32,
+   "d2h_ms": 5.1,
+   "d2h_GBps": 13.16
+  },
+  {
+   "MiB": 256,
+   "h2d_ms": 21.77,
+   "h2d_GBps": 12.33,
+   "d2h_ms": 20.36,
+   "d2h_GBps": 13.19
+  },
+  {
+   "MiB": 458,
+   "h2d_ms": 38.96,
+   "h2d_GBps": 12.33,
+   "d2h_ms": 36.42,
+   "d2h_GBps": 13.19
+  },
+  {
+   "MiB": 1024,
+   "h2d_ms": 87.09,
+   "h2d_GBps": 12.33,
+   "d2h_ms": 81.4,
+   "d2h_GBps": 13.19
+  }
+ ],
+ "swap_4k_tokens_h2d_ms": 38.1
+}

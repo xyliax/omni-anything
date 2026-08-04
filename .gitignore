@@ -10,3 +10,6 @@ __pycache__/
 # OS / editor
 .DS_Store
 *.swp
+
+# External clone (reference artifact, not our code) — see metronome/_WHY_THIS_IS_HERE.md
+metronome/

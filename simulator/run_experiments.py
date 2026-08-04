@@ -1,4 +1,6 @@
-"""S1-S4 experiment matrix on the discrete-event simulator.
+"""S1-S3 experiment matrix on the discrete-event simulator.
+
+S1=density, S2=cancellation, S3=injection shock (renumbered 2026-08).
 
 Every scenario runs multiple seeds; we report mean +/- stdev.
 """
@@ -118,7 +120,7 @@ def _s1_cell(cal, seeds, sim_ms, L, off, inject_at_ms, tools, timeline):
     for r in rs:
         for m in r["miss_events"]:
             streak.append(m["lateness_ms"])
-    row = {"scenario": "S1", "L": L, "inject_offset_ms": off,
+    row = {"scenario": "S3", "L": L, "inject_offset_ms": off,
                  "miss_rate": mr[0], "miss_rate_sd": mr[1],
                  "misses": nm[0], "misses_sd": nm[1],
                  "misses_per_injection": per_inj[0],
@@ -155,7 +157,7 @@ def s2(cal, seeds, sim_ms, out, nmax=320):
             avgB = agg([r["avg_decode_B"] for r in rs])
             infl = agg([r["step_inflation_vs_ideal"] for r in rs])
             p99 = agg([r["beat_p99_ms"] for r in rs])
-            rows.append({"scenario": "S2", "N": N, "phase": phase,
+            rows.append({"scenario": "S1", "N": N, "phase": phase,
                          "miss_rate": mr[0], "miss_rate_sd": mr[1],
                          "utilisation": util[0], "avg_decode_B": avgB[0],
                          "batch_fill_ratio": fill[0],
@@ -186,70 +188,6 @@ def s2(cal, seeds, sim_ms, out, nmax=320):
 
 
 # ------------------------------------------------------------------ S3
-def s3(cal, seeds, sim_ms, out, N, tool_rate, Ls=(512, 1024, 2048, 4096, 8192)):
-    """Density x injection: three no-scheduling policies, four metrics each."""
-    rows = []
-    for L in Ls:
-        for pol in [Policy.WHOLE, Policy.CHUNKED, Policy.IDLE_ONLY]:
-            rs = run(cal, seeds, n_sessions=N, sim_ms=sim_ms,
-                     tool_rate_per_min=tool_rate, tool_L=L, policy=pol)
-            mr = agg([r["miss_rate"] for r in rs])
-            ans = agg([r["answer_p50_ms"] for r in rs])
-            util = agg([r["utilisation"] for r in rs])
-            # effective density: sessions meeting the <1% miss bar
-            eff = []
-            for r in rs:
-                ok = sum(1 for v in r["per_session"].values()
-                         if v["beats"] and v["misses"] / v["beats"] <= 0.01)
-                eff.append(ok)
-            effa = agg(eff)
-            cross = agg([r["cross_session_misses"] for r in rs])
-            crossf = agg([r["cross_session_misses"] / max(1, r["total_misses"])
-                          for r in rs])
-            waste = agg([r["wasted_tokens"] for r in rs])
-            # blast radius: distinct victim sessions per tool-blamed miss
-            radius = []
-            for r in rs:
-                for m in r["miss_events"]:
-                    if m["blamed_tool_sids"]:
-                        radius.append(len(m["blamed_tool_sids"]))
-            # Blast radius distribution: how many DISTINCT other sessions were
-            # damaged by one session's injection burst, per victim-miss event.
-            hist = {}
-            for k in radius:
-                hist[k] = hist.get(k, 0) + 1
-            # Answers that never arrived at all (policy (c) can starve them).
-            delivered = agg([r["answers_delivered"] for r in rs])
-            rows.append({
-                "scenario": "S3", "L": L, "policy": pol.value, "N": N,
-                "miss_rate": mr[0], "miss_rate_sd": mr[1],
-                "answer_p50_ms": ans[0], "answer_sd": ans[1],
-                "answer_p99_ms": agg([r["answer_p99_ms"] for r in rs])[0],
-                "answers_delivered": delivered[0],
-                "answer_delivery_rate": round(
-                    (delivered[0] or 0) / max(1e-9, agg([r["total_tools"] for r in rs])[0]), 3),
-                "effective_density": effa[0], "effective_density_sd": effa[1],
-                "wasted_tokens": waste[0],
-                "cross_session_misses": cross[0],
-                "cross_miss_fraction": crossf[0],
-                "mean_blast_sessions": round(statistics.fmean(radius), 3) if radius else 0,
-                "max_blast_sessions": max(radius) if radius else 0,
-                "blast_hist": json.dumps(dict(sorted(hist.items()))),
-                "utilisation": util[0],
-                "total_misses": agg([r["total_misses"] for r in rs])[0],
-                "tools": agg([r["total_tools"] for r in rs])[0],
-                "beat_p99_ms": agg([r["beat_p99_ms"] for r in rs])[0],
-                "kv_overflow_step_frac": kv_note(rs),
-            })
-            print(f"  S3 L={L:>5} {pol.value:>9}: miss={mr[0]:.4f} "
-                  f"ans_p50={ans[0]} deliv={rows[-1]['answer_delivery_rate']:.2f} "
-                  f"eff_dens={effa[0]:.1f}/{N} cross={cross[0]:.0f} "
-                  f"({(crossf[0] or 0)*100:.0f}% of misses) blast_max={rows[-1]['max_blast_sessions']}")
-    write(out, rows)
-    return rows
-
-
-# ------------------------------------------------------------------ S4
 def s4(cal, seeds, sim_ms, out, N, tool_rate, Ls=(2048, 8192)):
     """Cancellation waste under 40% interrupt prior, current no-reclaim semantics."""
     rows = []
@@ -280,7 +218,7 @@ def s4(cal, seeds, sim_ms, out, N, tool_rate, Ls=(2048, 8192)):
             for st in ("in_flight", "returned", "spliced"):
                 stages[f"cancelled_{st}"] = agg([r["cancel_stages"][st] for r in rs])[0]
             rows.append({
-                "scenario": "S4", "L": L, "interrupt_prob": ip, "N": N,
+                "scenario": "S2", "L": L, "interrupt_prob": ip, "N": N,
                 "wasted_tokens": waste[0], "wasted_tokens_sd": waste[1],
                 "wasted_KV_GiB": occ[0],
                 # Cumulative across the run (nothing is reclaimed, so this can
@@ -305,7 +243,7 @@ def s4(cal, seeds, sim_ms, out, N, tool_rate, Ls=(2048, 8192)):
                                        for r in rs])[0],
                 "kv_overflow_step_frac": kv_note(rs),
             })
-            print(f"  S4 L={L:>5} ip={ip}: wasted={waste[0]:.0f}tok "
+            print(f"  S2 L={L:>5} ip={ip}: wasted={waste[0]:.0f}tok "
                   f"({occ[0]:.2f}GiB KV) stale_splices={stale[0]:.1f} "
                   f"cancelled={canc[0]:.1f}/{tot[0]:.1f} resid_mean={resid[0]:.0f}ms")
     write(out, rows)
@@ -321,7 +259,7 @@ def main():
     ap.add_argument("--suffix", default="")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--sim-ms", type=float, default=60000)
-    ap.add_argument("--scenarios", default="S1,S2,S3,S4")
+    ap.add_argument("--scenarios", default="S1,S2,S3")
     ap.add_argument("--tool-rate", type=float, default=6.0)
     ap.add_argument("--force-n", type=int, default=0)
     args = ap.parse_args()
@@ -333,14 +271,17 @@ def main():
     sc = args.scenarios.split(",")
 
     safe_n, kv_n = {}, {}
+    # Renumbered 2026-08 whitelist: S1=density (was S2), S2=cancellation (was
+    # S4), S3=injection shock (was S1). The policies matrix experiment was
+    # removed from the repo scope.
     if "S1" in sc:
-        print("[S1] injection shock, 1 session")
-        s1(cal, seeds, args.sim_ms, f"S1_injection{sfx}")
-    if "S2" in sc:
-        print("[S2] density baseline")
-        _, safe_n, kv_n = s2(cal, seeds, args.sim_ms, f"S2_density{sfx}")
+        print("[S1] density baseline")
+        _, safe_n, kv_n = s2(cal, seeds, args.sim_ms, f"S1_density{sfx}")
         print("   deadline-safe N (first N with >1% miss):", safe_n)
         print("   KV-feasible N (last N fitting the measured pool):", kv_n)
+    if "S3" in sc:
+        print("[S3] injection shock, 1 session")
+        s1(cal, seeds, args.sim_ms, f"S3_injection{sfx}")
 
     N = args.force_n
     if not N:
@@ -351,11 +292,9 @@ def main():
         # silently pick a density the card cannot hold.
         base = kv_n.get("random") or safe_n.get("random") or 16
         N = max(1, int(0.7 * base))
-    print(f"[S3/S4] using N={N} (70% of safe density)")
-    if "S3" in sc:
-        s3(cal, seeds, args.sim_ms, f"S3_policies{sfx}", N, args.tool_rate)
-    if "S4" in sc:
-        s4(cal, seeds, args.sim_ms, f"S4_cancellation{sfx}", N, args.tool_rate)
+    print(f"[S2] using N={N} (70% of safe density)")
+    if "S2" in sc:
+        s4(cal, seeds, args.sim_ms, f"S2_cancellation{sfx}", N, args.tool_rate)
     (RES / f"meta{sfx}.json").write_text(json.dumps({
         "calib": cal.summary(), "seeds": seeds, "sim_ms": args.sim_ms,
         "N_used": N, "tool_rate_per_min": args.tool_rate}, indent=2))

@@ -1,0 +1,8 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "device": "NVIDIA GeForce RTX 3090",
+  "unloaded_h2d_gbs": 12.298,
+  "max_kappa_at_r<=0.75": 1.0668,
+  "max_kappa_any": 1.0668,
+  "rows": 20
+}
