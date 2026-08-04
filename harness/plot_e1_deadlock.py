@@ -5,12 +5,13 @@
 the warmup anchor; smi/client offsets are fixed small constants from the driver's sequencing.
 Output: results/figures/E1_deadlock_anatomy.{png,pdf}
 """
-import json, re, collections
+import json, re, collections, sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-BASE = "results/paper/baseline/e1perreq_n8_d600"
+TAG = sys.argv[1] if len(sys.argv) > 1 else "e1perreq_n8_d600"
+BASE = f"results/paper/baseline/{TAG}"
 KB_PER_TOK = 57344 / 2**20          # MiB per token: 2*4 KV heads*128*2B*28 layers
 
 # palette (dataviz reference, light mode, pairs validated)

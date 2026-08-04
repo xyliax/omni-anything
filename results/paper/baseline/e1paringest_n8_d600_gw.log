@@ -1,0 +1,2 @@
+2026/08/04 18:47:00 worker ready: model=Qwen/Qwen2.5-Omni-7B
+2026/08/04 18:47:00 [go-gateway] WS on :8907  tick=2000ms tpt=25 -> worker 127.0.0.1:50054

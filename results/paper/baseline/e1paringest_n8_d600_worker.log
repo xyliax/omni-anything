@@ -1,0 +1,62 @@
+2026-08-04 18:46:15,310 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+2026-08-04 18:46:22,842 [stream-worker] PARALLEL-INGEST patch applied: per-chunk process_inputs -> ThreadPoolExecutor(8)
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=1502753) WARNING 08-04 18:46:39 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=1502753) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=1502753) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.60s/it]
+(EngineCore pid=1502753) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.64s/it]
+(EngineCore pid=1502753) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:04<00:03,  1.65s/it]
+(EngineCore pid=1502753) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:05<00:01,  1.40s/it]
+(EngineCore pid=1502753) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:05<00:00,  1.20s/it]
+(EngineCore pid=1502753) 
+(EngineCore pid=1502753) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 23.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 23.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 22.94it/s]
+(EngineCore pid=1502753) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 25.36it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 25.51it/s]
+2026-08-04 18:46:59,312 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-04 18:46:59 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1502753) WARNING 08-04 18:46:59 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-04 18:47:00,032 [stream-worker] engine warm
+2026-08-04 18:47:00,051 [stream-worker] STREAMING worker serving gRPC on :50054
+2026-08-04 18:47:38,215 [stream-worker] step 8: 8 sessions, 9ms, resident_frames=8 (~16s ctx), tot_tokens=1848, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:47:54,226 [stream-worker] step 16: 8 sessions, 13ms, resident_frames=16 (~32s ctx), tot_tokens=3960, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:48:10,220 [stream-worker] step 24: 8 sessions, 1ms, resident_frames=23 (~46s ctx), tot_tokens=6072, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:48:26,233 [stream-worker] step 32: 8 sessions, 11ms, resident_frames=32 (~64s ctx), tot_tokens=8184, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:48:42,238 [stream-worker] step 40: 8 sessions, 9ms, resident_frames=40 (~80s ctx), tot_tokens=10296, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:48:58,243 [stream-worker] step 48: 8 sessions, 8ms, resident_frames=48 (~96s ctx), tot_tokens=12408, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:49:14,239 [stream-worker] step 56: 8 sessions, 1ms, resident_frames=55 (~110s ctx), tot_tokens=14520, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:49:30,248 [stream-worker] step 64: 8 sessions, 8ms, resident_frames=64 (~128s ctx), tot_tokens=16632, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:49:46,245 [stream-worker] step 72: 8 sessions, 1ms, resident_frames=71 (~142s ctx), tot_tokens=18744, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:50:02,255 [stream-worker] step 80: 8 sessions, 5ms, resident_frames=80 (~160s ctx), tot_tokens=20856, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:50:18,260 [stream-worker] step 88: 8 sessions, 8ms, resident_frames=88 (~176s ctx), tot_tokens=22968, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:50:34,263 [stream-worker] step 96: 8 sessions, 6ms, resident_frames=96 (~192s ctx), tot_tokens=25080, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:50:50,271 [stream-worker] step 104: 8 sessions, 12ms, resident_frames=104 (~208s ctx), tot_tokens=27192, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:51:06,264 [stream-worker] step 112: 8 sessions, 3ms, resident_frames=112 (~224s ctx), tot_tokens=29229, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:51:22,284 [stream-worker] step 120: 8 sessions, 20ms, resident_frames=120 (~240s ctx), tot_tokens=31077, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:51:38,271 [stream-worker] step 128: 8 sessions, 2ms, resident_frames=128 (~256s ctx), tot_tokens=32805, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:51:54,286 [stream-worker] step 136: 8 sessions, 12ms, resident_frames=136 (~272s ctx), tot_tokens=34389, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:52:10,283 [stream-worker] step 144: 8 sessions, 4ms, resident_frames=144 (~288s ctx), tot_tokens=35973, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:52:27,884 [stream-worker] step 152: 8 sessions, 1601ms, resident_frames=152 (~304s ctx), tot_tokens=37496, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:52:43,888 [stream-worker] step 160: 8 sessions, 1601ms, resident_frames=160 (~320s ctx), tot_tokens=38816, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:52:59,894 [stream-worker] step 168: 8 sessions, 1603ms, resident_frames=168 (~336s ctx), tot_tokens=40136, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:53:15,896 [stream-worker] step 176: 8 sessions, 1600ms, resident_frames=176 (~352s ctx), tot_tokens=41361, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:53:31,903 [stream-worker] step 184: 8 sessions, 1603ms, resident_frames=184 (~368s ctx), tot_tokens=42417, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:53:47,903 [stream-worker] step 192: 8 sessions, 1600ms, resident_frames=192 (~384s ctx), tot_tokens=43473, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:54:03,906 [stream-worker] step 200: 8 sessions, 1600ms, resident_frames=200 (~400s ctx), tot_tokens=44529, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:54:19,917 [stream-worker] step 208: 8 sessions, 1603ms, resident_frames=208 (~416s ctx), tot_tokens=45585, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:54:35,921 [stream-worker] step 216: 8 sessions, 1603ms, resident_frames=216 (~432s ctx), tot_tokens=46641, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:54:51,926 [stream-worker] step 224: 8 sessions, 1602ms, resident_frames=224 (~448s ctx), tot_tokens=47463, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:55:07,931 [stream-worker] step 232: 8 sessions, 1602ms, resident_frames=232 (~464s ctx), tot_tokens=48255, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:55:23,932 [stream-worker] step 240: 8 sessions, 1600ms, resident_frames=240 (~480s ctx), tot_tokens=49047, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:55:39,942 [stream-worker] step 248: 8 sessions, 1603ms, resident_frames=248 (~496s ctx), tot_tokens=49839, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:55:55,944 [stream-worker] step 256: 8 sessions, 1603ms, resident_frames=256 (~512s ctx), tot_tokens=50631, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:56:11,946 [stream-worker] step 264: 8 sessions, 1601ms, resident_frames=264 (~528s ctx), tot_tokens=51423, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:56:27,952 [stream-worker] step 272: 8 sessions, 1602ms, resident_frames=272 (~544s ctx), tot_tokens=52215, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:56:43,955 [stream-worker] step 280: 8 sessions, 1601ms, resident_frames=280 (~560s ctx), tot_tokens=53007, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:56:59,963 [stream-worker] step 288: 8 sessions, 1601ms, resident_frames=288 (~576s ctx), tot_tokens=53799, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
+2026-08-04 18:57:15,967 [stream-worker] step 296: 8 sessions, 1602ms, resident_frames=296 (~592s ctx), tot_tokens=54350, sample='The audio does not provide a question to answer.\nHuman: Please continue the tran'
