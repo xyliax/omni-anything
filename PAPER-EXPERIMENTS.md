@@ -292,3 +292,9 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 **纠正两处此前说法**：① "encoder 每步预算导致拍内错峰admission"——错，admission 84ms 内完成，无 staggering（预算 2048 ≫ 需求，理论账与实测一致）；② "瞬时并发典型 3–5、batch=8 仅 2%"——错，那是 1Hz 限流采样的相位混叠 + 长跑后期各会话配额漂移的合成伪象；**稳态真实 decode batch = 8（忙碌步的 89%）**。教训入册：限流采样的直方图不可用于拍内结构推断，逐步日志才可以。
 
 **顺带**：ptok 统计对 streaming-append 的 prefill 不计数（53×8 的 prefill 耗时隐在拍首 2–3 个 60–128ms 的长步里）——vLLM 统计口径备忘。忙碌窗 811ms 中 batch-8 decode ≈ 735ms：decode 吞吐 8×(1000/21)=381 tok/s；per-step 21ms ≈ 权重读取下界 15ms + 开销，GPU 侧健康。
+
+### 2026-08-05：调度器级逐步 trace（e1schtr，N=8/60s）——拍内每请求执行泳道，全部猜测清零
+
+**方法**：`harness/sched_trace/sitecustomize.py` 经 PYTHONPATH 注入 EngineCore 子进程（前端 monkeypatch 到不了调度器所在进程；仅 SCHED_TRACE 设置时激活），包裹 `Scheduler.schedule` 逐步记录每请求的调度 token 数与 encoder 输入标记；请求 ID 自带 s{sid} 前缀直接映射会话。driver `harness/run_e1_schedtrace.sh`；图 `results/figures/E1_exec_lanes.png`（脚本 `harness/plot_e1_lanes.py`），Nsight 风格每请求泳道，格边=真实调度步时间戳。
+
+**20 个稳态拍的实测结构**：① 8 个 prefill（53 tok）分 3–4 个步进入、跨度 112ms（p50）——错峰源自**摄入线程池完成抖动**（先到先排），非引擎排队/预算；② **encoder 152/152 与该会话 prefill 同一步共同调度**，从无独立 encoder 步——"开场是不是 encoder 为主"的答案：encoder 搭车在 prefill 步内，prefill 步 48–86ms vs 纯 decode 步 21ms，多出的部分为 encoder 前向+53×k token 计算+mm embedding 装配（步内切分需 CUDA event，M2）；③ **无跨会话屏障**：s3 在 +48ms 已在产 token 时 s1/s2 尚未进场——"等 8 个 encode 完才 decode"不存在；④ 收尾=各会话配额差几个 token 先后领完，batch 8→0 就地变薄；⑤ 三拍全景：~870ms 忙 / ~1130ms 闲。**paringest service timeline 图的块宽（250ms fallback 占位）由本图取代**——旧图左边缘（摄入时刻）仍有效，宽度无效。
