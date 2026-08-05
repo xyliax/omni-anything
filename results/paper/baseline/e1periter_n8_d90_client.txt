@@ -1,0 +1,16 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[audio] 64 REAL clips from llama-questions
+=== SUSTAINED continuous full-duplex: 8 streams, 90s, budget 2000ms ===
+        window   ticks   lat p50   lat p99    miss
+         0-10s      40       14ms      634ms   0.0%
+        10-20s      40       16ms       23ms   0.0%
+        20-30s      40       16ms       26ms   0.0%
+        30-40s      40       16ms       21ms   0.0%
+        40-50s      40       11ms       16ms   0.0%
+        50-60s      40       10ms       15ms   0.0%
+        60-70s      40        7ms       21ms   0.0%
+        70-80s      40       15ms       28ms   0.0%
+        80-90s      40        6ms       25ms   0.0%
+  OVERALL: ticks=360 lat p50=14 p90=25 p99=634ms miss=0.00% TTFA p50=642ms voice_out_frames=0 err=0
+  CADENCE: delivered 100% of frames (45/45 per session) -> real frame period 2000ms vs budget 2000ms => REAL-TIME
+  DEGRADATION: first-bucket p99 634ms -> last-bucket p99 25ms (drift -609ms) STABLE

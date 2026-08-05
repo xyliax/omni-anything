@@ -218,12 +218,20 @@ class StreamingEngine:
                 def __init__(self, vllm_config, engine_index=0):
                     self._f = open(sl, "a"); self._t0 = _time.time(); self._last = 0.0
                     self._pre = 0     # cumulative preemptions (must accumulate across throttled calls)
+                    pi = os.environ.get("PERITER_LOG")
+                    self._it = open(pi, "a", buffering=1) if pi else None
                 def record(self, scheduler_stats, iteration_stats, mm_cache_stats=None, engine_idx=0):
                     if iteration_stats is not None:
                         self._pre += getattr(iteration_stats, "num_preempted_reqs", 0)
                     if scheduler_stats is None:
                         return
                     now = _time.time()
+                    if self._it is not None and iteration_stats is not None:
+                        # per-iteration: engine-step composition (no throttle)
+                        self._it.write(f"{now - self._t0:.3f} run={scheduler_stats.num_running_reqs} "
+                                       f"wait={scheduler_stats.num_waiting_reqs} "
+                                       f"gen={iteration_stats.num_generation_tokens} "
+                                       f"ptok={getattr(iteration_stats, 'num_prompt_tokens', 0)}\n")
                     if now - self._last < 1.0:   # throttle to ~1 Hz
                         return
                     self._last = now
