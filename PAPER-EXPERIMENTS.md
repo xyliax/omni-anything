@@ -298,3 +298,13 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 **方法**：`harness/sched_trace/sitecustomize.py` 经 PYTHONPATH 注入 EngineCore 子进程（前端 monkeypatch 到不了调度器所在进程；仅 SCHED_TRACE 设置时激活），包裹 `Scheduler.schedule` 逐步记录每请求的调度 token 数与 encoder 输入标记；请求 ID 自带 s{sid} 前缀直接映射会话。driver `harness/run_e1_schedtrace.sh`；图 `results/figures/E1_exec_lanes.png`（脚本 `harness/plot_e1_lanes.py`），Nsight 风格每请求泳道，格边=真实调度步时间戳。
 
 **20 个稳态拍的实测结构**：① 8 个 prefill（53 tok）分 3–4 个步进入、跨度 112ms（p50）——错峰源自**摄入线程池完成抖动**（先到先排），非引擎排队/预算；② **encoder 152/152 与该会话 prefill 同一步共同调度**，从无独立 encoder 步——"开场是不是 encoder 为主"的答案：encoder 搭车在 prefill 步内，prefill 步 48–86ms vs 纯 decode 步 21ms，多出的部分为 encoder 前向+53×k token 计算+mm embedding 装配（步内切分需 CUDA event，M2）；③ **无跨会话屏障**：s3 在 +48ms 已在产 token 时 s1/s2 尚未进场——"等 8 个 encode 完才 decode"不存在；④ 收尾=各会话配额差几个 token 先后领完，batch 8→0 就地变薄；⑤ 三拍全景：~870ms 忙 / ~1130ms 闲。**paringest service timeline 图的块宽（250ms fallback 占位）由本图取代**——旧图左边缘（摄入时刻）仍有效，宽度无效。
+
+### 补注：每拍 decode 步数由谁决定（e1 系列通用）
+
+决定链：harness 的 `--tpt 25` → worker 给每个 chunk 的 SamplingParams 设 `max_tokens=25n+8` →
+**vLLM 对 resumable 请求的 max_tokens 语义是每段独立**（`scheduler.py:1058` 段边界 `_output_token_ids.clear()`，
+`check_stop` 按段内计数），且实际生效的是首段的 33——worker 里 `25n+8` 的累计式公式在引擎语义下等效为
+**恒定 33/段**（数值实证：paringest 幸存者 9900 tok ÷ 300 段 = 精确 33.0）。引擎对"拍"零感知：
+decode 到 33 停 → 队列有下一 chunk 则立即续段、无则挂起（WAITING_FOR_STREAMING_REQ）——拍结构完全由
+音频到达节奏从外部塑形。两个衍生注记：① tpt=25 的来源是语音级 token 率（12.5 tok/s），+8 是余量；
+② 生产 33/拍 vs 客户端取 25/拍的差额在 worker 文本缓冲累积（无害但存在，harness 语义备忘）。
