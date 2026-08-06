@@ -2,7 +2,10 @@
 
 *写给熟悉 LLM serving（continuous batching / chunked prefill / PagedAttention / KV 管理）、但对"双工语音前台 + 后台 agent"这一产品形态陌生的读者。目标：讲清这个负载为什么是显存绑定的、现有引擎为什么在容量墙远未到时就崩坏、以及由此收敛出的方案方向（`IDEA-KV-CONVEYOR.md`）。*
 
-*所有数字来自真机标定（RTX 3090 + vLLM 0.9.2 V0 + Qwen3-1.7B，`calibration/data/`）与保真度已验证的离散事件模拟（真机对照 5/5 通过 15% 判据、累计误差中位 10.44%，`simulator/validation_runs/`），以及本仓库 `simulator/trace_*.py` 系列可复跑实验。效度前提见 `EVIDENCE.md` §六（最重要的一条：模型是 1.7B，所有阈值应读作乐观上界）。*
+> **⚠️ 存档声明（2026-08-06 深度清理）**：本文写于 problem-discovery 阶段，其数字来自当时的模拟器/标定
+> 谱系——**该谱系已整体删除**（git 5020583 及之前可溯）。显存绑定、三面墙等核心主张现由 **E1 真栈证据**
+> 支撑且更强（见 `PAPER-EXPERIMENTS.md` 执行记录），本文数字不应再被引用。**例外：§5 补充证据（双工
+> 产品/文献查证）仍为现行内容。**
 
 ---
 

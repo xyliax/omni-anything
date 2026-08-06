@@ -1,11 +1,13 @@
 # PAPER-EXPERIMENTS：KV 传送带的正式实验设计（2026-08-04 草案 v1）
 
 *目标：以发 paper（MLSys/OSDI/EuroSys 口径）为标准，验证 `IDEA-KV-CONVEYOR.md` 的方案。
-本文档是实验的**设计与协议**；执行后的结论回填到新的 EVIDENCE 章节。*
+本文档是实验的**设计与协议**；执行后的结论回填到文末执行记录。*
 
 **数据纪律：本轮所有进 paper 的数字全部新测。** 既有 T1–T4/S1–S3 降级为 problem-discovery
 的 pilot 证据（继续支撑 PROBLEM.md 的动机叙事，但不作为 paper 实验数据）；模拟器保留但必须
 在新 harness 上重新校验后才能用于外推。实验编号用 E0–E6，与旧 S 系列隔离。
+**[2026-08-06 订正：模拟器及 pilot 证据已随深度清理整体删除（git 可溯）；E6 改为闭式地形路线，见 E6 节改版。
+E4 先验（40% 作废、LogNormal）已固化于 §三负载定义，不再依赖原始 pilot 数据。]**
 
 ---
 
@@ -69,7 +71,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 | `bench/metrics.py`（MSCS、miss-run、Jain） | 原样复用 |
 | `experiments/run_fresh_sweep.sh` / `run_variance_rand.sh` 模式 | 方法论移植（fresh-per-point、乱序重复批） |
 | `metronome/engine.py`（paged-KV decode 循环） | **fork 为 conveyor worker 的底子**（放本仓库，不改 clone） |
-| `bench/gpu_probe.py` `wait_for_window` + 本仓库 `wait_quiet.sh` | 共租 GPU 防污染守卫 |
+| `bench/gpu_probe.py` `wait_for_window` + 本仓库 `harness/wait_quiet.sh` | 共租 GPU 防污染守卫 |
 | `worker/stream_server.py` | 参照实现（vanilla baseline 直接用它 + 文本分支 ~20 行） |
 | FIX 1/4（通用 vLLM bug） | 仅 vanilla baseline 需要；先查上游是否已修 |
 
@@ -107,7 +109,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 
 - **问题**：拷贝引擎上的 pinned H2D 是否偷 decode 的 HBM 带宽/SM？这是现有标定推不出的
   唯一参数（IDEA §五.3）。
-- **方法**：扩展 `calibration/bench.py`：T1 网格子集（B×ctx）decode 步，同时后台 CUDA
+- **方法**（工具为独立的 `calibration/bench_dma_interference.py`）：T1 网格子集（B×ctx）decode 步，同时后台 CUDA
   stream 以速率 r ∈ {0, 25%, 50%, 75%, 100% 链路} 持续 H2D；测 decode 步时膨胀系数 κ(r)
   与实效 H2D 带宽。反向也测（decode 是否压 DMA）。顺带重测 pinned 带宽曲线（不复用
   7 月的 json）。
@@ -157,13 +159,16 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 - 预期表：正确率 conveyor ≈ unbounded ≫ windowed（窗外≈0）；同时 conveyor 的池占用
   有界——"无损 + 有界"同框。
 
-### E6 泛化与外推（C7）
+### E6 泛化与外推（C7）——方法改版（2026-08-06）：闭式地形 + 实测锚点（模拟器路线废止）
 
-- 模拟器扩展：链路资源 + 传送带调度器 + TDMA；**先重新校验**：用 E2/E3 的真机 trace
-  做逐步对比（沿用 validate.py 方法论，门槛 15%），报告保真度。
-- 扫描：T ∈ {80ms, 200ms, 480ms, 1s, 2s} × B_link ∈ {PCIe3/4/5, C2C} × 模型
-  {1.7B, 7B, 30B 口径} → 收益地形 vs 闭式 P/M 的吻合度；标出甜区（200ms–2s）与
-  不值得做区（80ms）；2s/30B 点与 Metronome 发表口径对照。
+- 原计划以模拟器外推；深度清理后改为**解析闭式直接绘制地形 + 多锚点验证**。所需闭式已全部建立
+  且各有实测锚点（见执行记录诸补注）：P/M = η·B_link·T/M_bytes（E0 锚定 η 与 B）、撞墙步时
+  0.9V/BW 不变量（V/BW 五代恒定 24–36ms）、busy(ctx) 斜率、B* 计算 bound 翻转点、TDMA 去同步守恒律、
+  收益 = min((M+P)/M, 算力倍数)。
+- 扫描轴不变：T ∈ {80ms..2s} × B_link ∈ {PCIe3/4/5, C2C 900GB/s} × 模型档位 → 等高线由闭式绘制；
+  锚点：3090+PCIe4（本仓库全套实测）、Metronome Blackwell+30B-A3B 发表数字（步时 4.8–14ms、t_sat 模型）、
+  H200/GB300 规格注记点。预期形状："两端翘"（显存受限消费端 + C2C 旗舰端高、PCIe 胖显存中段低）。
+- 相比模拟器路线：消除"模拟器保真度"整层效度威胁，换来审稿人可直接复算的公式组。
 
 ---
 
@@ -171,14 +176,14 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 
 1. **fresh-per-point**：每个数据点新起 worker 进程（Metronome 与本仓库 run_all.sh
    双重教训）。
-2. **共租守卫**：每次测量前 `wait_quiet.sh` + `gpu_probe.wait_for_window`；记录期间
+2. **共租守卫**：每次测量前 `harness/wait_quiet.sh` + `gpu_probe.wait_for_window`；记录期间
    `nvidia-smi` 采样存档，事后剔除受污染窗口。
 3. **重复与乱序**：headline 点 ≥5 次、条件乱序（run_variance_rand.sh 模式）；报告
    中位数 + IQR，不报单次。
 4. **双重 miss 判据**：worker 自报步时 + 客户端 cadence completeness（deliv_pct ≥ 0.9）
    交叉验证。
 5. **工件纪律**：每个数字可追溯到 `results/paper/` 下的原始 JSON + 生成脚本 + git rev
-   + 环境记录（延续 EVIDENCE.md 的追溯风格）。
+   + 环境记录（可追溯性风格沿袭已删除的 pilot 期 EVIDENCE.md，git 可溯）。
 
 ## 六、效度威胁与预答复
 
@@ -186,7 +191,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 |---|---|
 | 文本代理非真音频 | KV 物理与模态无关；E6 交叉核对 Metronome 真音频口径；limitations 明示 |
 | 自研 worker vs vLLM 不公平 | 主对比同 worker 内 ON/OFF；vLLM 作外参照；绝对步时与 vLLM 对齐并报告 |
-| 1.7B 太小 | P/M 闭式与模型无关（b 被约掉）；E6 给 7B/30B 口径外推；诚实边界沿用 EVIDENCE §六 |
+| 1.7B 太小 | P/M 闭式与模型无关（b 被约掉）；E6 给 7B/30B 口径外推；诚实边界声明沿袭 pilot 期方法（EVIDENCE.md 已删，git 可溯） |
 | 3090 非数据中心卡 | full-pool P/M ≈ H100+PCIe5 同量级是特性不是缺陷；若可临时租 H100/PCIe5 加一个 headline 复测点（可选，非阻塞） |
 | 共租 GPU 噪声 | 方法论规范 §五.2/.3；关键结论附重复分布 |
 
@@ -197,7 +202,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 2. **M1**：vanilla vLLM-realtime 文本分支跑通 → E1。
 3. **M2**：conveyor worker v1（固定时刻表，无 TDMA）→ E2。
 4. **M3**：TDMA + τ_lead 扫描（E3）→ 注入/作废（E4）→ 召回探针（E5）。
-5. **M4**：模拟器扩展 + 重校验 → E6；变异批次补测；工件打包。
+5. **M4**：E6 闭式地形 + 锚点核对（模拟器路线已废止）；变异批次补测；工件打包。
 
 每个里程碑结束回填本文档的"执行记录"节（待建），偏差与设计变更记录在案。
 
