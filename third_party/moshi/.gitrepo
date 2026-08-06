@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/kyutai-labs/moshi.git
+	branch = main
+	commit = e6a55d2722a65870ef52a6c9f6ecfc0e90f38362
+	parent = e1ac1c3d99b29cbcaa4d9f2494f6c0f118c84a7a
+	method = merge
+	cmdver = 0.4.9

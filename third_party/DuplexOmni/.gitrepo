@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/MuyeHuang/DuplexOmni.git
+	branch = main
+	commit = 33bfba1a821b09c5aa66790944f9098584979d34
+	parent = 2a949d07b9043d024544c632f56c303a862fb2a5
+	method = merge
+	cmdver = 0.4.9

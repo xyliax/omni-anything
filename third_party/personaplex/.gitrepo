@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/NVIDIA/personaplex.git
+	branch = main
+	commit = 3428dfd95309a7f3c84fd93259ded0f810d1ff91
+	parent = 9a51c3b25645aeae1342f3fabce140353e294c5c
+	method = merge
+	cmdver = 0.4.9

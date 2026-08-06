@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/vllm-project/vllm-omni.git
+	branch = main
+	commit = 4b625d1175e367e313ef9166a5d296d558fcfce4
+	parent = d49558bd146032ebc19e2ba8a21613e816fcf981
+	method = merge
+	cmdver = 0.4.9
