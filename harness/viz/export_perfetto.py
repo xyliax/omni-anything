@@ -12,19 +12,17 @@ Mapping:
   process "gateway"        audio tick boundaries as instants.
   process "scheduler"      evictions as instants.
   counters                 KV pool %, run, wait, cumulative evictions, SM util %.
-Clock alignment is inherited from build_viewer.build() (single source of truth).
+Clock alignment is inherited from bundle.build_bundle() (single source of truth).
 """
 import gzip, json, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_viewer import build, OUT  # noqa: E402
+from bundle import build_bundle, OUT  # noqa: E402
 
 
 def export(tag: str) -> str:
-    build(tag)  # ensures logs parse; we rebuild the bundle in-memory below
-    import build_viewer
-    bundle = json.loads(open(f"{OUT}/{tag}.html").read().split("const D = ", 1)[1]
-                        .split(";\n", 1)[0])
+    bundle = build_bundle(tag)
+    os.makedirs(OUT, exist_ok=True)
     ev = []
     us = lambda t: int(t * 1e6)
 

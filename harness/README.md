@@ -23,8 +23,9 @@
 ## 仪器与工具
 
 - `sched_trace/sitecustomize.py`：经 PYTHONPATH 注入 EngineCore 子进程的调度器逐步记录（仅 `SCHED_TRACE=` 设置时激活）。
-- `viz/build_viewer.py` → `results/viz/<tag>.html`：自包含交互查看器（轻量应急）。
-- `viz/export_perfetto.py` → `results/viz/<tag>.trace.json.gz`：**主力前端**——ui.perfetto.dev 打开。
+- `viz/bundle.py`：数据层——解析五件套日志并做跨时钟对齐，产出 bundle。
+- `viz/export_perfetto.py` → `results/viz/<tag>.trace.json.gz`（已 gitignore，可再生）：ui.perfetto.dev 打开。
+  自研 HTML 查看器已退役（需要时见 git 历史 build_viewer.py/timeline_template.html）。
 - `plots/`：论文静态图的生成脚本（每张已提交的图对应一个脚本——工件纪律，勿删）。
 
 时钟对齐约定：三类日志（perf/unix/statlog）逐 run 用 warmup 锚点重算偏移；泳道类对齐用物理不变量

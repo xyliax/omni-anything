@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
-"""Build a self-contained interactive HTML timeline viewer for one run.
-
-Usage: python3 harness/viz/build_viewer.py <tag> [<tag2> ...]
-       (tag = e.g. e1schtr_n8_d600; logs read from results/paper/baseline/<tag>_*)
-
-Emits results/viz/<tag>.html — double-click to open, no server needed.
-Clock alignment onto one experiment axis (t=0 = first real gateway tick) uses the
-same warmup anchors as the plot scripts. Missing logs degrade gracefully
-(runs without a scheduler trace simply have no lanes track).
-"""
-import json, os, re, sys
+"""Data layer for run visualization: parse one run's logs (results/paper/baseline/<tag>_*),
+align all clocks onto one experiment axis, return a bundle dict. Consumed by
+export_perfetto.py; the retired self-built HTML viewer lived on the same bundle
+(see git history: harness/viz/build_viewer.py + timeline_template.html)."""
+import json, os, re
 
 BASE = "results/paper/baseline"
 OUT = "results/viz"
-TMPL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "timeline_template.html")
 
 
-def build(tag: str) -> str:
+def build_bundle(tag: str) -> dict:
+
     bundle = {"tag": tag}
 
     # ---- perreq: anchors + tick times + per-sid starve ----
@@ -113,14 +107,4 @@ def build(tag: str) -> str:
             tmax = max(tmax, bundle[key][-1][0])
     bundle["t_end"] = round(tmax + 5, 1)
 
-    os.makedirs(OUT, exist_ok=True)
-    html = open(TMPL).read().replace("__DATA_JSON__", json.dumps(bundle, separators=(",", ":")))
-    path = f"{OUT}/{tag}.html"
-    open(path, "w").write(html)
-    return path
-
-
-if __name__ == "__main__":
-    for tag in sys.argv[1:]:
-        p = build(tag)
-        print(f"wrote {p}  ({os.path.getsize(p)//1024} KiB)")
+    return bundle
