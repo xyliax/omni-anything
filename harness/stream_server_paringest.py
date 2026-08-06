@@ -309,7 +309,7 @@ class StreamingEngine:
                     _r = _rnd.Random(9973 * (sid + 1))
                     _vocab = ("alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel",
                               "india","juliet","kilo","lima","mike","november","oscar","papa")
-                    filler = " ".join(_r.choice(_vocab) for _ in range(self.seed_tokens))
+                    filler = " ".join(_r.choice(_vocab) for _ in range(int(self.seed_tokens / 1.6)))  # ~1.6 tok/word measured
                     _pev("SEED", sid, self.seed_tokens)
                     yield StreamingInput(
                         prompt={"prompt": self.HEAD + f"[context {sid}] " + filler
