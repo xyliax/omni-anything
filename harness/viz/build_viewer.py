@@ -85,6 +85,28 @@ def build(tag: str) -> str:
         u = [int(l.split()[0]) for l in open(sm) if "%" in l]
         bundle["smi"] = [[round(5*i - 2.5, 1), v] for i, v in enumerate(u)]
 
+    # ---- cross-clock alignment: the P-family (ticks/kv/starve, perf clock) and the
+    # scheduler steps (unix clock) have different origins. Anchor them with the physical
+    # invariant "no chunk's first prefill precedes its own push by construction": shift the
+    # P-family so min(prefill_start - nearest_preceding_tick) == +3ms.
+    if bundle.get("ticks") and bundle.get("steps"):
+        pf = [t for t, ents in bundle["steps"] if any(n >= 40 for _, n, _ in ents)]
+        import bisect as _bi
+        ds = []
+        for st in pf:
+            i = _bi.bisect_right(bundle["ticks"], st) - 1
+            lo = max(0, i - 1)
+            for j in range(lo, min(i + 2, len(bundle["ticks"]))):
+                d = st - bundle["ticks"][j]
+                if -1.0 < d < 1.0: ds.append(d)
+        if ds:
+            shift = round(min(ds) - 0.003, 3)
+            bundle["ticks"] = [round(t + shift, 3) for t in bundle["ticks"]]
+            if "kv" in bundle:
+                bundle["kv"] = [[round(r[0] + shift, 2)] + r[1:] for r in bundle["kv"]]
+                bundle["evictions"] = [round(t + shift, 2) for t in bundle.get("evictions", [])]
+            if "starve" in bundle:
+                bundle["starve"] = {k: round(v + shift, 1) for k, v in bundle["starve"].items()}
     tmax = 0
     for key, idx in (("kv", 0), ("steps", 0), ("smi", 0)):
         if key in bundle and bundle[key]:
