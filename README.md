@@ -20,7 +20,7 @@
 
 ## 目录
 
-- `harness/` — E 系列真栈实验全部组件（worker/driver/仪器/可视化导出），见 `harness/README.md`
+- `harness/` — E 系列真栈实验全部组件（worker/driver/仪器/可视化导出）：索引 `harness/README.md`，**使用手册 `harness/USAGE.md`**
 - `calibration/` — E0 DMA 干扰微基准（工具 + 数据；PCIe 带宽标定）
 - `results/paper/` — E 系列运行证据（五件套日志）；`results/figures/` — E1 图组
 - `metronome/` — **外部只读 clone**（不入 git）：Metronome 论文开源 harness，用于复用其 baseline 谱系——为什么在这里、怎么用、引用时的坑，见 `metronome/_WHY_THIS_IS_HERE.md`
