@@ -353,3 +353,13 @@ anatomy 节按此三分。**静态图规范追加**：时间轴图必须画真�
 ② MoE 反向偏离（等效 W 小 → 空闲更多，Metronome 30B-A3B 即此）；③ token 率远超语音级则正向侵蚀。
 我们全部工作区间（N≤16）远低于 3090 的 B*。忙碌是总驻留字节的函数而非会话数的函数
 （六次抢占时刻 busy 均 ~1050–1090ms、总驻留均 3.97GiB——N×ctx=74.3k tok 双曲线守恒）。
+
+### 订正：本系列所有运行均处于 async scheduling 模式（2026-08-06）
+
+vLLM 0.23 对 `async_scheduling=None` 的解析是**默认启用**（`config/vllm.py:958`，仅 pooling/部分投机解码/不支持的
+executor 例外——我们与 Metronome 均不命中；确认日志为 info 级被 WARNING 吞掉）。测量语义随之修正：
+**sched trace 的步间隔 = 流水线节拍 = GPU 瓶颈侧纯执行时间**（CPU 调度藏于 GPU 影子内），21.0ms 无需气泡项即与
+物理闭式闭合（权重 17.5–18.7 + KV ~1 + 开销 ~1-2ms）；此前基于同步假设的"每步 2–4ms 空泡"估计作废（SM-util
+占用差应归因 nvidia-smi 采样粗糙）。两家步时数字（我们 21ms、Metronome 4.8–14ms）口径一致均为纯 GPU 步时。
+AsyncScheduler 继承 schedule() 未重写，trace 钩子有效性不受影响；async 的停止滞后+作废机制在运行中活跃
+（收尾偶发第 34 步的候选解释）。
