@@ -6,7 +6,7 @@ Updated: 2026-08-06
 
 | RP | 状态 | Dossier | 权威内容源 |
 | --- | --- | --- | --- |
-| RP1 — omni-anything | Active；已收敛 | `rp1-omni-anything.md` | 仓库根 `README.md` 及文档地图 |
+| RP1 — omni-anything | Active；已收敛 | `rp1-omni-anything.md` | 仓库根 `AGENTS.md` 及文档地图 |
 | RP2 — 静态图特化 | Preliminary | `rp2-static-specialization.md` | 暂无独立实现 |
 | RP3 | Vacant | 不建文件 | 无 |
 

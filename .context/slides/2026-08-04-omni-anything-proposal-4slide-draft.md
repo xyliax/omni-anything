@@ -21,8 +21,7 @@ Fresh extract: `.llm/2026-08-04-omni-anything-proposal-draft/slides.md`
 
 `Training-Free · Agent-Agnostic · Real-Time · Stateful`
 
-首期落地：openJiuwen / jiuwenswarm 生态  
-首个验证载体：全双工语音交互
+首个验证载体：全双工语音交互（历史稿；非现行落地目标）
 
 ### 版式建议
 
@@ -53,7 +52,7 @@ Fresh extract: `.llm/2026-08-04-omni-anything-proposal-draft/slides.md`
 
 #### 1. 通用接入｜Any Agent
 
-- 通过标准适配层连接 jiuwenswarm 及异构 Agent / Tool / API
+- 通过标准适配层连接异构 Agent / Tool / API
 - 不修改 Agent 的核心推理逻辑，不依赖模型权重训练
 - 前台交互模型与后台 Agent 可独立演进、灵活替换
 

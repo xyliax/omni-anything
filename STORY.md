@@ -110,7 +110,7 @@
 
 ## 6. 空间有多大：三面墙与方案指针
 
-**三面墙全有解析式**（可行域清晰）：摊薄平点 N≳32；注入墙 gap(N) ≥ 注入需求(N) → N≈57（`TIMELINES.md` L1b）；KV 墙 = 池字节/工作集（哪面先到是硬件参数的函数：3090 上 KV 先绑定、80G 卡上注入先绑定）。墙内是调度的领地；墙外只能准入控制——那不是本问题的失败，是它的边界。墙序已获独立实测印证：Metronome 在真栈上测得 vanilla 显存悬崖先到（N=128 亚稳崩溃），windowed-KV 绑定状态后才反转为死线先到（N\*≈209 < 显存外推 ~500）。
+**三面墙全有解析式**（可行域清晰）：摊薄平点 N≳32；注入墙 gap(N) ≥ 注入需求(N) → N≈57（历史模拟外推）；KV 墙 = 池字节/工作集（哪面先到是硬件参数的函数：3090 上 KV 先绑定、80G 卡上注入先绑定）。墙内是调度的领地；墙外只能准入控制——那不是本问题的失败，是它的边界。墙序已获独立实测印证：Metronome 在真栈上测得 vanilla 显存悬崖先到（N=128 亚稳崩溃），windowed-KV 绑定状态后才反转为死线先到（N\*≈209 < 显存外推 ~500）；现行真栈口径见 `FINDINGS.md`。
 
 **收敛出的方案**（`IDEA-KV-CONVEYOR.md`）：既然显存先绑定一个数量级、而 H2D 链路与计算时间大量闲置，就**用带宽赎回容量**——每路尾部 KV 母本住 DRAM，按时刻表每拍 DMA 搬入、算完即释放；等效 KV 容量 = M + P（P = 一拍能搬入的量），收益比 P/M 是纯硬件比值（PCIe5/480ms 拍 +24%，净 ~20%；3090/PCIe3 +83%；2s 拍 ~+100%）。相位指派把 Metronome 的"刻意错相实验设置"升级为调度资源；提交语义把 P3 的死 KV 从源头消灭；注入 KV 走同一条链路的第二优先级——P1–P4 四个事实在方案里各就其位。
 
@@ -120,12 +120,8 @@
 
 | 主张 | 来源 |
 |---|---|
-| 步时定律/组成税/免费区 | `calibration/data/T1–T4_*.csv`，EVIDENCE §一 |
-| P1 显存先绑定/占空比/欠批 | `pilot/S1_density.csv`、`simulator/trace_batches.py`、`trace_density.py` |
-| P2 注入冲击/相位 1:1 | `pilot/S3_injection.csv`、`S3_injection_timeline.csv`、`simulator/trace_injection.py` |
-| P3 作废黑洞 | `pilot/S2_cancellation.csv` |
-| P4 swap/重算实测、util 三口径 | `calibration/data/pcie_h2d_bench.json`（H2D 12.33GB/s、4k swap 38.1ms）、`trace_density.py`、`trace_saturation.py` |
-| 三面墙 | `TIMELINES.md` L1b、EVIDENCE §二 |
-| 时间线可视化全集 | `TIMELINES.md` L1–L4 |
-| 模拟保真度/效度威胁 | `simulator/validation_runs/summary.json`、`EVIDENCE.md` §六 |
+| E 系列真栈结论（现行） | `FINDINGS.md`、`results/paper/`、`results/figures/` |
+| H2D / DMA 标定 | `calibration/data/pcie_h2d_bench.json`；E0 论文证据 `results/paper/e0/` |
 | 方案收益闭式/相关工作对比 | `IDEA-KV-CONVEYOR.md` §3.2/§四 |
+| 产品/文献查证（§5） | 本文 §5；`.context/references/` 白名单 notes |
+| 已删模拟器 pilot / `EVIDENCE.md` / `TIMELINES.md` / `T1–T4` | **仅 git 可溯**；不得当现状证据 |

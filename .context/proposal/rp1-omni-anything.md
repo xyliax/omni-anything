@@ -10,7 +10,7 @@ Status: **Active；当前唯一已经收敛并有实验支撑的 research point�
 
 ## 权威入口
 
-- 当前结论与文档地图：仓库根 `README.md`
+- 当前结论与文档地图：仓库根 `AGENTS.md`
 - 问题定义：`PROBLEM.md`
 - 逐条发现：`FINDINGS.md`
 - 方案候选：`IDEA-KV-CONVEYOR.md`

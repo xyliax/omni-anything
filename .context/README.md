@@ -1,7 +1,7 @@
 # `.context/` — 文档与背景资料
 
 本目录放**文档性质**的背景材料：论文 digest、curated notes、薄 proposal、slides 草稿。  
-**不是** RP1 的事实源；现行结论仍以仓库根目录文档地图为准（`README.md`、`FINDINGS.md`、`PROBLEM.md` 等）。
+**不是** RP1 的事实源；现行结论以仓库根 `AGENTS.md` 文档地图及 `FINDINGS.md` / `PROBLEM.md` 等为准。
 
 | 路径 | 内容 | 默认是否读入 session |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 
 ## 与其它目录的分工
 
-- **根目录 `*.md`**：现行结论与实验设计（唯一事实层）
+- **根 `AGENTS.md` + 结论/设计 `*.md`**：现行结论与实验设计（唯一事实层）；`README.md` 仅为占位
 - **`harness/` / `calibration/` / `results/`**：可运行代码与证据
 - **`third_party/`**：第三方**代码**（git-subrepo），不是文档
 - **`.context/`**：阅读材料与表达层

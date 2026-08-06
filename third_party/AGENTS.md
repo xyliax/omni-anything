@@ -42,5 +42,5 @@ git subrepo status third_party/<name>
 
 ## 与事实源的关系
 
-- 现行结论与实验数字：仓库根 `README.md` / `FINDINGS.md` / `PROBLEM.md` / `results/`，不从本目录反推。
+- 现行结论与实验数字：仓库根 `AGENTS.md` / `FINDINGS.md` / `PROBLEM.md` / `results/`，不从本目录反推。
 - 文档与 digest：`.context/`，不是代码 pin。

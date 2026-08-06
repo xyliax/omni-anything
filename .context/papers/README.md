@@ -26,5 +26,5 @@ Updated: 2026-08-06
 
 ## 当前 focus 入口
 
-- 仓库根 `README.md`（事实与目录地图）
+- 仓库根 `AGENTS.md`（契约与文档地图）
 - `.context/references/` 白名单 notes

@@ -3,7 +3,7 @@
 > **溯源注（2026-08-06）**：本文的问题定义与三要素仍为现行；文中源自模拟器 pilot 的具体数字已被
 > E1 真栈数据取代（更强的同向结论），以 `PAPER-EXPERIMENTS.md` 执行记录为准。
 
-*汇集全部实验与调研修正后的最终口径。配套：`STORY.md`（完整叙事与相关工作）、`EVIDENCE.md`（实验证据索引）、`TIMELINES.md`（时间线可视化）、`IDEA-KV-CONVEYOR.md`（收敛的方案候选，未验证）。文档地图见 `README.md`。*
+*汇集全部实验与调研修正后的最终口径。配套：`FINDINGS.md`（E 系列发现与证据指针）、`STORY.md`（叙事与相关工作；模拟器数字以 E1/`FINDINGS` 为准）、`IDEA-KV-CONVEYOR.md`（方案候选，未验证）、`results/`（运行证据）。文档地图见 `AGENTS.md`。已删的 `EVIDENCE.md`/`TIMELINES.md`/模拟器仅 git 可溯。*
 
 ## 一句话
 
@@ -21,7 +21,7 @@
 
 ## 四个实测事实（本仓库 + Metronome 交叉验证）
 
-1. **显存先绑定一个数量级**（S1）：KV 可行 N=12 ≪ deadline 墙 N=192/208（随机/对齐，判据 miss>1%；该墙为模拟外推——真实 unbounded 引擎在 N>12 区间是显存悬崖硬僵死，不是弹性排队，见 `TIMELINES.md` L1b 前提域注）；单会话占空比 4–9%。Metronome 真栈复现：vanilla N=128 显存悬崖时 GPU 时间占用仅 ~13–32%——"memory kills sessions whose compute the GPU could easily carry"。
+1. **显存先绑定一个数量级**（S1）：KV 可行 N=12 ≪ deadline 墙 N=192/208（随机/对齐，判据 miss>1%；deadline 墙为历史模拟外推——真实 unbounded 引擎在 N>12 区间是显存悬崖硬僵死，不是弹性排队；真栈口径见 `FINDINGS.md` / `results/paper/`）。单会话占空比 4–9%。Metronome 真栈复现：vanilla N=128 显存悬崖时 GPU 时间占用仅 ~13–32%——"memory kills sessions whose compute the GPU could easily carry"。
 2. **相位从没被当成资源**（S1）：随机相位比对齐多花 4.96× GPU 时间，组成税占全卡忙时 64.7%；批大小由到达巧合决定，调度器零话语权。
 3. **整段注入与拍死线正面冲突，伤害由相位 1:1 决定**（S3）：最坏相位 L\*=6144 打爆死线，拍初 8192 都安全；冲击一拍宽。注入走引擎步就必然与拍抢同一资源。
 4. **作废黑洞**（S2）：40% 打断先验下峰值 24.2% 常驻 KV 是死内容、驻留 35.6s、每分钟 2.2 次陈旧拼接（正确性事故）；死字节每步 decode 照付带宽原价。
@@ -30,7 +30,7 @@
 
 - **显存墙**：KV 池字节 / 单路工作集——vanilla 语义下最先到（本仓库 N=12；Metronome N=128 悬崖，且亚稳、静默）。
 - **死线墙**：状态被绑定/换出后才成为绑定约束（Metronome windowed 后 N\*≈209 < 显存外推 ~500；本仓库模拟外推 N=192/208，判据 miss>1%）。
-- **注入墙**：效率地板上拍 + 注入总需求 = 1 → **N≈57**（`TIMELINES.md` L1b：baseline N=48 已两头坏，48→57 是调度器空间，>57 是准入控制领域）。
+- **注入墙**：效率地板上拍 + 注入总需求 = 1 → **N≈57**（历史模拟外推：baseline N=48 已两头坏，48→57 是调度器空间，>57 是准入控制领域；真栈注入实验见 `PAPER-EXPERIMENTS.md`）。
 
 墙序是硬件/负载参数的函数，但**在所有现实配置下显存墙都远早于卡的计算能力耗尽**——这是全部机会所在。
 
@@ -65,4 +65,4 @@ Metronome（arXiv:2607.02640，2026）是截至 2026-08 唯一的真双工 GPU s
 
 ## 明确不做什么（边界）
 
-语音合成头与音频 token 化；过载区 N>墙（准入控制，Metronome 地盘）；多卡 P/D 分离（作 baseline 对比而非贡献）；80ms 锁步家族（收益 ÷6）。效度前提见 `EVIDENCE.md` §六（最重要：标定模型 1.7B，阈值是乐观上界）。
+语音合成头与音频 token 化；过载区 N>墙（准入控制，Metronome 地盘）；多卡 P/D 分离（作 baseline 对比而非贡献）；80ms 锁步家族（收益 ÷6）。效度前提见 `FINDINGS.md` / `PAPER-EXPERIMENTS.md`（最重要：标定模型 1.7B，阈值是乐观上界；旧 `EVIDENCE.md` 已删）。
