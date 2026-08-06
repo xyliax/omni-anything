@@ -166,6 +166,11 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
   0.9V/BW 不变量（V/BW 五代恒定 24–36ms）、busy(ctx) 斜率、B* 计算 bound 翻转点、TDMA 去同步守恒律、
   收益 = min((M+P)/M, 算力倍数)。
 - 扫描轴不变：T ∈ {80ms..2s} × B_link ∈ {PCIe3/4/5, C2C 900GB/s} × 模型档位 → 等高线由闭式绘制；
+  **T 轴四点均有真实系统锚定**（2026-08-06 查证）：80ms=Moshi/PersonaPlex（音频原生 12.5Hz）、
+  480ms=DuplexOmni（T-T 切片，D2 headline 口径）、~1s=MiniCPM-o、2s=Qwen-Omni（audio encoder 2s 块 +
+  TMRoPE 每 2s 时间交织——本 E1 拍长的模型原生依据，arXiv:2503.20215）。适用域声明：80ms 音频原生端
+  无轮转窗口（不值得做区的架构学原因）；传送带是 T-T 切片家族（480ms–2s）的设计——恰为可做注入/工具
+  调用的那一支。本卡上 480ms 与 2s 实际收益几乎同为 ~2×（算力封顶），T 的差别在算力倍数更高的卡上显形。
   锚点：3090+PCIe4（本仓库全套实测）、Metronome Blackwell+30B-A3B 发表数字（步时 4.8–14ms、t_sat 模型）、
   H200/GB300 规格注记点。预期形状："两端翘"（显存受限消费端 + C2C 旗舰端高、PCIe 胖显存中段低）。
 - 相比模拟器路线：消除"模拟器保真度"整层效度威胁，换来审稿人可直接复算的公式组。
