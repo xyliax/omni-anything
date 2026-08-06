@@ -25,6 +25,26 @@ for ln in open("results/paper/baseline/e1schtr_n8_d600_sched.log"):
 T0 = steps[0][0]
 EV1 = 216.2   # sid3's last scheduled step (eviction #1 boundary, from analysis)
 
+# TRUE tick boundaries: gateway P events (perf clock), anchored onto the sched axis by the
+# physical invariant min(prefill_start - preceding_tick) = +3ms (same method as the viewer).
+_pts = []; _p0 = None
+for _ln in open("results/paper/baseline/e1schtr_n8_d600_perreq.log"):
+    _k, _t, _sid, *_ = _ln.split()
+    if _k == "P" and int(_sid) != 10**9:
+        _t = float(_t)
+        if _p0 is None: _p0 = _t
+        _pts.append(_t - _p0)
+_pts = sorted(set(round(x, 3) for x in _pts))
+_pf = [t - T0 for t, d in steps if any(n >= 40 for n, _ in d.values())]
+import bisect as _bi
+_ds = []
+for _s in _pf:
+    _i = _bi.bisect_right(_pts, _s) - 1
+    for _j in range(max(0, _i-1), min(_i+2, len(_pts))):
+        _d = _s - _pts[_j]
+        if -1.0 < _d < 1.0: _ds.append(_d)
+TICKS = [round(x + min(_ds) - 0.003, 3) for x in _pts]
+
 def draw(ax, lo, hi):
     ax.set_facecolor(SURF)
     for s in ("top", "right", "left"): ax.spines[s].set_visible(False)
@@ -41,7 +61,11 @@ def draw(ax, lo, hi):
     ax.set_yticks(range(1, 9), [f"sid {s}" for s in range(8, 0, -1)], fontsize=8)
     ax.set_ylim(0.4, 8.8); ax.set_xlim(0, hi - lo)
     ax.grid(axis="x", color=GRID, lw=0.6); ax.set_axisbelow(True)
-    ax.set_xlabel(f"seconds from t={lo:.0f}s", fontsize=8, color=SEC)
+    ax.set_xlabel(f"seconds from t={lo:.0f}s · dotted = TRUE gateway tick boundaries (audio arrival)",
+                  fontsize=8, color=SEC)
+    for tk in TICKS:
+        if lo <= tk <= hi:
+            ax.axvline(tk - lo, color=MUT, lw=0.9, ls=(0, (1, 2.5)), zorder=2)
 
 fig, axes = plt.subplots(3, 1, figsize=(11, 8.8),
                          gridspec_kw=dict(hspace=0.62))

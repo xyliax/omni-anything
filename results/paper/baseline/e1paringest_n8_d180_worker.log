@@ -1,0 +1,36 @@
+2026-08-06 08:27:34,539 [stream-worker] loading STREAMING worker: Qwen/Qwen2.5-Omni-7B (vLLM 0.23 append-to-resident-KV, unbounded (vanilla vLLM-realtime))
+2026-08-06 08:27:42,149 [stream-worker] PARALLEL-INGEST patch applied: per-chunk process_inputs -> ThreadPoolExecutor(8)
+[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.
+[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.
+[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.
+[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.
+[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.
+[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.
+[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.
+[transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+(EngineCore pid=2078810) WARNING 08-06 08:27:59 [qwen2_5_omni_thinker.py:1075] flash_attn is not available, the model may not yield the exactly same result as the transformers implementation in the audio tower part.
+(EngineCore pid=2078810) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=2078810) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:01<00:06,  1.63s/it]
+(EngineCore pid=2078810) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:03<00:04,  1.66s/it]
+(EngineCore pid=2078810) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:05<00:03,  1.72s/it]
+(EngineCore pid=2078810) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:06<00:01,  1.44s/it]
+(EngineCore pid=2078810) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:06<00:00,  1.23s/it]
+(EngineCore pid=2078810) 
+(EngineCore pid=2078810) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/7 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 3/7 [00:00<00:00, 22.83it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 6/7 [00:00<00:00, 22.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 7/7 [00:00<00:00, 21.91it/s]
+(EngineCore pid=2078810) Capturing CUDA graphs (decode, FULL):   0%|          | 0/5 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):  60%|██████    | 3/5 [00:00<00:00, 24.11it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 5/5 [00:00<00:00, 24.42it/s]
+2026-08-06 08:28:19,870 [stream-worker] AsyncLLM streaming engine ready (model=Qwen/Qwen2.5-Omni-7B)
+WARNING 08-06 08:28:19 [input_processor.py:282] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=2078810) WARNING 08-06 08:28:19 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _compute_slot_mapping_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+2026-08-06 08:28:21,274 [stream-worker] engine warm
+2026-08-06 08:28:21,297 [stream-worker] STREAMING worker serving gRPC on :50054
+2026-08-06 08:28:50,452 [stream-worker] step 8: 8 sessions, 29ms, resident_frames=8 (~16s ctx), tot_tokens=64, sample='I'
+2026-08-06 08:29:06,432 [stream-worker] step 16: 8 sessions, 3ms, resident_frames=16 (~32s ctx), tot_tokens=128, sample='Ism'
+2026-08-06 08:29:22,443 [stream-worker] step 24: 8 sessions, 13ms, resident_frames=24 (~48s ctx), tot_tokens=192, sample='Ism\n\n\n\n\n\n\n\n\n\n`'
+2026-08-06 08:29:38,447 [stream-worker] step 32: 8 sessions, 11ms, resident_frames=32 (~64s ctx), tot_tokens=256, sample='Ism\n\n\n\n\n\n\n\n\n\n`'
+2026-08-06 08:29:54,458 [stream-worker] step 40: 8 sessions, 19ms, resident_frames=40 (~80s ctx), tot_tokens=320, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`'
+2026-08-06 08:30:10,459 [stream-worker] step 48: 8 sessions, 15ms, resident_frames=48 (~96s ctx), tot_tokens=384, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`'
+2026-08-06 08:30:26,470 [stream-worker] step 56: 8 sessions, 17ms, resident_frames=56 (~112s ctx), tot_tokens=448, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n`'
+2026-08-06 08:30:42,460 [stream-worker] step 64: 8 sessions, 6ms, resident_frames=64 (~128s ctx), tot_tokens=512, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n`\n\n'
+2026-08-06 08:31:00,058 [stream-worker] step 72: 8 sessions, 1601ms, resident_frames=72 (~144s ctx), tot_tokens=512, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n`\n\n'
+2026-08-06 08:31:16,061 [stream-worker] step 80: 8 sessions, 1601ms, resident_frames=80 (~160s ctx), tot_tokens=512, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n`\n\n'
+2026-08-06 08:31:32,066 [stream-worker] step 88: 8 sessions, 1602ms, resident_frames=88 (~176s ctx), tot_tokens=512, sample='Ism\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n`\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n`\n\n\n\n`\n\n'
