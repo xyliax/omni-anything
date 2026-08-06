@@ -118,9 +118,9 @@
 | 主张 | 来源 |
 |---|---|
 | 步时定律/组成税/免费区 | `calibration/data/T1–T4_*.csv`，EVIDENCE §一 |
-| P1 显存先绑定/占空比/欠批 | `results/S1_density.csv`、`simulator/trace_batches.py`、`trace_density.py` |
-| P2 注入冲击/相位 1:1 | `results/S3_injection.csv`、`S3_injection_timeline.csv`、`simulator/trace_injection.py` |
-| P3 作废黑洞 | `results/S2_cancellation.csv` |
+| P1 显存先绑定/占空比/欠批 | `pilot/S1_density.csv`、`simulator/trace_batches.py`、`trace_density.py` |
+| P2 注入冲击/相位 1:1 | `pilot/S3_injection.csv`、`S3_injection_timeline.csv`、`simulator/trace_injection.py` |
+| P3 作废黑洞 | `pilot/S2_cancellation.csv` |
 | P4 swap/重算实测、util 三口径 | `calibration/data/pcie_h2d_bench.json`（H2D 12.33GB/s、4k swap 38.1ms）、`trace_density.py`、`trace_saturation.py` |
 | 三面墙 | `TIMELINES.md` L1b、EVIDENCE §二 |
 | 时间线可视化全集 | `TIMELINES.md` L1–L4 |

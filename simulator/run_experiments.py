@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from calib_model import Calibration, load_default  # noqa: E402
 from engine import Engine, Policy, BEAT_MS  # noqa: E402
 
-RES = Path(__file__).parent.parent / "results"
+RES = Path(__file__).parent.parent / "pilot"
 # Measured on the calibration card (calibration/data/env_Qwen3-1.7B.json):
 # Qwen3-1.7B fp16, 28 layers x 8 KV heads x 128 dim x 2 (K+V) x 2 bytes.
 KV_KB_PER_TOKEN = 112.0

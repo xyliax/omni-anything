@@ -43,7 +43,7 @@
 
 ## 二、S1 密度：显存先绑定，相位是资源
 
-N 扫描（随机/对齐两种相位，60s，5 seed）。数据：`results/S1_density.csv`，图：`results/figures/S1_density.png`。
+N 扫描（随机/对齐两种相位，60s，5 seed）。数据：`pilot/S1_density.csv`，图：`pilot/figures/S1_density.png`。
 
 1. **KV 可行密度 N=12**（最后一个工作集装得进 44,336 token 池的 N）；deadline 墙在 **N=192（随机）/ N=208（对齐）**——**16×**。墙的判据：**miss 率首次越过 1% 的最小 N**（随机 N=192 时 2.27%、前一格 N=176 仅 0.51%；对齐 N=208 时 11.79%、前一格 N=192 仅 0.48%；首次非零 miss 出现在随机 160 / 对齐 192——引用时请带判据）。1.7B 上密度是 KV 容量绑定，deadline 不是绑定约束。
 2. **单会话占空比仅 4–9%**（每拍 1 个 micro-prefill 步 + 2–4 个 decode 步，~20–45ms/480ms）——卡装不下的时候远没跑满。
@@ -54,7 +54,7 @@ N 扫描（随机/对齐两种相位，60s，5 seed）。数据：`results/S1_de
 
 ## 三、S2 作废：死 KV 常驻且持续计税
 
-N=8，40% 打断先验，60s，5 seed。数据：`results/S2_cancellation.csv`，图：`results/figures/S2_cancellation.png`。
+N=8，40% 打断先验，60s，5 seed。数据：`pilot/S2_cancellation.csv`，图：`pilot/figures/S2_cancellation.png`。
 
 | L | 白算 prefill token | 峰值失效上下文占常驻 KV | 平均驻留 | 陈旧拼接次数/分 | 白费 GPU 时间 |
 |---|---|---|---|---|---|
@@ -68,7 +68,7 @@ N=8，40% 打断先验，60s，5 seed。数据：`results/S2_cancellation.csv`�
 
 ## 四、S3 注入冲击：伤害由相位决定，一拍宽
 
-N=8 会话环境中、对其中一路注入的 L×相位扫描（其余 7 路正常跑拍）。数据：`results/S3_injection.csv`（56 行）+ `results/S3_injection_timeline.csv`（逐拍 505 行），图：`results/figures/S3_injection.png`、`results/figures/S3_timeline.png`。
+N=8 会话环境中、对其中一路注入的 L×相位扫描（其余 7 路正常跑拍）。数据：`pilot/S3_injection.csv`（56 行）+ `pilot/S3_injection_timeline.csv`（逐拍 505 行），图：`pilot/figures/S3_injection.png`、`pilot/figures/S3_timeline.png`。
 
 1. **最坏相位 L\*=6144**：整段拼回在拍末注入时 6144 token 即打爆死线；拍初注入则 8192 都安全（max beat 257ms）——阈值是相位函数，不是常数。
 2. **max beat 与注入偏移 1:1 线性**（L=5120：off=5ms→71.7ms，off=470ms→441.3ms）：纯溢出到下一拍，不是计算变多。
@@ -87,8 +87,8 @@ N=8 会话环境中、对其中一路注入的 L×相位扫描（其余 7 路正
 
 | # | 原假设 | 实测 | 数据来源 |
 |---|---|---|---|
-| F1 | 密度上限由 480ms deadline 决定 | 否证。deadline 墙 N=192/208 是 KV 可行 N=12 的 ~16×，密度是 KV 容量绑定 | `results/S1_density.csv` |
-| F2 | 单会话注入冲击会累积 | 否证。冲击一拍宽，下一拍回基线 | `results/S3_injection_timeline.csv` |
+| F1 | 密度上限由 480ms deadline 决定 | 否证。deadline 墙 N=192/208 是 KV 可行 N=12 的 ~16×，密度是 KV 容量绑定 | `pilot/S1_density.csv` |
+| F2 | 单会话注入冲击会累积 | 否证。冲击一拍宽，下一拍回基线 | `pilot/S3_injection_timeline.csv` |
 | F3 | wake 成本随会话寿命增长 | 否证。开 prefix caching 时 40 拍内 wake 不升反降（-12.4%）；关掉稳在 112ms | `calibration/data/diag_wake_growth.json` |
 | F4 | "注入后 decode 变慢" | 伪相关。2× decode 异常出现在注入**之前**，元凶是同租户争用 | `calibration/data/diag_post_prefill_decode.json` |
 
