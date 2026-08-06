@@ -174,6 +174,9 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
   锚点：3090+PCIe4（本仓库全套实测）、Metronome Blackwell+30B-A3B 发表数字（步时 4.8–14ms、t_sat 模型）、
   H200/GB300 规格注记点。预期形状："两端翘"（显存受限消费端 + C2C 旗舰端高、PCIe 胖显存中段低）。
 - 相比模拟器路线：消除"模拟器保真度"整层效度威胁，换来审稿人可直接复算的公式组。
+- **呈现形态（方法论榜样：FasterMoE/PPoPP'22 的 DDL-Roofline 范式）**：定制 **Deadline-Capacity
+  Roofline**——横轴每会话 ctx，纵轴可承载 N，三条屋顶（算力/HBM 容量/传送带抬升后容量），E1 实测轨迹
+  为运动点；论文 Figure-1 候选。M2 调度决策（G/B̄、τ_lead）从模型推导，对应其 shadowing 决策公式的地位。
 
 ---
 
