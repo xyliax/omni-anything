@@ -25,7 +25,7 @@ CUDA_VISIBLE_DEVICES=$GPU HF_HUB_OFFLINE=1 METRONOME_ROOT=$MET \
   setsid ~/vllm023-venv/bin/python -u "$ROOT/harness/stream_server_paringest.py" \
     --model "$MODEL" --port $WPORT \
     --gpu-mem $GPU_MEM --max-model-len $MML --max-num-seqs $MAXSEQS --tpt 25 --max-audio-chunks 64 \
-    --window-frames 0 --wait-budget-s 1.6 --ready-file /tmp/wready_paringest_$$.flag \
+    --window-frames 0 --wait-budget-s 1.6 --seed-tokens ${SEED_TOKENS:-0} --ready-file /tmp/wready_paringest_$$.flag \
     > "$OUT/${TAG}_worker.log" 2>&1 &
 WPID=$!
 for i in $(seq 1 120); do

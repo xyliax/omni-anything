@@ -177,7 +177,7 @@ class StreamingEngine:
     """AsyncLLM + per-session resident resumable requests, driven from a sync Step()."""
 
     def __init__(self, model, gpu_mem, max_model_len, max_num_seqs, tpt, wait_budget_s,
-                 max_audio_chunks, window_frames=0, window_overlap=0, turn_eos=0):
+                 max_audio_chunks, window_frames=0, window_overlap=0, turn_eos=0, seed_tokens=0):
         from vllm import SamplingParams
         from vllm.engine.arg_utils import AsyncEngineArgs
         from vllm.v1.engine.async_llm import AsyncLLM
@@ -187,6 +187,7 @@ class StreamingEngine:
         self.window_frames = window_frames
         self.window_overlap = window_overlap
         self.turn_eos = turn_eos
+        self.seed_tokens = seed_tokens   # warm-start: prefill ~K filler tokens per session at start
         self.HEAD, self.APH, self.INSTR, self.ASST, self.TRAIL = model_prompts(model)
         self.sessions: dict[int, Session] = {}
         self.lock = threading.Lock()
@@ -299,6 +300,22 @@ class StreamingEngine:
             n = [len(seed)]
 
             async def gen():
+                # 0) WARM-START (omni-anything harness feature): one-shot prefill of ~seed_tokens
+                #    filler text so sessions begin with pre-grown context (KV bytes are modality-
+                #    agnostic). Per-sid unique prefix defeats prefix-cache dedup, which would
+                #    otherwise make capacity look optimistic. max_tokens=1: prefill, one token, on.
+                if self.seed_tokens and st.epoch == 1:
+                    import random as _rnd
+                    _r = _rnd.Random(9973 * (sid + 1))
+                    _vocab = ("alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel",
+                              "india","juliet","kilo","lima","mike","november","oscar","papa")
+                    filler = " ".join(_r.choice(_vocab) for _ in range(self.seed_tokens))
+                    _pev("SEED", sid, self.seed_tokens)
+                    yield StreamingInput(
+                        prompt={"prompt": self.HEAD + f"[context {sid}] " + filler
+                                + self.INSTR + self.ASST},
+                        sampling_params=self.SamplingParams(temperature=0.0, max_tokens=1,
+                                                            ignore_eos=True))
                 # 1) SLIDING re-seed: re-encode the carried-over recent window ONCE (one prefill of OV
                 #    chunks; the mm-processor cache often reuses their encoder output) so context is
                 #    preserved across the slide. Text after the audio (INSTR+ASST) avoids the mrope edge.
@@ -319,7 +336,7 @@ class StreamingEngine:
                     _pev("F", sid, st.frame)
                     recent.append((arr, sr))
                     prompt = (self.HEAD + self.APH + self.INSTR + self.ASST) \
-                        if (n[0] == 1 and not seed) else (self.APH + self.TRAIL)
+                        if (n[0] == 1 and not seed and not self.seed_tokens) else (self.APH + self.TRAIL)
                     sp = self.SamplingParams(temperature=0.0, max_tokens=self.tpt * n[0] + 8,
                                              ignore_eos=True)
                     yield StreamingInput(
@@ -467,6 +484,10 @@ def main():
     ap.add_argument("--turn-eos", type=int, default=0,
                     help="correctness eval: per turn, accumulate this many audio frames then generate "
                          "ONE EOS-terminated answer (no ignore_eos filler). 0 = continuous streaming.")
+    ap.add_argument("--seed-tokens", type=int, default=0,
+                    help="warm-start: prefill about this many unique filler text tokens per "
+                         "session at start (0 = off) — compresses time-to-wall, makes ctx a "
+                         "controlled variable")
     ap.add_argument("--ready-file", default=None)
     args = ap.parse_args()
 
@@ -476,7 +497,7 @@ def main():
     eng = StreamingEngine(args.model, args.gpu_mem, args.max_model_len, args.max_num_seqs,
                           args.tpt, args.wait_budget_s, args.max_audio_chunks,
                           window_frames=args.window_frames, window_overlap=args.window_overlap,
-                          turn_eos=args.turn_eos)
+                          turn_eos=args.turn_eos, seed_tokens=args.seed_tokens)
     # warm: one short session so JIT/CUDA-graph cost is paid before advertising ready.
     try:
         sil = (np.zeros(32000, dtype=np.float32), 16000)
