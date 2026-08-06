@@ -1,0 +1,22 @@
+{
+  "title": "JoyAI-VL-Interaction: Real-Time Vision-Language Interaction Intelligence",
+  "arxiv": "https://arxiv.org/abs/2606.14777",
+  "date": "2026-06-10",
+  "date_checked": "2026-07-02",
+  "classification": "core_streaming_rl",
+  "unit": "JD.com",
+  "resources": {
+    "paper": "https://arxiv.org/abs/2606.14777",
+    "code": "https://github.com/jd-opensource/JoyAI-VL-Interaction",
+    "demo": "repo quick start / WebUI",
+    "model": "https://huggingface.co/jdopensource/JoyAI-VL-Interaction-Preview",
+    "data": "https://huggingface.co/datasets/jdopensource/JoyAI-VL-Interaction"
+  },
+  "workflow": {
+    "action_space": ["silence", "response", "delegate"],
+    "sft": "weighted SFT over time-aligned per-second action data",
+    "rl": "GRPO over answer-centered streaming trajectories",
+    "rollout_unit": "causal streaming window centered on useful response timing",
+    "runtime": "foreground real-time loop plus background async loop with hierarchical memory"
+  }
+}

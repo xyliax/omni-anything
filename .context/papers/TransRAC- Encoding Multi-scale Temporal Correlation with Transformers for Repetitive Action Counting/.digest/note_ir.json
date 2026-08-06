@@ -1,0 +1,758 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "TransRAC: Encoding Multi-scale Temporal Correlation with Transformers for Repetitive Action Counting",
+    "summary": "TransRAC reframes repetitive action counting for longer, irregular videos by pairing a fine-grained benchmark with multi-scale self-comparison over video features and density-map period prediction.",
+    "paper_type": "application",
+    "venue": "arXiv preprint 2022",
+    "authors": "Huazhang Hu, Sixun Dong, Yiqun Zhao, Dongze Lian, Zhengxin Li, Shenghua Gao; ShanghaiTech University; National University of Singapore; Shanghai Engineering Research Center of Intelligent Vision and Imaging; Shanghai Engineering Research Center of Energy Efficient and Custom AI IC",
+    "keywords": [
+      "repetitive action counting",
+      "temporal correlation",
+      "self-attention",
+      "multi-scale video representation",
+      "density map regression",
+      "fine-grained annotation",
+      "RepCount",
+      "video understanding"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a video-understanding paper about class-agnostic repetitive action counting, meaning counting repeated movement without assuming a fixed action category: it targets the gap between short, clean benchmark clips and longer human videos with pauses, speed changes, and only coarse count labels.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "TransRAC improves repetitive action counting in realistic long videos by turning repeated motion into a time-localized density signal derived from multi-scale self-comparison of the video.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E6",
+        "E9"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Imagine watching the same exercise video through several differently paced rulers, marking where the motion lines up with itself, then adding the marks to get the final count.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the controlled RepCount-A comparison plus ablations showing that the proposed correlation and density-map choices each move the same metrics in the intended direction.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E11",
+        "E14",
+        "E15"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C1: RepCount compared with UCFRep and Countix; baseline datasets have shorter clips and coarser labels; metrics are video count, duration, count range, and annotations; delta is 1,451 videos with 19,280 cycle annotations and longer average duration; support status direct dataset evidence.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C2: RepCount Part-A training and test; closest listed baseline is Huang et al.; MAE drops from 0.5267 to 0.4431 and OBO rises from 0.1589 to 0.2913; support status positive but no variance reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: RepCount Part-A ablations; baselines are TSM correlation, classifiers, and single-scale variants; self-attention, density-map regression, and multi-scale fusion all improve MAE or OBO; support status positive but controlled only within the authors' setup.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E14",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "Trust is bounded by the fixed-frame inference policy, missing uncertainty reporting, and paper-shown failures when multiple people move or most repetitions are concentrated in one part of a long clip.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E10",
+        "E13"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "we introduce a new large-scale repetitive action counting dataset covering a wide variety of video lengths, along with more realistic situations where action interruption or action inconsistencies occur in the video.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "1. Introduction",
+      "locator": "Restricted video length paragraph",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "The previous datasets typically contain only short videos (e.g., 0.4-30 s), however, methods are likely to be deployed to long videos in real scenarios.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1. Introduction",
+      "locator": "Inadequate annotations paragraph",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "the number of repetitive actions in a video is simply labeled as a numerical value. Although the count number serves as an ultimate predictive goal, such coarse-grained annotation deprives the interpretability of the algorithm.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "3. Our Proposed Dataset",
+      "locator": "Table 1 and Dataset statistics",
+      "claim_type": "background",
+      "evidence_type": "metadata",
+      "snippet": "we provide 1,451 videos collaborated with 19,280 annotations. The videos from our dataset have an average length of 39.359 seconds, which is 4-5 times the length of videos from other datasets.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "3. Our Proposed Dataset",
+      "locator": "Dataset annotation",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "each individual video is assigned to two volunteers; ii) start and end time of every action cycle are labeled; iii) the annotations are cross-validated by comparing that from two volunteers",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "4. TransRAC Model",
+      "locator": "Model overview and Figure 3",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "TransRAC that contains three stages: the encoder, temporal correlation, and period predictor. The video subsequences V are fed into the encoder, then the output X is used to calculate the correlation matrix C",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "4.1. Encoder",
+      "locator": "Video sequences of multi-scale",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "We extract three scale subsequences from the video: single-frame, 4-frames, and 8 frames indicating the video subsequence of multi-scale (V) in Fig. 3.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "4.2. Temporal correlation and Self-attention",
+      "locator": "Self-attention paragraph",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "We use 4-heads with 512 dimensions (not eight heads which is more usual) and multi-scale embeddings to calculate the correlation. Therefore, after the self-attention layer, concatenating three scales' features into one",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "4.3 Period Predictor and 4.4 Losses",
+      "locator": "Density map and Losses",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "We use the density map predicto as our period predictor. The density map contains the global information of the entire video. Each row of the density map indicates the frame's position in the local cycle",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "5.2. Implementation Details and 4.5 Inference",
+      "locator": "Implementation Details; Inference",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "The encoder, Video Swin Transformer tiny, was pre-trained on the Kinetics400... the parameters of the pre-trained encoder were frozen during the training process. We train our remaining layers of the model for 16K steps",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "5.4. Evaluation and Comparison",
+      "locator": "Table 2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2. Performance of different methods on RepCount part-A test when trained on the same train set of RepCount. Huang et al.: MAE 0.5267, OBO 0.1589; Ours: MAE 0.4431, OBO 0.2913.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "5.4. Evaluation and Comparison",
+      "locator": "Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Performance of different methods on RepCount part-B and UCFRep when trained on the same train set of RepCount part-A. RepNet: 0.9994/0.0025 and 0.9985/0.009; Ours: 0.7839/0.091 and 0.6401/0.324.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "5.4. Evaluation and Comparison",
+      "locator": "Figure 5 bad cases",
+      "claim_type": "limitation",
+      "evidence_type": "case_study",
+      "snippet": "there still are some failure cases... because there is more than one person moving in the video. The failure case on the bottom indicates that the frame extracting strategy could diminish the performance.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "5.5. Ablation Studies",
+      "locator": "Table 4",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Table 4. Result of our model applying different correlation matrix when trained on training set of RepCount part-A. TSM: MAE 0.5678, OBO 0.2251. Self-attention (Ours): MAE 0.4431, OBO 0.2913.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "5.5. Ablation Studies",
+      "locator": "Table 5",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Table 5. ResNet + CLS: MAE 0.9950, OBO 0.0134; ResNet + DM: MAE 0.6905, OBO 0.0811; Ours (Scale-4): MAE 0.5434, OBO 0.2649; Ours (Multi): MAE 0.4431, OBO 0.2913.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "A. Extra experiments",
+      "locator": "A.1 Density map and A.2 Sample rate",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The density map generated by the mean in the mid-frame has the best effort. Experimental results show that increasing video frames can improve the performance of density maps to a certain extent",
+      "confidence": "medium"
+    },
+    {
+      "id": "E17",
+      "section": "B. Dataset description",
+      "locator": "B.2 Open-set setting and Table 9",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "For Open-set setting, the action types in train/val/test are disjoint, where the actions in the test set do not appear in the training set. Table 9 reports Huang et al. 1.0000/0.0000 and Ours 0.6249/0.2040.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E18",
+      "section": "A.5. Compare to action segmentation",
+      "locator": "Supplementary A.5",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "action segmentation is to segment the temporal bound for different types of actions but repetitive action counting aims to count the number of repetitive action... action segmentation can only address predefined action types",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Repetitive action counting asks a vision model to watch a video and estimate how many cycles of the same human movement occur. A cycle is a complete repeat of the motion, and temporal correlation means comparing moments in time to find that repeating rhythm.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A workout video does not always look like a metronome. People pause, slow down, speed up, and drift in and out of clean motion, so the model must count repeats rather than just recognize the activity.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Short clips can hide this difficulty because a fixed sampling pattern often catches enough of the movement. Longer, messier clips make fast actions easy to miss and slow actions wasteful to sample densely.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Compare the video with itself at several temporal scales, then predict where cycles occur over time and sum that signal into a count.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that repetitive action counting is useful for human-centric video analysis, but existing benchmarks understate the real problem because they focus on short videos and aggregate count labels. The stakes are practical robustness and interpretability: a model can get a final number roughly right while placing the implied cycles at the wrong times.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior repetitive-counting datasets are presented as too clean: they largely lack interruption, within-video speed variation, long-range clips, and start/end labels for each cycle. That gap blocks both harder evaluation and training objectives that care where cycles occur.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The core insight is that repetition can be treated as self-similarity over time: if the same motion phase recurs, video features from those moments should correlate, and this correlation should be measured at multiple temporal scales because actions run at different speeds.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper advances three falsifiable claims about the benchmark, the model, and the design choices.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: RepCount is a more realistic and harder repetitive action counting benchmark because it contains longer videos, fine-grained cycle labels, anomaly cases, and a local-school subset for generalization checks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E4",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: TransRAC outperforms the compared action-recognition, action-segmentation, and repetition-counting baselines on RepCount Part-A and transfers better than RepNet to RepCount Part-B and UCFRep when trained on Part-A.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: The model's self-attention temporal correlation, density-map period predictor, and multi-scale subsequences each contribute measurable performance gains in the authors' ablations.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14",
+                "E15",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "TransRAC samples a video into short clips, embeds them with a Video Swin Transformer, a transformer-style video encoder that uses windowed attention over space and time, computes self-attention correlation matrices, and regresses a density map, a time-series whose integral estimates the repetition count. The count is obtained by summing predicted density values rather than directly classifying a count bin.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E8",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_flow",
+          "label": "Data / Control Flow",
+          "text": "Input frames are converted into single-frame, four-frame, and eight-frame subsequences; each scale is encoded, spatially pooled, compared with itself through query-key dot-product attention, concatenated across scales and heads, then passed to the period predictor. At inference, the model samples a fixed number of frames, pads short videos, predicts the density sequence, and linearly sums it into the final count.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E8",
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The major choices all convert the same idea into tractable supervision: compare time positions to expose repetition, keep multiple temporal receptive fields for fast and slow motions, and predict a localizable density map because the dataset supplies cycle boundaries.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "design_decision_multiscale",
+              "label": "",
+              "text": "Need: fixed sampling can miss fast actions or waste compute on slow ones; design choice: three temporal clip scales; closest reported alternative: single-scale columns; tradeoff: more feature extraction and fusion for better coverage of variable periods.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_attention_correlation",
+              "label": "",
+              "text": "Need: count repeated phases rather than only recognize action class; design choice: dot-product self-attention as a temporal correlation matrix; closest reported alternative: Temporal Self-similarity Matrix using squared Euclidean distance; tradeoff: better reported metrics but transformer-like quadratic pairwise comparison.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_density",
+              "label": "",
+              "text": "Need: count labels alone do not say where repeats occur; design choice: density-map regression from Gaussianized cycle labels; closest reported alternative: classifier-style count predictors; tradeoff: more annotation demand for better localization and reported accuracy.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E9",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation uses PyTorch, a Video Swin Transformer tiny encoder pretrained on Kinetics400, frozen encoder parameters during training because of GPU memory limits, a transformer hidden dimension of 512, Adam optimization, batch size 16, and 16K training steps. The paper reports no post-processing for accuracy at inference, and the provided text points to code for additional details rather than fully specifying scripts or hardware.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The main evaluation trains on RepCount Part-A and tests on RepCount Part-A, RepCount Part-B, and UCFRep; the paper also reports an open-set split where test action types are disjoint from train and validation. Metrics are Off-By-One (OBO), the fraction of videos counted within one repetition, and Mean Absolute Error (MAE), normalized absolute count error where lower is better.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest where the paper controls training data and compares directly against named baselines, and weakest where it lacks repeat counts, variance, or hardware-normalized cost.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "claim_matrix_c1",
+              "label": "",
+              "text": "Supports C1: dataset statistics and annotation protocol directly show larger average duration, more fine-grained labels, Part-A/Part-B sources, and per-cycle start/end labeling, but privacy and bias are acknowledged only broadly.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "claim_matrix_c2",
+              "label": "",
+              "text": "Supports C2: Table 2 and Table 3 report better MAE and OBO than the compared methods on RepCount-A, RepCount-B, and UCFRep, with Part-B and UCFRep serving as no-fine-tuning transfer checks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "claim_matrix_c3",
+              "label": "",
+              "text": "Supports C3: Table 4 isolates correlation choice, Table 5 compares density-map and scale variants, and the supplement adds density-position and sampling-rate sensitivity.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14",
+                "E15",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "On RepCount Part-A, TransRAC reports the best listed MAE and OBO under the shared training setup, and on transfer tests it substantially beats RepNet while still leaving large absolute error on Part-B. In the open-set split, it beats the action-segmentation comparison, supporting the claim that repetitive counting is not just temporal segmentation over known action classes.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E17",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "headline_result_repcount_a",
+              "label": "",
+              "text": "RepCount-A: TransRAC reports MAE 0.4431 and OBO 0.2913, versus the closest listed baseline Huang et al. at MAE 0.5267 and OBO 0.1589; uncertainty is not reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_transfer",
+              "label": "",
+              "text": "Transfer: training on Part-A, TransRAC reports MAE/OBO of 0.7839/0.091 on Part-B and 0.6401/0.324 on UCFRep, compared with RepNet's 0.9994/0.0025 and 0.9985/0.009.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_open_set",
+              "label": "",
+              "text": "Open-set: with disjoint action types across splits, TransRAC reports MAE 0.6249 and OBO 0.2040, while the action-segmentation baseline reports MAE 1.0000 and OBO 0.0000.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations support the main design but also reveal sensitivity to sampling and density target placement: self-attention beats TSM, density maps beat classifier variants, multi-scale fusion beats each single-scale variant, mid-frame Gaussian targets are best among tested density placements, and more sampled frames help the single-scale density model. These are useful controlled checks, but they do not report statistical uncertainty or resource budgets.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E14",
+            "E15",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper states that dataset and code are available and gives key hyperparameters, but the provided text does not report random seeds, repeated-run variance, confidence intervals, exact hardware, runtime, memory footprint, or full preprocessing scripts. Because the encoder is frozen due to GPU memory limits, missing hardware and memory details matter for reproducing both performance and efficiency claims.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E10"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The paper's strongest technical move is aligning supervision, representation, and task structure: per-cycle labels justify density-map regression, temporal self-comparison matches periodicity, and multiple clip scales address variable action speed. The ablations are directionally consistent with this story rather than only showing a monolithic final model.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9",
+            "E14",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The clearest failure boundary is videos where the sampled frames do not preserve the temporal distribution of repetitions, especially long clips with most action concentrated in one segment, or scenes with more than one moving person. Benefits may also diminish when fine-grained cycle labels are unavailable, since the density target is built from those labels.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E10",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Relative to RepNet-style repetition counting, TransRAC shifts from count-oriented prediction toward temporal localization through density regression and self-attention correlation. Relative to action segmentation, which labels contiguous spans of known action types, it targets repeated-cycle counting regardless of action category, which explains the open-set comparison.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E14",
+            "E15",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "When a task asks for a global count of repeated events, it can be better to supervise a local time-density signal and then sum it, provided the dataset can label event locations. Multi-scale self-comparison is a reusable pattern for turning variable-speed temporal structure into a countable representation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E8",
+            "E9"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_repetitive_action_counting",
+      "term": "repetitive action counting",
+      "aliases": [
+        "RAC",
+        "repetition counting"
+      ],
+      "note": "Estimating how many complete cycles of a repeated human motion appear in a video; unlike action recognition, the target is count over time."
+    },
+    {
+      "id": "g_action_cycle",
+      "term": "action cycle",
+      "aliases": [
+        "period",
+        "motion period"
+      ],
+      "note": "One complete repetition of the motion; RepCount annotates each cycle by start and end time."
+    },
+    {
+      "id": "g_temporal_correlation",
+      "term": "temporal correlation",
+      "aliases": [
+        "auto-correlation",
+        "self-similarity"
+      ],
+      "note": "A comparison between time positions in the same video feature sequence; repeated motion phases should show stronger correlation."
+    },
+    {
+      "id": "g_self_attention",
+      "term": "self-attention",
+      "aliases": [
+        "dot-product attention",
+        "query-key attention"
+      ],
+      "note": "A transformer operation that compares each feature position with other positions through query and key vectors; TransRAC uses it as the temporal correlation matrix."
+    },
+    {
+      "id": "g_multiscale_temporal_input",
+      "term": "multi-scale temporal input",
+      "aliases": [
+        "Scale-1",
+        "Scale-4",
+        "Scale-8"
+      ],
+      "note": "Parallel subsequences spanning different numbers of frames, used so the model can observe both fast and slow repetitions."
+    },
+    {
+      "id": "g_density_map",
+      "term": "density map",
+      "aliases": [
+        "DM",
+        "period density"
+      ],
+      "note": "A one-dimensional time signal whose values indicate where repetitions occur; summing the values gives the predicted count."
+    },
+    {
+      "id": "g_gaussianization",
+      "term": "Gaussianization",
+      "aliases": [
+        "Gaussian density target"
+      ],
+      "note": "The process of converting annotated cycle boundaries into a smooth density target using a Gaussian function."
+    },
+    {
+      "id": "g_obo",
+      "term": "Off-By-One",
+      "aliases": [
+        "OBO"
+      ],
+      "note": "Evaluation metric counting a video as correct when the predicted count is within one repetition of the ground truth; higher is better."
+    },
+    {
+      "id": "g_mae",
+      "term": "Mean Absolute Error",
+      "aliases": [
+        "MAE"
+      ],
+      "note": "Normalized absolute count error between prediction and ground truth in this paper's evaluation; lower is better."
+    },
+    {
+      "id": "g_open_set",
+      "term": "open-set setting",
+      "aliases": [
+        "disjoint action types"
+      ],
+      "note": "Evaluation where the action types in the test split do not appear in training or validation, testing whether counting transfers beyond seen categories."
+    }
+  ]
+}

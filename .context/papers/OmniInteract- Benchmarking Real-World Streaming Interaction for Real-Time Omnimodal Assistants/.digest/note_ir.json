@@ -1,0 +1,776 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "OmniInteract: Benchmarking Real-World Streaming Interaction for Real-Time Omnimodal Assistants",
+    "summary": "OmniInteract turns real-time audio-visual assistance into a measurable benchmark by preserving spoken queries and stream timing, showing that current omnimodal assistants still struggle with when to speak, when to wait, when to stop, and when to resume.",
+    "paper_type": "benchmark",
+    "venue": "arXiv preprint 2026",
+    "authors": "Xudong Lu (CUHK MMLab), Xueying Li (SJTU), Annan Wang (NTU), Yang Bo (McMaster), Jinpeng Chen (CityUHK), Zengliang Li (JUFE), Nianzu Yang (SJTU), Rui Liu (CUHK MMLab), Xue Yang (SJTU), Jingwen Hou (JUFE), Hongsheng Li (CUHK MMLab)",
+    "keywords": [
+      "omnimodal assistants",
+      "streaming interaction",
+      "audio-visual benchmark",
+      "full-duplex interaction",
+      "response timing",
+      "interruption handling",
+      "nested interaction",
+      "1QnA monitoring"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as an evaluation paper for real-time omnimodal large language models, systems that process vision, audio, speech, and text together; it targets the gap between recognizing video content offline and managing a live interaction loop.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "OmniInteract benchmarks live audio-visual assistants by converting a continuous stream into timed response opportunities where the model must detect intent, wait for evidence, answer, and control its speech.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E6"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a person helping while watching a video with you: the hard part is not only knowing the answer, but noticing the right cue, speaking at the right time, pausing when interrupted, and returning to unfinished business.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is that four representative native real-time models remain weak on the benchmark, especially on long-horizon monitoring and nested resumption.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E11",
+        "E12",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c1",
+          "label": "",
+          "text": "Supports C1: benchmark comparison; prior streaming benchmarks mainly use text queries, offline inference, or custom protocols; coverage dimensions add spoken audio queries, native online inference, 1QnA, nested interaction, and interruption; support status: direct design comparison.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3",
+          "label": "",
+          "text": "Supports C3: four native real-time models; closest baseline is the best competing model in the same table; All Global IA-QTF1 tops out at 0.368 and best 1QnA IA-QTF1 at 0.052; support status: moderate because no variance or repeat counts are reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c4",
+          "label": "",
+          "text": "Supports C4: MiniCPM-o 4.5 mathematical reasoning; baseline is offline full-input inference; pure quality score drops from 0.6833 to 0.3475, a -0.3358 absolute change; support status: moderate because it covers one model and task family.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The benchmark is informative but not yet broad enough to establish general real-time assistant capability across languages, domains, model families, or speech conditions.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E15"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We introduce OmniInteract, a streaming benchmark for real-time omnimodal large language models evaluated through native online inference over audio-visual streams. Unlike offline video understanding or text-prompted streaming QA, OmniInteract preserves the original audio-visual stream and requires models to process it online, without access to future content.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1 and Table 1",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing benchmarks are evaluated on pre-segmented video clips with offline inference, or rely on custom streaming protocols distinct from the models' native real-time inference. As a result, they only partially evaluate the interaction loop required by native real-time assistants.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "OmniInteract Benchmark",
+      "locator": "Section 3.1 and Table 2",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "The 1Q1A split contains 1,062 response slots across real-time, proactive, and nested interactions, while 1QnA contains 368 response slots. The 147 interruptions in 1Q1A and 45 interruptions in 1QnA are annotated as cross-cutting cases within these splits.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Data Curation",
+      "locator": "Section 3.2",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We self-record 210 videos in two groups of scenarios. The first group covers daily-life interactions in Chinese, including home activities, gym exercises, museums, shopping, and other common situated interactions (150 videos). The second group covers English mathematical problem-solving.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Data Curation",
+      "locator": "Section 3.2",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "For the 1QnA split, we construct continuous monitoring instances from existing procedural and task-oriented video benchmarks (40 videos), including live step-by-step task guidance and egocentric error detection.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Slot Construction and Chunk Matching",
+      "locator": "Section 3.3.1",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Continuous streams do not provide explicit turn boundaries, so we discretize evaluation into interaction slots: slot=[t_start,t_a,t_end), where t_start is the onset of observation, t_a is the earliest moment for a valid core response, and t_end is the window's close.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Interaction-Aware Scoring",
+      "locator": "Section 3.3.2",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "A false positive (FP) aggregates four unwarranted behaviors: 1) unmatched chunks, 2) early hallucinations, 3) low-quality responses, and 4) spill, where output exceeds the boundary t_end to disrupt conversational continuity.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Extended Metrics",
+      "locator": "Section 3.3.3",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "IDS addresses this gap with three complementary diagnostics: No-Output Rate (NOR), the proportion of interrupted slots with no model output for the preempted query; Partial Answer Quality (PAQ), an LLM-judged usefulness score for already-spoken content without incompleteness penalties; and Conditional Spill Metrics (CSM).",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments",
+      "locator": "Section 4 and 4.1",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "During inference, each recording is replayed chronologically to the model through its native real-time interface, so that frames and audio are exposed only according to their original timestamps. The model can therefore condition on past and current inputs, but cannot access future video frames, future audio, or ground-truth slot boundaries.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "1Q1A Interaction",
+      "locator": "Section 4.2 and Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "For explicit real-time queries, Gemini obtains the best score (0.553), followed by Qwen3.5-Omni (0.524). In contrast, proactive interaction favors MiniCPM-o (0.607) and AURA (0.549).",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "1Q1A Interaction",
+      "locator": "Section 4.2 and Table 4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "MiniCPM-o achieves the best NCCS of 0.284, followed by AURA at 0.270. Although Gemini and Qwen3.5-Omni answer many inner queries correctly, they fail to resume the outer query in 119 and 116 of 120 cases, respectively.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "1QnA Interaction",
+      "locator": "Section 4.3 and Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "All models perform substantially worse on 1QnA than on 1Q1A. AURA obtains the highest IA-QTF1 score of 0.052, but the absolute score remains low.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "More Interruption Analyses",
+      "locator": "Section 4.4 and Table 5",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "MiniCPM-o shows the opposite pattern: it responds more often, with a lower NOR of 53.65% and the best PAQ of 0.571, but spills severely when it responds, with CSM of 83.15% and 10.067 s.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Full-duplex Capability Degradation",
+      "locator": "Section 4.5 and Table 6",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "MiniCPM-o drops from 0.6833 offline to 0.3475 online, an absolute decrease of 0.3358. This suggests that continuous listening, visual processing, and concurrent response generation can substantially degrade reasoning quality.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "Limitations",
+      "locator": "Limitations",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "First, we evaluate four representative models, but the landscape of omnimodal systems is evolving rapidly. Second, the online capability degradation analysis is limited to MiniCPMo on mathematical reasoning tasks. Third, the 1QnA split uses TTS-synthesized speech for initial instructions.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "LLM Judge Evaluation Protocol",
+      "locator": "Appendix A.4",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "All open-ended answer assessments use GPT-4o as an external judge to avoid evaluator bias from the tested models. Core-stage assessment receives: (1) the ground-truth target answer, (2) the concatenated model-generated chunks within the core segment, and (3) a structured instruction.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Some assistants now combine video, sound, speech, and text in one system. A live assistant must treat the world as a stream, not as a finished clip.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A person may ask a question aloud, point the camera somewhere, get interrupted, or wait for something to happen. The assistant has to decide whether now is the moment to speak.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The evidence arrives over time, and speaking too early can be as wrong as saying the wrong thing. The assistant must also remember paused requests while handling new ones.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Mark the moments when a response becomes possible, then judge both the answer and the timing around those moments.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that offline video question answering and text-prompted streaming tests miss the live interaction loop of omnimodal large language models, systems that combine visual, audio, speech, and text inputs. The stake is whether a model can detect spoken intent, ground it in unfolding audio-visual evidence, answer at the right time, and avoid disruptive outputs.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior streaming video benchmarks often keep the video stream but remove the natural query channel by giving text prompts, or they evaluate pre-segmented clips rather than the model's native real-time interface. This decouples perception from spoken intent recognition, timing control, interruption handling, and context resumption.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "A continuous interaction can be evaluated if each expected response is represented as a temporally grounded response opportunity (interaction slot) with a trigger, the first valid answer time, the window close, and a target answer. That turns fuzzy live dialogue into aligned decisions about whether, when, and what to say.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's claim chain is best read as four falsifiable claims about benchmark coverage, scoring, model weakness, and offline-online transfer.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: OmniInteract covers a missing evaluation setting by preserving spoken audio queries, visual events, ambient sounds, native online inference, 1Q1A local interactions, 1QnA continuous monitoring, nested interactions, and interruptions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E2",
+                "E3"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: The interaction slot formulation plus Interaction-Aware Quality-Timeliness F1 (IA-QTF1), Interruption Diagnostic Suite (IDS), and Nested Chain Completion Score (NCCS) makes content quality, timing, spillover, interruption behavior, and resumption measurable in one benchmark.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Current native real-time omnimodal models are weak on this setting, with the best All Global IA-QTF1 reaching 0.368 and the best 1QnA IA-QTF1 reaching only 0.052.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: Offline multimodal reasoning quality does not reliably transfer to full-duplex real-time interaction, where a model listens and generates at the same time; MiniCPM-o 4.5 loses 0.3358 pure-quality points in the paper's online math setting.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "OmniInteract's core mechanism is the interaction slot: a time window from observation start to window close, with an answer becoming valid at a specific moment inside it. Generated chunks are assigned to slots by timestamp, split around the valid-answer time when necessary, and then scored for answer quality and timing.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The benchmark flow is: construct audio-visual recordings, annotate slots, replay each recording chronologically through the model's native real-time interface, timestamp model chunks, align chunks to slots, and score each slot. The model receives only past and current stream content, not future frames, future audio, or slot boundaries.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_1q1a",
+              "label": "",
+              "text": "The 1Q1A split is self-recorded and covers explicit real-time queries, proactive requests whose evidence appears later, and nested cases where an inserted query interrupts an ongoing proactive request.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_1qna",
+              "label": "",
+              "text": "The 1QnA split converts procedural or task-oriented videos into one initial spoken instruction followed by multiple timed response slots for guidance or error detection.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_scoring",
+              "label": "",
+              "text": "Open-ended outputs are judged against ground-truth answers, with the judge also identifying the earliest answer-bearing phrase used to compute the timeliness factor.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The benchmark chooses native audio-visual replay over converted text QA, slot-level annotation over free-form transcript review, and targeted diagnostics over one aggregate score. These choices make the benchmark harder to run but closer to the behavior expected from a live assistant.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E2",
+            "E6",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_audio_queries",
+              "label": "",
+              "text": "Need: test whether intent can be recognized from the stream; choice: keep user queries in the audio track; alternative: external text prompts; tradeoff: more realistic but more sensitive to speech recognition and audio conditions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E2",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_slots",
+              "label": "",
+              "text": "Need: score continuous streams without fixed turns; choice: annotate each response slot with trigger, valid-answer moment, window close, and target answer; alternative: answer-only accuracy; tradeoff: more annotation burden but captures timing failures.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_diagnostics",
+              "label": "",
+              "text": "Need: distinguish silence, useful partial answers, spillover, and failed resumption; choice: add IDS and NCCS beside IA-QTF1; alternative: one global F1; tradeoff: clearer diagnosis but more judge and timestamp dependence.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E11",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation surface implied by the paper includes replaying audio and frames through each model's native real-time interface, capturing timestamped output chunks, running slot alignment, and using external judge prompts for semantic scoring. The paper promises public code and datasets, but the provided text does not establish released artifact state, hardware budgets, or run-script completeness.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E9",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The experiments test AURA, Gemini 2.5 Flash Live, MiniCPM-o 4.5, and Qwen3.5-Omni Flash Realtime under chronological replay through their native real-time pipelines. GPT-4o is used as an external semantic judge for open-ended answers, while timing and slot alignment are computed from replay timestamps.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence most directly supports the benchmark-definition claims, moderately supports model-performance claims, and weakly supports broad generalization beyond the tested models, domains, and languages.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E10",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1 is supported by the benchmark comparison and dataset composition: OmniInteract adds spoken audio queries, native online inference, 1QnA monitoring, nested slots, and interruption cases relative to prior categories.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E2",
+                "E3"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2 is supported by formal slot definitions and metric definitions for soft true positives, false positives, no-output rate, partial answer quality, conditional spill, and nested chain completion.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3_c4",
+              "label": "",
+              "text": "C3 and C4 are supported by reported model tables, but the support is bounded because the paper reports point estimates rather than statistical uncertainty, and the offline-online degradation analysis is limited to MiniCPM-o 4.5 mathematical reasoning.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10",
+                "E12",
+                "E14",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is not a single winning model but a pattern: models that do reasonably on explicit real-time queries still fail on monitoring, resumption, interruption control, or online reasoning. MiniCPM-o has the best All Global IA-QTF1 at 0.368, while AURA has the best 1QnA IA-QTF1 at only 0.052.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E12",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_1q1a",
+              "label": "",
+              "text": "Supported claim: explicit questions are easier than proactive monitoring for some models; configuration: 1Q1A categories; baseline: other tested models; metric: IA-QTF1; direction: Gemini leads real-time at 0.553, MiniCPM-o leads proactive at 0.607; caveat: no uncertainty reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_nested",
+              "label": "",
+              "text": "Supported claim: local inner-query answering does not guarantee outer-task resumption; configuration: 120 nested pairs; baseline: other tested models; metric: NCCS and missed outer count; direction: Gemini and Qwen3.5-Omni miss 119 and 116 outer resumptions; caveat: benchmark-specific pair design.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_interruption_online",
+              "label": "",
+              "text": "Supported claim: interruption behavior has a quality-control tradeoff; configuration: interrupted slots and MiniCPM-o math comparison; metrics: NOR, PAQ, CSM, pure quality score; direction: MiniCPM-o gives better partial answers but spills more, and online reasoning drops by 0.3358; caveat: one full-duplex model in the degradation test.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "Not applicable: no controlled ablation or statistical sensitivity study is reported; the paper instead provides diagnostic breakdowns by interaction type, interruption behavior, nested resumption, and offline-online setting.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper gives useful reuse hooks, including data-license notes and judge prompt templates, and says code and datasets will be public. Missing trust fields in the provided text include confirmed released repository state, exact hardware/resource budgets, repeat counts, confidence intervals, and end-to-end scripts for all native model interfaces.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E15",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The benchmark's main technical contribution holds up because it evaluates the whole live loop rather than only answer correctness: spoken-query recognition, temporal grounding, answer content, spillover, interruptions, and resumption are all represented in the scoring design. The case is strongest for defining a benchmark gap and weakest for ranking model families definitively.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E6",
+            "E7",
+            "E8",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_may_fail",
+          "label": "Where It May Fail",
+          "text": "Generality may fail when moving beyond the covered languages, domains, speech styles, and model set, especially because 1QnA uses synthesized initial instructions and the full-duplex degradation study is limited to one open-source model on mathematical reasoning. The judge-based scoring also makes semantic evaluation depend on prompt stability and external model behavior.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E15",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Relative to offline and text-prompted streaming video benchmarks, OmniInteract shifts the evaluation axis from understanding a video to managing a spoken, audio-visual interaction over time. Relative to full-duplex voice benchmarks, it adds visual grounding and temporally annotated response opportunities rather than focusing only on speech turn-taking.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For streaming-agent evaluation, expose the hidden control problem by annotating when an answer becomes valid and when it becomes disruptive. A benchmark that scores only final answer text can miss the failures that make a live assistant unusable.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_omnimodal_llm",
+      "term": "omnimodal large language model",
+      "aliases": [
+        "omnimodal LLM",
+        "omni-modal model"
+      ],
+      "note": "A model family that handles multiple interaction channels, especially vision, audio, speech, and text, in one system."
+    },
+    {
+      "id": "g_online_streaming_inference",
+      "term": "online streaming inference",
+      "aliases": [
+        "native online inference",
+        "real-time inference"
+      ],
+      "note": "Running the model as the audio-visual stream unfolds, so it can use past and current inputs but not future content."
+    },
+    {
+      "id": "g_interaction_slot",
+      "term": "interaction slot",
+      "aliases": [
+        "slot",
+        "[t_start, t_a, t_end)"
+      ],
+      "note": "A temporally grounded response opportunity with an observation start, earliest valid answer time, window close, and target answer."
+    },
+    {
+      "id": "g_1q1a",
+      "term": "1Q1A",
+      "aliases": [
+        "single-response interaction"
+      ],
+      "note": "A setting where one trigger corresponds to one expected answer; OmniInteract includes real-time, proactive, and nested variants."
+    },
+    {
+      "id": "g_1qna",
+      "term": "1QnA",
+      "aliases": [
+        "continuous monitoring",
+        "multi-response interaction"
+      ],
+      "note": "A setting where one spoken instruction can require multiple timed responses as a task unfolds."
+    },
+    {
+      "id": "g_full_duplex",
+      "term": "full-duplex real-time interaction",
+      "aliases": [
+        "full-duplex"
+      ],
+      "note": "Interaction where the model processes incoming input while generating output, so listening and speaking overlap."
+    },
+    {
+      "id": "g_ia_qtf1",
+      "term": "Interaction-Aware Quality-Timeliness F1",
+      "aliases": [
+        "IA-QTF1"
+      ],
+      "note": "The paper's global score combining soft true positives for quality and timeliness with penalties for missing or disruptive outputs."
+    },
+    {
+      "id": "g_ids",
+      "term": "Interruption Diagnostic Suite",
+      "aliases": [
+        "IDS",
+        "NOR",
+        "PAQ",
+        "CSM"
+      ],
+      "note": "A diagnostic set separating no output, useful partial answer quality, and conditional spillover during interrupted slots."
+    },
+    {
+      "id": "g_nccs",
+      "term": "Nested Chain Completion Score",
+      "aliases": [
+        "NCCS"
+      ],
+      "note": "A geometric-mean score for nested interactions that requires both the inserted inner answer and resumed outer answer to be correct."
+    },
+    {
+      "id": "g_spillover",
+      "term": "spillover",
+      "aliases": [
+        "spill"
+      ],
+      "note": "Model output that continues beyond a slot boundary and can disrupt the next interaction context."
+    }
+  ]
+}

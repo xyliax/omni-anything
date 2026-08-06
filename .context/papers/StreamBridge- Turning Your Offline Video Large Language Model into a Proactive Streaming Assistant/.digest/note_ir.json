@@ -1,0 +1,877 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "title": "StreamBridge: Turning Your Offline Video Large Language Model into a Proactive Streaming Assistant",
+    "summary": "StreamBridge adapts offline Video-LLMs into streaming assistants by buffering interleaved frame/text embeddings, compressing old visual tokens, and using a lightweight external activation model, improving multi-turn and proactive video interaction while mostly preserving offline video understanding.",
+    "paper_type": "system",
+    "venue": "NeurIPS 2025; arXiv:2505.05467v2",
+    "authors": "Haibo Wang (Apple, Fudan University), Bo Feng (Apple), Zhengfeng Lai (Apple), Mingze Xu (Apple), Shiyu Li (Apple), Weifeng Ge (Fudan University), Afshin Dehghan (Apple), Meng Cao (Apple), Ping Huang (Apple)",
+    "keywords": [
+      "streaming video understanding",
+      "Video-LLM",
+      "online multimodal assistant",
+      "memory buffer",
+      "token compression",
+      "proactive response",
+      "Stream-IT",
+      "activation model"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this for a practical adaptation recipe: keep a strong offline Video-LLM, add streaming state/compression, and separate proactive timing into a small side model. It is also useful for understanding why many nominal streaming evaluations reduce to single-turn offline QA.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E3",
+        "E4",
+        "E10"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "StreamBridge turns offline Video-LLMs into 1-FPS multi-turn and proactive streaming assistants by buffering interleaved embeddings, round-decay-compressing old visual tokens, using an external activation classifier, and fine-tuning on Stream-IT.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E4",
+        "E7",
+        "E8"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Think of it as a video-chat event loop: an encoder keeps appending frames to a rolling notebook, a janitor compresses old pictures first, and a small alarm model decides when the large narrator should speak.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest support is the triangle of cross-model streaming gains, proactive ET-Bench generation results, and compression/latency ablations.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E12",
+        "E13",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_streaming",
+          "label": "",
+          "text": "C1: Qwen2-VL-7B + StreamBridge + Stream-IT at 1 FPS reaches OVO/Streaming averages 71.30/77.04 versus its offline single-turn 55.98/69.04 and GPT-4o 64.46/73.28; uncertainty is not reported and evaluation modes differ.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_proactive",
+          "label": "",
+          "text": "C3: On ET-Bench, Qwen2-VL under StreamBridge improves generation-based DVC/SLC over VideoLLM-Online and Dispider, e.g. DVC_F1 38.3 versus 24.0/33.8; timing localization is not best versus Dispider.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_compression",
+          "label": "",
+          "text": "C4: Round-decayed compression beats truncation and round-uniform on OVO/Streaming/ET similarities and keeps A100 latency near-constant beyond MaxLen, whereas no compression OOMs at 2048 frames.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "Generality beyond the paper's 1-FPS, mostly visual-only benchmark setting remains uncertain: Stream-IT is partly synthetic/concatenated, very long videos are capped by uniform sampling, and code/data/repeat information is not fully reported in the provided text.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E16",
+        "E17"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We present StreamBridge, a simple yet effective framework that seamlessly transforms offline Video-LLMs into streaming-capable models. It addresses two fundamental challenges: limited capability for multi-turn real-time understanding, and lack of proactive response mechanisms. StreamBridge incorporates a memory buffer with round-decayed compression, and a decoupled lightweight activation model.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, opening paragraphs and Figure 1 discussion",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "Video Large Language Models typically process entire pre-recorded videos at once. However, emerging applications, such as robotics and autonomous driving, require causal perception and interpretation of visual information online. Figure 1 highlights two representative patterns: multi-turn real-time understanding and proactive response generation.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Methodology - Preliminary Analysis",
+      "locator": "Section 3.1",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "For a query Q_i at time t_i, the visual input is restricted to the uniformly sampled frames under segment V_[0:t_i], and prior dialogue history is completely discarded. As a result, the multi-turn streaming scenario is reduced to a series of independent, single-turn offline tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Methodology - StreamBridge",
+      "locator": "Section 3.2 and Algorithm 1",
+      "claim_type": "system_design",
+      "evidence_type": "paper_statement",
+      "snippet": "StreamBridge proposes three key components to enable streaming capabilities: a memory buffer responsible for storing and retrieving frame tokens over time, a round-decayed compression strategy that efficiently prunes redundant tokens from earlier rounds while preserving the most recent context, and a compact activation model that enables proactive responses.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Methodology - Memory Buffer",
+      "locator": "Section 3.2.1",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "Each incoming frame is independently encoded and appended to the buffer alongside any associated query embeddings. Upon the arrival of a user query and a positive activation decision, the buffer content, including both visual and textual embeddings, is flattened into a single sequence of input embeddings and fed into the LLM; the response is also appended.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Methodology - Round-Decayed Compression",
+      "locator": "Section 3.2.2",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "Before each response generation, the model checks whether the current input embedding exceeds MaxLen. If so, starting from the earliest dialogue rounds, visual tokens are progressively merged frame-by-frame until the total length falls below MaxLen. The merging is implemented via average pooling over adjacent frame tokens, preserving recent visual context.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Methodology - Plug-and-play Activation Model",
+      "locator": "Section 3.2.3, Figure 3, Appendix A",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The activation model uses a compact external MLLM such as LLaVA-OV-0.5B. The standard LM head is replaced with a score head for binary classification, and a learnable <ACT> token is appended to visual embeddings. A score above threshold alpha triggers response generation. Training labels only the last P% frames positive, with P sampled 0%-50%; Appendix A reports about 180k video samples.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Stream-IT Dataset",
+      "locator": "Section 4 and Appendix B",
+      "claim_type": "other",
+      "evidence_type": "paper_statement",
+      "snippet": "Stream-IT is designed for streaming instruction tuning with interleaved multi-turn dialogue. StreamingQA-120K filters approximately 1.28 million clips from WebVid-10M, Panda-70M, and InternVid-10M; each constructed video contains roughly 10 clips with average length exceeding 150 seconds. GPT-4o generates QA pairs across 8 task types, with Random QA Drop 0.55 and QA Interval Shift 0.1.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments - Settings",
+      "locator": "Section 5.1 and Appendix D",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "The framework is evaluated using LLaVA-OV-7B, Qwen2-VL-7B, and Oryx-1.5-7B. Stream-IT is supplemented with approximately 600K samples from LLaVA-178K, VCG-Plus, and ShareGPT4Video. The activation model is LLaVA-OV-0.5B, videos are sampled at 1 FPS, OVO/Streaming use multiple-choice accuracy, and ET-Bench uses F1 and sentence-level similarity.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Experiments - Main Results",
+      "locator": "Section 5.2, Table 1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Qwen2-VL under StreamBridge improves average OVO-Bench from 55.98 to 63.35 and Streaming-Bench from 69.04 to 72.01. LLaVA-OV shows a slight drop from 64.02 to 61.64 and 71.12 to 68.39. Fine-tuning gives Oryx-1.5 gains of +11.92 and +4.2. Qwen2-VL + Stream-IT reaches 71.30 on OVO and 77.04 on Streaming, outperforming GPT-4o and Gemini 1.5 Pro.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "Experiments - Main Results",
+      "locator": "Section 5.2, Table 2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2: Oryx-1.5-7B (ours) gets VideoMME 65.5, an increase of 6.7. LLaVA-OV-7B (ours) improves MVBench 56.7 to 59.4, PerceptionTest 57.1 to 63.9, EgoSchema 60.1 to 67.0, but LongVideoBench 56.3 to 54.3. Qwen2-VL (ours) is 64.4 on MVBench versus 67.0 base and 64.4 VideoMME versus 63.3 base.",
+      "confidence": "high"
+    },
+    {
+      "id": "E12",
+      "section": "Experiments - Main Results",
+      "locator": "Section 5.2, Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On ET-Bench, the question is presented at the beginning and the model must autonomously decide when to respond. Qwen2-VL (ours) reports TVG_F1 34.3, TAL_F1 24.3, DVC_F1 38.3, DVC_Sim 25.1, SLC_F1 22.6, SLC_Sim 17.1. Dispider has TVG_F1 36.1 and TAL_F1 27.3 but lower DVC/SLC generation metrics.",
+      "confidence": "high"
+    },
+    {
+      "id": "E13",
+      "section": "Experiments - In-Depth Analysis",
+      "locator": "Section 5.3, Table 4",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Table 4 compares compression: Truncation scores 68.88/72.79/22.1/16.7; Round-Uniform scores 69.91/74.18/23.8/15.9; Round-Decayed scores 71.30/77.04/25.1/17.1 on OVO Avg., Streaming Avg., DVC_Sim, and SLC_Sim. The text says uniform compression harms latest visual tokens critical for real-time comprehension.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "Experiments - In-Depth Analysis",
+      "locator": "Section 5.3, Figure 4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "The paper evaluates inference latency on a single A100-80G GPU with MaxLen 8k, 16k, and 32k. Its compression method maintains near-constant latency when input tokens exceed MaxLen, whereas models without compression suffer sharply increasing delays and eventually trigger out-of-memory errors with 2048 frames.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "Experiments - In-Depth Analysis",
+      "locator": "Section 5.3, Tables 5 and 6",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Training on LLaVA-178K alone causes a marked drop on OVO-Bench and Streaming-Bench; using only Stream-IT without LLaVA-178K leads to declines in general video understanding; removing StreamingQA-120K degrades both streaming and offline benchmarks. MaxLen ablation shows OVO stable from 70.49 to 71.30, while VideoMME improves from 61.7 at 4k to 64.7 at 32k.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "Appendix C - More Implementation Details",
+      "locator": "Appendix C",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "LLaVA-OV-7B uses 49 tokens per frame; Oryx uses 33-59; Qwen2-VL uses 36-64. Main models are fine-tuned for one epoch with learning rate 2e-5; the image encoder is frozen while projector and LLM are trainable. The activation model pools to 16 tokens per frame. Videos longer than 256 seconds are uniformly sampled to 256 frames; experiments use H100/A100 GPUs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "Appendix G - Limitations",
+      "locator": "Appendix G",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "Stream-IT relies partially on synthetic QA generation and clip concatenation, which may introduce domain shift compared to truly continuous real-world video streams. StreamBridge currently focuses on frame-by-frame streaming under relatively low sampling rates such as 1 FPS; extending to denser frame rates or multi-modal streaming inputs such as audio-visual-text remains future work.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "Experiments - In-Depth Analysis",
+      "locator": "Section 5.3, Figure 5",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The compact activation model makes a per-frame decision with frequency determined by threshold alpha; the default alpha is 0.35. Figure 5 shows both excessively low and high alpha decrease DVC_F1 and SLC_F1: low thresholds trigger overly frequent responses, while high thresholds suppress them excessively.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "Offline Video-LLMs assume full-video access, but online settings need causal, timely, temporally coherent interaction. The paper frames the stakes around two streaming patterns: multi-turn real-time QA over accumulating history and proactive responses without an immediate user prompt.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper argues that existing evaluations often discard prior visual/dialogue history and reduce streaming to independent offline queries, while prior proactive designs tend to entangle timing decisions with the main model. It also claims that existing data lacks long interleaved multi-turn/proactive supervision, motivating Stream-IT.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "Streaming adaptation can be decomposed without rebuilding the base Video-LLM: persist multimodal history as embeddings, spend context budget preferentially on recent frames, and move speaking-time decisions to an external lightweight classifier.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's empirical claims are falsifiable along four axes: multi-turn streaming adaptation, Stream-IT data value, proactive activation, and compression efficiency.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E10",
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "argument_claim_C1",
+              "label": "",
+              "text": "C1: StreamBridge alone equips offline Video-LLMs for multi-turn streaming; Qwen2-VL improves from 55.98 to 63.35 on OVO and 69.04 to 72.01 on Streaming before Stream-IT fine-tuning.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C2",
+              "label": "",
+              "text": "C2: Stream-IT fine-tuning materially improves streaming performance and is intended to retain or improve general video ability; Qwen2-VL+Stream-IT reaches 71.30/77.04 on OVO/Streaming.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E10",
+                "E11",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C3",
+              "label": "",
+              "text": "C3: Decoupling activation from generation supports proactive response without burdening the main LLM; ET-Bench generation metrics exceed VideoLLM-Online and Dispider.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C4",
+              "label": "",
+              "text": "C4: Round-decayed compression is the best tested memory-budget mechanism and lowers latency/memory pressure while preserving recent context.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "At each time step, a frame encoder appends visual embeddings to a memory buffer; when a query is pending and the activation model fires, the system flattens accumulated visual/text history, optionally compresses it to MaxLen, and lets the base LLM decode. The generated response is appended back into the buffer so later turns see conversational history.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The execution order is producer-consumer: frame encoder produces per-frame embeddings, the activation model decides whether the LLM should consume the buffer, and compression enforces a bounded input sequence before decoding.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_ingest",
+              "label": "",
+              "text": "Ingest: each incoming frame is encoded independently and appended; queries and generated responses are also stored, preserving multi-turn visual/text history.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_trigger",
+              "label": "",
+              "text": "Trigger: after a query or initial proactive prompt, ACT emits a binary decision, and only a positive decision routes the flattened buffer to the main LLM.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_budget",
+              "label": "",
+              "text": "Budget: if flattened input length exceeds MaxLen, COM merges earlier visual tokens frame-by-frame while preserving recent visual detail.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design trades exact long-history retention for deployable latency and modularity: recency-biased compression, sidecar activation, and mixed streaming/offline data replace full streaming-model retraining.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E8",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_recency",
+              "label": "",
+              "text": "Need: infinite streams exceed context; choice: compress earliest rounds first by average pooling; tested alternatives are truncation and uniform per-round compression; tradeoff is loss of older visual detail.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E13",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_activation",
+              "label": "",
+              "text": "Need: proactive speaking time; choice: external LLaVA-OV-0.5B classifier with score head and <ACT> token; alternative is backbone-integrated activation; tradeoff is an extra model and threshold.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E12",
+                "E18"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_data_mix",
+              "label": "",
+              "text": "Need: interleaved streaming supervision without forgetting offline skills; choice: Stream-IT plus 600K offline video samples; ablations show offline-only loses streaming, Stream-IT-only hurts general video, and removing StreamingQA-120K degrades both.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E9",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported implementation exposes the main cost knobs: per-frame visual token counts, MaxLen, frame sampling, and which weights are trainable. The main models keep frozen image encoders but tune projectors and LLMs, while the activation model pools frames aggressively and trains only lightweight adaptation components.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E16",
+            "E7"
+          ],
+          "children": [
+            {
+              "id": "mechanism_impl_tokens",
+              "label": "",
+              "text": "Main-model per-frame visual tokens after downsampling are LLaVA-OV 49, Oryx 33-59, and Qwen2-VL 36-64; MaxLen defaults to 16384.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_training",
+              "label": "",
+              "text": "Main Video-LLMs are fine-tuned for one epoch at lr 2e-5 with AdamW/cosine; the activation model trains for 5 epochs with separate learning rates for projector versus LoRA, score head, and <ACT>.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_sampling",
+              "label": "",
+              "text": "Streaming and long-video evaluations mostly use 1 FPS; videos longer than 256 seconds are uniformly sampled to 256 frames, and experiments use H100/A100 GPUs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16",
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "Experiments adapt LLaVA-OV-7B, Qwen2-VL-7B, and Oryx-1.5-7B; benchmarks cover OVO-Bench/Streaming-Bench real-time MCQA, seven offline video MCQA benchmarks, and ET-Bench proactive F1/similarity tasks. The default in-depth model is Qwen2-VL-7B, with LLaVA-OV-0.5B as the activation model.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "Evidence is strongest for benchmarked streaming adaptation and the compression policy; evidence is weaker for open-ended deployment because the paper does not report statistical uncertainty or natural live-stream field tests.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E13",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_cem_C1",
+              "label": "",
+              "text": "C1 Multi-turn adaptation: supported by Qwen2-VL and Oryx gains under StreamBridge/Stream-IT, but base-model compatibility varies because LLaVA-OV initially drops when only wrapped for streaming.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_C2",
+              "label": "",
+              "text": "C2 Stream-IT value: supported by main results and data ablation showing Stream-IT and StreamingQA-120K improve streaming, while offline data is still needed to preserve general video ability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_C3",
+              "label": "",
+              "text": "C3 Proactive activation: supported for generation-quality tasks on ET-Bench, but timing/localization is only partly supported because Dispider has higher TVG_F1 and TAL_F1.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_C4",
+              "label": "",
+              "text": "C4 Compression efficiency: supported by direct ablations over truncation/uniform compression and by A100 latency results showing bounded latency beyond MaxLen.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline results show large streaming gains after Stream-IT, competitive offline video performance, and proactive generation gains; however, uncertainty, repeat count, and confidence intervals are not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_streaming_qwen",
+              "label": "",
+              "text": "Streaming result: Qwen2-VL-7B + StreamBridge + Stream-IT at 1 FPS scores 71.30 OVO and 77.04 Streaming, improving over Qwen2-VL offline single-turn by +15.32/+8.00 and over GPT-4o by +6.84/+3.76; caveat: evaluation protocols differ.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_offline_video",
+              "label": "",
+              "text": "Offline-video result: Oryx-1.5-7B gains +6.7 on VideoMME after StreamBridge+Stream-IT, while LLaVA-OV mostly improves but drops on LongVideoBench and Qwen2-VL drops on MVBench; the non-degradation claim is therefore model/benchmark dependent.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_proactive_et",
+              "label": "",
+              "text": "Proactive result: Qwen2-VL StreamBridge reports DVC_F1/DVC_Sim 38.3/25.1 and SLC_F1/SLC_Sim 22.6/17.1, exceeding VideoLLM-Online and Dispider on generation metrics; it is below Dispider on TVG_F1/TAL_F1 localization.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "Ablations validate the major design knobs: compression policy, Stream-IT data composition, MaxLen, and activation threshold alpha. The paper reports point estimates only, so sensitivity conclusions should be treated as directional.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E15",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_compression",
+              "label": "",
+              "text": "Compression: Round-Decayed beats Truncation and Round-Uniform on OVO Avg. 71.30 versus 68.88/69.91 and Streaming Avg. 77.04 versus 72.79/74.18, supporting recency-biased compression.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_data_maxlen",
+              "label": "",
+              "text": "Data/MaxLen: removing StreamingQA-120K or offline auxiliary data hurts complementary capabilities; OVO is fairly stable across MaxLen 4k-32k, while VideoMME improves with larger MaxLen.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_activation_threshold",
+              "label": "",
+              "text": "Activation threshold: too-low alpha over-triggers and too-high alpha suppresses responses; the default is 0.35, with Figure 5 showing degradation at both extremes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E18"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports base models, data source families, sampling rates, token counts, optimizer/lr choices, GPU classes, and benchmark metrics, but the provided text does not report code/model/data release URLs, seeds, run counts, or statistical uncertainty. Reproducing Stream-IT also depends on GPT-4o generation and large filtered video-source pipelines.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "evaluation_repro_reported_not_reported",
+              "label": "",
+              "text": "Reported: base models, sampling, optimizer/lr, token counts, MaxLen, and hardware class; not reported in the provided text: release artifacts, random seeds, repeat count, or confidence intervals.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_repro_dataset_dependency",
+              "label": "",
+              "text": "Dataset reproducibility is a concrete blocker because StreamingQA-120K requires filtering 1.28M clips, semantic concatenation, GPT-4o QA generation, and source clip availability.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The decomposition is technically plausible because it changes the input/state path rather than requiring a new streaming backbone, and each major component has either cross-model or ablation evidence. The compression mechanism is especially well supported because it improves accuracy and bounds latency under the same memory budget.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E10",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "judgment_holds_cross_model",
+              "label": "",
+              "text": "Cross-base results on Qwen2-VL, Oryx, and LLaVA-OV reduce the risk that the framework is a single-model trick, although base-model pretraining still matters.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_holds_efficiency",
+              "label": "",
+              "text": "Round-decayed compression has a clear systems rationale: keep high-fidelity recent evidence, average-pool older visual tokens, and prevent latency/OOM growth.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E6",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The method's benefit should diminish when tasks require fine-grained old-frame details, higher frame rates, audio cues, or naturally evolving long videos unlike concatenated clips. Proactive timing also remains threshold-sensitive and not uniformly superior on localization.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E12",
+            "E16",
+            "E17",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "judgment_fail_paper_limitations",
+              "label": "",
+              "text": "Paper-provided limitation: synthetic QA generation and clip concatenation may cause domain shift; low-rate 1-FPS visual streaming does not cover denser frame rates or audio-visual-text inputs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_sampling_cap",
+              "label": "",
+              "text": "The 256-frame cap for videos longer than 256 seconds means the evaluated long-stream setting is not full-resolution temporal accumulation for arbitrarily long live video.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_activation_timing",
+              "label": "",
+              "text": "Activation is useful but not solved: alpha changes response frequency, and Table 3 shows StreamBridge below Dispider on TVG_F1 and TAL_F1 despite stronger generation scores.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12",
+                "E18"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Technically, StreamBridge sits between offline Video-LLM inference and fully specialized streaming assistants: it adapts strong offline models with a buffer/compression wrapper rather than replacing the backbone. Relative to backbone-integrated activation approaches, the decoupled sidecar reduces optimization interference but adds a second model and threshold tuning.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E10",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For adapting offline foundation models to online interaction, split the problem into state retention, context-budget policy, and actuation policy; each can then be ablated and tuned independently. The broader pattern is to protect the base generator's learned capabilities while adding small, task-specific online control surfaces such as MaxLen and alpha.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E15",
+            "E18"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_streambridge",
+      "term": "StreamBridge",
+      "note": "Framework that wraps offline Video-LLMs with a memory buffer, round-decayed compression, and a decoupled activation model to support streaming interaction."
+    },
+    {
+      "id": "g_memory_buffer",
+      "term": "Memory Buffer (MB)",
+      "note": "Persistent sequence of visual and textual embeddings accumulated over time; stores incoming frame features, user queries, and generated responses."
+    },
+    {
+      "id": "g_round_decayed_compression",
+      "term": "Round-Decayed Compression (COM)",
+      "note": "Context-budget policy that compresses visual tokens from earlier dialogue rounds first, usually by average pooling frames, while preserving recent context at higher fidelity."
+    },
+    {
+      "id": "g_activation_model",
+      "term": "Activation Model (ACT)",
+      "note": "Small external MLLM, implemented with LLaVA-OV-0.5B in the paper, trained as a binary classifier to decide when the main LLM should respond."
+    },
+    {
+      "id": "g_stream_it",
+      "term": "Stream-IT",
+      "note": "Streaming instruction-tuning dataset with interleaved video-text sequences for multi-turn real-time QA and proactive response formats."
+    },
+    {
+      "id": "g_streamingqa_120k",
+      "term": "StreamingQA-120K / SQA-120K",
+      "note": "Synthetic Stream-IT subset built by semantically concatenating short clips into long videos and generating multi-turn QA pairs with GPT-4o."
+    },
+    {
+      "id": "g_maxlen",
+      "term": "MaxLen",
+      "note": "Maximum allowed input-embedding sequence length before compression; default reported value is 16384, with ablations over 4k to 32k."
+    },
+    {
+      "id": "g_activation_threshold",
+      "term": "Activation threshold alpha",
+      "note": "Score threshold for ACT to trigger a response; lower values increase response frequency and higher values suppress it."
+    }
+  ]
+}

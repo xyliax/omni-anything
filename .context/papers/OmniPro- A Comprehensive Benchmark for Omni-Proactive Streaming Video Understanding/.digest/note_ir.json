@@ -1,0 +1,821 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "OmniPro: A Comprehensive Benchmark for Omni-Proactive Streaming Video Understanding",
+    "summary": "OMNIPRO turns proactive streaming video understanding into a time-triggered, audio-visual benchmark that exposes whether models can understand content, decide when to speak, and sustain performance over long streams.",
+    "paper_type": "benchmark",
+    "venue": "arXiv preprint 2026",
+    "authors": "Ruixiang Zhao (Renmin University of China); Jie Yang (WeChat Vision, Tencent Inc.); Zijie Xin (Renmin University of China); Tianyi Wang (WeChat Vision, Tencent Inc.); Fengyun Rao (WeChat Vision, Tencent Inc.); Jing Lyu (WeChat Vision, Tencent Inc.); Xirong Li (Renmin University of China)",
+    "keywords": [
+      "omni-proactive streaming video understanding",
+      "benchmark",
+      "audio-visual video understanding",
+      "proactive responding",
+      "long-horizon perception",
+      "multimodal evaluation"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a benchmark-design paper for proactive streaming video understanding, the setting where a model watches a live stream and decides when to answer; its useful lens is how to test modality, meaning input type such as vision, speech, or sound, without confusing offline question answering for real proactivity.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3",
+        "E17"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "OMNIPRO improves evaluation of streaming video assistants by converting videos into standing-instruction tests with human-checked trigger times, expected responses, and a protocol that tests both content understanding and self-timed responding.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E8"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a careful event monitor: it is given a rule at the start, watches and listens continuously, keeps track of what has changed, and should tap the user only when the rule has actually become true.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is not a single leaderboard win but the benchmark's diagnostic slices: model scores change sharply by response mode, input modality, trigger time, and sound type.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E11",
+        "E12",
+        "E13"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c1",
+          "label": "",
+          "text": "Supports C1: OMNIPRO versus prior proactive video benchmarks; baseline is StreamingBench-Pro, OVO-Bench-Pro, and OmniMMI-Pro; metric is capability coverage and audio dependency; delta is all six capabilities with speech and non-speech sound versus at most two capabilities and no non-speech sound; support status is strong for benchmark coverage.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c2",
+          "label": "",
+          "text": "Supports C2: Probe mode queries before and after each known trigger while Online mode streams frames and lets the model decide; baseline is fixed polling or preset query times; metric is accuracy versus F1 score, the harmonic mean of precision and recall; delta is separate tests for content and timing; support status is strong for protocol design.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3",
+          "label": "",
+          "text": "Supports C3: eleven-model evaluation; baseline is current open-source and proprietary systems; metric is mean accuracy, F1 score, audio plus video gain over video-only input, and late-trigger retention; delta includes Gemini-3-Flash at 40.4 mean accuracy, MiniCPM-o 4.5 at 20.9 online F1, A+V gains of 2.4 to 11.1 points, and average long-term retention of 37%; support status is descriptive but broad.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E11",
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The benchmark is most trustworthy as an English, time-triggered diagnostic for model comparison; it does not by itself prove multilingual robustness, real deployment behavior, or statistical stability across repeated runs.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E9",
+        "E14",
+        "E16"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We present OMNIPRO, the first benchmark to jointly evaluate omni-modal perception, proactive responding, and diverse video understanding tasks. It comprises 2,700 human-verified samples spanning 9 sub-tasks and 3 cognitive levels, covering 6 basic video understanding capabilities.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing benchmarks fall short in three key aspects: they rely primarily on visual signals, adopt polling or fixed-timestamp protocols instead of true proactive evaluation, and cover only a limited range of tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1 Introduction",
+      "locator": "paragraph defining three criteria",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "We argue that such a model must satisfy three key criteria: (1) Omnimodal perception: it should jointly reason over visual signals, speech, and non-speech audio; (2) Proactive responding: it must decide when to respond without external polling or fixed schedules; (3) Diverse video understanding tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "3.1.1 Task Taxonomy",
+      "locator": "task taxonomy paragraph",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We categorize tasks by cognitive ability into three levels, namely Perception, Comprehension, and Reasoning, with increasing difficulty. This yields 9 sub-tasks and 2,700 evaluation samples in total.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "3.1.2 Source Video Collection and 3.1.3 Automated QA Generation",
+      "locator": "source collection and QA synthesis paragraphs",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "Source videos were drawn from the test sets of two public datasets: LongVALE and COIN. For each source video, we employed Gemini 3 Flash to generate temporally aligned multi-modal dense captions with start and end timestamps for each segment.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "3.1.4 Human Quality Control",
+      "locator": "human review paragraph",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "The auto-generated data underwent two rounds of human review. In the first round, 9 annotators each reviewed one sub-task using a dedicated tool, verifying question naturalness, trigger time accuracy, response faithfulness, and modality annotation correctness.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "3.1.5 Dataset Statistics",
+      "locator": "Figure 2 discussion",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "Figure 2b breaks down the trigger modality composition, revealing that visual+speech is the dominant type and nearly half of all triggers exhibit cross-modal characteristics. Figure 2d depicts the distribution of first and last trigger times: the average first trigger occurs at 54.1 s and the last at 126.2 s.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "3.2.1 Evaluation Protocol",
+      "locator": "Probe and Online mode definitions",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Probe mode is compatible with any VLM and does not require streaming capability. For each ground-truth trigger, the evaluator queries the model twice: a pre-probe and a post-probe. Online mode targets streaming models. The model receives the user instruction at the start of the video, then processes subsequent frames one by one.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "4.1 Experimental Settings",
+      "locator": "evaluated models and implementation details",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We evaluate 11 representative models spanning two evaluation modes. In Probe mode, we assess 9 models. In Online mode, we evaluate 3 streaming models. All models uniformly sample input video at 1 fps. All open-source model inference is conducted on NVIDIA A800 80GB GPUs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "4.2 Using OMNIPRO for Assessing Overall Model Capability",
+      "locator": "Table 2 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Gemini-3-Flash attains 40.4% average accuracy, nearly double the best open-source model (22.1%), indicating a substantial capability gap. Online mode is considerably harder: MiniCPM-o 4.5 reaches only 20.9% F1, with severe degradation on generation-intensive tasks.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "4.3 Using OMNIPRO for Disentangling Modality Contributions",
+      "locator": "Table 3 discussion",
+      "claim_type": "result",
+      "evidence_type": "ablation",
+      "snippet": "A+V consistently outperforms either single modality, with gains over V ranging from +2.4 (Qwen3-Omni) to +11.1 (video-SALMONN 2+), confirming that the two modalities provide complementary cues.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "4.4 Using OMNIPRO for Evaluating Long-Horizon Perception",
+      "locator": "Figure 3 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "All models show substantial degradation for later-occurring triggers, retaining on average only 37% of their Short-term performance at the Long-term. MiniCPM-o 4.5 nearly fails entirely on the Long-term (29.1 to 0.3).",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "4.5 Using OMNIPRO for Identifying Modality Bottlenecks",
+      "locator": "Figure 4 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "All models perform weakest on visual+sound triggers (15.3-22.3), revealing that perceiving and utilizing non-speech audio (e.g., environmental sounds, sound effects) remains a shared bottleneck.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "C.1 Limitations",
+      "locator": "limitations paragraph",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "All questions and ground-truth annotations in OMNIPRO are written in English, which limits its applicability for evaluating multilingual or non-English proactive streaming models. Extending the benchmark to additional languages is left for future work.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "C.3 Licenses",
+      "locator": "license list",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "LongVALE: CC-BY-NC-SA-4.0. COIN: CC BY-NC 4.0. OMNIPRO (our benchmark): CC BY-NC 4.0. Evaluation code: MIT License.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "A.1 Tolerance Window Ablation",
+      "locator": "Figure 5 discussion",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Figure 5 shows the effect of varying the temporal matching tolerance on joint_F1 for three online-mode models. The tolerance window ranges from ±1 s to ±5 s. We adopt ±3 s as the default in all Online-mode evaluations.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E17",
+      "section": "2.2 Proactive Streaming Video Benchmarks",
+      "locator": "summary of prior benchmarks",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "In summary, no existing benchmark simultaneously satisfies all three criteria: none involves non-speech sound, only OmniMMI-Pro supports proactive responding, limited to single-trigger, and at most 2/6 capabilities are covered.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Streaming video assistants watch a live feed rather than a finished clip. Useful behavior here means listening to speech and ambient sounds, watching visual changes, and remembering what has just happened.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain_words",
+          "label": "The Problem in Plain Words",
+          "text": "A user gives a standing instruction, then the assistant must notice the right moment and speak without being pinged again.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The useful signal may arrive through speech, background sound, visual motion, or their combination, and the assistant must avoid speaking too early, too late, or too often.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Test the assistant as a timed listener: give it a standing instruction, mark the moments where a response belongs, and score both timing and content.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper studies proactive streaming video understanding, meaning a model must process an ongoing audio-visual stream and decide when to respond without a fresh user query. The stakes are evaluation validity: a benchmark that only asks offline questions can miss whether a future assistant can notice, wait, and interrupt correctly.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior proactive video benchmarks leave at least one required capability untested: some are visual-only, some poll or query at preset times, and the most proactive prior benchmark still lacks non-speech sound and multi-trigger decision-making.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "A benchmark for this area has to bind the content answer to the response moment; otherwise a model can look good at recognizing video content while failing the real interaction problem of deciding when to speak.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's central claims are about coverage, protocol separation, diagnostic findings, and bounded reuse.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: OMNIPRO fills an evaluation gap by jointly requiring audio-visual signals, autonomous response timing, and coverage of all six basic video-understanding capabilities.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E2",
+                "E17"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: The dual-mode protocol separates content-understanding evaluation from online proactive behavior, so non-streaming vision-language models and streaming models can be tested under different but related conditions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: OMNIPRO is discriminative: tested models remain far from solved and show visible weaknesses by modality, trigger time, generation burden, and non-speech sound.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: The dataset is human-checked and useful for English proactive streaming evaluation, but its English-only annotations bound claims about multilingual generality.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "OMNIPRO turns each video into a standing instruction plus trigger times, where a trigger time is the moment a response should be produced, and expected responses with modality labels. The same samples support a non-streaming content test and a streaming self-timing test.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The data flow is source videos from LongVALE and COIN, dense audio-visual captions from Gemini 3 Flash, task-specific QA synthesis, two human review rounds, then evaluation samples organized by task, modality labels, trigger timing, and expected response.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_source",
+              "label": "",
+              "text": "Source selection supplies broad daily-life, sports, news, and instructional videos, with COIN used to cover tutorial-like sequential instruction.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_generation",
+              "label": "",
+              "text": "Captioning records visual content, ambient audio, and speech over time, then QA synthesis creates standing instructions, trigger times, responses, trigger modality, and audio dependency.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_quality",
+              "label": "",
+              "text": "Human review checks naturalness, timing, faithfulness, and modality annotations, then cross-validates sub-tasks to reduce inconsistent task standards.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The major design choices make the benchmark diagnostic rather than just larger: prioritize audio-rich triggers, split tasks by cognitive demand, and evaluate content separately from autonomous timing.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "design_audio_first",
+              "label": "",
+              "text": "Need: distinguish omni-modal models from vision-only models; choice: use an audio-first generation strategy; closest alternative: visual-only event selection; tradeoff: stronger audio diagnostics but a distribution shaped by benchmark intent.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E5",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_taxonomy",
+              "label": "",
+              "text": "Need: avoid a benchmark that only tests alerts; choice: organize samples into perception, comprehension, and reasoning levels across alerting, monitoring, grounding, counting, narration, and prediction-like guidance; tradeoff: broad coverage with heterogeneous task difficulty.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_dual_protocol",
+              "label": "",
+              "text": "Need: include models that cannot stream while still testing proactivity where possible; choice: Probe mode tests content around known triggers, while Online mode tests autonomous timing; tradeoff: scores across modes are related diagnostics, not a single interchangeable leaderboard.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "Probe mode gives each model cumulative video up to a query time and scores exact structured answers; Online mode streams frames with dialogue history, aligns predictions to ground-truth triggers within a tolerance window, and uses exact match or an LLM judge, a large language model used to score open-ended answers, for generation-heavy tasks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "implementation_probe",
+              "label": "",
+              "text": "Probe mode asks before and after each trigger; the trigger is correct only when the pre-probe is negative and the post-probe gives the task-specific correct answer.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "implementation_online",
+              "label": "",
+              "text": "Online mode computes precision, recall, and F1 score after greedy temporal matching, with a default ±3 second response window.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "implementation_model_run",
+              "label": "",
+              "text": "The reported experiments sample videos at 1 fps and run open-source models on NVIDIA A800 80GB GPUs with greedy decoding and a 512-token maximum generation length.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation covers proprietary and open-source omni-modal models, vision-language models (VLMs, models that answer from visual input and text), and native streaming models. Probe reports accuracy, while Online reports F1 score after timing and content correctness are both checked.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence base is strongest for benchmark coverage and diagnostic breadth, and weaker for statistical certainty because the paper reports descriptive model results without repeat counts, variances, or confidence intervals.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E9",
+            "E10",
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1: Supported by direct benchmark construction evidence: task taxonomy, modality labels, audio dependency statistics, and prior-benchmark comparison all point to broader coverage than prior proactive video benchmarks.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E1",
+                "E4",
+                "E7",
+                "E17"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2: Supported by the formal Probe and Online definitions; the remaining caveat is that Probe and Online answer different questions, so their numeric scores should not be read as one unified metric.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3: Supported by broad model comparisons and ablations, but the strength is descriptive rather than statistical because the paper does not report repeated-run uncertainty.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The benchmark shows that current systems are far from solved: the best reported Probe scores are modest, the Online setting is harder, audio plus video usually helps over video-only input, late triggers degrade strongly, and visual plus non-speech sound is the weakest trigger category.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "headline_overall_capability",
+              "label": "",
+              "text": "Overall capability: Gemini-3-Flash reaches 40.4 mean Probe accuracy, while MiniCPM-o 4.5 reaches 20.9 Online F1; this supports C3 but lacks reported uncertainty.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_modality",
+              "label": "",
+              "text": "Modality contribution: audio plus video (A+V) improves over video-only input by 2.4 to 11.1 points across five omni-modal models, supporting C3's modality-diagnostic claim.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_horizon_sound",
+              "label": "",
+              "text": "Temporal and audio bottlenecks: long-term triggers retain only 37% of short-term performance on average, and visual+sound triggers score lowest across models, supporting C3's long-horizon and non-speech-sound diagnosis.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The main ablation is modality isolation, which shows complementary audio and video cues and different model fusion patterns; the appendix also varies the Online temporal tolerance window and keeps ±3 seconds as the default. Not reported: statistical uncertainty, repeat counts, or sensitivity to frame rate beyond the stated 1 fps setting.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E11",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports the project page, source datasets, prompts, hardware class, sampling rate, dataset license, and code license, which helps reuse. Concrete gaps for independent reproduction are annotator agreement details, exact generation scripts or model versions beyond named Gemini variants, and repeated-run uncertainty for model evaluations.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E9",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The benchmark design matches the capability definition: audio-visual triggers, autonomous response timing, multiple task forms, and modality-isolation labels make aggregate scores decomposable. The strongest technical contribution is the evaluation framing, not a new model or algorithm.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E3",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "Generality may weaken when the language, domain distribution, timing tolerance, frame rate, or judge behavior changes. Because QA generation starts from Gemini-produced captions and synthesis before human filtering, the benchmark may reflect both real video difficulty and the biases of its generation pipeline.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E9",
+            "E14",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Relative to StreamingBench-Pro and OVO-Bench-Pro, OMNIPRO moves from polling or preset queries toward autonomous timing; relative to OmniMMI-Pro, it adds multi-trigger responses, non-speech sound, and broader video-understanding task coverage.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For emerging interactive model abilities, benchmark the decision boundary directly: define when the model should act, what information is available at that moment, and which diagnostic labels let failures be sliced by input type, time horizon, and task demand.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_omni_proactive_streaming_video_understanding",
+      "term": "omni-proactive streaming video understanding",
+      "aliases": [
+        "omni-proactive understanding"
+      ],
+      "note": "A setting where a model watches and listens to a continuous stream, decides when to respond, and produces the right content without being repeatedly prompted."
+    },
+    {
+      "id": "g_modality",
+      "term": "modality",
+      "aliases": [
+        "input type"
+      ],
+      "note": "A channel of information such as visual frames, speech, non-speech sound, or text."
+    },
+    {
+      "id": "g_proactive_responding",
+      "term": "proactive responding",
+      "aliases": [
+        "when-to-speak"
+      ],
+      "note": "The model initiates an answer when the stream warrants it, rather than waiting for a new query or fixed polling time."
+    },
+    {
+      "id": "g_trigger_time",
+      "term": "trigger time",
+      "aliases": [
+        "GT trigger"
+      ],
+      "note": "The annotated moment when the model should produce a response."
+    },
+    {
+      "id": "g_probe_mode",
+      "term": "Probe mode",
+      "aliases": [
+        "pre-probe",
+        "post-probe"
+      ],
+      "note": "A non-streaming evaluation mode that queries a model before and after each annotated trigger to test whether it understands the event content."
+    },
+    {
+      "id": "g_online_mode",
+      "term": "Online mode",
+      "aliases": [
+        "streaming evaluation"
+      ],
+      "note": "A streaming evaluation mode where the model receives frames over time and must decide by itself when to answer."
+    },
+    {
+      "id": "g_modality_isolation",
+      "term": "modality-isolation label",
+      "aliases": [
+        "trigger modality",
+        "audio dependency"
+      ],
+      "note": "Annotation describing which input type is needed or helpful for detecting a trigger or answering a sample."
+    },
+    {
+      "id": "g_non_speech_audio",
+      "term": "non-speech audio",
+      "aliases": [
+        "sound",
+        "environmental sound"
+      ],
+      "note": "Audio cues other than spoken language, such as alarms, music, whistles, or environmental sounds."
+    },
+    {
+      "id": "g_f1_score",
+      "term": "F1 score",
+      "aliases": [
+        "F1"
+      ],
+      "note": "The harmonic mean of precision and recall; in Online mode it counts a response only when timing and content are both correct."
+    },
+    {
+      "id": "g_long_horizon_perception",
+      "term": "long-horizon perception",
+      "aliases": [
+        "late-trigger robustness"
+      ],
+      "note": "The ability to keep useful perception and memory over long video streams so events late in the video are still detected correctly."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "source_language": "en",
+  "target_language": "zh-CN",
+  "style": "plain explanatory Chinese for research reading",
+  "last_updated": "2026-07-02",
+  "files": {
+    "english": "overview.md",
+    "chinese": "overview_cn.md",
+    "bilingual": "overview_bilingual.md"
+  }
+}

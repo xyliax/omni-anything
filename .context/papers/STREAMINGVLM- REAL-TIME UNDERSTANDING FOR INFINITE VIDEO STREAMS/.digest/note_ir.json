@@ -1,0 +1,765 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "title": "STREAMINGVLM: Real-Time Understanding for Infinite Video Streams",
+    "summary": "StreamingVLM shows that long-horizon real-time video understanding can be made practical by aligning overlapped-chunk SFT with inference-time KV-cache reuse, attention sinks, recent text/vision windows, and bounded contiguous RoPE.",
+    "paper_type": "system",
+    "venue": "ICLR 2026; arXiv:2510.09608v2",
+    "authors": "Ruyi Xu* (MIT), Guangxuan Xiao* (MIT), Yukang Chen (NVIDIA), Liuning He (MIT), Yao Lu (NVIDIA), Song Han (MIT/NVIDIA)",
+    "keywords": [
+      "streaming VLM",
+      "infinite video",
+      "KV cache",
+      "attention sink",
+      "sliding window attention",
+      "contiguous RoPE",
+      "video captioning",
+      "sports commentary"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "A concrete recipe for turning a finite-context VLM into a low-latency streaming video commentator: train with short overlapped chunks, then infer with reusable compact KV state rather than recomputing overlapping windows.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3",
+        "E5",
+        "E14"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "StreamingVLM improves real-time infinite-stream video captioning by fine-tuning Qwen2.5-VL-7B on overlapped interleaved video-text chunks and serving it with attention-sink plus recent text/vision KV reuse and contiguous RoPE.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E4",
+        "E5",
+        "E9"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "A rolling commentator notebook: pin the opening instructions, keep the latest transcript, keep only the last visual moments, and renumber the remaining pages so the model never sees out-of-range positions.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the combination of long-game pairwise captioning wins, constant per-token latency, and VQA transfer without VQA-specific fine-tuning.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E11",
+        "E13",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_C1",
+          "label": "",
+          "text": "C1: On Inf-Streams-Eval, StreamingVLM in infinite mode reports 66.18% win rate against GPT-4o mini in 100 s chunk mode, 87.81% against LiveCC chunk mode, and 99.12% against LiveCC infinite mode.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_C2",
+          "label": "",
+          "text": "C2: In the latency test, StreamingVLM keeps roughly 0.05 s/token through 1000 s of processed video and is reported to support 8 FPS real-time commentary on one NVIDIA H100.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_C3",
+          "label": "",
+          "text": "C3: Without VQA SFT, StreamingVLM improves over Qwen2.5-VL-7B-Instruct on LongVideoBench from 54.70 to 59.00 and on OVOBench Realtime from 56.00 to 61.96.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "Trust is strongest for English sports commentary under an LLM-as-judge protocol; broader video domains, human preference validation, variance across judges/runs, and exact reproducibility of GPT-5 cleaning/judging are less established in the supplied text.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E6",
+        "E7",
+        "E10"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Title block",
+      "locator": "paper header",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "arXiv:2510.09608v2 [cs.CV] 31 May 2026. Published as a conference paper at ICLR 2026. STREAMINGVLM: REAL-TIME UNDERSTANDING FOR INFINITE VIDEO STREAMS. Ruyi Xu, Guangxuan Xiao, Yukang Chen, Liuning He, Yao Lu, Song Han. MIT, NVIDIA. https://github.com/mit-han-lab/streaming-vlm",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Section 1",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "VLMs could power real-time assistants and autonomous agents, but they face a critical challenge: understanding near-infinite video streams without escalating latency and memory usage. Processing entire videos with full attention leads to quadratic computational costs and poor performance on long videos. Meanwhile, simple sliding window methods are also flawed.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "2.1 Inference Scheme of Streaming VLM",
+      "locator": "Figure 3; Streaming-aware KV Cache",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "We keep 512 attention-sink tokens to stabilize attention, a long text window of 512 recent tokens to preserve long-term memory, and a short vision window covering 16 seconds to track ongoing actions. The key idea is to maintain a compact and stable KV cache by reusing previous states during streaming inference.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "2.1 Inference Scheme of Streaming VLM",
+      "locator": "Contiguous RoPE paragraph",
+      "claim_type": "optimization",
+      "evidence_type": "implementation_detail",
+      "snippet": "When earlier tokens are removed, the RoPE indices of subsequent and incoming tokens are shifted so that their positions remain numerically contiguous with the last retained token. Once the video length surpasses the total window size, the effective RoPE indices stop growing and remain within a bounded range.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "2.2 Training Strategy",
+      "locator": "overlapped-chunk full-attention description",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We split a long video stream into consecutive chunks of length W frames, with temporal overlap O frames between C_i and C_{i+1}. Each chunk is treated as a training instance in which vision and text tokens are sampled and interleaved at 1 s intervals. We apply full attention within a chunk.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "2.3.1 Video Collection and ASR; 2.3.2 Data Cleaning",
+      "locator": "data pipeline",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We collected game videos from five sports: basketball, soccer, ice hockey, baseball, and American football... obtaining an initial corpus of videos with a total duration of over 6,000 hours. We set rules and used GPT to clean these data... 46.32% were kept, 37.89% were edited, and 15.79% were deleted.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "2.3.3 SFT and Evaluation Data Segmentation",
+      "locator": "SFT and Inf-Streams-Eval construction",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Under the training setup in Section 2.2, we split videos with W = 24 s and O = 12 s... For evaluation, we create a new benchmark, Inf-Streams-Eval. It contains 20 full games with an average length of 2.12 hours... For scoring, a larger model (we use gpt-5) votes between two model outputs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "2.3.4 High-Quality Annealing Data",
+      "locator": "annealing data construction",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We first slice all data without overlap, requiring each clip to be 16–64 seconds long with internal silence no longer than 3 seconds... Across all games, we obtained 52,530 new samples. Then... GPT-5 [determines] whether the proportion of real-time commentary exceeds 80%... only 14,786 samples were retained.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "3.1 Experimental Setup",
+      "locator": "Training paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We fine-tune StreamingVLM from Qwen2.5-VL-Instruct-7B. Step 1 teaches the model the infinite streaming inference pattern. We train on our SFT set (525K streaming samples) and on LiveCC's Live-WhisperX-526K (526K streaming samples). Step 2 uses our high-quality annealing data (14K streaming samples)... The total compute is about 128 H100-days.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "3.1 Experimental Setup",
+      "locator": "Baselines and Benchmark paragraphs",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Due to design limits, GPT-4o mini is evaluated on Inf-Streams-Eval in the chunk setting, not the infinite mode used by StreamingVLM. LiveCC7B-Instruct is tested in both chunked and infinite settings... For video understanding, we evaluate StreamingVLM on four public suites: VideoMME, MVBench, LongVideoBench, OVOBench.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "3.2.1 Captioning",
+      "locator": "Table 1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 1 reports StreamingVLM^infinity on Inf-Streams-Eval with win rates 66.18 against GPT-4o^dagger, 87.81 against Livecc^dagger, and 99.12 against Livecc^infinity. On Livecc-Sports-3K cc it reports 47.33 against LLaVA, 45.59 against GPT-4o, 44.21 against Gemini, and 56.19 against Livecc.",
+      "confidence": "high"
+    },
+    {
+      "id": "E12",
+      "section": "3.2.1 Captioning",
+      "locator": "Table 2; ReKV comparison",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "We observe a paradox for training-free ReKV: models without task-specific fine-tuning perform poorly, yet models that are specially fine-tuned rely on a fixed context format that ReKV's eviction policy disrupts, often yielding no output. Table 2 reports StreamingVLM (+ReKV) with 0.00 win rates and StreamingVLM (+Ours) with 66.18, 87.81, 99.12.",
+      "confidence": "high"
+    },
+    {
+      "id": "E13",
+      "section": "3.2.2 VQA",
+      "locator": "Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Without any VQA fine-tuning, StreamingVLM delivers consistent accuracy gains across all tasks. Table 3 reports Qwen-2.5-VL-7B-Instruct at 67.34, 65.10, 54.70, 56.00 on MVBench, Video MME, LongVideoBench, OVOBench Realtime, and StreamingVLM at 69.16, 65.10, 59.00, 61.96.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "3.3 Efficiency Tests",
+      "locator": "Figure 7 and efficiency paragraph",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Figure 7 reports per-token latency versus video length. Full attention soon exceed the limit and OOM... Streaming VLM keeps fixed context length and reuses KV, maintains lower and stable latency, and supports real-time commentary at 8 FPS on a single NVIDIA H100. The table shows StreamingVLM at 0.05 s/token through 1000 s.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "3.4.1 Contiguous RoPE",
+      "locator": "Table 4",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Native RoPE degrades sharply on infinite streams because its index grows fast and exceeds the training range. Table 4 reports Native^infinity at 25.09 against GPT-4o^dagger, 59.42 against Livecc^dagger, and 60.32 against Livecc^infinity, while Contiguous^infinity reaches 66.18, 87.81, and 99.12.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "3.4.2 Sliding Window and Sink; A.3 Sensitivity Analysis",
+      "locator": "Table 5; Table 8",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The right table in Table 5 shows that a 16 s visual window is a good choice... keeping 0 s of vision context leads to a clear drop. Appendix A.3 states that sink token size noticeably impacts final performance, generally larger T_sink capacities yield better win rates, and gains plateau at larger window sizes.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "3.4.3 Training Strategy and Dataset",
+      "locator": "Table 6 and Table 7",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Compared with a model trained only on Live-WhisperX-526K, training on the overlapped SFT data strengthens perception of infinite video, yielding clear gains +31.29 on Inf-Streams-Eval. Table 6 reports 32.17, 63.46, and 66.18 win rate against GPT-4o^dagger for Live-WhisperX, +Inf-Streams-Train, and +High-Quality Annealing Data.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "4 Related Work",
+      "locator": "Long-context and streaming inference; streaming video LLMs",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "The text community has proposed attention sink + sliding window, RoPE extension and continuity, and KV cache compression/eviction such as H2O, SnapKV, and ReKV. However, these methods are mostly tested on text, and alignment between streaming training and inference remains underexplored. We bring the sink + sliding window + contiguous position recipe to cross-modal streaming.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper targets VLMs that must process near-infinite video streams and respond in real time without latency or memory increasing with stream length. The stakes are practical assistants, embodied agents, and autonomous systems where full attention is quadratic/unbounded and naive sliding windows either lose coherence or recompute too much.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Existing video VLMs mostly operate on finite clips, while text-side streaming/KV eviction methods do not directly solve cross-modal training-inference mismatch. The paper argues that training on extremely long videos is infeasible, so a short-context training procedure must induce the same recency and cache structure used at test time.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "Approximate the streaming inference attention pattern during SFT rather than training on full long videos: use overlapped full-attention chunks with per-second interleaved vision/text, then infer with a compact reusable KV cache and bounded position indices. This makes the model expect the same kinds of context that will survive online eviction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper supports four main falsifiable claims: better long-stream captioning, real-time stable inference, transfer to VQA, and necessity of the proposed cache/position/training design choices.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E13",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "argument_claims_C1",
+              "label": "",
+              "text": "C1: StreamingVLM improves long-horizon sports captioning, reporting 66.18% win rate versus GPT-4o mini chunk mode and 87.81% versus LiveCC chunk mode on Inf-Streams-Eval.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claims_C2",
+              "label": "",
+              "text": "C2: KV reuse with fixed retained context keeps inference real time, with reported 0.05 s/token through 1000 s and 8 FPS support on one H100.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claims_C3",
+              "label": "",
+              "text": "C3: Streaming SFT improves general video QA without VQA-specific fine-tuning, especially on long-horizon and real-time benchmarks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claims_C4",
+              "label": "",
+              "text": "C4: Contiguous RoPE, recent visual retention, and overlapped/data-curated SFT are material contributors, not cosmetic engineering details.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15",
+                "E16",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core_mechanism",
+          "label": "Core Mechanism",
+          "text": "StreamingVLM maintains a compact KV cache containing attention-sink text tokens, a recent text window, and a recent vision window; older vision is evicted first, and text history is retained asymmetrically for discourse coherence. The reported default in Figure 3 is 512 sink tokens, 512 recent text tokens, and 16 seconds of recent vision.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The system first builds aligned sports video/commentary streams with ASR and GPT cleaning, then trains on overlapped 24 s/12 s chunks with interleaved per-second V/T tokens, and finally serves a live stream by appending new states, evicting outside-window tokens, and shifting RoPE indices. The previous text used in training is compressed to the first T_sink and last T_window tokens to match inference.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7"
+          ],
+          "children": [
+            {
+              "id": "mechanism_data_control_flow_1",
+              "label": "",
+              "text": "Data preparation uses WhisperX ASR over five sports, GPT-5 keep/edit/delete cleaning, and separate SFT/evaluation/annealing segment pipelines.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_control_flow_2",
+              "label": "",
+              "text": "SFT uses full attention inside short overlapped chunks, with loss only on aligned text positions and placeholders for seconds without narration.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_control_flow_3",
+              "label": "",
+              "text": "Online inference avoids recomputing overlapping windows by reusing cached KV for retained sink/text/vision tokens and assigning contiguous positions after eviction.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The three main design choices are asymmetric cache retention, contiguous RoPE, and overlapped-chunk SFT; each directly addresses a failure mode of full attention or naive sliding windows. The closest tested alternatives are native RoPE, ReKV-style eviction, no/altered windows, and non-overlapping or weaker data training.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12",
+            "E15",
+            "E16",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_cache",
+              "label": "",
+              "text": "Need: preserve discourse while bounding compute; choice: sink plus long text window plus short vision window; tradeoff: the model can only use old visual facts if they survive in text or sink-like context.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E3",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_rope",
+              "label": "",
+              "text": "Need: avoid out-of-distribution position growth after many evictions; choice: left-shift contiguous RoPE, including 3D RoPE for Qwen-VL visual tokens; tested alternative native RoPE drops sharply in infinite mode.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_sft",
+              "label": "",
+              "text": "Need: teach streaming behavior without quadratic long-context training; choice: overlapped full-attention chunks with interleaved V/T at one-second cadence; alternative non-overlap performs worse in the reported ablation.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported implementation fine-tunes Qwen2.5-VL-Instruct-7B in two stages: 525K Inf-Streams SFT samples plus 526K Live-WhisperX samples, followed by 14K high-quality annealing samples, using about 128 H100-days. The paper reports the public GitHub URL, but gives more algorithmic detail about cache/RoPE behavior than low-level kernel or serving-stack detail.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E9"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "Captioning is evaluated on Inf-Streams-Eval, a 20-game benchmark averaging 2.12 hours per game, plus Livecc-Sports-3K CC; pairwise commentary quality is judged by GPT-5 with references. VQA transfer is evaluated on VideoMME, MVBench, LongVideoBench, and OVOBench, and GPT-4o mini is only evaluated in chunk mode on Inf-Streams-Eval.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is primarily empirical: win-rate tables for captioning, accuracy tables for VQA, latency traces for serving, and ablations over RoPE/cache/data/training strategy. The strongest support is for the integrated system under the paper's own sports-streaming setting.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E11",
+            "E13",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_C1",
+              "label": "",
+              "text": "C1 captioning quality: supported by Inf-Streams-Eval and Livecc-Sports-3K win rates, with the caveat that GPT-4o mini is evaluated only in 100 s chunk mode on Inf-Streams-Eval.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_C2",
+              "label": "",
+              "text": "C2 real-time efficiency: supported by per-token latency over increasing processed video length and the reported 8 FPS single-H100 setting.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_C3",
+              "label": "",
+              "text": "C3 VQA transfer: supported by direct comparison against the Qwen2.5-VL-7B-Instruct base model on four public video QA suites.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_C4",
+              "label": "",
+              "text": "C4 component necessity: supported by ablations over native versus contiguous RoPE, visual/text windows and sink size, Live-WhisperX versus Inf-Streams data, annealing data, and overlap strategy.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15",
+                "E16",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline is that StreamingVLM beats strong captioning baselines on long sports streams while keeping latency flat, and the same SFT improves some general video QA metrics. The most important caveat is that the captioning metric is pairwise LLM judging rather than human evaluation with statistical uncertainty.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E7",
+            "E11",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_headline_captioning",
+              "label": "",
+              "text": "Captioning: StreamingVLM^infinity reports 66.18% win rate vs GPT-4o^dagger, 87.81% vs Livecc^dagger, and 99.12% vs Livecc^infinity on Inf-Streams-Eval.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_efficiency",
+              "label": "",
+              "text": "Efficiency: the latency trace reports StreamingVLM at 0.05 s/token through 1000 s, while full attention exceeds limits/OOM and overlapping windows remain inefficient.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_vqa",
+              "label": "",
+              "text": "VQA: relative to Qwen2.5-VL-7B-Instruct, StreamingVLM improves MVBench by 1.82, LongVideoBench by 4.30, and OVOBench Realtime by 5.96, while VideoMME remains 65.10.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations are unusually diagnostic for a systems-style VLM paper: they test position extrapolation, retained-context allocation, training data, and training/inference consistency. They show that the system is not just a cache trick; model behavior depends on being trained for the same interleaved streaming context it will see at inference.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E12",
+            "E15",
+            "E16",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_rope",
+              "label": "",
+              "text": "RoPE: native infinite inference drops to 25.09% win rate against GPT-4o^dagger, while contiguous infinite inference reaches 66.18%, supporting the bounded-position argument.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_window",
+              "label": "",
+              "text": "Windows: removing visual context hurts, and the paper identifies 16 s as a good visual window; Appendix A.3 says sink size affects performance and plateaus at larger sizes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_data_strategy",
+              "label": "",
+              "text": "Data/strategy: win rate vs GPT-4o^dagger rises from 32.17 with Live-WhisperX to 63.46 with Inf-Streams-Train and 66.18 after high-quality annealing; the paper also reports overlap outperforming non-overlap.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports a GitHub URL, model base, sample counts, compute budget, and major benchmark settings, but the supplied text does not provide random seeds, repeat counts, statistical uncertainty, complete judging/cleaning prompts, or enough low-level serving details to independently audit latency. Reuse of the data pipeline may also depend on access/licensing for full sports videos and proprietary GPT-5 judging/cleaning behavior.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E6",
+            "E7",
+            "E9",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The core systems idea is credible because it attacks the actual serving bottleneck: overlapping-window recomputation is replaced by fixed-size KV reuse, while contiguous RoPE prevents the retained cache from carrying ever-growing positions. The ablation evidence is aligned with the mechanism: native RoPE collapses in infinite mode, ReKV disrupts the fine-tuned context format, and the latency trace stays flat only for the proposed cache policy.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E12",
+            "E14",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_it_may_fail",
+          "label": "Where It May Fail",
+          "text": "The approach may fail on tasks requiring precise retrieval of old visual evidence that was never verbalized into retained text, because the design intentionally keeps only recent vision tokens. Generalization is also uncertain outside English sports streams and LLM-judge commentary, since the main data/evaluation pipeline is sports-focused and window sizes are scenario-sensitive hyperparameters.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E6",
+            "E7",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_to_other_work",
+          "label": "Relation to Other Work",
+          "text": "Technically, StreamingVLM is closest to StreamingLLM-style attention sinks plus sliding windows, but extends the recipe to cross-modal streams with interleaved vision/text and 3D contiguous RoPE. Compared with training-free KV eviction such as ReKV, the paper's central distinction is training-inference alignment: the model is fine-tuned to expect the same cache format that serving will preserve.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E12",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For streaming foundation-model systems, do not treat cache eviction as an inference-only optimization: choose the retained-state interface first, then train with short synthetic contexts whose attention pattern approximates that interface. Bounded positional indices are part of that interface, not an implementation afterthought, whenever the model uses relative/rotary position encodings over unbounded streams.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E15",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_attention_sink",
+      "term": "Attention sink / T_sink",
+      "note": "Early retained text tokens, including system and previous text, kept in the KV cache to stabilize attention over long streaming inference."
+    },
+    {
+      "id": "g_t_window",
+      "term": "T_window",
+      "note": "The recent text-token window retained in the streaming KV cache; intended to preserve discourse and long-term memory in compressed textual form."
+    },
+    {
+      "id": "g_v_window",
+      "term": "V_window",
+      "note": "The recent vision-token window retained in the streaming KV cache; the reported default covers 16 seconds of video."
+    },
+    {
+      "id": "g_contiguous_rope",
+      "term": "Contiguous RoPE",
+      "note": "A position-indexing scheme that left-shifts RoPE indices after eviction so retained and incoming tokens remain contiguous and bounded rather than growing with total stream length."
+    },
+    {
+      "id": "g_overlapped_chunk_sft",
+      "term": "Overlapped-chunk SFT",
+      "note": "Training strategy that splits streams into overlapping short chunks, applies full attention within each chunk, and interleaves vision/text at one-second intervals to mimic streaming inference."
+    },
+    {
+      "id": "g_inf_streams_eval",
+      "term": "Inf-Streams-Eval",
+      "note": "The paper's long-stream sports-commentary benchmark: 20 full games averaging 2.12 hours, evaluated by GPT-5 pairwise voting with references."
+    },
+    {
+      "id": "g_chunk_vs_infinite",
+      "term": "Chunk mode vs. infinite mode",
+      "note": "Chunk mode processes independent fixed segments with previous text; infinite mode runs continuously over the full stream while reusing past KV/output state."
+    },
+    {
+      "id": "g_win_rate",
+      "term": "Win rate",
+      "note": "Pairwise LLM-as-judge preference share of model A over model B; higher is better, but results depend on judge model, references, and prompt protocol."
+    }
+  ]
+}

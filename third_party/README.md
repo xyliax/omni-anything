@@ -27,17 +27,25 @@ git subrepo status third_party/<name>
 
 ## 纪律
 
-- `third_party/*` 只读参考。实验改动放在仓库自己的 `harness/`、patch 或 fork，不直接改上游树再当实验代码。
+- `third_party/*` 只读参考。实验改动放在 `harness/`、patch 或 fork，不直接改上游树再当实验代码。
 - 不要把模型权重、大数据集放进本目录。
-- 体积很大、与 RP1 仅弱相关的 clone（例如历史 streaming-RL 栈、带 demo 视频的仓库）优先放在 `Project-Duplex` 仓外，不要默认 subrepo 进本仓库。
+- 加入前评估：是否会显著胀大本仓库历史；偶尔阅读用 shallow clone 即可，不必 subrepo。
 
-## 候选（尚未挂入）
+## 候选上游（需要钉死时再 `subrepo clone`）
 
-与双工 / serving 相关、需要钉死再读代码时可按需加入：
-
-- `vllm-omni` — https://github.com/vllm-project/vllm-omni
-- `moshi` / `moshi-finetune` — kyutai-labs
-- `personaplex` — NVIDIA
-- `DuplexOmni` — MuyeHuang/DuplexOmni
-
-加入前评估：是否会显著胀大本仓库历史；若只是偶尔阅读，仓外 shallow clone 更合适。
+| 名称 | 上游 | 备注 |
+| --- | --- | --- |
+| vllm-omni | https://github.com/vllm-project/vllm-omni | serving 栈对照 |
+| moshi | https://github.com/kyutai-labs/moshi | 双工语音 |
+| moshi-finetune | https://github.com/kyutai-labs/moshi-finetune | 同上 |
+| personaplex | https://github.com/NVIDIA/personaplex | 工业双工参考 |
+| DuplexOmni | https://github.com/MuyeHuang/DuplexOmni | 曾钉 `4c93fd0` |
+| JoyAI-VL-Interaction | https://github.com/jd-opensource/JoyAI-VL-Interaction | 曾钉 `9d07596` |
+| ThinkStream | https://github.com/CASIA-IVA-Lab/ThinkStream | 流式思考 |
+| VST | https://github.com/1ranGuan/VST | Video Streaming Thinking |
+| EasyVideoR1 | https://github.com/cyuQ1n/EasyVideoR1 | 曾钉 `7ab338b`；偏 video RL |
+| MMDuet2 | https://github.com/yellow-binary-tree/MMDuet2 | 偏 video RL |
+| uni-agent | https://github.com/verl-project/uni-agent | 偏 agent RL |
+| DualAxisRM | https://github.com/MM-Speech/DualAxisRM | 小参考 |
+| videollm-online | https://github.com/showlab/videollm-online | 含大体积 demo 媒体 |
+| jiuwenswarm | https://github.com/openJiuwen-ai/jiuwenswarm | 曾钉 `de623dd` @ develop；体积大、旧集成线 |

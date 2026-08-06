@@ -1,0 +1,795 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Hollywood in Homes: Crowdsourcing Data Collection for Activity Understanding",
+    "summary": "Hollywood in Homes shows that the data-creation process itself can be crowdsourced to build Charades, a controlled but diverse household-activity benchmark whose baseline failures expose fine-grained person-object interaction and captioning gaps.",
+    "paper_type": "dataset",
+    "venue": "arXiv 2016",
+    "authors": "Gunnar A. Sigurdsson, Gul Varol, Xiaolong Wang, Ali Farhadi, Ivan Laptev, and Abhinav Gupta; Carnegie Mellon University, Inria, University of Washington, and The Allen Institute for AI",
+    "keywords": [
+      "activity understanding",
+      "crowdsourced dataset collection",
+      "Charades",
+      "household activities",
+      "action recognition",
+      "video captioning",
+      "temporal localization",
+      "human-object interaction"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a dataset-design paper for activity understanding, the vision problem of recognizing what people do over time: it attacks the missing-data gap for ordinary household behavior that web and movie sources underrepresent.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E13"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "Hollywood in Homes improves household activity data collection by turning online workers into script writers, actors, and annotators, producing Charades with free-text descriptions, action labels, and labels with start and end times (temporal localization).",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E3",
+        "E6"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Think of it as a distributed home movie studio: the researchers provide a small prop list and task list, many people improvise ordinary scenes at home, and separate viewers check what actually happened.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the combination of dataset scale, controlled annotations, and weak baseline performance measured by mean average precision (mAP), a metric that averages precision over ranked predictions.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E9",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c1",
+          "label": "",
+          "text": "Supports C1: Charades v1.0; contemporary video datasets in Table 1 as context; dataset origin, action density, labels, and temporal localization; 6.8 actions per video, 157 classes, and about 67K labels from 267 homes; supported as dataset-scale evidence.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3",
+          "label": "",
+          "text": "Supports C3: action classification on Charades; Random, C3D, AlexNet, Two-Stream, Improved Dense Trajectories (IDT), and late-fusion Combined baselines; mAP; Combined reaches 18.6% versus Random 5.9%; supported but without variance or repeat counts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c4",
+          "label": "",
+          "text": "Supports C4: sentence prediction on scripts and descriptions; Sequence to Sequence - Video to Text (S2VT) versus human descriptions; CIDEr caption similarity; S2VT scores 0.17/0.14 while humans score 0.51/0.53; supported but baseline-era only.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The evidence proves Charades was challenging for 2016 baselines, but the collection is still scripted and acted, and the experiments do not report uncertainty, repeat counts, hardware budgets, or modern model comparisons.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E4",
+        "E5",
+        "E9",
+        "E12"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and The Charades v1.0 Dataset",
+      "locator": "Abstract; Introduction dataset paragraph",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "The dataset is composed of 9,848 annotated videos with an average length of 30 seconds, showing activities of 267 people from three continents, and over 15% of the videos have more than one person.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "1 Introduction",
+      "locator": "Introduction, web-video bias discussion",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "But how do we find these boring videos of our daily lives? If we search common activities such as drinking from a cup, riding a bike on video sharing websites such as YouTube, we observe a highly-biased sample of results.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1 Introduction",
+      "locator": "Hollywood in Homes overview",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We take the Hollywood filming process to the homes of hundreds of people on Amazon Mechanical Turk. AMT workers follow the three steps of filming process: script generation; video direction and acting based on scripts; and video verification.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "2.1 Generating Scripts",
+      "locator": "Script vocabulary and AMT prompt",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "We found 15 types of rooms to cover most of typical homes. From movie-script term statistics we curated a list of 40 objects and 30 actions to be used as seeds for script generation.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "2.2 Generating Videos",
+      "locator": "Worker recruitment, cost, and verification",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "To maximize the diversity of scenes, objects, clothing and behaviour of people, we ask the workers themselves to record the 30 second videos by following collected scripts.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "2.3 Annotations",
+      "locator": "Annotation procedure",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "Using the generated scripts, all verb, preposition, noun triplets were analyzed, and the most frequent grouped into 157 action classes. For all the chosen action classes in each video, another set of workers was asked to label the starting and ending point.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "3 Charades v1.0 Analysis",
+      "locator": "Dataset statistics and co-occurrence analysis",
+      "claim_type": "result",
+      "evidence_type": "paper_statement",
+      "snippet": "Since we have control over the data acquisition process, instead of using Internet search, there are on average 6.8 relevant actions in each video. These actions occur in various orders and context, similar to our daily lives.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E8",
+      "section": "4 Applications",
+      "locator": "Train/test split and label precision",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "The resulting training and test sets contain 7,985 and 1,863 videos, respectively. The number of annotated action intervals are 49,809 and 16,691 for training and test. The label precision for the data is 95.6%.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "4.1 Action Classification",
+      "locator": "Table 2 and baseline discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2 reports mAP for action classification: Random 5.9, C3D 10.9, AlexNet 11.3, Two-Stream-B 11.9, Two-Stream 14.3, IDT 17.2, and Combined 18.6.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "4.1 Action Classification",
+      "locator": "Figure 7 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "The majority of the confusion is among actions that interact with the same object, and there is confusion among objects with similar functional properties. Evaluation of action recognition on actions with no specific object of interaction results in 38.9% mAP.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "4.2 Sentence Prediction",
+      "locator": "Task setup and baselines",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "The dataset contains sentences that have been used to create the video, as well as multiple video descriptions obtained manually for recorded videos. Captions are evaluated using CIDEr, BLEU, ROUGE, and METEOR metrics.",
+      "confidence": "high"
+    },
+    {
+      "id": "E12",
+      "section": "4.2 Sentence Prediction",
+      "locator": "Table 4 and Figure 8 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 4 shows S2VT as the strongest baseline. Its CIDEr scores are 0.17 for script prediction and 0.14 for description prediction, while human performance is 0.51 and 0.53 respectively.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "1 Introduction",
+      "locator": "Related dataset discussion",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "Standard approaches in the past have used videos downloaded from the Internet, gathered from movies or recorded in controlled environments. Movies however are still exciting and do not capture the scenes, objects or actions of daily living.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "1 Introduction",
+      "locator": "Table 1",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Table 1 compares Charades with ActivityNet, UCF101, HMDB51, THUMOS, Sports 1M, MPII-Cooking, ADL, and MPII-MD across actions per video, classes, labelled instances, total videos, origin, type, and temporal localization.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "4.1 Action Classification",
+      "locator": "Table 3",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Table 3 studies improved trajectories with HOG, HOF, MBH, descriptor combinations, and GMM cluster counts. Performance improves from 12.3 mAP with HOG at K=64 to 17.2 with HOG+HOF+MBH at K=256.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This is about activity understanding: teaching vision systems to recognize what people are doing over time, not just which objects appear in one image. The prerequisite idea is that datasets shape model behavior, because models learn the situations a dataset makes common.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "Everyday household behavior is visually ordinary, so people rarely upload clean examples of it online, yet home robots and assistive tools need to understand exactly that kind of behavior.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The data must be realistic, diverse, annotated over time, and still controllable enough that learning tasks have clear labels.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Move the filming pipeline into workers' homes: ask people to write small scripts, act them out, and let other workers verify and annotate the resulting videos.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that models meant for real homes need training examples of ordinary object-centered activities, not only static images, sports clips, movies, or lab scenes. The stakes are representation learning for object state, human-object interaction, context, video description, and future robot perception.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Internet and movie datasets provide scale but bias toward entertaining or edited actions, while in-house and first-person daily-activity datasets provide control but not the same diversity or scalability. ActivityNet is presented as complementary because it uses YouTube daily activities but remains uncontrolled and professionally edited.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The collection bottleneck can be shifted from finding naturally uploaded videos to creating ordinary videos on demand, while preserving diversity by distributing the filming across workers' real homes. The control lever is not a lab set but a vocabulary-constrained script prompt.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's main claims are about a collection method, the resulting dataset, and the difficulty that dataset exposes for recognition and captioning systems.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E3",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Hollywood in Homes can produce a large, controlled, and diverse dataset of realistic household activities rather than relying on web search, movies, or lab recording.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E3",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Charades supplies dense multi-action videos with temporal localization and object interaction labels, making it useful for household activity, context, and description benchmarks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Standard action-recognition baselines struggle on Charades, especially when actions differ mainly by the object being manipulated or by fine-grained interaction.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: Video captioning baselines can produce coherent language on Charades but remain far from human descriptions in relevance.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core_mechanism",
+          "label": "Core Mechanism",
+          "text": "The method uses Amazon Mechanical Turk (AMT), an online marketplace for paid tasks, to distribute the whole data lifecycle: workers write scripts, other workers act and record them in homes, and additional workers verify and annotate the videos. This turns crowdsourcing from a labeling tool into a controlled content-creation pipeline.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The pipeline starts with a constrained text prompt, turns that prompt into a home-recorded video, verifies whether the video matches the prompt, and then derives descriptions, object labels, action classes, and temporal intervals. The resulting artifact links free text, object interaction, multi-action labels, and action timing for each video.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_script_step",
+              "label": "",
+              "text": "Script step: workers receive a room, sampled objects, and sampled actions, then write a short realistic paragraph so the dataset remains both guided and human-imagined.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_video_step",
+              "label": "",
+              "text": "Video step: workers record roughly half-minute videos in their own homes, using the script as direction and bringing natural variation in rooms, objects, clothing, and behavior.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_annotation_step",
+              "label": "",
+              "text": "Annotation step: workers describe the observed video, verify object lists and action presence, and mark action start and end points to create temporal localization.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The central tradeoff is controlled diversity: the researchers restrict the vocabulary enough to benchmark actions, but leave the scene and paragraph construction open enough to preserve human variation. They also spend collection budget on recruitment, retention, and verification because filming is more inconvenient than ordinary annotation.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_decision_vocabulary",
+              "label": "",
+              "text": "Need: enough examples per category; design choice: seed scripts with curated rooms, objects, and actions; closest alternative: free web search or free-form filming; tradeoff: better control but bounded vocabulary.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_worker_creativity",
+              "label": "",
+              "text": "Need: realistic household scenarios; design choice: let workers compose short paragraphs with selected ingredients; closest alternative: lab-written scripts; tradeoff: more human bias and diversity but less precise semantic control.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_quality_control",
+              "label": "",
+              "text": "Need: usable videos and labels; design choice: separate verification and exhaustive action annotation, especially for the test set; closest alternative: trust the recorder's self-report; tradeoff: higher cost for better label reliability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation surface is a set of AMT tasks and interfaces rather than a new recognition algorithm: script writing, filming, line-up verification, object verification, action verification, and temporal interval labeling. The paper states that code and interfaces would be released with the dataset, but does not provide enough in-paper detail to reproduce the full worker workflow alone.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation uses a worker-disjoint train/test split and multi-label classification, meaning one video may contain several action labels, measured by mAP. Baselines include hand-crafted motion features, object-image convolutional neural network features, two-stream video networks, 3D convolutional features, late fusion, and sentence-prediction baselines evaluated with caption metrics.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest for dataset construction and baseline difficulty, moderate for detailed failure analysis, and weakest for claims about long-term generalization beyond the collected household-script setting.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E8",
+            "E9",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1: supported by the reported collection pipeline, worker diversity, and dataset size, but the paper's realism claim is bounded by scripted acting rather than passive observation.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E1",
+                "E3",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2: supported by the reported number of descriptions, action intervals, object labels, actions per video, and comparison to contemporary datasets.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E6",
+                "E7",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3: supported by low mAP for several standard baselines and by confusion among actions sharing objects or functionally similar objects.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c4",
+              "label": "",
+              "text": "C4: supported by caption metrics where S2VT is the strongest baseline but remains far below human captions, plus examples showing coherent but irrelevant outputs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is that Charades is not saturated by then-standard action and captioning methods: late fusion is best among action baselines, but absolute action mAP is low, and S2VT remains well below human caption scores. The paper also finds that fine-grained object interactions drive many classification confusions.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "result_action_baselines",
+              "label": "",
+              "text": "Action classification: Combined late fusion scores 18.6% mAP, IDT scores 17.2%, and Random scores 5.9%; this supports C3 but no variance or repeated-run uncertainty is reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "result_confusion",
+              "label": "",
+              "text": "Object-interaction failure: the Combined baseline mostly confuses actions involving the same object, while actions without a specific object interaction reach 38.9% mAP; this sharpens C3.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "result_captioning",
+              "label": "",
+              "text": "Sentence prediction: S2VT is the strongest baseline, but its CIDEr is 0.17 on scripts and 0.14 on descriptions versus human 0.51 and 0.53; this supports C4.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The clearest sensitivity study is for IDT feature design: combining HOG, HOF, and MBH descriptors and using more Gaussian mixture components improves mAP. The paper does not provide a causal ablation of the collection pipeline itself, such as removing script constraints or changing verification depth.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "Reported: dataset split sizes, label precision, baseline families, selected hyperparameters, and a promise to release code/interfaces. Not reported: random seeds, repeated runs, confidence intervals, hardware/resource budgets, exact AMT interface details, and complete training scripts inside the paper.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E8",
+            "E9",
+            "E11",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The data-generation logic is coherent: a constrained vocabulary gives benchmark coverage, human-written scripts create plausible sequences, home recording adds environmental variation, and separate verification reduces label noise. The evaluation also cleanly connects the dataset's intended difficulty to baseline failures on multi-action recognition and caption relevance.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6",
+            "E8",
+            "E9",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_may_fail",
+          "label": "Where It May Fail",
+          "text": "Benefits may diminish when the target behavior is unscripted, culturally specific, safety-critical, rare, or outside the curated indoor-object vocabulary. Generality is also limited by the fact that the empirical difficulty is shown with 2016 baselines and without statistical uncertainty.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E9",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation",
+          "label": "Relation to Other Work",
+          "text": "Compared with YouTube datasets such as UCF101, Sports1M, and ActivityNet, Charades trades natural upload behavior for controlled household coverage; compared with movie-description datasets, it removes entertainment editing; compared with in-house cooking or daily-living datasets, it scales diversity through distributed homes. The paper positions these sources as complementary rather than universally inferior.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "When naturally occurring data is missing, crowdsource the generative process, not just the labels: constrain the task enough to make benchmark categories reliable, then let many participants supply the variation that a lab cannot cheaply stage. This pattern transfers to other domains where the desired behavior is ordinary, private, or under-uploaded.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_activity_understanding",
+      "term": "activity understanding",
+      "aliases": [
+        "human activity understanding"
+      ],
+      "note": "Computer vision task of recognizing actions, object interactions, and temporal context in video."
+    },
+    {
+      "id": "g_crowdsourcing",
+      "term": "crowdsourcing",
+      "aliases": [
+        "AMT collection",
+        "online-worker collection"
+      ],
+      "note": "Using many distributed workers to create, verify, or label data; in this paper it includes filming, not only annotation."
+    },
+    {
+      "id": "g_script",
+      "term": "script",
+      "aliases": [
+        "video prompt"
+      ],
+      "note": "A short paragraph describing ordinary household actions that a worker acts out in a video."
+    },
+    {
+      "id": "g_temporal_localization",
+      "term": "temporal localization",
+      "aliases": [
+        "action interval",
+        "start/end annotation"
+      ],
+      "note": "Labeling when an action starts and ends inside a video, rather than only saying the action appears somewhere."
+    },
+    {
+      "id": "g_action_class",
+      "term": "action class",
+      "aliases": [
+        "activity label"
+      ],
+      "note": "A benchmark label for a type of action, often tied to an object interaction such as opening a refrigerator."
+    },
+    {
+      "id": "g_multi_label_classification",
+      "term": "multi-label classification",
+      "aliases": [
+        "multi-action classification"
+      ],
+      "note": "Classification where one video can be assigned several action labels at the same time."
+    },
+    {
+      "id": "g_map",
+      "term": "mean average precision",
+      "aliases": [
+        "mAP"
+      ],
+      "note": "Ranking metric commonly used when each class has positives and negatives; higher is better."
+    },
+    {
+      "id": "g_idt",
+      "term": "Improved Dense Trajectories",
+      "aliases": [
+        "IDT"
+      ],
+      "note": "A hand-crafted video feature method that tracks local motion patterns and encodes them for action recognition."
+    },
+    {
+      "id": "g_two_stream",
+      "term": "two-stream network",
+      "aliases": [
+        "spatial-temporal CNN"
+      ],
+      "note": "A video recognition model family that combines appearance information from frames with motion information across frames."
+    },
+    {
+      "id": "g_s2vt",
+      "term": "Sequence to Sequence - Video to Text",
+      "aliases": [
+        "S2VT"
+      ],
+      "note": "A video captioning baseline that combines convolutional visual features with a recurrent language model."
+    },
+    {
+      "id": "g_cider",
+      "term": "CIDEr",
+      "aliases": [
+        "Consensus-based Image Description Evaluation"
+      ],
+      "note": "Caption similarity metric used to compare generated descriptions against human reference descriptions."
+    }
+  ]
+}

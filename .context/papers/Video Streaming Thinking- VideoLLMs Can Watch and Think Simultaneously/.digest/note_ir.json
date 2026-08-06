@@ -1,0 +1,932 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Video Streaming Thinking: VideoLLMs Can Watch and Think Simultaneously",
+    "summary": "Video Streaming Thinking turns playback time into proactive clip-level reasoning, letting online video language models keep a compact memory and answer later questions with low latency.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2026",
+    "authors": "Yiran Guan*, Liang Yin*, Dingkang Liang, Yuliang Liu, Xiang Bai (Huazhong University of Science and Technology); Jianzhong Ju, Zhenbo Luo, Jian Luan (MiLM Plus, Xiaomi Inc.)",
+    "keywords": [
+      "streaming video understanding",
+      "VideoLLM",
+      "chain-of-thought",
+      "online reasoning",
+      "knowledge graph data synthesis",
+      "reinforcement learning"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a streaming video understanding paper about the missing reasoning layer between visual-token memory systems and slow after-the-query chain-of-thought reasoning.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "Video Streaming Thinking (VST) improves online video question answering (QA) by generating compact thoughts while the video is still arriving, so the final answer can reuse already-processed evidence instead of starting its reasoning after the user asks.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E4"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a live note-taker watching a video: every few moments it writes a short running note, keeps the latest scene in sight, and answers from those notes when a question arrives.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest support is the combination of online benchmark gains, low query-time latency, and ablations showing that VST data and training stages matter.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E11",
+        "E13",
+        "E15"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_online",
+          "label": "",
+          "text": "Supports C3: VST-7B on online benchmarks; Streamforest and Streamo as closest open-source streaming baselines; overall accuracy; +2.2 points on StreamingBench and +1.4 points on OVO-Bench; supported but without reported variance.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_latency",
+          "label": "",
+          "text": "Supports C1: VST-7B on VideoHolmes latency measurement; Video-R1 with chain-of-thought as closest reasoning baseline; query-answer latency; 0.56s versus 8.80s, about 15.7x faster; supported for query-time latency, not total token cost.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_training",
+          "label": "",
+          "text": "Supports C3: VST-SFT plus VST-RL training schedule; Qwen2.5-VL-7B base as baseline; OVO-Bench and VideoMME accuracy; 59.3 versus 50.5 on OVO-Bench and 64.9 versus 62.9 on VideoMME; supported by ablation, without repeat counts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The latency story depends on having playback time available for pre-query thinking; the paper also acknowledges extra generated tokens and mostly text-guided memory, so VST is not a free replacement for efficient visual memory.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E15",
+        "E17"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and header",
+      "locator": "title block and abstract",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "Video Streaming Thinking: VideoLLMs Can Watch and Think Simultaneously. Yiran Guan, Liang Yin, Dingkang Liang, Jianzhong Ju, Zhenbo Luo, Jian Luan, Yuliang Liu, Xiang Bai. Code, data, and models will be released at https://github.com/1ranGuan/VST.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "1 Introduction",
+      "locator": "paragraphs on online challenges and prior methods",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "the core challenges of online video understanding lie in strict temporal causality, real-time processing, and a finite context window. Several prior methods primarily improve context-window efficiency by explicitly managing visual tokens for compression or by retrieving from the KV cache.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1 Introduction",
+      "locator": "VST motivation paragraph",
+      "claim_type": "insight",
+      "evidence_type": "paper_statement",
+      "snippet": "we introduce the Video Streaming Thinking (VST) to resolve the trade-off between explicit reasoning and real-time responsiveness, shifting the LLM backend from passive waiting to active, intermittent reasoning during video consumption.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "2.1 The Video Streaming Thinking (VST) Paradigm",
+      "locator": "opening paragraph and Fig. 2",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "This process synthesizes key visual details and event dynamics into a dual-memory system: maintaining a short-term native video memory for the current visual context, while accumulating a long-term textual semantic memory of past events.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "2.1 The Video Streaming Thinking (VST) Paradigm",
+      "locator": "advantages after Eq. 1",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "It amortizes the computational cost of Chain-of-Thought (CoT) generation over the pre-query phase. This strategy effectively achieves test-time scaling to boost performance without incurring additional latency at the moment of user interaction.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "2.2 Training Method for VST",
+      "locator": "Stage 1: VST-SFT",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "we apply a streaming video attention mask. This mask restricts the model's attention to a fixed-size window of recent visual tokens, mirroring the short-term visual buffer used during inference.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "2.2 Training Method for VST",
+      "locator": "Stage 2: VST-RL",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "We compute the reward solely based on the final answer via verifiable reward functions. To encourage the model to generate useful streaming thoughts, the calculated advantage is assigned to all generated tokens within the entire trajectory.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "2.3 Data Synthesis Pipeline for VST",
+      "locator": "data synthesis and curation paragraphs",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "we model entities and their temporal relationships within long videos as knowledge graphs. By sampling paths from these graphs to form evidence chains, we prompt an offline VideoLLM to generate complex QA pairs and their corresponding intermediate CoTs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "3.1 Implementation Details",
+      "locator": "implementation paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "We adopt Qwen2.5-VL as our base offline VideoLLM, processing input videos at 2 fps. Both VST-SFT and VST-RL (7B model) training stages are conducted on 32 x 80GB VRAM GPUs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "3.2 Benchmarks",
+      "locator": "benchmark description paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Streaming-Bench and OVO-Bench are utilized for online video understanding, focusing on the model's online reasoning capabilities and temporal awareness. VideoMME serves as a comprehensive offline benchmark, while LongVideoBench is designed to evaluate long-form video understanding.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "3.3 Online Video Benchmark Results",
+      "locator": "Tables 1 and 2 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "VST-7B achieves 79.5% on StreamingBench and 59.3% on OVO-Bench, clearly outperforming prior open-source streaming SOTA models, including Streamforest (77.3%) on StreamingBench and Streamo (57.9%) on OVO-Bench.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "3.4 Offline Video Benchmark Results",
+      "locator": "Table 3 discussion",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On long-video benchmarks, VST-7B achieves 55.3% on VideoMME-long, outperforming TimeChat-Online by +6.9%, and 58.0% on LongVideoBench, exceeding it by +2.6%. On the reasoning benchmark VideoHolmes, VST-7B reaches 41.9%, surpassing VideoR1 by +5.4%.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "3.5 Ablation Study",
+      "locator": "Table 4 discussion",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "the mix of 20K LLaVA-Vid and 30K VST data achieves a +6.6% gain on the OVO-Bench. Combining both stages (VST-SFT & VST-RL) yields the highest overall performance on both OVO-Bench (59.3%) and VideoMME (64.9%).",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "3.5 Ablation Study",
+      "locator": "Fig. 5 and Table 5 discussion",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "For the Backward task, accuracy increases from 53.3% and grows continuously from 1 to 16 steps, ultimately reaching 57.5%. For the Real-Time and Forward tasks, initial thinking steps significantly aid in understanding visual information. However, performance reaches a plateau for >= 4 steps.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "3.6 Analysis",
+      "locator": "Efficiency Analysis and Table 6",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Qwen2.5-VL-7B w/CoT has 5.30s QA latency, Video-R1 w/CoT has 8.80s, and VST-7B has 0.56s. streaming think is executed asynchronously before the query and finishes within the clip inter-arrival interval.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "3.6 Analysis",
+      "locator": "Case Study and Fig. 6",
+      "claim_type": "result",
+      "evidence_type": "case_study",
+      "snippet": "VST-7B employs streaming thinking to continuously update its evidence (e.g., timestamps and event triggers) as the video memories. This pre-query evidence accumulation allows VST to correctly deduce the time-based rule.",
+      "confidence": "low"
+    },
+    {
+      "id": "E17",
+      "section": "5 Conclusion",
+      "locator": "Limitation and Future Works",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "While the computation of streaming thoughts can be scheduled in parallel with incoming video clips, the additional LLM token consumption is still non-negligible. A promising direction is to explore latent reasoning to enable more token-efficient streaming thinking.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Video Large Language Models (VideoLLMs) answer questions about video. In live settings, the model sees the video as it arrives, so it must remember earlier events without looking ahead.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A viewer may ask a question late, but the clue may have appeared much earlier. The model needs to keep useful clues ready while still responding quickly.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Long videos contain too many frames to keep raw details forever, and careful reasoning after the question can make the user wait.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Make the model write useful running thoughts while it watches, then answer from those thoughts plus the latest scene.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "Online video understanding must obey temporal causality, meaning the model cannot use future frames, while still meeting real-time query-answer latency and finite context-window limits, where a context window is the bounded amount of tokens a model can attend to at once.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper positions prior online VideoLLMs as mostly managing visual memory through compression or key-value cache retrieval, where a key-value cache stores earlier attention state for reuse, while offline chain-of-thought (CoT), or step-by-step reasoning text, improves reasoning but shifts latency after the user query.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The key insight is to move explicit reasoning into the natural waiting time between incoming video clips, so reasoning cost is amortized over playback instead of concentrated at the moment of interaction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's logical claims are that pre-query streaming thoughts can reduce query-time latency, that a dual-memory protocol can make offline VideoLLMs causal, that the training and data recipe improves accuracy, and that the method has bounded but real efficiency costs.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E11",
+            "E13",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "argument_claim_C1",
+              "label": "",
+              "text": "C1: VST reduces query-answer latency for reasoning-heavy video QA by generating CoT-style thoughts before the question arrives instead of only after it.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C2",
+              "label": "",
+              "text": "C2: A short-term visual buffer plus long-term textual semantic memory lets a VideoLLM operate under temporal causality and finite context while preserving useful history.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C3",
+              "label": "",
+              "text": "C3: The VST supervised fine-tuning (VST-SFT), reinforcement learning (VST-RL), and knowledge-graph data synthesis recipe improves online benchmark accuracy and remains competitive on offline long-video reasoning benchmarks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "argument_claim_C4",
+              "label": "",
+              "text": "C4: VST is complementary to efficient visual-memory methods rather than a free substitute, because it spends extra generated tokens and relies mainly on text-guided memory.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "VST treats live video as a multi-turn conversation: each new clip produces a streaming thought, a short textual summary of useful events, and the model later answers from accumulated thoughts plus the current clip.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_clip_thought",
+              "label": "",
+              "text": "Incoming frame features are grouped into clips when the visual-token budget is reached, and each clip is processed together with previous memory to generate the next thought.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_dual_memory",
+              "label": "",
+              "text": "The visual side keeps recent raw video tokens for precise perception, while the text side stores prior thoughts as semantic memory with first-in-first-out eviction.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_query",
+              "label": "",
+              "text": "When the user asks, the final answer is generated directly from the current clip and accumulated memory rather than replaying the whole video or starting a long reasoning trace from scratch.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The execution order is clip arrival, visual encoding, streaming-thought generation, memory update, and final answer on query; the training order mirrors this sequence so the model sees only past and current evidence.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_inference",
+              "label": "",
+              "text": "At inference, streaming thoughts are scheduled before the next clip arrives, so the user-facing path after the query contains only current encoding and answer generation.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_sft",
+              "label": "",
+              "text": "During VST-SFT, training examples interleave memory, clip, thought pairs and end with the final clip, question, and answer, with next-token prediction applied only to thoughts and the final response.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_data",
+              "label": "",
+              "text": "The synthetic-data path builds a video knowledge graph, samples evidence chains with depth-first search, and asks an offline model to generate streaming CoT and QA pairs aligned to those chains.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design consistently chooses lightweight text memory and causal masks over keeping all raw visual evidence, trading away some visual fidelity to keep streaming feasible.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "mechanism_decision_dual_memory",
+              "label": "",
+              "text": "Need: unbounded streams exceed fixed context; choice: a recent visual buffer plus long-term textual memory; closest alternative: visual-token compression or retrieval-only memory; tradeoff: summaries can omit details later needed for a question.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E2",
+                "E4",
+                "E17"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_causal_mask",
+              "label": "",
+              "text": "Need: avoid future-frame leakage during training; choice: a streaming attention mask that exposes only a sliding visual window plus non-visual history; closest alternative: offline global attention; tradeoff: old raw frames must be represented by text memory.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_final_reward",
+              "label": "",
+              "text": "Need: improve thoughts without separately scoring every intermediate thought; choice: group-relative policy optimization (GRPO) with final-answer reward assigned across trajectory tokens; tradeoff: credit assignment can be noisy when a final answer depends on only some thoughts.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E7"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported implementation starts from Qwen2.5-VL, freezes the visual encoder and projection layer, processes video at 2 fps, trains the 7B model on 32 x 80GB GPUs, and evaluates through lmms-eval with inference caps on visual tokens and thinking times.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_impl_training_stack",
+              "label": "",
+              "text": "VST-RL uses verl with vLLM rollout and Fully Sharded Data Parallel (FSDP), while the appendix reports one epoch for both VST-SFT and VST-RL plus actor learning-rate, batch, and rollout settings.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_eval_cap",
+              "label": "",
+              "text": "Testing caps each inference step, including streaming-think and final answer, at 8,192 video tokens and limits max thinking times to 4 for efficient evaluation.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation covers online temporal reasoning with StreamingBench and OVO-Bench, offline general video understanding with VideoMME, long-video understanding with LongVideoBench, and complex reasoning with VideoHolmes.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The paper backs the latency claim with a direct latency table, the causal-memory claim with method design, the accuracy claim with online, offline, and ablation results, and the cost boundary with its own limitation section.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E11",
+            "E13",
+            "E15",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_C1",
+              "label": "",
+              "text": "C1 is supported by Table 6 and the streaming pipeline: VST keeps query-time latency close to direct-answer models while reasoning baselines pay post-query CoT latency.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_C2",
+              "label": "",
+              "text": "C2 is supported mechanistically by the dual-memory formulation and streaming attention mask, but not isolated by a clean memory-component ablation.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E4",
+                "E6",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_C3",
+              "label": "",
+              "text": "C3 is supported by online, offline, training-schedule, thinking-time, and model-size evaluations, though the paper does not report statistical uncertainty.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is not a single largest number but the accuracy-latency tradeoff: VST-7B improves over open-source streaming baselines on online tasks, stays competitive offline, and avoids the large post-query latency of CoT baselines.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_online",
+              "label": "",
+              "text": "Supported claim: C3; configuration: VST-7B; baselines: Streamforest and Streamo; metric: benchmark accuracy; direction and delta: 79.5 versus 77.3 on StreamingBench and 59.3 versus 57.9 on OVO-Bench; caveat: no variance or repeated-run statistics reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_offline",
+              "label": "",
+              "text": "Supported claim: C3; configuration: VST-7B; baselines: TimeChat-Online and Video-R1; metric: accuracy; direction and delta: +6.9 on VideoMME-long, +2.6 on LongVideoBench, and +5.4 on VideoHolmes; caveat: benchmark comparability depends on identical evaluation settings.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_latency",
+              "label": "",
+              "text": "Supported claim: C1; configuration: VideoHolmes latency; baselines: Qwen2.5-VL-7B with CoT and Video-R1 with CoT; metric: query-answer latency; direction and delta: 0.56s for VST-7B versus 5.30s and 8.80s; caveat: pre-query token generation is outside QA latency.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations suggest the VST-specific data and two-stage training both matter, while more streaming thoughts help up to a point and then add redundant memory detail.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_training_data",
+              "label": "",
+              "text": "The VST data mix outperforms LLaVA-Vid-only supervised fine-tuning, with the reported 20K LLaVA-Vid plus 30K VST mix giving +6.6 OVO-Bench points over 50K LLaVA-Vid alone.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_stages",
+              "label": "",
+              "text": "VST-SFT and VST-RL have different reported strengths, with SFT helping backward memory and RL helping forward prediction; using both gives the best reported OVO-Bench and VideoMME scores.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_thinking_times",
+              "label": "",
+              "text": "Increasing max streaming thinking times improves Backward accuracy through 16 steps, while Real-Time and Forward tasks plateau after about 4 steps, marking a practical budget boundary.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_repro_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper says code, data, and models will be released and reports substantial training details, hardware, backends, datasets, and inference caps, but it does not report seeds, repeat counts, variance, full filtering acceptance rates, or release verification in the provided text.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E9",
+            "E13",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The core systems argument holds up: when a live stream creates idle time before a query, moving reasoning into that interval can reduce observed QA latency while preserving a compact history for later temporal questions.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "judgment_holds_up_training",
+              "label": "",
+              "text": "The ablation that VST data plus both VST-SFT and VST-RL gives the best reported scores makes the training recipe more credible than a pure prompting story.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_holds_up_boundary",
+              "label": "",
+              "text": "The latency table is persuasive for query-time responsiveness because the closest reasoning baselines defer CoT generation until after the query.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_may_fail",
+          "label": "Where It May Fail",
+          "text": "VST may fail when the stream has little idle time, when useful evidence is hard to summarize into text, when a later question needs a precise old visual detail that was evicted, or when token cost matters more than query-time latency.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E14",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "judgment_fail_eval",
+              "label": "",
+              "text": "The reported plateau for some tasks after about 4 thinking steps suggests extra thoughts can become redundant rather than universally useful.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_uncertainty",
+              "label": "",
+              "text": "The accuracy evidence is broad but not uncertainty-aware, since the paper does not report variance, confidence intervals, or repeat counts for the benchmark deltas.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with streaming visual-memory systems such as Streamforest, TimeChatOnline, VideoLLM-online, Dispider, and Flash-VStream, VST shifts the emphasis from retaining visual tokens to generating evolving semantic thoughts; compared with Video-R1 or LongVILA-R1-style video reasoning, it moves reasoning before the query.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E5",
+            "E11",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "judgment_relation_visual_memory",
+              "label": "",
+              "text": "The paper's own limitation frames text-guided memory as orthogonal to streaming visual-memory mechanisms, so the clean research comparison is not replacement but complementarity.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For interactive AI systems, a useful pattern is to spend predictable idle time on incremental state-building, store the result in a compact form, and keep the user-triggered path short and direct.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_video_llm",
+      "term": "Video Large Language Model",
+      "aliases": [
+        "VideoLLM",
+        "VideoLLMs"
+      ],
+      "note": "A language model extended to take video-derived visual inputs and answer natural-language questions about them."
+    },
+    {
+      "id": "g_online_video_understanding",
+      "term": "online video understanding",
+      "aliases": [
+        "streaming video understanding"
+      ],
+      "note": "Understanding video as it arrives over time, without using future frames that have not yet appeared."
+    },
+    {
+      "id": "g_context_window",
+      "term": "context window",
+      "aliases": [
+        "visual context window"
+      ],
+      "note": "The bounded set of tokens the model can attend to at one time; for video, this limits how much raw visual evidence can remain visible."
+    },
+    {
+      "id": "g_vst",
+      "term": "Video Streaming Thinking",
+      "aliases": [
+        "VST"
+      ],
+      "note": "The paper's paradigm of generating intermediate thoughts during video playback and answering later from those thoughts plus the current clip."
+    },
+    {
+      "id": "g_cot",
+      "term": "chain-of-thought",
+      "aliases": [
+        "CoT"
+      ],
+      "note": "Step-by-step natural-language reasoning text generated by a model before or alongside an answer."
+    },
+    {
+      "id": "g_streaming_thought",
+      "term": "streaming thought",
+      "aliases": [
+        "stream thought"
+      ],
+      "note": "An intermediate textual summary or reasoning update generated for a new video clip before the final user question is answered."
+    },
+    {
+      "id": "g_vst_sft",
+      "term": "VST supervised fine-tuning",
+      "aliases": [
+        "VST-SFT",
+        "SFT"
+      ],
+      "note": "The imitation-learning stage that teaches the model the streaming thought format under causal video constraints."
+    },
+    {
+      "id": "g_vst_rl",
+      "term": "VST reinforcement learning",
+      "aliases": [
+        "VST-RL",
+        "GRPO",
+        "RL"
+      ],
+      "note": "The on-policy stage that samples full streaming trajectories and optimizes them using a final-answer reward; GRPO is the group-relative policy optimization method used."
+    },
+    {
+      "id": "g_knowledge_graph",
+      "term": "knowledge graph",
+      "aliases": [
+        "evidence chain",
+        "DFS"
+      ],
+      "note": "A graph of entities and relations extracted from a video; the paper samples paths through it as multi-hop evidence for synthetic training questions."
+    },
+    {
+      "id": "g_fsdp",
+      "term": "Fully Sharded Data Parallel",
+      "aliases": [
+        "FSDP"
+      ],
+      "note": "A distributed training technique that shards model parameters and optimizer state across GPUs to reduce per-device memory pressure."
+    },
+    {
+      "id": "g_qa_latency",
+      "term": "query-answer latency",
+      "aliases": [
+        "QA latency"
+      ],
+      "note": "The measured time from user query submission to the model's response, not necessarily the total computation spent while the video was playing."
+    }
+  ]
+}

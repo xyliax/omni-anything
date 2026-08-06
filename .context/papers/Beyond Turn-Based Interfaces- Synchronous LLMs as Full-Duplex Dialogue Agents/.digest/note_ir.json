@@ -1,0 +1,782 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Beyond Turn-Based Interfaces: Synchronous LLMs as Full-Duplex Dialogue Agents",
+    "summary": "SyncLLM turns a text-pretrained Llama3-8B model into a synchronous full-duplex speech dialogue agent by making time an explicit token-level structure, showing that language pretraining can improve spoken dialogue meaning without sacrificing much turn-taking naturalness.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2024",
+    "authors": "Bandhav Veluri (Meta AI, University of Washington); Benjamin N. Peloquin (Meta AI); Bokai Yu (Meta AI); Hongyu Gong (Meta AI); Shyamnath Gollakota (University of Washington)",
+    "keywords": [
+      "full-duplex dialogue",
+      "spoken dialogue agents",
+      "synchronous language modeling",
+      "speech tokens",
+      "turn-taking",
+      "synthetic speech training"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a speech-language-model systems paper about moving large language models (LLMs) from push-to-talk dialogue toward always-listening, always-ready voice agents, with the main gap being real-time synchrony rather than only speech recognition or speech synthesis.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "SyncLLM improves full-duplex spoken dialogue, where both speakers may talk and listen at once, by training a text-pretrained Llama3-8B to generate speech in clocked chunks that keep both speakers on a shared timeline.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E5"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture two people passing short audio cards across a table every instant: the model writes its own next card, guesses the other person's not-yet-arrived card when the network is late, then replaces the guess with the real card as soon as it arrives.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the human Mean Opinion Score (MOS), a five-point listener rating, where SyncLLM is much more meaningful than dGSLM while naturalness remains close.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E13",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_mos",
+          "label": "",
+          "text": "Supports C2: 160 ms SyncLLM-F continuation; dGSLM baseline; overall Meaningfulness-MOS; +2.19 points from 1.55 to 3.74 with standard errors reported; strong support for better dialogue content.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_perplexity",
+          "label": "",
+          "text": "Supports C2: Fisher-trained continuation with 10 s prompts; dGSLM baseline; median transcription perplexity; SyncLLM stays roughly 15 above ground truth while dGSLM is roughly 70 above; medium support because variance is not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_interaction",
+          "label": "",
+          "text": "Supports C3: two SyncLLM agents with one-chunk delayed input; continuation and dGSLM references; ASR perplexity and MOS; interactive models remain far above dGSLM in meaningfulness but below single-model continuation; medium support for latency-tolerant interaction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The paper proves the idea mostly through simulated LLM-to-LLM interaction and listener ratings, so deployment trust still depends on real user studies, better speech generation quality, safety controls, and longer-context handling.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E15",
+        "E16"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract, opening and contribution summary",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "Beyond Turn-Based Interfaces: Synchronous LLMs as Full-Duplex Dialogue Agents. Bandhav Veluri, Benjamin N Peloquin, Bokai Yu, Hongyu Gong, Shyamnath Gollakota. Meta AI and University of Washington.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Abstract",
+      "locator": "Abstract, problem statement",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "Most approaches are inherently half-duplex - restricted to turn-based interaction with responses requiring explicit prompting by the user or implicit tracking of interruption or silence events. Human dialogue, by contrast, is full-duplex allowing for rich synchronicity.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1 Introduction",
+      "locator": "Introduction, four challenges paragraph",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Developing a full-duplex spoken dialog agent is challenging for four reasons: turn-taking cues require a common reference clock, spoken dialogue data is limited, the model must be streaming for the duration of dialogue, and cloud deployment must address Internet latency.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "2 Related work",
+      "locator": "Related work, dGSLM comparison",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "The closest work to ours is dGSLM, which models simultaneous dialogue using a dual-tower Transformer that attends to two channels. One weakness of dGSLM is its reliance on speech-only training, which does not fully utilize textual knowledge.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "3 SyncLLM",
+      "locator": "Section 3, architecture overview",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "SyncLLM is an auto-regressive transformer decoder architecture, that natively models discrete speech units in a wall-clock synchronous fashion. In each time step, the model predicts speech units corresponding to a fixed duration for its side followed by the user's side.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "3.1 Latency tolerant interaction",
+      "locator": "Section 3.1 and Figure 1",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "The LLM's output for the next chunk is computed by first estimating the user's response for the current time chunk. We then append this estimated chunk to the LLM's context to generate the LLM's next chunk.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "3.2 Token sequence format",
+      "locator": "Section 3.2, HuBERT tokenization",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "Following prior works in spoken language modeling, we use HuBERT to represent speech, with a token sampling rate of 25 Hz - one token for every 40 ms of audio - and a vocabulary size of 501.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "3.2 Token sequence format",
+      "locator": "Deduplication and Interpolation paragraphs",
+      "claim_type": "optimization",
+      "evidence_type": "implementation_detail",
+      "snippet": "SyncLLM is trained to predict deduplicated HuBERT sequences, with coarse timing information maintained by periodically interleaved special tokens. To generate token sequences suitable for speech synthesis, we use timing information to interpolate the deduplicated token sequence.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "4 Training",
+      "locator": "Training overview and Table 1",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "We use Llama3-8b as our base model and employ a three stage training procedure. The data table lists 193k hours of SFT synthetic speech, 20k hours of dialogue synthetic speech, and 1927 hours of real spoken dialogue.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "4 Training",
+      "locator": "Stage 3 paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "Finally, we finetune the model to learn turn-taking cues from real-world spoken dialogue data. We use the Fisher dataset with 2000 hours of spoken dialogues, where each speaker's speech is separated into independent audio channels.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "5.1 Semantic evaluation",
+      "locator": "Section 5.1, Figures 5 and 6",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "We transcribe the generated spoken dialogues into turn-based text dialogues and compute median perplexity. dGSLM has a perplexity drop of approximately 70 relative to the ground-truth, while SyncLLM only has a drop of approximately 15.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "5.2 Naturalness evaluation",
+      "locator": "Section 5.2 and Table 2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Generations with our models achieve better turn-taking event correlation with ground-truth continuations compared to dGSLM for both in-distribution and out-of-distribution testsets. Resynth-GT serves as a topline for our method.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "5.3 Human Evaluation",
+      "locator": "Human evaluation protocol paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "experiment_result",
+      "snippet": "In total, n_annot = 32 annotators provided ratings for n_items = 180 items divided evenly between the CANDOR and Fisher datasets. Each sample received a rating by three unique raters; 95 percent confidence intervals use bootstrapping.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "5.3 Human Evaluation",
+      "locator": "Table 3 and Overall results paragraph",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Nearly all models are at parity in perceived Naturalness of turn-taking, while SyncLLM-based models significantly outperform dGSLM in Meaningfulness, approaching re-synthesized ground-truth values. Table 3 reports SyncLLM-F overall Meaningfulness 3.74 versus dGSLM 1.55.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "5.4 Full-duplex interaction",
+      "locator": "Section 5.4, Figure 7, Table 4, Appendix C",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "SyncLLM in the LLM-LLM interaction setting is able to closely match the performance of the continuation setting and perform significantly better than dGSLM. Appendix C reports robustness to 200 ms latency but performance drops above that.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "7 Limitations and Risks",
+      "locator": "Limitations paragraph",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "Performance could be further improved in terms of speech quality; the paper uses a simple HiFi-GAN vocoder. It has not studied expressivity and non-verbal sounds such as laughter, and Llama-3 sequence length limits long-context modeling.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "A.1 Hyperparameters",
+      "locator": "Appendix A.1",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "We trained SyncLLM with the Llama3-8b's original sequence length 8192. Stage one uses 128 A100 GPUs and trains for 40k iterations; later stages reduce token batch sizes and train for 6000 and 2000 iterations.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "A.2 Benchmarking interleaving strategies",
+      "locator": "Appendix A.2 and Table 5",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "We explore two text-speech interleaving strategies in stage 1: sentence-level and turn-level. Sentence-level interleaving outperforms turn-level interleaving across all spoken language understanding benchmarks in Table 5.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Spoken dialogue agents try to let machines converse by voice, not just read and write text. Full-duplex dialogue means both sides can listen and speak at the same time, as people do when they interrupt, overlap, or say brief listening signals like 'yeah'.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "Most voice agents wait for a clean turn before answering, but real conversations do not wait politely: people start early, pause mid-thought, overlap briefly, and give tiny signals while the other person is still talking.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "A model must know what time it is, keep listening while it speaks, work with scarce real speech conversations, and answer before delayed network audio has fully arrived.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Make the model speak in short clocked chunks, train it on both sides of the conversation, and let it guess the other side briefly when live input is late.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper targets the mismatch between human full-duplex conversation and half-duplex voice interfaces that wait for prompts, silence, or turn-end detection. The stakes are not only lower latency, but preserving backchannels, interruptions, overlaps, and timing cues that make spoken interaction feel cooperative.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior spoken dialogue models either stay turn-based or, in the closest full-duplex baseline dGSLM, use speech-only modeling and assume immediate cross-speaker access; SyncLLM instead tries to preserve text-pretrained LLM knowledge while handling delayed input.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The key insight is that synchrony can be represented as a token-sequence problem: periodically insert speaker timing tags, generate fixed-duration chunks for both speakers, and use short-horizon prediction of the user stream to bridge unavoidable latency.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's claim chain has three falsifiable claims: C1 about synchronous modeling, C2 about semantic and natural dialogue quality, and C3 about latency-tolerant interaction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E11",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: A standard auto-regressive transformer decoder can model full-duplex speech when dialogue is encoded as interleaved, fixed-duration chunks with periodic speaker synchronization tokens.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Combining large synthetic speech-dialogue training with a smaller real dual-channel speech stage yields more meaningful generated dialogue than dGSLM while maintaining comparable turn-taking naturalness.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E11",
+                "E12",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Estimating the user's missing current chunk lets SyncLLM sustain simulated full-duplex interaction under one-chunk network delay, with evidence strongest up to 200 ms and weaker at 240 ms.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "SyncLLM keeps the ordinary next-token prediction interface of an auto-regressive transformer, a model that predicts the next symbol from previous symbols, but changes the sequence so speech from both participants is interleaved by real-time chunks. Periodic speaker tags, special tokens naming each speaker, act as synchronization marks that make elapsed time visible to the model.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E7"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_chunking",
+              "label": "",
+              "text": "Each chunk covers a fixed duration, and the model predicts its own side's discrete speech units followed by the user's side's units, allowing overlap and silence to be represented in the same sequence.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_tokens",
+              "label": "",
+              "text": "Speech is represented with HuBERT, a self-supervised speech tokenizer that maps audio into discrete units, at 25 Hz with a 501-unit vocabulary.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_data_flow",
+          "label": "Data / Control Flow",
+          "text": "At runtime, the model receives interleaved past chunks, lacks the user's current chunk until that audio finishes and arrives, predicts an estimated current user chunk, uses it to produce its next own chunk, then replaces the estimate with real user input for later chunks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_data_flow_train",
+              "label": "",
+              "text": "For training, each speaker's audio channel is tokenized separately, arranged into parallel streams, deduplicated within chunks, and interleaved with speaker tags.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_flow_synthesis",
+              "label": "",
+              "text": "For speech synthesis, deduplicated units are expanded back to the expected number of per-chunk tokens by interpolation before a vocoder converts units into audio.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design repeatedly trades exact acoustic timing for a representation that a text-pretrained LLM can learn: deduplicate speech units for semantics, keep coarse time with speaker tags, and bootstrap real full-duplex learning from synthetic turn-based speech.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "design_decision_dedup",
+              "label": "",
+              "text": "Need: raw speech tokens waste many positions on repeated silence or duration; choice: deduplicate HuBERT sequences; tradeoff: duration must be approximated later by interpolation.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_training_stages",
+              "label": "",
+              "text": "Need: real dual-channel spoken dialogue is scarce; choice: use synthetic text-to-speech stages before real Fisher full-duplex fine-tuning; tradeoff: early stages cannot teach true overlap or backchannels.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_sentence_interleave",
+              "label": "",
+              "text": "Need: align text and speech without destabilizing a text-only base model; choice: sentence-level text/speech interleaving rather than turn-level interleaving; ablation reports better zero-shot spoken language understanding.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E18"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported system extends Llama3-8B with speech-unit and speaker-tag tokens, uses the original 8192 sequence length, trains on 128 A100 GPUs in stage one, and synthesizes generated speech with a simple HiFi-GAN vocoder.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E17",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation has continuation mode, where one model extends both sides of a prompt, and interaction mode, where two SyncLLM instances talk with one-chunk delayed input. It compares against dGSLM, uses Fisher as in-distribution data and CANDOR as out-of-distribution data, and measures text semantics, turn-taking timing, and human MOS ratings.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E13",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "Evidence is strongest for C2 because it combines ASR-based semantic checks, turn-taking statistics, and human ratings; C1 is mainly supported by successful system behavior rather than isolated mechanism proof; C3 is supported by simulation rather than live human interaction.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "matrix_C1",
+              "label": "",
+              "text": "C1: Method evidence is direct for the sequence format and runtime algorithm, but the paper does not isolate every synchronization component in a causal ablation.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_C2",
+              "label": "",
+              "text": "C2: Semantic and MOS evidence is strong relative to dGSLM, while naturalness evidence is moderate because correlation metrics and MOS standard errors are reported but not full statistical tests for every comparison.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_C3",
+              "label": "",
+              "text": "C3: Interaction evidence shows useful degradation behavior across latency, but it is limited to model-model simulations and one reported interaction protocol.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "SyncLLM-F improves overall Meaningfulness-MOS from dGSLM's 1.55 to 3.74 at 160 ms chunks while Naturalness-MOS remains similar, 3.90 versus 3.95. In automatic semantic evaluation, SyncLLM's median transcription perplexity stays much closer to ground truth than dGSLM across generated durations and OOD prompts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "headline_naturalness",
+              "label": "",
+              "text": "Turn-taking correlations in Table 2 favor SyncLLM over dGSLM on both Fisher and CANDOR, but the resynthesized ground-truth topline shows there remains substantial timing loss from tokenization and synthesis.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_interaction",
+              "label": "",
+              "text": "In interaction mode, SyncLLM-F-C and SyncLLM-F-F retain higher Meaningfulness-MOS than dGSLM but fall below SyncLLM-F continuation, showing interaction is plausible but not free.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations",
+          "label": "Ablations and Sensitivity",
+          "text": "The clearest ablation is training interleaving level: sentence-level text/speech interleaving beats turn-level interleaving on WUGGY, BLIMP, Topic-StoryCloze, and StoryCloze. Latency sensitivity shows little degradation at 160-200 ms interaction but worse performance at 240 ms.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E18",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports model family, sequence length, hardware scale, learning rates, training iterations, data sources, evaluation protocols, and a project webpage; it does not provide enough information in the paper text alone to reproduce the exact synthetic TTS corpus, sampling recipes, model checkpoints, or all generation scripts.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E13",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The central systems move is credible: expose time in the token stream while keeping the architecture close to a pretrained LLM, which lets the model inherit language knowledge that speech-only dGSLM lacks. The strongest empirical support is that semantics improve sharply while timing metrics and Naturalness-MOS do not collapse.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E11",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "Benefits are likely to diminish when latency exceeds the chunk regime studied, when conversations need long memory beyond the inherited sequence length, when non-verbal expressivity matters, or when the simple vocoder dominates perceived quality. The method also assumes discrete semantic speech units are enough to carry dialogue behavior after interpolation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E8",
+            "E15",
+            "E16",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with turn-based spoken LLMs such as SpeechGPT-style systems, SyncLLM changes the interaction contract rather than only adding speech input and output. Compared with dGSLM, it replaces a speech-only dual-channel architecture with a text-pretrained decoder plus a synchronous sequence format, so the technical bet is reuse of language knowledge under a real-time speech encoding.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "When adapting LLMs to a medium with continuous time, avoid building a new architecture first; instead, encode the missing physical variable as a small, regular structure in the sequence, then use staged synthetic-to-real training to bridge data scarcity.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E8",
+            "E9"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_full_duplex",
+      "term": "full-duplex dialogue",
+      "aliases": [
+        "full-duplex"
+      ],
+      "note": "A conversation mode where both sides can speak and listen at the same time; translate as quan shuang gong or simultaneous two-way dialogue depending on context."
+    },
+    {
+      "id": "g_half_duplex",
+      "term": "half-duplex dialogue",
+      "aliases": [
+        "turn-based"
+      ],
+      "note": "A mode where one side effectively speaks at a time and the system waits for an explicit prompt, silence, or turn boundary before responding."
+    },
+    {
+      "id": "g_backchannel",
+      "term": "backchannel",
+      "aliases": [],
+      "note": "Short listener feedback such as 'yeah' or 'uh-huh' that can overlap with the speaker and signals attention or understanding."
+    },
+    {
+      "id": "g_sync_llm",
+      "term": "Synchronous LLM",
+      "aliases": [
+        "SyncLLM",
+        "LLM"
+      ],
+      "note": "The paper's model family: a large language model trained to generate speech-token chunks synchronized to a real-world clock."
+    },
+    {
+      "id": "g_hubert",
+      "term": "HuBERT",
+      "aliases": [],
+      "note": "A self-supervised speech representation model used here as a tokenizer that converts audio into discrete speech units."
+    },
+    {
+      "id": "g_speaker_tag",
+      "term": "speaker tag",
+      "aliases": [
+        "[S0]",
+        "[S1]"
+      ],
+      "note": "Special tokens marking which speaker's speech units follow; [S0] also acts as the periodic synchronization anchor."
+    },
+    {
+      "id": "g_deduplication",
+      "term": "deduplication",
+      "aliases": [],
+      "note": "Removing repeated consecutive speech tokens so the model spends capacity on semantic changes rather than silence or duration repetitions."
+    },
+    {
+      "id": "g_interpolation",
+      "term": "interpolation",
+      "aliases": [],
+      "note": "The reconstruction step that repeats deduplicated speech units to fill the expected number of tokens in each chunk before audio synthesis."
+    },
+    {
+      "id": "g_mos",
+      "term": "Mean Opinion Score",
+      "aliases": [
+        "MOS",
+        "N-MOS",
+        "M-MOS"
+      ],
+      "note": "A listener rating scale; this paper uses Naturalness-MOS for turn-taking and Meaningfulness-MOS for dialogue content."
+    },
+    {
+      "id": "g_fto",
+      "term": "floor-transfer offset",
+      "aliases": [
+        "FTO"
+      ],
+      "note": "A turn-taking timing measure: negative values represent overlap between speakers and positive values represent gaps."
+    },
+    {
+      "id": "g_hifigan",
+      "term": "HiFi-GAN vocoder",
+      "aliases": [
+        "HiFi-GAN",
+        "GAN"
+      ],
+      "note": "The simple speech synthesizer used by the paper to convert generated speech units into audible waveform output; GAN expands to generative adversarial network."
+    }
+  ]
+}

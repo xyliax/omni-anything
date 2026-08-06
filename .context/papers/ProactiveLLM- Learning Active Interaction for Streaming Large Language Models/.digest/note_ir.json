@@ -1,0 +1,817 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "ProactiveLLM: Learning Active Interaction for Streaming Large Language Models",
+    "summary": "ProactiveLLM trains streaming large language models to sense when partial input is semantically sufficient, reducing latency and redundant context use without relying on external timing annotations.",
+    "paper_type": "system",
+    "venue": "ICML 2026",
+    "authors": "Junlong Tong (Eastern Institute of Technology, Ningbo; Shanghai Jiao Tong University), Yao Zhang (Eastern Institute of Technology, Ningbo), Anhao Zhao (Eastern Institute of Technology, Ningbo; Hong Kong Polytechnic University), Yingqi Fan (Eastern Institute of Technology, Ningbo), Yunpu Ma (Munich Center for Machine Learning, LMU), Xiaoyu Shen (Eastern Institute of Technology, Ningbo)",
+    "keywords": [
+      "streaming large language models",
+      "active interaction",
+      "semantic sufficiency",
+      "masked streaming language modeling",
+      "self-distillation",
+      "latency-quality tradeoff"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a systems paper on models that answer while input is still arriving (streaming large language models), focused on the gap between fixed read/write schedules and content-aware interaction timing.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "ProactiveLLM improves streaming generation by training partial-input predictions to stay grounded in full-input behavior, so the model's own uncertainty can decide when to answer.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E7"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a careful listener who keeps listening while several answers remain plausible and starts speaking when the right clue makes one answer snap into focus.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest support is that ProactiveLLM improves the quality-latency tradeoff across text and speech tasks, with the largest gains on non-monotonic question answering where fixed schedules fail.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E11",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c2",
+          "label": "",
+          "text": "Supports C2: Qwen3-4B text streaming; wait-k and alignment-supervised baselines; BLEU/F1 with AIL/RCO; ProactiveLLM beats GPT-5.4-generated alignment data on short QA by 10.62 F1 at low latency and 8.15 F1 at high latency; medium support because repeat counts and variance are not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3",
+          "label": "",
+          "text": "Supports C3: Qwen2-Audio speech streaming; batch and wait-k baselines; WER/F1 with second-level AIL and RCO; Proactive-Entropy reaches 71.12 F1 on Spoken-SQuAD versus batch 72.15 while lowering AIL from 31.02s to 21.26s; medium support because uncertainty is not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c4",
+          "label": "",
+          "text": "Supports C4: component ablations; full model versus w/o MSLM and w/o Distill; quality-latency Pareto curves; removing components shifts curves down and right, while the KL coefficient is comparatively insensitive; medium support because figure values are partially summarized.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The method still needs threshold calibration: if a partial clue looks sufficient but later evidence overturns it, active writing can fail, and the paper's own case study fixes this by waiting more conservatively.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E17"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Sec. 1 Introduction",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "Standard Large Language Models follow a read-then-generate paradigm, causing unnecessary latency and computation. Streaming LLMs alleviate this issue by generating while receiving inputs, but still struggle to decide when to interact with the stream.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Sec. 1, prior-methods paragraph",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing methodologies remain largely confined within a passive adaptation framework. They either rely on heuristic interaction schedules, such as fixed wait intervals or chunkwise decoding, or learn generation timing from task-specific alignment supervision.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Sec. 1 contribution paragraph",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "The model first learns to perceive semantic sufficiency from partial inputs through two complementary training mechanisms: mask-based streaming modeling and synchronized privileged self-distillation. Together, these mechanisms induce endogenous sufficiency cues without requiring external teachers or annotations.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Preliminary",
+      "locator": "Sec. 2, definition and metrics",
+      "claim_type": "background",
+      "evidence_type": "paper_statement",
+      "snippet": "Given an input stream X and an output stream Y, the model generates tokens sequentially while the input continues to unfold. phi(t) denotes the interaction scheduler, representing the boundary of the input stream accessible to the model at output step t.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Streaming LLM Backbone",
+      "locator": "Sec. 3.1 and Appendix B.1",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "Prior research has demonstrated that group positional encoding effectively adapts batch-processed LLMs to streaming scenarios without requiring architectural modifications. Regarding the streaming speech LLM, we utilize a Whisper encoder to project audio features into the textual latent space.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Proactive Streaming Training Framework",
+      "locator": "Sec. 3.2, Masked Streaming Language Modeling",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "During training, we simulate this dynamic availability by applying a randomized causal mask to the future input context. Each unique mask matrix corresponds to a specific interaction decision trajectory phi, effectively transforming a static full-input sample into a simulation of a dynamic streaming process.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Proactive Streaming Training Framework",
+      "locator": "Sec. 3.2, Synchronized Privileged Self-Distillation",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "The streaming mode serves as the partial-context student, while the batch mode serves as the full-context teacher with privileged access to the complete input. Since both views are produced by the current model parameters and optimized jointly during training, the teacher signal is continuously synchronized.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Streaming Active Interaction Decision",
+      "locator": "Sec. 3.3",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The decision head monitors the model's intrinsic states, such as token entropy or attention weights, to guide the interaction decision. High H(P) reflects an information deficit where the predictive mass is dispersed across multiple hypotheses, necessitating a Read.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Experimental Settings",
+      "locator": "Sec. 4.1",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "For text streaming, we select tasks representing monotonically aligned processes, specifically translation evaluated on IWSLT-17 En-De and En-Fr, as well as non-monotonically aligned processes, including summarization on Dialogue Summarization, short-form QA on SQuAD, and multiple-choice QA on MCTest.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Text-input Results",
+      "locator": "Sec. 4.2, Table 1 and following text",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "In monotonically aligned tasks, fixed-interval methods like wait-k face a rigid trade-off. Breaking this constraint, ProactiveLLM achieves generation quality superior to wait-9 while maintaining lower latency and redundancy than the wait-9 baseline.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Text-input Results",
+      "locator": "Sec. 4.2, Table 2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On non-monotonic short-form QA, ProactiveLLM outperforms the best learning-based baseline by 10.62 and 8.15 F1 points at the low- and high-latency levels, respectively, showing more robust decision making without external alignment data.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Speech-input Results",
+      "locator": "Sec. 4.3, Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 3 suggests that the effectiveness of ProactiveLLM extends to speech streaming tasks. In monotonic ASR, our method appears to alleviate the strict latency-accuracy trade-off found in fixed strategies, achieving performance comparable to high-k baselines but with reduced latency.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Ablation Studies",
+      "locator": "Sec. 4.4, Fig. 4 and Fig. 5",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The results clearly demonstrate that ProactiveLLM achieves the optimal Pareto frontier across all tasks. As components are systematically removed, the trade-off curves consistently shift towards the bottom-right, indicating a degradation in both latency and quality.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Analysis",
+      "locator": "Sec. 5, Random Mask Analysis and Fig. 6",
+      "claim_type": "ablation",
+      "evidence_type": "profiling",
+      "snippet": "The naive random method exhibits extremely high variance with paths frequently deviating from the ideal diagonal. In contrast, the polynomial allocation maintains smoother, stable trajectories, indicating that the budget-based mechanism successfully mitigates such extreme decision-making.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "Analysis",
+      "locator": "Sec. 5, Generalization Analysis and Table 4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 4 demonstrates that directly deploying Wait-k logic on ProactiveLLM achieves performance fully comparable to a specialized Wait-k model trained from scratch. Notably, ProactiveLLM significantly surpasses the baseline in aggressive low-latency regimes.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "Analysis",
+      "locator": "Sec. 5, Redundancy and Latency Analysis and Table 5",
+      "claim_type": "optimization",
+      "evidence_type": "profiling",
+      "snippet": "ProactiveLLM consistently reduces computation across benchmarks, with gains correlating to task-specific information density. Non-monotonic alignment streaming tasks like Multi-choice QA (34.82%) and short-form QA (21.67%) yield the highest savings.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E17",
+      "section": "Case Study",
+      "locator": "Appendix E, Table 10",
+      "claim_type": "limitation",
+      "evidence_type": "case_study",
+      "snippet": "Streaming settings reduce interaction latency, but generating from partial information is inherently risky. This limitation arises from the streaming setting itself rather than from a specific model: when the current prefix contains a plausible but incomplete clue, the model may generate prematurely.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E18",
+      "section": "Implementation and Hyperparameter Settings",
+      "locator": "Appendix B.3, Table 6",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "We summarize the main model, training, and inference hyperparameters in Table 6. These settings are shared across the reported ProactiveLLM experiments unless otherwise specified. Training epochs are 2, hardware is 4 x H100 GPUs, and the decision threshold is swept in [0, 1].",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Streaming language work asks a model to listen and answer as input arrives, instead of waiting for the whole message. The key prerequisite is semantic sufficiency: the point where the partial input already contains enough meaning for a safe next output.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain_words",
+          "label": "The Problem in Plain Words",
+          "text": "In live speech, dialogue, or long text, a system that waits feels slow, but one that answers too early can guess from the wrong clue.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Useful evidence does not always arrive at a steady pace; sometimes it appears early, sometimes late, and the model sees only a moving prefix.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Train the model on many partial views so its own uncertainty and attention become signals for when to keep reading or start writing.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "A streaming large language model (streaming LLM) generates output while the input is still arriving, controlled by an interaction scheduler phi(t), the boundary of input visible at output step t. The stake is reducing latency and redundant context processing without losing task quality.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior streaming methods either hard-code when to read and write, such as wait-k schedules, or learn timing from task-specific annotations, timestamps, segmentation labels, or stronger teachers; this makes timing passive and expensive to adapt.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The paper's core insight is to train the model's hidden states to expose sufficiency cues first, then attach a lightweight decision policy afterward; this separates streaming capability learning from the particular read/write rule used at inference.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's claims are about endogenous timing cues, plug-and-play decision heads, cross-modal transfer, and component necessity.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E10",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Mask-based streaming training plus synchronized privileged self-distillation can cultivate semantic-sufficiency cues from partial inputs without external timing labels or stronger teachers.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Decision heads using model-internal attention or entropy can turn those cues into read/write schedules that improve the quality-latency tradeoff over fixed wait-k baselines and costly alignment-supervised baselines on text tasks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: The framework transfers across backbones and modalities, including causal speech-input models, where it keeps near-batch quality with lower latency than batch or fixed schedules.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E9",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: Both Masked Streaming Language Modeling and the batch-side anchor are needed for robust proactive behavior, while the exact KL-divergence coefficient is not the primary source of gains.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "Masked Streaming Language Modeling (MSLM) hides future input tokens behind monotonic read boundaries, so each output token learns from a realistic partial prefix. Synchronized Privileged Self-Distillation (SPSD) lets the same evolving model act as a full-context teacher and partial-context student, with small top-k logit alignment rather than a hard match.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "At inference, incoming text or causal speech features are added to separate input/output positions and a Key-Value cache (KV cache, stored attention state reused during decoding); before each output, a decision head chooses Read or Write.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_training_mask",
+              "label": "",
+              "text": "Training first samples a monotonic trajectory phi(t), then masks output-to-input attention so output token t can only see input tokens up to phi(t).",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_teacher_student",
+              "label": "",
+              "text": "The batch pass sees the full input and supplies teacher logits, while the streaming pass sees only the partial prefix and learns next-token prediction plus a soft alignment to the batch view.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_decision",
+              "label": "",
+              "text": "The attention-driven head writes when attention concentrates on specific inputs, and the entropy-driven head writes when next-token uncertainty is low enough.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The main design choices all push toward one boundary: the backbone learns many plausible partial-context states, while the final read/write rule stays replaceable.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "design_decision_mask_allocation",
+              "label": "",
+              "text": "Need: expose partial-context states without impossible training noise; choice: budgeted polynomial or uniform multinomial allocation of reads; closest alternative: naive random masks; tradeoff: smoother trajectories may underrepresent bursty real streams.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_self_distillation",
+              "label": "",
+              "text": "Need: stop partial-context anticipation from drifting; choice: same-model full-context teacher; closest alternative: external or frozen teacher; tradeoff: soft top-k KL preserves anticipation but gives no independent teacher signal.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_decision_heads",
+              "label": "",
+              "text": "Need: adapt timing without retraining the whole model; choice: attention and entropy heads over frozen LLM states; closest alternative: fixed wait-k or learned alignment labels; tradeoff: thresholds must be calibrated for reliability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The text models use Qwen2.5-3B-Instruct and Qwen3-4B with Group Positional Encoding (GPE, separate input and output position streams) and decoupled attention/KV cache; the speech model uses Qwen2-Audio-7B-Instruct with a causal Whisper encoder. Reported settings include top-100 logit distillation, two training epochs, learning rate 5e-5, four H100 GPUs, and a main decision threshold at the 0.9 quantile.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E18"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation covers text streams on IWSLT-17 En-De/En-Fr, DialogSum, SQuAD, and MCTest, plus speech streams on LibriSpeech and Spoken-SQuAD. It reports task quality plus read coverage per output token (RCO, average consumed input fraction) and average interaction lag (AIL, delay from an ideal streaming schedule).",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence mostly supports the paper's relative tradeoff claims, but the absence of repeat counts, variance, and significance tests keeps the experimental support at medium strength.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "matrix_c1",
+              "label": "",
+              "text": "C1 is mechanistically supported by the MSLM and SPSD objectives, and indirectly supported by ablations, but the paper does not isolate a direct measurement of semantic-sufficiency cues.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_c2",
+              "label": "",
+              "text": "C2 is supported by text tables against wait-k and alignment-supervised baselines, especially short QA, where content-dependent timing matters more than fixed latency.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_c3_c4",
+              "label": "",
+              "text": "C3 is supported by speech results and backbone coverage; C4 is supported by ablations, though the KL coefficient analysis weakens any claim that explicit KL matching alone drives the gains.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline pattern is that ProactiveLLM gives the clearest benefit when the task has sparse decisive evidence, while monotonic translation shows smaller but still useful quality-latency improvements.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "headline_text_results",
+              "label": "",
+              "text": "On Qwen3-4B En-Fr, Proactive-Entropy scores 32.24 BLEU with RCO 0.88 versus Wait-9 at 24.33 BLEU and RCO 0.89; on short QA, ProactiveLLM beats the best GPT-5.4 alignment-supervised baseline by 8.15 F1 at high latency.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_speech_results",
+              "label": "",
+              "text": "On Spoken-SQuAD, Proactive-Entropy reaches 71.12 F1 with AIL 21.26s and RCO 0.80, close to batch 72.15 F1 while using less context and lower latency.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_efficiency_results",
+              "label": "",
+              "text": "Variable attention FLOPs drop most on Choice QA (34.82%) and Short-form QA (21.67%), moderately on summarization (9.90%), and only slightly on MT En-De (2.27%), matching the claim that benefits depend on information density.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "Ablations indicate that both the streaming objective and the batch-side anchor matter, while lambda, the coefficient on KL divergence, is less sensitive across the reported range.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "ablation_components",
+              "label": "",
+              "text": "Removing SPSD causes the largest reported collapse in reasoning-heavy short QA, while removing MSLM weakens quality under low-latency constraints.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "ablation_mask_distribution",
+              "label": "",
+              "text": "Polynomial allocation reduces high-variance mask trajectories relative to naive random masking, making training states closer to plausible streaming paths.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "ablation_waitk_generalization",
+              "label": "",
+              "text": "Deploying wait-k on ProactiveLLM performs comparably to wait-k trained from scratch and is better in aggressive low-latency regimes, supporting the plug-and-play framing.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports backbones, datasets, hardware, major hyperparameters, and decision-threshold policy, but the provided text does not expose a concrete repository URL, seeds, data split details for every task, repeat counts, variance, or full scripts for the alignment-supervised baselines.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E18"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The strongest part is the separation between representation training and decision policy: MSLM and SPSD make the model useful under partial views, while attention or entropy thresholds can be swapped without rebuilding the backbone. The evidence aligns with this story because gains are largest where semantic sufficiency is sparse and input-dependent.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E10",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The approach can fail when early evidence is plausible but not decisive, as shown by the Spoken-SQuAD Levi's Stadium example; more conservative thresholds mitigate this but give back latency. Benefits also diminish on tasks that truly need nearly every input token, consistent with the small MT FLOP reduction.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E16",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_to_other_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with wait-k and chunkwise decoding, ProactiveLLM makes timing depend on model state rather than a fixed clock; compared with alignment-supervised policies, it avoids task-specific timing labels. Compared with ordinary distillation, the teacher and student are the same evolving model under different context access, so the method is closer to privileged self-alignment than external teacher transfer.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E7",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For streaming systems, first train the model to behave under realistic partial observations, then keep the timing controller small, replaceable, and thresholded. This pattern turns latency into a deployment knob instead of baking one timing policy into the model.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E8",
+            "E15"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_streaming_llm",
+      "term": "streaming large language model",
+      "aliases": [
+        "streaming LLM"
+      ],
+      "note": "A model that can generate output while the input stream is still arriving, rather than waiting for the full input."
+    },
+    {
+      "id": "g_semantic_sufficiency",
+      "term": "semantic sufficiency",
+      "aliases": [
+        "sufficiency cue"
+      ],
+      "note": "The point where the visible prefix contains enough meaning for the model to generate a reliable next output."
+    },
+    {
+      "id": "g_interaction_scheduler",
+      "term": "interaction scheduler",
+      "aliases": [
+        "phi(t)",
+        "read/write policy"
+      ],
+      "note": "The rule or learned policy that decides how much input the model may read before producing each output token."
+    },
+    {
+      "id": "g_mslm",
+      "term": "Masked Streaming Language Modeling",
+      "aliases": [
+        "MSLM"
+      ],
+      "note": "The training objective that hides future input tokens behind monotonic boundaries so generation learns from partial prefixes."
+    },
+    {
+      "id": "g_spsd",
+      "term": "Synchronized Privileged Self-Distillation",
+      "aliases": [
+        "SPSD"
+      ],
+      "note": "A same-model teacher-student setup where the full-context view guides the partial-context streaming view during training."
+    },
+    {
+      "id": "g_rco",
+      "term": "read coverage per output token",
+      "aliases": [
+        "RCO"
+      ],
+      "note": "A redundancy metric: the average fraction of the input stream consumed when producing output tokens; lower means less context was read."
+    },
+    {
+      "id": "g_ail",
+      "term": "average interaction lag",
+      "aliases": [
+        "AIL"
+      ],
+      "note": "A relative latency metric: how delayed write decisions are compared with an ideal uniform streaming alignment."
+    },
+    {
+      "id": "g_wait_k",
+      "term": "wait-k",
+      "aliases": [
+        "fixed interval"
+      ],
+      "note": "A fixed streaming policy that waits for a preset amount of input before writing, then follows a rigid read/write rhythm."
+    },
+    {
+      "id": "g_entropy_head",
+      "term": "entropy-driven decision head",
+      "aliases": [
+        "Proactive-Entr",
+        "Proactive-Entropy"
+      ],
+      "note": "A controller that reads when the next-token distribution is uncertain and writes when the distribution is concentrated."
+    },
+    {
+      "id": "g_gpe_kv",
+      "term": "Group Positional Encoding and KV cache",
+      "aliases": [
+        "GPE",
+        "KV cache"
+      ],
+      "note": "GPE separates source and target position streams; a KV cache stores attention keys and values so new tokens can be processed incrementally."
+    }
+  ]
+}

@@ -1,0 +1,847 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "title": "Streaming Video Instruction Tuning",
+    "summary": "Streamo turns offline video LLMs into streaming assistants by training them to emit Silence/Standby/Response state tokens on multi-task temporally annotated data, improving open-ended streaming instruction following while exposing long-context efficiency limits.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2026; arXiv:2512.21334v2",
+    "authors": "Jiaer Xia (Hong Kong Baptist University); Peixian Chen (Tencent Youtu Lab); Mengdan Zhang (Tencent Youtu Lab); Xing Sun (Tencent Youtu Lab); Kaiyang Zhou (Hong Kong Baptist University)",
+    "keywords": [
+      "streaming video understanding",
+      "video LLM",
+      "instruction tuning",
+      "response timing",
+      "temporal grounding",
+      "time-sensitive QA",
+      "online multimodal assistants"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this for a concrete recipe for converting offline video LLMs into interactive streaming models: represent response timing as tokens, train on temporally aligned multi-task dialogues, and rebalance sparse response states.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E4",
+        "E5"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "Streamo improves streaming video instruction following by interleaving one-second video turns with three response-state tokens and training on Streamo-Instruct-465K with state-aware focal/frequency weighting.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E2",
+        "E4",
+        "E5",
+        "E7"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Think of the model as a live commentator with a built-in traffic light: red Silence for irrelevant context, yellow Standby for relevant-but-incomplete events, and green Response for the moment the answer should be emitted.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest support is the combination of Streamo-Bench breadth, offline-retention results, and targeted ablations showing that both adaptive loss weighting and the Standby state matter.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E11",
+        "E12",
+        "E13",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c1",
+          "label": "",
+          "text": "C1: Streamo-Bench; Streamo-7B vs listed online baselines; average score 55.3 vs best baseline 24.6; supports multi-instruction streaming generalization.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c2",
+          "label": "",
+          "text": "C2: Offline conversion; Qwen2.5-VL-7B base; average 63.9 vs 60.6 (+3.3); supports preserving or improving general video understanding after streaming tuning.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3",
+          "label": "",
+          "text": "C3: Loss ablation; Qwen2.5-VL-3B on OVO forward-active tasks; focal loss raises REC/SSR/CRR from 6.45/20.99/41.67 under CE to 27.94/50.72/82.5.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The method still inherits unbounded-stream memory/latency growth, and the broad SOTA framing should be read carefully because Table 2 includes a ViSpeak row with higher OVO overall than Streamo-7B.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E10",
+        "E16"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Title block",
+      "locator": "paper header",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "arXiv:2512.21334v2 [cs.CV] 10 Apr 2026. Streaming Video Instruction Tuning. Jiaer Xia, Peixian Chen, Mengdan Zhang, Xing Sun, Kaiyang Zhou. Hong Kong Baptist University; Tencent Youtu Lab.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We present Streamo, a real-time streaming video LLM that serves as a general-purpose interactive assistant. Unlike existing online video models that focus narrowly on question answering or captioning, Streamo performs a broad spectrum of streaming video tasks, including real-time narration, action understanding, event captioning, temporal event grounding, and time-sensitive question answering.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "1. Introduction",
+      "locator": "paragraphs on streaming requirements and prior controllers",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing offline models struggle to meet the demands of the streaming setting because they are designed to process entire clips before producing a single output. Recent studies have attempted to extend offline video models for streaming by introducing a separate decision module, but this creates a trade-off between accuracy and efficiency and prevents tight coupling between perception and response.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "3.2 Data Structure",
+      "locator": "state-token formulation and Table 1",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "To simulate streaming scenarios during training, we reformulate the single-turn offline format into a multi-turn dialogue structure. A complete video is temporally segmented into N contiguous segments, each annotated with temporal boundaries using special markers. Three discrete response states are directly integrated into the normal token prediction process: <Silence>, <Standby>, and <Response>.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "3.3 Training",
+      "locator": "loss definition",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "The multi-turn streaming format introduces severe class imbalance among the three response states. In typical streaming scenarios, <Silence> tokens dominate the distribution, often more than 80% of the time, while <Response> tokens are sparse. To mitigate this, we apply focal weighting specifically to the three special state tokens and introduce frequency-based alpha weights.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "4.1 Data Construction",
+      "locator": "annotation protocol overview",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We predefined multiple tasks spanning different response granularities, assigning each video several types of task annotations. A unified annotation protocol is applied across datasets, avoiding inconsistencies and biases. Each video carries multiple task types with clearly delineated response boundaries, enabling the model to better perceive varying task requirements.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "4.2 Statistics",
+      "locator": "dataset statistics paragraph and Figure 3",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "Using a unified annotation standard and protocol, we labeled and curated a total of 400K valid samples and additionally merged offline video QA data from the LLaVA-Video dataset, culminating in Streamo-Instruct-465K. We integrated multiple open-source video datasets as sources, yielding 135,875 videos in total.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "5.2 Benchmarks",
+      "locator": "benchmark setup paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We evaluated our model across three dimensions of benchmarks: Online, Offline, and Stream Instruction. For the online setting, we adopted OVO-Bench. The offline evaluation used MVBench, TempCompass, VideoMME, and LongVideoBench. We constructed StreamoBench, which includes 300 videos and 3,000 instruction tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "5.3 Implementation Details",
+      "locator": "training setup paragraph",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "Across all models, we use a unified training setup. Full parameter tuning is applied with the vision encoder frozen, and only the connector and the LLM will be updated. Training runs for a single epoch with a batch size of 512 and a learning rate of 1 x 10^-5. Each video is split into turns of one second, and frames are sampled at 1 fps. Gamma is set to 2.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "5.4 Main Results",
+      "locator": "Table 2 and accompanying text",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2 reports Dispider-7B Overall Avg. 41.78, ViSpeak-7B Overall Avg. 61.08, Streamo-7B at 1fps Overall Avg. 55.61, and Streamo-7B at 2fps Overall Avg. 57.86. The text states that Streamo-7B exceeds Dispider by +13.83 average performance.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "5.4 Main Results",
+      "locator": "Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 3 reports Qwen2.5-VL-7B Avg 60.6 and Streamo-7B Avg 63.9 (+3.3), with MVBench 72.3 (+2.7), VideoMME 67.9 (+2.8), and LongVideoBench 59.2 (+3.2). StreamingVLM-7B reports MVBench 69.2, VideoMME 65.1, and LongVideoBench 59.0.",
+      "confidence": "high"
+    },
+    {
+      "id": "E12",
+      "section": "5.4 Main Results",
+      "locator": "Table 5",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 5 reports Streamo-Bench results: Streamo-7B reaches Forward Grounding 29.4, Backward Grounding 38.3, Narration 75.9, Dense Caption 72.8, TSQA Accuracy 51.6, TSQA Recall 63.9, Average 55.3. The strongest listed existing online baseline average is StreamingVLM-7B at 24.6.",
+      "confidence": "high"
+    },
+    {
+      "id": "E13",
+      "section": "5.5 Ablation",
+      "locator": "Table 4 and ablation discussion",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "In Streamo-Instruct-465K, the empirical ratio of state labels is approximately <Silence>:<Standby>:<Response> = 12:3:2. Table 4 shows Qwen2.5-VL-3B on OVO Forward Active tasks: CrossEntropy 6.45/20.99/41.67, Loss Scale 18.62/41.02/49.17, and Focal Loss 27.94/50.72/82.5 for REC/SSR/CRR.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "A.5 Further Analysis of the Three-State Design",
+      "locator": "Table 7",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Table 7 compares Streamo-3B with an EOS-only variant on the same Streamo-Instruct dataset: Streamo-3B has OVOBench RTVP 61.51, BT 41.76, FAR 53.72, AVG 52.33, Forward Grounding 14.7; the EOS variant has 60.93, 39.43, 45.22, 48.52, and 9.3.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "C.2 Metric",
+      "locator": "Streamo-Bench metric definitions",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "For grounding tasks, performance is measured using mean Intersection over Union. Narration and caption quality are assessed via pairwise comparison against Qwen2.5-VL-72B. For Time-Sensitive QA, a prediction must be correct in both its content and its timestamp; the timestamp tolerance delta_t is set to 3 seconds.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "7. Limitations and Future Work",
+      "locator": "limitations paragraph",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "Our current pipeline lacks specialized long-sequence optimizations, leading to significant memory and latency costs that become prohibitive as sequence length grows. The paper proposes integrating KV-cache management, visual token pruning, sliding-window attention, and adaptive frame compression as future directions.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "1. Introduction",
+      "locator": "contributions paragraph",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We establish a comprehensive benchmark for streaming video instruction-following and provide strong baseline models for future research. All research resources including code, models, and datasets will be made publicly available.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "arg_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "Offline video LLMs assume a bounded clip and answer after seeing the whole video, whereas streaming assistants must decide continuously, from partial observations, both whether enough evidence has arrived and what to say. The stakes are latency-sensitive interactive tasks such as narration, proactive alerts, event grounding, and answers whose truth changes over time.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "arg_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper frames prior online adaptations as either decoupled controller-plus-offline-model pipelines or narrow EOS-style response-timing training, which can trade accuracy for latency, lose coupling between perception and generation, or cover only limited task formats.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "arg_key_insight",
+          "label": "Key Insight",
+          "text": "Instead of adding an external streaming controller, make response timing part of the language-modeling target: the same decoder predicts Silence, Standby, or Response tokens and then generates the answer when the Response state is reached. Because these state tokens are sparse and imbalanced, the paper couples this representation with focal and per-batch frequency weighting.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "arg_claims",
+          "label": "Claims",
+          "text": "The paper's supportable claim chain is that Streamo's state-token formulation plus Streamo-Instruct-465K improves streaming instruction following, preserves offline video ability, and benefits materially from the proposed loss and three-state design.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "arg_claims_c1",
+              "label": "",
+              "text": "C1: Streamo improves open-ended streaming instruction following on Streamo-Bench, reaching 55.3 average versus 24.6 for the strongest listed existing online baseline.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "arg_claims_c2",
+              "label": "",
+              "text": "C2: Streaming tuning does not simply sacrifice offline ability; Streamo-7B improves the Qwen2.5-VL-7B average from 60.6 to 63.9 across the paper's offline-oriented suite.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "arg_claims_c3",
+              "label": "",
+              "text": "C3: State-aware focal/frequency weighting improves proactive response learning under the reported 12:3:2 state-label imbalance.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "arg_claims_c4",
+              "label": "",
+              "text": "C4: The Standby state is useful beyond a binary answer/silence or EOS design, especially for forward-active and grounding tasks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "Streamo reformulates streaming video as interleaved multi-turn supervised fine-tuning: each video segment is paired with an assistant turn whose target begins with a response-state token. The state token acts as an inline control signal, so the model learns both temporal readiness and natural-language output in the same next-token prediction objective.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "Training simulates a stream by splitting a video into one-second turns with absolute time markers, inserting task instructions at appropriate turns, and requiring the assistant to emit Silence, Standby, or Response at every step. The Response token gates answer generation; Silence and Standby continue accumulation without final output.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_step_segment",
+              "label": "",
+              "text": "Step 1: Convert an offline clip into ordered segments with time tags such as <2s-3s>, so every training turn has an explicit temporal boundary.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_step_state",
+              "label": "",
+              "text": "Step 2: Predict <Silence> for irrelevant or insufficient context, <Standby> for relevant but incomplete evidence, and <Response> when the model should answer.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_step_loss",
+              "label": "",
+              "text": "Step 3: For state tokens, the loss applies `$w_{\\mathrm{focal}}(x_i)=(1-p_{c_i})^{\\gamma}$` and `$\\alpha_k=\\frac{1}{|\\mathcal{S}|}\\frac{\\sum_{j\\in\\mathcal{S}} n_j}{n_k}$` to cross-entropy, while ordinary tokens keep standard CE.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The major design decisions all target the same bottleneck: sparse, temporally precise response decisions must be learned without detaching them from language generation. The paper's ablations most directly support the Standby token and adaptive state-loss choices.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_inline_control",
+              "label": "",
+              "text": "Need: avoid latency and decoupling from an auxiliary controller; choice: integrate response-state tokens into the decoder's normal token stream; tradeoff: the LLM context now carries continuous control history.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_standby",
+              "label": "",
+              "text": "Need: distinguish irrelevant frames from relevant-but-unfinished events; choice: add <Standby>; alternative: EOS-only timing; evidence shows EOS lowers OVOBench FAR and forward-grounding scores.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_adaptive_loss",
+              "label": "",
+              "text": "Need: prevent the model from collapsing toward Silence under imbalanced labels; choice: dynamic focal plus per-batch frequency weighting; alternative: vanilla CE or fixed loss scaling, both weaker in Table 4.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported implementation is deliberately close to standard SFT: Qwen2.5-VL 3B/7B bases, frozen vision encoder, trainable connector and LLM, one epoch, batch size 512, learning rate 1e-5, one-second turns, 1 fps sampling, and gamma 2. Streamo-Instruct-465K supplies the temporal multi-task supervision rather than requiring architectural surgery.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_impl_training",
+              "label": "",
+              "text": "Training surface: the vision encoder is frozen, while the connector and LLM are updated under a unified setup across models.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_annotation",
+              "label": "",
+              "text": "Data surface: each video can carry multiple task annotations with unified temporal response boundaries, addressing heterogeneous labeling across source datasets.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_release",
+              "label": "",
+              "text": "Artifact surface: the paper promises public release of code, models, and datasets, but the provided text states this as future availability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "Evaluation spans online OVO-Bench, offline/general video benchmarks, and Streamo-Bench, a 300-video/3,000-task mixed instruction benchmark. Streamo-Bench mixes mIoU for grounding, Qwen2.5-VL-72B pairwise win rate for narration/caption, and TSQA content-plus-time correctness with a 3-second timestamp tolerance.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest where the paper combines controlled architecture/training comparisons with task-specific benchmarks, and weakest where broad SOTA claims depend on baseline selection or LLM-judge evaluation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E12",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1 multi-task streaming: supported by Streamo-Bench, where Streamo-7B is highest among listed models across a heterogeneous average, though the average combines different metric types.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2 offline retention: supported by Table 3, where Streamo-7B improves the Qwen2.5-VL-7B average and exceeds StreamingVLM on the reported offline benchmark columns.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3 response-state training: supported by ablations showing focal loss over CE/fixed scaling and three-state design over EOS-only on response-timing-sensitive tasks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline results support Streamo as a strong streaming-instruction model, but not every broad comparison is clean: the OVO table itself contains a higher ViSpeak overall score. No statistical uncertainty, repeat counts, or hardware-normalized latency numbers are reported in the supplied text.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_ovo",
+              "label": "",
+              "text": "Online OVO: Streamo-7B 1fps scores 55.61 overall vs Dispider-7B 41.78 (+13.83), and 2fps evaluation scores 57.86; caveat: ViSpeak-7B is listed at 61.08 overall.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_offline",
+              "label": "",
+              "text": "Offline/general benchmarks: Streamo-7B averages 63.9 vs Qwen2.5-VL-7B 60.6 (+3.3), with reported gains on MVBench, VideoMME, and LongVideoBench.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_streamobench",
+              "label": "",
+              "text": "Streamo-Bench: Streamo-7B scores 55.3 average vs 24.6 for the strongest listed existing online baseline, with especially large margins on grounding and dense captioning.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations are important because they isolate two non-obvious pieces of the method: adaptive reweighting for sparse state tokens and the Standby state for relevant-but-incomplete events. The 2fps evaluation suggests some test-time sampling-rate robustness, but it is only reported for the OVO configuration in the main table.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_loss",
+              "label": "",
+              "text": "Loss ablation: on Qwen2.5-VL-3B, focal loss improves REC/SSR/CRR to 27.94/50.72/82.5 from CE's 6.45/20.99/41.67 and fixed scaling's 18.62/41.02/49.17.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_eos",
+              "label": "",
+              "text": "State-design ablation: replacing the three-state design with EOS-only drops OVOBench average from 52.33 to 48.52 and forward grounding from 14.7 to 9.3.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_fps",
+              "label": "",
+              "text": "Sampling-rate sensitivity: the table reports Streamo-7B trained at 1fps and evaluated at 2fps improving OVO overall from 55.61 to 57.86, but broader frame-rate sweeps are not reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_repro_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper gives enough high-level training and metric detail to understand the recipe, but several fields needed for robust reproduction or systems comparison remain unspecified in the supplied text. The largest practical blocker is that public artifacts are promised rather than evidenced as already available.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E15",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_repro_release",
+              "label": "",
+              "text": "Artifact availability: code, models, and datasets are stated as future public releases; exact repository state, licenses, preprocessing scripts, and checkpoints are not reported here.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_repro_compute",
+              "label": "",
+              "text": "Training resources: batch size, learning rate, epoch count, frozen modules, and sampling rate are reported, but GPU type/count, wall-clock time, memory use, and serving latency are not reported.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_repro_eval",
+              "label": "",
+              "text": "Evaluation uncertainty: Streamo-Bench caption/narration uses an LLM judge and TSQA uses a 3-second tolerance, but judge agreement, repeated runs, and confidence intervals are not reported.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The central reframing is technically plausible and useful: response timing becomes a supervised token prediction problem compatible with standard multimodal SFT, not a separate controller. The ablations give credible mechanism-level evidence that both adaptive state-token weighting and the Standby state improve timing-sensitive behavior.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "judgment_holds_up_state",
+              "label": "",
+              "text": "The three-token control interface is simple enough to port across base models because it lives in the dialogue format and loss rather than a new perception architecture.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E4",
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_holds_up_causal",
+              "label": "",
+              "text": "The loss and EOS ablations are more convincing than aggregate benchmark wins because they directly perturb the proposed response-timing mechanisms.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The approach does not solve the systems problem of truly unbounded streams: accumulating dialogue/video context without specialized cache or token management can make memory and latency prohibitive. It also depends heavily on the quality and temporal precision of generated annotations and on evaluation protocols that include heterogeneous metrics and LLM judging.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E15",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "judgment_fail_context",
+              "label": "",
+              "text": "Systems boundary: benefits should diminish as stream length exceeds feasible context or KV-cache budgets unless pruning, compression, or sliding-window attention is added.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_sota",
+              "label": "",
+              "text": "Baseline boundary: the paper's SOTA wording should be narrowed because Table 2 lists ViSpeak-7B with 61.08 OVO overall, above Streamo-7B's 55.61 and 2fps 57.86.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_metrics",
+              "label": "",
+              "text": "Evaluation boundary: averaging mIoU, LLM-judge win rates, and TSQA accuracy/recall is useful diagnostically but not a single clean operational metric for latency-quality tradeoffs.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_relation",
+          "label": "Relation to Other Work",
+          "text": "Relative to controller-based streaming adapters such as Dispider and StreamBridge, Streamo moves the decision policy into the same decoder that generates text. Relative to EOS-only approaches such as VideoLLM-Online or StreamingVLM, the Standby token provides an intermediate temporal state; relative to QA-centric streaming benchmarks, Streamo-Bench tests mixed open-ended tasks.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E14",
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For interactive streaming tasks, model readiness as an explicit sequence of latent states, not as a binary answer/no-answer event; an intermediate relevant-but-incomplete state can preserve temporal alignment until sufficient evidence arrives. When such states are rare, rebalance them dynamically rather than relying on vanilla next-token CE.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E13",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_streamo",
+      "term": "Streamo",
+      "note": "The paper's streaming video LLM framework/model; the name's 'o' is described as 'omni' for multi-task and multimodal capabilities."
+    },
+    {
+      "id": "g_streamo_instruct",
+      "term": "Streamo-Instruct-465K",
+      "note": "A temporally annotated multi-task instruction-tuning dataset for streaming video; built from 400K curated samples plus offline video QA, over 135,875 videos."
+    },
+    {
+      "id": "g_streamo_bench",
+      "term": "Streamo-Bench",
+      "note": "A 300-video, 3,000-task benchmark for mixed streaming instructions including grounding, narration, dense captioning, and time-sensitive QA."
+    },
+    {
+      "id": "g_three_state_tokens",
+      "term": "<Silence>, <Standby>, <Response>",
+      "note": "Special response-state tokens inserted into assistant turns: no output, relevant-but-incomplete context, and answer-ready output respectively."
+    },
+    {
+      "id": "g_standby",
+      "term": "Standby state",
+      "note": "The intermediate state that marks an event as relevant before it is complete; it is the key difference from EOS-only timing formulations."
+    },
+    {
+      "id": "g_tsqa",
+      "term": "Time-Sensitive QA (TSQA)",
+      "note": "Questions whose answers change over time; evaluation requires matching both answer content and timestamp within a specified tolerance."
+    },
+    {
+      "id": "g_miou",
+      "term": "mIoU",
+      "note": "Mean temporal Intersection over Union between predicted and ground-truth event intervals; used for Streamo-Bench grounding tasks."
+    },
+    {
+      "id": "g_focal_frequency_loss",
+      "term": "Focal/frequency state-token loss",
+      "note": "A modified cross-entropy for the three state tokens that combines token hardness via focal weighting with inverse batch-frequency alpha weights."
+    }
+  ]
+}

@@ -1,0 +1,864 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "DuplexOmni: Real-Time Listening, Seeing, Thinking, and Speaking for Full-Duplex Interaction",
+    "summary": "DuplexOmni frames real-time multimodal assistants as two cooperating processes: a low-latency interaction model keeps listening and speaking while a pluggable thinking layer performs slower reasoning or tool use in the background.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2026",
+    "authors": "Muye Huang (Xi'an Jiaotong University / MOE KLNN Lab), Lingling Zhang (Xi'an Jiaotong University / MOE KLNN Lab), Xingyu Yu (MOE KLNN Lab), Lei Shi (Meituan), Zhanyu Ma (Meituan), Jun Xu (Meituan), Jiuchong Gao (Meituan), Jinghua Hao (Meituan), Renqing He (Meituan), Jun Liu (Xi'an Jiaotong University / MOE KLNN Lab)",
+    "keywords": [
+      "full-duplex interaction",
+      "omni model",
+      "streaming speech generation",
+      "multimodal dialogue",
+      "asynchronous reasoning",
+      "training data construction"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a real-time multimodal-assistant systems paper: it targets the gap between models that can listen and speak at once (full-duplex interaction) and models that can do slower reasoning or tool use without freezing the conversation.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "DuplexOmni improves continuous audio-video dialogue by letting a fast interaction model keep the conversation alive while a separate background thinking process returns information later.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E4"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a front-desk helper who keeps talking, listening, and watching the visitor while a specialist in the back room searches, calculates, or plans and passes notes forward.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the combination of realtime benchmark gains and ablations showing that interaction quality and reasoning strength come from different parts of the system.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E11",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_c4_duplexbench",
+          "label": "",
+          "text": "Supports C4: full DuplexOmni with Gemini-3.1-Flash-Lite thinking layer; realtime omni baselines; Full DuplexBench ToR; 72.6% versus 36.3% for MiniCPM-o 4.5 at similar latency; supported, but no variance or repeat count is reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c4_reasoning",
+          "label": "",
+          "text": "Supports C4: full system; ablations without the default thinking layer; Big Bench Audio; 77.2% versus 50.3% with weak thinking and 22.2% without thinking; supported, but statistical uncertainty is not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_c3_data",
+          "label": "",
+          "text": "Supports C3: Writer-Director annotated corpus; no direct baseline; coverage of delayed reasoning, silence, assistant initiation, overlap, and reset patterns; broad coverage is supported, but human annotation quality is not independently audited.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "Trust is bounded by preprint-style evidence: the paper reports benchmark tables without error bars, admits weak video and English coverage, and shows short utterances remain hard under streaming full-duplex speech recognition.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E13",
+        "E14"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Section 1 contributions",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We present DuplexOmni, a method for real-time multimodal full-duplex interaction. DuplexOmni separates model capability into an interaction layer and a thinking layer, which collaborate asynchronously in parallel.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, Figure 1 discussion",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "When interaction involves deep thinking or tool use, the model often pauses the ongoing dialogue. It then waits for reasoning or tool results before continuing its response. This causes clear interruptions.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Related work",
+      "locator": "Sections 2.1 and 2.2",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Most of these models still organize interaction in a request-driven manner: user input is collected, the model performs understanding and generation, and then a response is returned. This mode is suitable for single-turn or multi-turn task processing, but cannot handle user interaction in real time.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Method",
+      "locator": "Section 3 and Section 3.1.1",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The interaction layer handles real-time dialogue, while the thinking layer performs background reasoning. When the current interaction requires external assistance, the interaction layer passes the user context to the thinking layer... This request does not block real-time interaction.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "DuplexOmni Model",
+      "locator": "Section 3.1.2, Time-Sliced Full-Duplex Modeling",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "We divide continuous interaction into fixed 480 ms slices. At slice t, the model consumes the dialogue history, the intermediate results returned by the thinking layer, and the inputs from slice t-1.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "DuplexOmni Model",
+      "locator": "Section 3.1.2, Model Architecture",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "DuplexOmni model follows the Thinker-Talker speech generation structure in the Qwen-Omni family. The Thinker is the internal MLLM backbone that processes the current context and generates Assistant text tokens. The Talker converts the generated linguistic states into streaming speech.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Data Construction",
+      "locator": "Section 3.2 opening",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing multi-turn dialogue data is mostly turn-based. It only records user and assistant utterances, and lacks temporal information. Therefore, it cannot describe when the model should speak, stop, wait, trigger background thinking, or use returned information.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Writer-Director Data Pipeline",
+      "locator": "Section 3.2.2 and Appendix A, Table 4",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "The Director converts this script into a structured sample with temporal control signals... [THINK] triggers background reasoning... [CUT] marks the actual stopping point... [WAIT] means that the user adds a new condition, so the background reasoning should pause or revise.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Real-Time Duplex Inference",
+      "locator": "Section 3.3",
+      "claim_type": "optimization",
+      "evidence_type": "implementation_detail",
+      "snippet": "DuplexOmni uses RTF < 1 as the latency target for speech generation... DuplexOmni decouples Thinker-based text generation from Talker-based speech generation and runs them as an asynchronous pipeline.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Experiments",
+      "locator": "Section 4.1 Settings",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We compare DuplexOmni with recent real-time omni models and speech-to-speech systems, including MiniCPM-o, Doubao, Qwen-Omni realtime variants, and Gemini live variants. All models are evaluated under their streaming or realtime settings.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Performance Comparison",
+      "locator": "Section 4.4 and Table 1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "DuplexOmni achieves 72.6% ToR on Full DuplexBench, substantially outperforming all realtime baselines, while keeping a response latency of 0.506s. DuplexOmni achieves the best Big Bench Audio score of 77.2% and remains competitive on Daily-Omni.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Ablation Study",
+      "locator": "Section 4.5 and Table 2",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "When the thinking layer is replaced by a weaker model, Big Bench Audio drops from 77.2% to 50.3%; removing the thinking layer further reduces it to 22.2%.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Full-Duplex ASR Analysis",
+      "locator": "Section 4.6 and Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 3 shows that DuplexOmni performs worse on short utterances, with WER dropping from 25.1% for 1-5 words to 8.8% for 21+ words. This suggests that short, low-context speech fragments in full-duplex interaction remain a key challenge.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Limitations",
+      "locator": "Limitations",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "First, its video capability remains limited because the amount of video-call and visually grounded interaction data is relatively small. Second, its English speech ability is weaker than desired, partly due to the training data being dominated by Chinese speech.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "Training",
+      "locator": "Section 4.3 Training",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "Initialized from Qwen3-Omni, it is trained with two-stage SFT... The learning rate is 1e-5 for the Thinker and 1e-4 for the Talker, with a batch size of 128. Training is conducted with Megatron-swift-3.12 on 128 Nvidia H20 GPUs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "Data and Appendix C",
+      "locator": "Sections 4.2, C.1-C.3, Tables 5-7",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We build about 620K scenario seeds... The dialogue content contains about 3.02M raw conversations, including 10K video-call conversations... delayed reasoning 94.3... Samples containing >=2 patterns 90.7.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This paper lives in voice and vision assistants that try to hear, see, reason, and answer in one system. The key setting is a conversation where both sides can listen and speak at the same time, rather than taking clean turns.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A helpful assistant should not go silent every time it needs to search, calculate, or look more carefully. It should keep the user engaged while new speech or visual information may still arrive.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Speaking quickly, listening for interruptions, watching the scene, and doing slow reasoning compete for attention and time. If they are forced through one queue, slow work blocks live conversation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Let one part handle the live conversation and another part think in the background, then stream useful pieces back into later replies.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that real-time audio-video dialogue fails when listening, speaking, reasoning, and tool use are serialized: slow reasoning blocks speech, while stripping reasoning away makes the assistant less useful. The stake is not just lower latency, but keeping the social rhythm of a conversation while still allowing hard tasks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The prior-work gap is between broad all-modal models, which often remain request-response systems, and full-duplex speech models, which listen while speaking but still have trouble when a dialogue needs longer reasoning. The paper positions DuplexOmni as a coordination design rather than only a larger model.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The key insight is to split live interaction from slow cognition: a low-latency interaction layer handles audio, video, dialogue rhythm, and speech output, while a pluggable thinking layer runs stronger language models or tools asynchronously. This makes reasoning a background service rather than a blocking stage.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's claim chain has four falsifiable parts: the architecture should preserve live interaction, the interaction model should implement that architecture at streaming granularity, the data pipeline should teach temporal behavior, and the benchmark evidence should separate interaction quality from reasoning strength.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E4",
+            "E11"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Decoupling a realtime interaction layer from an asynchronous thinking layer lets the system continue listening, seeing, speaking, and updating the dialogue while slower reasoning or tool use proceeds.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: The DuplexOmni model can implement the interaction layer by processing fixed speech-video slices and generating text plus speech for each slice with a Thinker-Talker architecture.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: A Writer-Director data pipeline can convert ordinary dialogue content into temporally annotated training samples for interruption, overlap, waiting, thinking triggers, delayed feedback, and silence.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E8",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: On the reported benchmarks, DuplexOmni improves full-duplex interaction and streaming audio reasoning under realtime settings, and ablations attribute these gains to both the interaction layer and the thinking layer.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "DuplexOmni is organized as an interaction layer plus a thinking layer. The interaction layer continuously consumes user speech, video frames, dialogue history, and returned thinking fragments, while the thinking layer acts as a background source of deeper reasoning or tool results.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_interaction_layer",
+              "label": "",
+              "text": "The interaction layer owns live dialogue control: it decides when to respond, wait, stop, request help, and fold returned results into later speech.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_thinking_layer",
+              "label": "",
+              "text": "The thinking layer is pluggable: the paper says it may be a strong language model, a multimodal large language model (MLLM), or a task-specific agent for reasoning, tool use, or planning.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_streaming_join",
+              "label": "",
+              "text": "The join point is streaming feedback: thinking results arrive as intermediate fragments with control tokens, and the interaction layer may continue, revise, or stop that stream as the conversation changes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "Execution is time-sliced: at each fixed slice, the model reads the previous slice's audio-video input, dialogue history, and thinking feedback, then emits a thinking-control signal, an interpretation of new user input, assistant text, and assistant speech. This turns full-duplex behavior into a repeated streaming update rather than a turn-level transaction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_thinker",
+              "label": "",
+              "text": "The Thinker, the text-and-context part of the model, generates assistant text tokens and hidden states from the current multimodal context.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_talker",
+              "label": "",
+              "text": "The Talker, the speech-generating part, conditions on Thinker outputs and previous speech-code history to autoregressively produce residual vector quantization (RVQ) codec tokens, which are discrete audio codes decoded into waveform.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_runtime",
+              "label": "",
+              "text": "For realtime inference, Thinker text generation and Talker speech generation run as an asynchronous pipeline, with cache-based incremental decoding and graph execution optimization used to reduce repeated speech-generation work.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The main design choices all serve the same pressure point: preserve conversational immediacy while allowing computation that may take longer than a speech chunk. The tradeoff is that correctness now depends on clean coordination signals, realistic temporal data, and robust handling of stale or interrupted thinking results.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E7",
+            "E8",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "design_decision_decouple_layers",
+              "label": "",
+              "text": "Need: avoid blocking speech during tool use; choice: decouple live interaction from background reasoning; closest alternative: one serial model pipeline; tradeoff: the interaction layer must decide when returned reasoning is still relevant.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E2",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_time_slices",
+              "label": "",
+              "text": "Need: train and infer on continuous streams; choice: fixed speech-video slices with carried history; closest alternative: ordinary turn-based dialogue; tradeoff: slice-level state is easier to schedule but short fragments can be hard to recognize.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_writer_director",
+              "label": "",
+              "text": "Need: supervise timing behaviors absent from ordinary dialogue; choice: generate a script, then add temporal control tokens; closest alternative: raw multi-turn text; tradeoff: the training signal is explicit but synthetic annotation quality becomes load-bearing.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E8",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported implementation initializes from Qwen3-Omni, trains with two-stage supervised fine-tuning, alternates Thinker and Talker optimization, synthesizes speech with Qwen3-TTS, encodes speech with the Mimi codec, and trains on a large H20 GPU cluster. The paper states it will release model weights, training data, and training and inference implementation, but the provided text does not give repository links or exact reproduction scripts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E15",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The comparison covers realtime omni and speech-to-speech systems under streaming or realtime settings, using Full DuplexBench for turn-taking interaction, Big Bench Audio for streaming audio understanding, Daily-Omni for general omni capability, LibriSpeech word error rate (WER) for speech recognition quality, and latency for response delay. The default full system uses DuplexOmni as the interaction layer and Gemini-3.1-Flash-Lite as the thinking layer.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest for C4's benchmark and ablation claims, reasonably direct for C1-C2's implementation claims, and supportive but less independently validated for C3's synthetic data-pipeline claim. No reported result includes confidence intervals, repeated-run statistics, or human preference uncertainty.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1 is supported by the described non-blocking interaction/thinking split and by ablations where replacing thinking barely changes Full DuplexBench ToR, but the paper does not isolate failure cases where stale thinking feedback harms dialogue.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E4",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2 is supported by the model's slice-level architecture and reported latency, but the paper gives limited profiling detail for the exact scheduler, cache reuse, or graph optimization contribution.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E9",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3_c4",
+              "label": "",
+              "text": "C3 is supported by the control-token design and corpus statistics; C4 is supported by benchmark tables and ablations, with the caveat that baseline API settings and evaluation variance are only partly observable from the paper text.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8",
+                "E10",
+                "E11",
+                "E12",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is that DuplexOmni reports the best Full DuplexBench ToR among realtime baselines while maintaining around half-second latency, and also reports the best Big Bench Audio score in the table. The closest directly comparable interaction baseline by latency is MiniCPM-o 4.5, where DuplexOmni reports much higher ToR but lower Daily-Omni accuracy.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": [
+            {
+              "id": "headline_result_duplexbench",
+              "label": "",
+              "text": "Supported claim: C4; configuration: full DuplexOmni; baseline: MiniCPM-o 4.5; metric: Full DuplexBench ToR, higher is better; delta: 72.6% versus 36.3%; uncertainty: not reported; caveat: benchmark details and human-rating variance are not shown in the excerpt.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_latency",
+              "label": "",
+              "text": "Supported claim: C2 and C4; configuration: realtime full system; baseline: MiniCPM-o 4.5 and Qwen realtime variants; metric: latency, lower is better; delta: 0.506 s versus 0.502 s for MiniCPM-o 4.5 and 1.25-1.28 s for Qwen realtime variants; uncertainty: not reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_bigbench",
+              "label": "",
+              "text": "Supported claim: C4; configuration: full DuplexOmni; baseline: Gemini-3.1-Flash-Lite thinking-only and Gemini Live; metric: Big Bench Audio, higher is better; delta: 77.2% versus 58.9% and 57.9%; uncertainty: not reported; caveat: the full system uses a Gemini thinking layer.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations support the layered interpretation: weakening the thinking layer leaves Full DuplexBench nearly unchanged but sharply reduces Big Bench Audio, while removing thinking reduces reasoning further. The ASR analysis shows sensitivity to utterance length, with short user fragments much harder than longer ones.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "ablation_thinking_strength",
+              "label": "",
+              "text": "Supported claim: C1 and C4; configuration: weak thinking versus full thinking; baseline: full system; metric: Full DuplexBench ToR and Big Bench Audio; delta: ToR 72.6% to 72.1%, Big Bench Audio 77.2% to 50.3%; support status: supports separation of interaction and reasoning strength.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "ablation_no_thinking",
+              "label": "",
+              "text": "Supported claim: C4; configuration: no thinking layer; baseline: full system; metric: Big Bench Audio; delta: 77.2% to 22.2%; support status: supports the claim that the thinking layer sets the reasoning ceiling.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "sensitivity_short_utterances",
+              "label": "",
+              "text": "Supported claim: boundary on C2 and C4; configuration: full-duplex ASR by utterance length; baseline: longer utterances; metric: WER, lower is better; delta: 25.1% for 1-5 words versus 8.8% for 21+ words; support status: shows short low-context speech is a weakness.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper promises release of weights, training data, and training and inference implementation, but the provided text itself does not include a repository, exact evaluation scripts, random seeds, repeated runs, cost budget, or enough proprietary API details to rerun all baselines. Reuse is also constrained by the large training stack, synthetic speech generation, and dependence on a strong external thinking model in the default configuration.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E10",
+            "E15",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The architecture is coherent because the paper identifies a real scheduling conflict and assigns the fast, user-facing loop and slow reasoning loop to different execution spaces. The ablation pattern is also internally consistent: interaction quality mostly follows the DuplexOmni model, while streaming audio reasoning follows the thinking layer plus the interaction layer's filtering and organization.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E4",
+            "E11",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The system may fail when user intent changes faster than thinking feedback can be invalidated, when visual grounding matters more than the small video-call corpus can support, or when short speech fragments carry the decisive cue. Benefits should diminish in low-latency tasks that require no external reasoning, and in languages or accents underrepresented in the training data.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E8",
+            "E13",
+            "E14",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_work",
+          "label": "Relation to Other Work",
+          "text": "Relative to broad omni models, DuplexOmni emphasizes interaction scheduling rather than only modality unification. Relative to full-duplex speech systems such as Moshi-like or flattened speech-text approaches, it adds an explicit asynchronous reasoning/tool layer and temporal supervision for when to wait, cut off, reset, or incorporate delayed results.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "The transferable pattern is to split latency-critical interaction from accuracy-critical deliberation, then train the boundary explicitly with control signals rather than hoping a single sequence model learns the timing protocol implicitly. This applies beyond voice assistants to any interactive AI system where the user-facing loop must remain responsive while deeper computation continues.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E7",
+            "E8",
+            "E9"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_full_duplex",
+      "term": "full-duplex interaction",
+      "aliases": [
+        "duplex interaction"
+      ],
+      "note": "A dialogue mode where the assistant can keep receiving user speech while it is speaking, so overlap, interruption, and backchannels are part of normal operation."
+    },
+    {
+      "id": "g_omni_model",
+      "term": "omni model",
+      "aliases": [
+        "omni-modal model"
+      ],
+      "note": "A model that handles multiple modalities such as speech, text, image, video, and sometimes speech output in one unified interaction system."
+    },
+    {
+      "id": "g_interaction_layer",
+      "term": "interaction layer",
+      "aliases": [
+        "DuplexOmni model"
+      ],
+      "note": "The fast layer responsible for live listening, watching, dialogue rhythm, immediate text response, and speech output."
+    },
+    {
+      "id": "g_thinking_layer",
+      "term": "thinking layer",
+      "aliases": [
+        "S2",
+        "background reasoning layer"
+      ],
+      "note": "A pluggable slower layer that can run a strong language model, multimodal model, or tool agent and stream useful results back to the interaction layer."
+    },
+    {
+      "id": "g_thinker_talker",
+      "term": "Thinker-Talker architecture",
+      "aliases": [
+        "Thinker",
+        "Talker"
+      ],
+      "note": "A speech-generation design where a text/context model produces linguistic states and a speech model converts those states into audio codec tokens."
+    },
+    {
+      "id": "g_time_slice",
+      "term": "time-sliced inference",
+      "aliases": [
+        "480 ms slice"
+      ],
+      "note": "A streaming inference schedule that repeatedly processes fixed-duration chunks of input and emits the next chunk of control, text, and speech output."
+    },
+    {
+      "id": "g_rvq",
+      "term": "residual vector quantization",
+      "aliases": [
+        "RVQ",
+        "codec tokens"
+      ],
+      "note": "An audio representation that stores speech as multiple layers of discrete codes; the Talker predicts these codes before a decoder turns them back into waveform."
+    },
+    {
+      "id": "g_mtp",
+      "term": "MTP module",
+      "aliases": [
+        "multi-token prediction"
+      ],
+      "note": "The module used after the first codec layer prediction to fill the remaining residual codebooks for each speech frame."
+    },
+    {
+      "id": "g_control_tokens",
+      "term": "Director control tokens",
+      "aliases": [
+        "[THINK]",
+        "[CUT]",
+        "[WAIT]",
+        "[PENDNS]",
+        "^",
+        "<...>"
+      ],
+      "note": "Special annotations that mark when background thinking starts, when returned thinking is injected, where overlap begins, where speech stops, when thinking resets, and when shared silence occurs."
+    },
+    {
+      "id": "g_rtf",
+      "term": "real-time factor",
+      "aliases": [
+        "RTF"
+      ],
+      "note": "The ratio between generation time and audio duration; below one means a chunk can be generated before it finishes playing."
+    },
+    {
+      "id": "g_kv_cache",
+      "term": "KV cache",
+      "aliases": [
+        "key-value cache"
+      ],
+      "note": "Saved attention state from earlier tokens that lets an autoregressive model avoid recomputing the whole prefix during incremental decoding."
+    },
+    {
+      "id": "g_asr_wer",
+      "term": "word error rate",
+      "aliases": [
+        "WER",
+        "ASR WER"
+      ],
+      "note": "A speech recognition error metric; lower is better, and the paper uses it to show that short utterances are difficult under full-duplex streaming."
+    }
+  ]
+}

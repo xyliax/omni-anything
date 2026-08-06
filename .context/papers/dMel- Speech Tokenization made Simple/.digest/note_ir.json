@@ -1,0 +1,784 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "dMel: Speech Tokenization made Simple",
+    "summary": "dMel shows that directly binning log-mel spectrogram energies can serve as a simple, training-free speech tokenization interface for decoder-only ASR and TTS, reducing dependence on learned speech codecs and task-specific token stacks.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2024, v3 May 2025",
+    "authors": "Richard He Bai, Zijin Gu, Tatiana Likhomanenko, Zakaria Aldeneh, Ruixiang Zhang, Navdeep Jaitly; Apple",
+    "keywords": [
+      "speech tokenization",
+      "log-mel spectrogram",
+      "text-to-speech",
+      "automatic speech recognition",
+      "decoder-only transformer",
+      "speech-text modeling"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a speech-tokenization paper that challenges the assumption that language-model-style speech systems need learned semantic or neural-codec tokens before modeling speech.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "dMel improves language-model-style speech recognition and synthesis by replacing learned speech tokenizers with a direct discretization of log-mel spectrogram energy values.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Treat speech like a heat map over time and pitch: dMel rounds each cell's brightness to a small set of levels, then asks a text-like next-token model to predict future heat-map columns.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the controlled comparison where the same decoder-only model is trained with different speech tokenizers, and dMel wins for both TTS intelligibility and ASR WER.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E7",
+        "E9"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_tts",
+          "label": "",
+          "text": "Supports C2: RichTTS Base on LibriSpeech 960h; HuBERT+KM and SpeechTokenizer inside the same LM-style model plus prior VOX-TLM/USLM; WER/CER lower is better; dMel reports 4.3 WER and 1.8 CER versus 9.5/4.3 for HuBERT+KM and 11.4/5.9 for SpeechTokenizer; supported, with automatic ASR evaluation caveat.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_asr",
+          "label": "",
+          "text": "Supports C3: RichASR Base on LibriSpeech 960h; same 258M architecture with SpeechTokenizer and HuBERT+KM; WER lower is better; dMel reports 4.2 test-clean and 10.4 test-other versus 5.8/13.8 for HuBERT+KM and 6.9/17.5 for SpeechTokenizer; supported with two-run standard deviations.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_reconstruction",
+          "label": "",
+          "text": "Supports C1: reconstruction on 300 LibriSpeech test-clean samples; neural tokenizers and mel-vocoder baselines; WER/MOS-LQO/MOS; dMel-HifiGAN is close to Mel-HifiGAN and competitive with acoustic codecs while needing no speech-to-unit encoder; supported, but sample size is small.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The paper demonstrates ASR and TTS on mostly English speech benchmarks, but does not establish general audio modeling, complex speech understanding, or large-scale pretrained multimodal LLM behavior.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E14"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "we introduce a novel speech representation (dMel) that discretizes mel-filterbank channels into intensity bins, creating a simpler yet more effective representation compared to existing speech tokenization methods.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, motivation and advantages",
+      "claim_type": "insight",
+      "evidence_type": "paper_statement",
+      "snippet": "By operating on the log mel-filterbanks and preserving the frequency and intensity information (with some loss of resolution from discretization), dMel inherently preserves both semantic and acoustic information in a unified representation, without the need for separate tokenization or additional pretraining of a tokenization model.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E3",
+      "section": "Method",
+      "locator": "Section 2.1, Tokenization",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "In practice, we compute the minimum m and maximum M values of log mel-filterbanks across the entire dataset to define the codebook C. Then we map a magnitude M_t,i of every frequency channel i = 1 ... N for the time frame t = 1 ... T into a bin index of the codebook C",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Method",
+      "locator": "Table 2 and Section 2.1 comparison",
+      "claim_type": "system_design",
+      "evidence_type": "paper_statement",
+      "snippet": "For dMel we use N = 80 log-mel-filterbanks (50ms window, 25ms hop distance), and 2^K = 16 values of the codebook C... dMel has a much smaller vocabulary, as it is discretized mel-filterbanks energies, allowing all 80 channels to share the same vocabulary",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Experiments",
+      "locator": "Table 3 and Section 3.1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Speech reconstruction results on 300 random samples from LibriSpeech test-clean set... dMel-HifiGAN ... WER 2.11 ... MOS-LQO 4.47 ... MOS 3.68 ±0.13... By comparing Mel and dMel, we can see that discretization has little impact on WER and MOS-LQO scores.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E6",
+      "section": "Experiments",
+      "locator": "Figure 4 and Section 3.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Results are shown in Figure 4: both HuBERT-KM and SpeechTokenizer fail in out-of-domain setting while EnCodec, Mel and dMel show robustness for noisy speech reconstruction. This supports our motivation to explore dMel, training-free and deterministic tokenization",
+      "confidence": "medium"
+    },
+    {
+      "id": "E7",
+      "section": "Experiments",
+      "locator": "Table 4 and Section 3.3.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "our LM-style model with dMel tokenization achieves a WER of 4.3 and a CER of 1.8, significantly outperforming the baseline methods. This indicates that our model can generate more accurate speech with less hallucination and distortion.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E8",
+      "section": "Experiments",
+      "locator": "Table 5, Table 6, Section 3.3.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "RichTTS achieves competitive performance on the TTS task in terms of both MOS and WER... Table 6 shows the WER results... our model achieves competitive performance across different text lengths, demonstrating its robustness and generalization ability",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments",
+      "locator": "Table 7 and Section 3.4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Our LM-style model with dMel speech tokenization achieves 4.2% WER on the test-clean and 10.4% WER on the test-other sets outperforming both HuBERT-KM and SpeechTokenizer.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "Experiments",
+      "locator": "Table 8 and Section 3.4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "RichASR with dMel outperforms VOX-TLM; it also outperforms [11] on clean sets and a bit behind it on other sets.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Ablations",
+      "locator": "Section 3.5 and Figure 5",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The 16-bin configuration used in the paper demonstrates the best overall performance across tasks. While the 32-bin setup slightly outperforms on the ASR test-other set, it shows degraded performance in TTS... And 8-bin configuration looses too much information with discretization.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Ablations",
+      "locator": "Section 3.5 and Figure 6",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "As we can see from this figure, k ≤ 4 yield similar results to single-frame model, while improves both the training and inference efficiency significantly. In contrast, for SpeechTokenizer, even K = 1 is worse than dMel with k = 6.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Appendix E",
+      "locator": "Appendix E.2, Training Details",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "We train TTS models for 100k steps and ASR models 80k steps with mixed precision training and BF16 on A100 and H100 GPUs with 80GB. Both ASR models and TTS models are trained with 8GPUs",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "Limitations and Reproducibility",
+      "locator": "Appendix B and C",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "we did not train on larger model sizes (>1B parameters), larger datasets (>1k hours), or using pretrained models... While dMel may potentially support non-speech tasks, our current exploration and verification focus solely on speech, not general audio... We do not plan to open-source any pre-trained models",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Speech systems often convert sound into a compact sequence before a model can process it. A log-mel spectrogram is a time-by-frequency picture of speech energy, and a speech token is a discrete symbol intended to make that picture usable by language-model-style predictors.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "If we want one model to both listen and speak, we need a representation that keeps the words, the speaker, and the sound quality without requiring a fragile extra model just to make the tokens.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Representations that keep meaning often drop acoustic detail, while representations that reconstruct sound well can be awkward for simple next-token modeling.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Instead of learning a speech code, round each log-mel energy value into a small ordered bin and model those rounded spectrogram frames directly.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper targets speech tokenization for language-model-style automatic speech recognition (ASR, speech-to-text) and text-to-speech (TTS, text-to-speech) systems: learned tokenizers add complexity, cost, and domain sensitivity, while unified speech-text modeling needs tokens that preserve both content and acoustics.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior speech tokenizers split into semantic tokens from self-supervised speech encoders, which preserve content but lose acoustic details, and acoustic tokens from neural audio compression, which reconstruct sound but often require residual vector quantization (RVQ, a stack of codebooks that encode successive reconstruction errors) and specialized hierarchical models.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The paper's central bet is that a log-mel spectrogram already contains enough content and acoustic information, so scalar quantization (rounding each continuous value to the nearest discrete bin) can make it token-like without training a tokenizer.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper makes four falsifiable claims about dMel as a tokenizer and as an interface to decoder-only models.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Discretizing log-mel spectrograms into dMel preserves enough acoustic information for waveform reconstruction and is more robust to noisy out-of-domain reconstruction than several learned tokenizers.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: In a language-model-style TTS setting, dMel enables more intelligible generated speech than HuBERT-KM or SpeechTokenizer under the paper's comparable decoder-only training setup.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: In a language-model-style ASR setting, dMel preserves semantic content better than the compared speech tokenizers, as measured by WER in the same architecture.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: dMel's per-channel independence lets the model predict multiple channels and nearby frames in parallel, improving efficiency without the same residual-code dependency problem as RVQ tokenizers.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "dMel computes a log-mel spectrogram, builds a shared scalar codebook from dataset-wide minimum and maximum energy values, and replaces each time-frequency cell with the nearest bin index; detokenization maps indices back through the codebook and uses a separately trained mel vocoder (a model that converts mel spectrograms into waveforms).",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "For speech input, each frame contains many frequency-channel bin IDs; each bin is embedded, the channel embeddings are concatenated and linearly projected to the transformer's hidden dimension, and the decoder-only transformer predicts future text tokens for ASR or future dMel speech tokens for TTS.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_tts",
+              "label": "",
+              "text": "For TTS, the input sequence concatenates a speaker embedding, character-level text tokens, and speech tokens, and the loss is applied to the speech-token outputs rather than the text prefix.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_asr",
+              "label": "",
+              "text": "For ASR, the input sequence concatenates speech tokens and character-level text tokens, and the loss is applied to the text-token outputs rather than the speech prefix.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design repeatedly chooses simple, shared, and parallelizable representations over learned compression structure, accepting higher bitrate in exchange for tokenizer simplicity and easier decoder-only modeling.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E11",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "design_bins",
+              "label": "",
+              "text": "Need: make continuous mel values discrete; choice: 16 shared ordinal bins across 80 channels; alternative: larger or smaller codebooks; tradeoff: 8 bins lose too much information, while 32 bins can help some ASR cases but hurts TTS in the paper's setting.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_parallel_channels",
+              "label": "",
+              "text": "Need: avoid sequential dependence across residual code channels; choice: predict dMel frequency channels independently and in parallel; alternative: RVQ-style residual channels; tradeoff: dMel has more raw bits but avoids residual hierarchy in the downstream model.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_context_masking",
+              "label": "",
+              "text": "Need: reduce copying of locally redundant audio frames and exposure bias; choice: span-mask speech context during training; tradeoff: this adds a training heuristic whose benefit is empirically reported but not theoretically analyzed.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation surface includes a deterministic tokenizer, a mel vocoder outside the transformer, character text tokens, d-vector speaker embeddings for TTS, RoPE relative position encoding, and Small/Base/Large decoder-only transformer configurations.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "implementation_training_resources",
+              "label": "",
+              "text": "Reported training uses Adam, mixed precision BF16, A100/H100 80GB GPUs, 8 GPUs, 80k ASR steps, 100k TTS steps, and less than a day for ASR versus 2-4 days for TTS.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation combines reconstruction tests, decoder-only TTS, decoder-only ASR, ablations, and a preliminary joint ASR+TTS model, mostly on LibriSpeech with additional TTS datasets LibriTTS, VCTK, and LJSpeech; metrics include word error rate (WER, lower is better), character error rate (CER), objective MOS-LQO, and human mean opinion score (MOS).",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest where tokenizer is varied under a shared model architecture, and weaker where comparisons cross different model families, datasets, or evaluation protocols.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9",
+            "E10"
+          ],
+          "children": [
+            {
+              "id": "matrix_c1",
+              "label": "",
+              "text": "C1 is supported by reconstruction WER/MOS-LQO/MOS on clean LibriSpeech and a noisy reconstruction stress test, but the clean reconstruction sample is only 300 utterances and noisy results rely on automatic ASR WER.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_c2_c3",
+              "label": "",
+              "text": "C2 and C3 are supported by same-architecture comparisons against HuBERT-KM and SpeechTokenizer; external comparisons to VOX-TLM, USLM, Tacotron2, FastSpeech2, and VITS are useful context but less controlled.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E7",
+                "E8",
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "matrix_c4",
+              "label": "",
+              "text": "C4 is supported by k-frame ablations that trade theoretical FLOPs for WER, but the paper reports theoretical inference time rather than full wall-clock serving measurements.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline results are that dMel closely preserves reconstruction quality, substantially improves TTS intelligibility over the tested tokenizers in the same LM-style model, and improves ASR WER over HuBERT-KM and SpeechTokenizer in the same Base architecture.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E7",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "headline_reconstruction",
+              "label": "",
+              "text": "C1: on 300 LibriSpeech test-clean samples, dMel-HifiGAN reports WER 2.11 and MOS-LQO 4.47 versus Mel-HifiGAN WER 2.08 and MOS-LQO 4.52, indicating small discretization loss under this vocoder.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_tts",
+              "label": "",
+              "text": "C2: RichTTS(dMel) trained on LibriSpeech 960h reports WER 4.3 and CER 1.8, while RichTTS(HuBERT+KM) reports 9.5/4.3 and RichTTS(SpeechTokenizer) reports 11.4/5.9.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_asr",
+              "label": "",
+              "text": "C3: RichASR(dMel) Base reports test-clean/test-other WER 4.2 ±0.2 and 10.4 ±0.1 versus HuBERT+KM 5.8 ±0.1 and 13.8 ±0.1 and SpeechTokenizer 6.9 ±0.4 and 17.5 ±0.5.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "Ablations identify the bin count, frame aggregation, ASR architecture choice, and augmentation/masking choices as important sensitivity axes rather than treating dMel as a universally sufficient drop-in.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "ablation_bins",
+              "label": "",
+              "text": "The paper selects 16 bins as the overall best tradeoff; 8 bins lose too much information, while 32 bins are mixed, slightly helping ASR test-other but degrading TTS.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "ablation_kframe",
+              "label": "",
+              "text": "k-frame parallel decoding works best up to moderate aggregation: the paper reports similar results for k ≤ 4 with improved theoretical efficiency, while very aggressive aggregation increases WER.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "ablation_lm_gap",
+              "label": "",
+              "text": "The ASR ablation argues that discretization itself causes only small degradation relative to continuous mel features, while much of the remaining gap comes from switching to an LM-style decoder-only ASR model.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports a public code URL and detailed training settings, but states that pretrained models will not be released and that code release was planned upon acceptance; absence of released checkpoints limits exact reproduction and reuse.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The central technical point holds up: if the task is ASR/TTS over speech, direct scalar-quantized mel features are a surprisingly strong baseline and remove a large learned-tokenizer dependency that prior systems often treat as necessary.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E7",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_may_fail",
+          "label": "Where It May Fail",
+          "text": "Benefits may diminish when the target is compact audio compression, non-speech audio, complex speech understanding, highly multilingual or adverse-domain pretraining, or production TTS quality that requires prosody and style control beyond intelligibility and naturalness scores reported here.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation",
+          "label": "Relation to Other Work",
+          "text": "Compared with HuBERT-KM semantic tokens, dMel keeps more acoustic detail; compared with EnCodec/SpeechTokenizer-style neural codecs, it avoids RVQ residual structure and tokenizer training; compared with AudioLM/VOX-TLM/VioLA-style unified modeling, it pushes complexity out of tokenization rather than adding stages or modality-specific hierarchy.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E4",
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "Before designing a learned discrete representation, test whether a physics-grounded continuous representation plus simple scalar quantization preserves the task-relevant information; the simpler token boundary can make downstream modeling and failure analysis easier even if it is not bitrate-optimal.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_log_mel_spectrogram",
+      "term": "log-mel spectrogram",
+      "aliases": [
+        "Mel",
+        "mel-filterbank",
+        "log mel-filterbanks"
+      ],
+      "note": "A time-by-frequency representation of audio energy where frequency bands follow a perceptual mel scale and amplitudes are log-transformed; it is the continuous representation dMel discretizes."
+    },
+    {
+      "id": "g_speech_tokenization",
+      "term": "speech tokenization",
+      "aliases": [
+        "speech tokens",
+        "audio tokens"
+      ],
+      "note": "The conversion of a continuous speech waveform or spectrogram into discrete symbols that can be modeled like text tokens."
+    },
+    {
+      "id": "g_dmel",
+      "term": "dMel",
+      "aliases": [
+        "discretized Mel",
+        "dMe1 in OCR text"
+      ],
+      "note": "The paper's tokenizer: each log-mel spectrogram cell is rounded to one of a small number of shared intensity bins, producing a matrix of discrete time-frequency token IDs."
+    },
+    {
+      "id": "g_vocoder",
+      "term": "vocoder",
+      "aliases": [
+        "mel vocoder",
+        "ParallelWaveGAN",
+        "HifiGAN"
+      ],
+      "note": "A model that converts acoustic features such as mel spectrograms back into waveform audio; in this paper it is trained independently and sits outside the transformer."
+    },
+    {
+      "id": "g_semantic_token",
+      "term": "semantic token",
+      "aliases": [
+        "content token",
+        "HuBERT-KM"
+      ],
+      "note": "A discrete speech unit usually obtained by clustering hidden states from a self-supervised speech model; it tends to preserve linguistic content better than fine acoustic detail."
+    },
+    {
+      "id": "g_acoustic_token",
+      "term": "acoustic token",
+      "aliases": [
+        "neural codec token",
+        "codec token"
+      ],
+      "note": "A discrete token produced by an audio compression model, intended to preserve enough low-level acoustic information to reconstruct the waveform."
+    },
+    {
+      "id": "g_rvq",
+      "term": "residual vector quantization",
+      "aliases": [
+        "RVQ"
+      ],
+      "note": "A multi-codebook quantization method where each later codebook encodes the reconstruction error left by earlier codebooks; common in neural audio codecs but creates ordered residual channels."
+    },
+    {
+      "id": "g_decoder_only_transformer",
+      "term": "decoder-only transformer",
+      "aliases": [
+        "LM-style transformer",
+        "autoregressive transformer"
+      ],
+      "note": "A transformer architecture that predicts the next token from previous tokens using causal masking, similar to GPT-style language models."
+    },
+    {
+      "id": "g_asr_tts",
+      "term": "ASR and TTS",
+      "aliases": [
+        "automatic speech recognition",
+        "text-to-speech"
+      ],
+      "note": "ASR maps speech to text; TTS maps text to speech. The paper uses both tasks to test whether dMel preserves semantic content and acoustic reconstructability."
+    },
+    {
+      "id": "g_wer_cer_mos",
+      "term": "WER, CER, and MOS",
+      "aliases": [
+        "word error rate",
+        "character error rate",
+        "mean opinion score",
+        "MOS-LQO"
+      ],
+      "note": "WER and CER measure transcription errors and are lower-is-better; MOS is a human naturalness score and MOS-LQO is an objective listening-quality estimate, both higher-is-better."
+    }
+  ]
+}

@@ -13,3 +13,9 @@ __pycache__/
 # OS / editor
 .DS_Store
 *.swp
+
+# .context: keep digests/notes in git; large binaries stay local-only
+.context/**/*.pdf
+.context/**/*.pptx
+.context/papers/**/*.log
+.context/papers/.digest-logs/

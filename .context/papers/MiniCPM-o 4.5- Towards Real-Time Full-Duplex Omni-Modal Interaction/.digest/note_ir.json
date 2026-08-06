@@ -1,0 +1,874 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "MiniCPM-o 4.5: Towards Real-Time Full-Duplex Omni-Modal Interaction",
+    "summary": "MiniCPM-o 4.5 treats live multimodal interaction as one time-aligned stream so a compact 9B model can watch, listen, and speak at once while keeping deployable edge efficiency.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2026",
+    "authors": "Junbo Cui, Bokai Xu, Chongyi Wang, Tianyu Yu, Weiyue Sun, Yingjing Xu, Tianran Wang, Zhihui He, Wenshuo Ma, Tianchi Cai, Jiancheng Gui, Luoyuan Zhang, Xian Sun, Fuwei Huang, Moye Chen, Zhuo Lin, Hanyu Liu, Qingxin Gui, Qingzhe Han, Yuyang Wen, Huiping Liu, Rongkang Wang, Yaqi Zhang, Hongliang Wei, Chi Chen, You Li, Kechen Fang, Jie Zhou, Yuxuan Li, Guoyang Zeng, Chaojun Xiao, Yankai Lin, Xu Han, Maosong Sun, Zhiyuan Liu, Yuan Yao; affiliations Unknown",
+    "keywords": [
+      "omni-modal interaction",
+      "full-duplex streaming",
+      "multimodal large language model",
+      "speech generation",
+      "edge inference",
+      "Omni-Flow"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a model-systems paper for omni-modal interaction, meaning one assistant processes vision, sound, text, and speech together; its useful gap is not adding one more input type, but keeping input and output active in the same moment.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "MiniCPM-o 4.5 improves real-time assistant interaction by replacing turn taking with a shared timeline that lets new visual and audio input affect the response while the model is still speaking.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E5",
+        "E7"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a live commentator who keeps one eye on the field, one ear on the crowd, and a finger on the microphone; every short moment, the next words are chosen from what just happened, not only from the scene at the start.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is triangulated across capability tables, one full-duplex benchmark, and deployment measurements, with the important caveat that the result tables do not report statistical uncertainty.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E11",
+        "E13",
+        "E16"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C4: instruct vision-language setting; Gemini 2.5 Flash and Qwen3-Omni baselines; OpenCompass score; MiniCPM-o 4.5 reaches 77.6 versus 78.5 and 75.7; support is broad but table-only.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C4: vision-only full-duplex LiveSports-3K-CC; LiveCC and StreamingVLM baselines; win rate; MiniCPM-o 4.5 scores 54.4 versus 41.5 and 45.6; support is direct but not audio-inclusive.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: SeedTTS speech-generation modes; no-interleave and fixed-text baselines; CER/WER and speaker-similarity metrics; Time-Aligned Interleaving trades lower temporal staleness for worse English WER; support is mixed.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_4",
+          "label": "",
+          "text": "Supports C4: single RTX 4090 vLLM INT4 setting; Qwen3-Omni-30B-A3B baseline; throughput, first-token latency, and memory; MiniCPM-o 4.5 reports 212.3 tokens/s, 0.58 s, and 11 GB versus 147.8, 0.98 s, and 20 GB.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The paper's full-duplex evidence is still narrow: the quantitative real-time benchmark is audio-free and vision-only, qualitative omni-stream demos are not standardized, and the authors report speech instability plus network-sensitive missing fragments.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E13",
+        "E17"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Title and Abstract",
+      "locator": "title block and abstract",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "The paper is titled MiniCPM-o 4.5: Towards Real-Time Full-Duplex Omni-Modal Interaction, appears as arXiv:2604.27393v1 in cs.CL on 30 Apr 2026, and presents MiniCPM-o 4.5 with a total of 9B parameters.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "1 Introduction",
+      "locator": "Introduction, paragraphs 1-2 and Figure 3",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "The authors argue that modality coverage and latency are no longer the only bottlenecks. Existing models still alternate perception and response, cannot update during generation, and remain request-driven rather than context-driven.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "3 Omni-Flow",
+      "locator": "Section 3 opening",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Omni-Flow coordinates omni-modal input and output streams on a shared temporal axis. It divides continuous interaction into fine-grained time windows and processes newly arrived signals while producing the next output.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "3.1 Time-Aligned Streams and 3.2 Unified Serialization",
+      "locator": "Sections 3.1-3.2",
+      "claim_type": "algorithm",
+      "evidence_type": "paper_statement",
+      "snippet": "The framework identifies env-visual, env-audio, and out-stream. For each chunk, visual tokens, audio tokens, and output tokens are grouped, with a special listen token when the assistant should produce no content.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E5",
+      "section": "2 End-to-End Omni-Modal Architecture",
+      "locator": "Section 2 opening and Figure 4",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The model combines streaming visual and audio encoders, a Qwen3-8B language backbone, an interleaved speech-token decoder, and a streaming flow-matching waveform decoder, with learnable components connected through token-level hidden states.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "2 End-to-End Omni-Modal Architecture",
+      "locator": "Visual Encoding, Audio Encoding, Text Decoding",
+      "claim_type": "optimization",
+      "evidence_type": "implementation_detail",
+      "snippet": "The visual path compresses each encoded slice from 1024 tokens to 64 tokens. The audio path produces 50 feature tokens per second then compresses to 10 audio tokens per second. The backbone only emits text-speed tokens.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "3.4 Time-Aligned Interleaving for Timely Speech Generation",
+      "locator": "Section 3.4 and Figure 5",
+      "claim_type": "algorithm",
+      "evidence_type": "paper_statement",
+      "snippet": "Time-Aligned Interleaving adaptively chooses how much text to generate so speech playback approaches the current chunk boundary. It can generate fewer tokens after earlier delay and defers a bounded look-ahead for pronunciation and prosody.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "4 Data and 5 Training",
+      "locator": "Sections 4.3, 5.1-5.4",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Full-duplex samples contain visual input, audio input, output text, and output speech tagged with time indices. Training proceeds through speech pretraining, joint pretraining, supervised fine-tuning, and reinforcement learning.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "3.3 Design Tradeoffs",
+      "locator": "Table 1 and surrounding analysis",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The design ablation varies chunk size, explicit boundaries, and listen-speak versus listen-text control. The authors report 1.0 s chunks, explicit boundaries, and separated listen-speak control as the best stability-responsiveness balance.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "6.1 Modalities and Domains",
+      "locator": "Section 6.1",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Evaluation covers vision-language understanding, speech understanding and generation, text capability, omni-modal streaming interaction, and full-duplex streaming. Benchmarks span STEM reasoning, OCR, hallucination, video, ASR, speech QA, and audio-visual tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "6.2 Vision-Language Results",
+      "locator": "Tables 2-3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "In instruct mode MiniCPM-o 4.5 reports OpenCompass 77.6, MMBench EN 87.6, MathVista 80.1, HallusionBench 63.2, Mantis-Eval 79.7, and several document/OCR scores competitive with larger or proprietary baselines.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "6.3 Speech Results",
+      "locator": "Tables 4-5",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On speech tasks the model leads selected semantic benchmarks such as CoVoST 2 en-to-zh, MELD, VoiceBench AlpacaEval, and Speech TriviaQA; for generation it reports lowest SeedTTS ZH CER and EN WER among listed baselines.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "6.5 Omni-modal and Streaming Results",
+      "locator": "Tables 7-8",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "MiniCPM-o 4.5 reports best results on five of seven simplex omni-modal benchmarks. On LiveSports-3K-CC, an audio-free full-duplex benchmark, it scores 54.4 versus 41.5 for LiveCC and 45.6 for StreamingVLM.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "6.6 Analysis",
+      "locator": "Table 9 and Figure 6",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The smooth length reward reports a thinking benchmark average of 74.3 with 35.3 percent length reduction, compared with 73.5 for no length reward and 73.0 with the more aggressive Kimi K1.5-style reward.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "6.6 Analysis",
+      "locator": "Table 10",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The speech-mode comparison shows fixed-text interleaving gives best SeedTTS CER/WER, while dynamic Time-Aligned Interleaving has worse EN WER but is presented as the mode designed for temporally aligned full-duplex interaction.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "7 Efficient Real-Time Inference",
+      "locator": "Tables 11-12",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On a single RTX 4090 with vLLM, MiniCPM-o 4.5 INT4 reports 212.3 tokens/s, 0.58 s first-token latency, and 11 GB memory. llama.cpp-omni INT4 reports real-time factor 0.21 with 11 GB memory.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E17",
+      "section": "8 Conclusion",
+      "locator": "Limitations paragraph",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "The authors call the work an early exploration, note that long dynamic real-world robustness needs more validation, and report occasional streaming speech instability, English-Chinese mixing, web-demo latency, missing fragments, and simple proactive behavior.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "Appendix A Model Configuration",
+      "locator": "Table 13",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "The appendix lists 9.34B learnable parameters in bfloat16, including a SigLIP visual encoder, visual resampler, Whisper Medium audio encoder, Qwen3-8B backbone, projector layers, and a speech-token decoder.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This paper lives in interactive AI: systems that take in what a person sees, says, types, and hears, then answer back. The key prerequisite is streaming, where information arrives continuously instead of as one finished prompt.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "Most assistants still behave like walkie-talkies: one side talks, then the other side talks. Real conversation needs an assistant that can keep watching and listening while it is already responding.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The model must decide what happened, whether to speak, what to say, and how to vocalize it while the world keeps changing. If any part runs ahead or falls behind, the answer can become stale.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Put every incoming signal and every outgoing word on one shared clock, then let the next response be conditioned on the newest moment rather than an old turn boundary.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper frames full-duplex interaction, meaning input and output happen at the same time, as the next bottleneck for multimodal large language models (MLLMs), which are language-model systems connected to image, audio, and speech modules. The stake is whether assistants can move from passive turn-taking toward ambient help that responds to changing scenes.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior interactive multimodal systems can process several media types, but the paper argues that they still serialize perception and response or let generated text drift away from speech playback. This leaves two gaps: blocked information flow during speaking and stale spoken output in changing scenes.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The key insight is to represent the live environment and the assistant's own output as time-aligned streams, meaning short pieces placed on the same clock. Once the data has that shape, a standard causal language model, which predicts the next unit from previous units, can model seeing, listening, deciding, and speaking in one sequence.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's thesis rests on four claims: a streaming formulation, an end-to-end architecture, speech timing control, and capability-efficiency evidence.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Omni-Flow turns multimodal interaction into a full-duplex time-aligned process in which perception, output, and proactive behavior share one temporal structure.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: A 9B end-to-end omni-modal architecture can preserve visual, speech, and text abilities while adding streaming interaction because the components exchange compact token-level representations.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Timely speech in full-duplex mode requires explicit timing choices, especially chunk granularity, listen-speak control, and Time-Aligned Interleaving (TAIL), which adapts text generation to speech playback.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E9",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: MiniCPM-o 4.5 is competitive with or ahead of named baselines across vision-language, speech, omni-modal, full-duplex, and efficiency evaluations at its scale.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "MiniCPM-o 4.5 uses compact tokens, meaning small model-readable units for text, audio, or visual features, as the common currency between encoders, the language backbone, and speech decoders. Omni-Flow then schedules these units in short time chunks so each output can depend on newly arrived visual and audio input.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E6"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_visual_audio",
+              "label": "",
+              "text": "Visual frames are encoded and resampled into fewer visual tokens, while audio is encoded in chunks and temporally compressed before entering the language backbone.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_text_speech",
+              "label": "",
+              "text": "The Qwen3-8B backbone emits text-speed outputs and hidden states, and a smaller speech-token decoder uses those hidden states to produce S3 speech tokens for waveform synthesis.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_waveform",
+              "label": "",
+              "text": "A streaming flow-matching decoder, a neural audio generator that converts speech tokens into waveform segments, uses reference audio from the multimodal system prompt for voice-conditioned synthesis.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_flow",
+          "label": "Data / Control Flow",
+          "text": "Each time chunk collects environment visual tokens, environment audio tokens, and output-stream tokens; if the assistant should stay silent, the output part contains a listen token, a special control token meaning no spoken/text content now. The sequence is still causal: past and current chunk content condition the next output, so the model can decide both whether to speak and what to say.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_streams",
+              "label": "",
+              "text": "The three load-bearing streams are env-visual for live scene observations, env-audio for acoustic context and user speech, and out-stream for generated text and speech.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_control",
+              "label": "",
+              "text": "The Listen-Speak (LS) formulation separates the binary decision to listen or speak from content generation, instead of mixing listen and text tokens in one output space.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The main design choices all protect timing stability: one-second chunks give more context per decision, explicit group boundaries reduce parsing burden, and separated listen-speak control avoids asking one prediction step to decide both action and content. TAIL adds a second timing layer for speech so text generation does not outrun audio playback.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E7",
+            "E9",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_chunking",
+              "label": "",
+              "text": "Need: responsiveness and coherence compete; choice: use one-second chunks in the reported setting; alternative: shorter chunks; tradeoff: shorter windows react faster but degrade decision stability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_tail",
+              "label": "",
+              "text": "Need: speech should match the current scene; choice: TAIL adapts text count from accumulated playback progress; alternative: fixed text-speech ratio; tradeoff: better temporal alignment can reduce speech-recognition accuracy.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_decoder_split",
+              "label": "",
+              "text": "Need: avoid making the large backbone emit high-rate speech tokens; choice: delegate speech-token generation to a small decoder conditioned by backbone hidden states; tradeoff: extra decoder surface but lower text-generation burden.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The reported system is a deployable stack rather than only a modeling idea: it specifies component sizes, precision, token rates, quantized inference, and a custom llama.cpp-omni runtime for real-time factor (RTF), meaning generated audio time divided by wall-clock time. The implementation surface spans model architecture, training data alignment, inference framework, and local demo deployment.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E16",
+            "E18"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation is broad rather than deeply controlled: it spans vision-language reasoning, OCR, hallucination, video, speech recognition, speech question answering, text-only benchmarks, omni-modal understanding, full-duplex streaming, and inference efficiency. Baselines include proprietary models, open multimodal models, speech systems, and streaming video-language systems, but the paper does not report repeat counts or confidence intervals.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12",
+            "E13",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest for capability and deployment efficiency, moderate for design choices, and weakest for real-world full-duplex generality because the benchmark coverage is still narrow.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E11",
+            "E13",
+            "E16",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_1",
+              "label": "",
+              "text": "C1: Supported mainly by method formulation and one streaming benchmark; the formulation is clear, but fully standardized full-duplex audio-visual evaluation is missing.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E3",
+                "E4",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_2",
+              "label": "",
+              "text": "C2: Supported by architecture details plus broad capability results; the causal link between compact token interfaces and retained capability is plausible but not isolated by a full architecture ablation.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_3",
+              "label": "",
+              "text": "C3: Supported by direct design and speech-mode ablations; the tradeoff is explicit because dynamic TAIL is temporally motivated but not the best recognition-quality mode.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E7",
+                "E9",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_4",
+              "label": "",
+              "text": "C4: Supported by many benchmark tables and efficiency measurements; support is table-based and lacks reported variance, so it is useful for recall but not a statistical dominance claim.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "Headline results show a compact model that is unusually broad: strong vision-language and OCR scores, competitive speech understanding and generation, top scores on several omni-modal benchmarks, and much lower memory than Qwen3-Omni in the reported INT4 setup. These results support scale-efficiency as much as raw quality.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E13",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "evaluation_headline_vl",
+              "label": "",
+              "text": "Vision-language: MiniCPM-o 4.5 is close to Gemini 2.5 Flash on OpenCompass and exceeds listed open baselines on several instruct-mode metrics, while lagging on some hard reasoning entries such as MMMU.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_speech_omni",
+              "label": "",
+              "text": "Speech and omni-modal: the paper reports leading entries on selected speech QA/generation metrics and best results on five of seven simplex omni-modal benchmarks, plus a LiveSports-3K-CC win-rate lead.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_efficiency",
+              "label": "",
+              "text": "Efficiency: MiniCPM-o 4.5 fits the reported RTX 4090 settings where Qwen3-Omni BF16 runs out of memory, and INT4 reduces memory to 11 GB in both vLLM and llama.cpp-omni measurements.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations are useful because they test the paper's own timing assumptions rather than only final benchmark scores. Their shared message is that the system works by balancing time pressure against model stability: too-short chunks, over-aggressive length rewards, or stricter temporal speech alignment can reduce quality.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablations_omniflow",
+              "label": "",
+              "text": "Omni-Flow design: explicit boundaries and LS control beat implicit or LT variants, and the reported one-second chunk gives the best table balance.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablations_length",
+              "label": "",
+              "text": "Length reward: the smooth reward reduces thinking length less aggressively than Kimi K1.5-style reward while improving the benchmark average in the reported lightweight RL experiment.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablations_speech",
+              "label": "",
+              "text": "Speech mode: fixed-text interleaving wins CER/WER, while dynamic TAIL is justified as the full-duplex timing mode despite worse English WER.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility",
+          "label": "Reproducibility Gaps",
+          "text": "Model, code, data, and scripts are not specified as available in the supplied paper text; the paper mentions a web demo, a lightweight demo system, and llama.cpp-omni, but not enough release detail to reproduce training or every benchmark. Hardware is partially specified for inference, while training compute, data licenses, variance, and benchmark prompts are not reported.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E16",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The strongest part of the paper is the data representation: aligning environment input and assistant output on one clock is the right abstraction for breaking turn-taking without inventing a new backbone. The efficiency story also holds up better than most capability-only model reports because the paper gives memory, latency, throughput, and RTF measurements on named hardware.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E9",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_may_fail",
+          "label": "Where It May Fail",
+          "text": "The main failure boundary is long, noisy, truly bidirectional real-world use: the quantitative full-duplex test is vision-only, TAIL trades away speech quality, and the authors acknowledge robustness, speech instability, code-mixing, latency, missing fragments, and simple proactive behavior. Benefits may diminish when network conditions are unstable, when speech timing is harder than the benchmark captures, or when proactive behavior needs planning rather than local scene reactions.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E13",
+            "E15",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation",
+          "label": "Relation to Other Work",
+          "text": "Compared with Qwen3-Omni, Kimi-Audio, CosyVoice2, LiveCC, and StreamingVLM as presented here, MiniCPM-o 4.5 is positioned less as a specialist speech or video model and more as an integrated real-time interaction stack. The technical difference is the shared temporal stream plus deployable runtime, not just better scores on the same offline multimodal benchmarks.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E7",
+            "E11",
+            "E12",
+            "E13",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable",
+          "label": "Transferable Lesson",
+          "text": "When an AI system must act while sensing, first make time an explicit data dimension, then separate control decisions from content decisions. This pattern transfers beyond speech assistants: streaming agents, robotics interfaces, and live monitoring systems can often improve by aligning observation, action, and silence decisions before adding model capacity.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E9"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_multimodal_large_language_model",
+      "term": "multimodal large language model",
+      "aliases": [
+        "MLLM"
+      ],
+      "note": "A language-model backbone connected to encoders or decoders for non-text signals such as images, video, audio, and speech."
+    },
+    {
+      "id": "g_full_duplex_interaction",
+      "term": "full-duplex interaction",
+      "aliases": [
+        "full-duplex"
+      ],
+      "note": "An interaction mode where the assistant can receive new input and produce output at the same time, rather than alternating turns."
+    },
+    {
+      "id": "g_token",
+      "term": "token",
+      "aliases": [],
+      "note": "A small unit the model reads or writes; in this paper tokens can represent text, visual features, audio features, or speech-code units."
+    },
+    {
+      "id": "g_omni_flow",
+      "term": "Omni-Flow",
+      "aliases": [],
+      "note": "The paper's framework for placing visual input, audio input, and assistant output on a shared time axis."
+    },
+    {
+      "id": "g_time_chunk",
+      "term": "time chunk",
+      "aliases": [
+        "time window"
+      ],
+      "note": "A short interval of the live interaction; Omni-Flow groups the visual, audio, and output tokens belonging to the same interval."
+    },
+    {
+      "id": "g_listen_speak",
+      "term": "Listen-Speak control",
+      "aliases": [
+        "LS"
+      ],
+      "note": "A control formulation where the model first decides whether to listen or speak, then generates content if it chooses to speak."
+    },
+    {
+      "id": "g_time_aligned_interleaving",
+      "term": "Time-Aligned Interleaving",
+      "aliases": [
+        "TAIL"
+      ],
+      "note": "The paper's speech-generation strategy that adapts how much text to generate so speech playback stays close to the current time boundary."
+    },
+    {
+      "id": "g_s3_speech_token",
+      "term": "S3 speech token",
+      "aliases": [
+        "speech token"
+      ],
+      "note": "A discrete speech-code unit generated by the speech-token decoder before waveform synthesis."
+    },
+    {
+      "id": "g_flow_matching_decoder",
+      "term": "flow-matching decoder",
+      "aliases": [],
+      "note": "A neural audio generator that converts speech tokens into waveform audio in a streaming way."
+    },
+    {
+      "id": "g_real_time_factor",
+      "term": "real-time factor",
+      "aliases": [
+        "RTF"
+      ],
+      "note": "An inference-speed measure for audio generation; lower values mean the system generates faster than playback time."
+    },
+    {
+      "id": "g_grpo",
+      "term": "Group Relative Policy Optimization",
+      "aliases": [
+        "GRPO"
+      ],
+      "note": "The reinforcement-learning method the paper uses to improve reasoning and instruction following with accuracy and auxiliary rewards."
+    }
+  ]
+}

@@ -1,0 +1,854 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "title": "Three things everyone should know about Vision Transformers",
+    "summary": "Small, interface-preserving changes to Vision Transformers can trade depth for parallelism, reduce fine-tuning cost, and make patch preprocessing compatible with masked self-supervision without large accuracy loss.",
+    "paper_type": "other",
+    "venue": "arXiv preprint 2022",
+    "authors": "Hugo Touvron, Matthieu Cord, Alaaeldin El-Nouby, Jakob Verbeek, Hervé Jégou; Meta AI, Sorbonne University, Inria",
+    "keywords": [
+      "Vision Transformer",
+      "parallel ViT",
+      "attention-only fine-tuning",
+      "masked image modeling",
+      "patch preprocessing",
+      "hMLP stem"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as an empirical Vision Transformer (ViT) design note: it probes three practical gaps in vanilla ViT recipes rather than proposing a new backbone family.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "The paper improves practical Vision Transformer (ViT) design, fine-tuning, and masked pretraining by empirically showing that dependencies usually treated as fixed can be decoupled while keeping the vanilla ViT interface.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a ViT as an assembly line of token updates: this paper asks which stations truly need to wait for the previous one, which stations need retraining for a new job, and how to inspect patches in sealed envelopes before masked prediction.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest support is from controlled ImageNet-1k comparisons where the alternatives differ by one local design choice.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E5",
+        "E10",
+        "E17"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C1: ImageNet-1k fixed residual-module ViT-B36 and ViT-S60; one-branch sequential baseline; top-1 improves by +0.5 pp for B36 and +0.4 pp for S60 with two branches, with small-batch V100 gains up to 45-47% for B18x2; supported for deep/high-capacity and small-batch cases.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C2: ImageNet 224-to-384 fine-tuning; full fine-tuning baseline; ViT-B AdamW top-1 is 84.3 versus 84.3 for attention-only and ViT-L is 85.5 versus 85.5; supported for resolution adaptation, with transfer caveats.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: ViT-B12 with BERT pre-training of image transformers (BeiT) plus fine-tuning; linear and convolutional stem baselines; hMLP BN reaches 83.43±0.10 versus 83.05±0.08 linear and 83.04 convolutional; supported with repeated hMLP/linear runs, but conv appears single-seed.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The findings are recipe-bound: most experiments use ImageNet-1k, vanilla 16x16-patch ViTs, seed 0 for many tables, and limited V100 latency measurements, so generality to other backbones, training recipes, or deployment kernels is partial.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E8",
+        "E12"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Sec. 1",
+      "claim_type": "insight",
+      "evidence_type": "paper_statement",
+      "snippet": "We offer three insights based on simple and easy to implement variants of vision transformers. The residual layers of vision transformers can to some extent be processed efficiently in parallel; fine-tuning the weights of the attention layers is sufficient; adding MLP-based patch pre-processing layers improves Bert-like self-supervised training.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Experimental setting",
+      "locator": "Sec. 2.2",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We consider the vanilla ViT models initially introduced by Dosovitskiy et al. as well as the smaller ones proposed by Touvron et al. We only consider transformers operating on 16x16 patches. Unless specified otherwise, we train our models on ImageNet-1k and evaluate top-1 accuracy. All experiments are carried with seed 0.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Baselines",
+      "locator": "Table 1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Baseline models at 224x224 include ViT-Ti/16 with 5.7M parameters and 72.7 validation top-1, ViT-S/16 with 22.1M and 79.7, ViT-B/16 with 86.6M and 82.2, and ViT-L/16 with 304.4M and 83.0 under the 300-epoch setting.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E4",
+      "section": "Parallelizing ViT",
+      "locator": "Sec. 3.2",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "Instead of sequentially processing the input in four steps, we replace this composition by two parallel operations. This reduces the number of layers by two for a given number of MHSA and FFN blocks. Conversely, there is twice the amount of processing in parallel. Our modification is neutral with respect to parameter and compute.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Depth vs Width: Parallel ViT",
+      "locator": "Sec. 3.3; Figure 1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "The best performance is obtained with two parallel branches for all tested model capacities. Using more than two parallel branches is not favorable. Figure 1 reports B36 one/two/three/four branches as 82.9/83.4/82.6/82.4 and S60 as 82.4/82.8/82.7/82.5.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E6",
+      "section": "Depth vs Width: Parallel ViT",
+      "locator": "Sec. 3.3; Figure 2 and Table 2",
+      "claim_type": "ablation",
+      "evidence_type": "experiment_result",
+      "snippet": "The smallest models ViT-Ti and ViT-S are better in their sequential version. The B24x1 and B12x2 achieve comparable performance. In contrast, the ViT-L12x2 is stronger than its sequential counterpart. With LayerScale, sequential and parallel models end up approximately on par.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E7",
+      "section": "Depth vs Width: Parallel ViT",
+      "locator": "Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 3 compares complexity-matched variants: B12x1 has 86.6M parameters, 17.6G FLOPS, 2077 MB, and 82.2±0.06 validation top-1; S24x2 has 85.9M, 18.3G, 1433 MB, and 82.6; B18x2 has 256.7M, 52.5G, 3217 MB, and 83.8.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E8",
+      "section": "Depth vs Width: Parallel ViT",
+      "locator": "Table 4; Latency paragraph",
+      "claim_type": "result",
+      "evidence_type": "profiling",
+      "snippet": "On V100 GPUs, ViT-B18x2 throughput at batch 1 is 42 images/s sequential versus 61 parallel, a 45% gain; at batch 2, 80 versus 117, a 47% gain; at batch 8, sequential 230 versus parallel 211, best gain 0%. The paper says specific hardware or kernels are required for compelling throughput.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "Fine-tuning attention is all you need",
+      "locator": "Sec. 4",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We consider an approach where we only fine-tune the weights corresponding to the MHSA layer. A recent line of work explores adaptation of pre-trained models with various types of adapter modules. In our work, instead, we focus on fine-tuning vanilla ViTs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Fine-tuning at different resolutions",
+      "locator": "Table 5",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 5 adapts models at resolution 384x384 from 224x224. ViT-B with AdamW: full 84.3, attention 84.3, FFN 84.1 on ImageNet-val; ImageNet-V2: full 73.7, attention 74.0, FFN 73.6. ViT-L AdamW validation: full 85.5, attention 85.5, FFN 85.2.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Fine-tuning at different resolutions",
+      "locator": "Sec. 4; Figure 4 discussion",
+      "claim_type": "result",
+      "evidence_type": "paper_statement",
+      "snippet": "Fine-tuning the MHSA weights only requires 10% less memory on the GPU. The training is also 10% faster, as less gradients are computed. The attention weights correspond to approximately one third of the weights, so each additional model can save 66% of storage.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Fine-tuning on different datasets",
+      "locator": "Table 6",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 6 reports ViT-S full versus attention-only: INAT-18 68.0 versus 60.6, INAT-19 73.9 versus 68.7, CARS 89.7 versus 89.8, Flowers 96.8 versus 96.9. ViT-L full versus attention-only: INAT-18 75.9 versus 75.3, CARS 93.8 versus 93.8, Flowers 98.3 versus 98.4.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Patch preprocessing for Bert-like self-supervised learning",
+      "locator": "Sec. 5",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Preprocessing images with convolutions is a priori not compatible with mask-based self-supervised learning approaches like BeiT or MAE. The convolutions propagate information across patches, impeding the masked prediction task. The paper says no work addresses compatibility with self-supervised methods based on patch masking.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "Patch preprocessing for Bert-like self-supervised learning",
+      "locator": "Sec. 5; Figure 5",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "Our hierarchical MLP stem processes all patches independently with linear layers interleaved with non-linearities and renormalization. Its design removes any interaction between the different 16x16 patches during preprocessing. With hMLP, we can equivalently mask the patches before or after the patch-processing stage.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "Patch preprocessing for Bert-like self-supervised learning",
+      "locator": "Sec. 5; Figure 5 discussion",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "In short, we start from small 2x2 patches and gradually increase their size until they reach 16x16. The patches are projected with a linear projection and normalized before GELU. ViT-B requires 17.73 GFLOPS with our design, less than 1% extra compute.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "Stem comparison in supervised learning",
+      "locator": "Table 7",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 7 reports linear ViT-B12 at 17.58 GFLOPS with supervised 82.20±0.06 and V2 71.0; convolutional Graham et al. BN/GELU at 19.07 GFLOPS with supervised 82.57 and V2 71.0; hMLP BN/GELU at 17.73 GFLOPS with supervised 82.54±0.09 and V2 71.5.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "Results with BeiT training",
+      "locator": "Sec. 5; Table 7",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "The paper uses the code of BeiT with its training procedure; models are pre-trained during 300 epochs and fine-tuned 100 epochs. BeiT+FT ImageNet-val results are linear 83.05±0.08, convolutional Graham et al. 83.04, local transformer 82.38, hMLP BN 83.43±0.10, and hMLP LN 83.24±0.09.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "Pytorch code of our hMLP Stem",
+      "locator": "Appendix C; Algorithm 1",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "Appendix C pseudocode implements hMLP_stem with Conv2d to embed_dim/4 using kernel_size 4 and stride 4, SyncBatchNorm and GELU, then Conv2d kernel 2 stride 2 with SyncBatchNorm and GELU, then Conv2d to embed_dim kernel 2 stride 2, followed by flatten and transpose.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "ViTs had become central in vision, but the paper argues that their design and training procedures were still underexplored. The stakes are practical: obtain capacity, cheaper adaptation, and masked-pretraining compatibility without abandoning vanilla ViT structure.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper targets three empirical blind spots: depth-versus-width tradeoffs for residual ViTs, whether vanilla ViTs need full fine-tuning, and whether patch preprocessing can coexist with masked image modeling when convolutions leak information across patches.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "Across the three studies, the useful move is to relax a dependency while preserving the interface: residual updates need not always be serial, adaptation need not update all weights, and preprocessing must not mix masked and unmasked patches.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E9",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper supports three empirical claims corresponding to its three advertised observations.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Parallelizing pairs of multi-head self-attention (MHSA) and feed-forward network (FFN) residual blocks preserves parameter and FLOP budgets and can match or improve accuracy for sufficiently deep/high-capacity ViTs, with latency gains mainly at small batch sizes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E5",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Updating only MHSA weights is sufficient for resolution fine-tuning and often competitive for transfer, while reducing memory, compute, and storage; the limitation is reduced adaptation capacity on larger transfer datasets for smaller ViTs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: A patch-independent hierarchical MLP (hMLP) stem is compatible with BERT pre-training of image transformers (BeiT) masked pretraining and improves BeiT plus fine-tuned ImageNet accuracy over linear or convolutional stems with little compute overhead.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14",
+                "E15",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "The paper is not one unified architecture; it is three local rewrites of the ViT computation graph or training graph. Each rewrite keeps the recognizable ViT scaffold so that comparisons against vanilla baselines remain clean.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E9",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_parallel",
+              "label": "",
+              "text": "For C1, two same-type residual submodules read the same activation and their outputs are summed, halving serial layer count for the same inventory of residual modules.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_attention_ft",
+              "label": "",
+              "text": "For C2, the forward architecture is unchanged but training updates are restricted to MHSA parameters, leaving FFN-dominated weights frozen and shareable.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_hmlp",
+              "label": "",
+              "text": "For C3, preprocessing is made patch-independent so masked and visible patches cannot exchange information before the masked prediction task.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "Images become 16x16 patch tokens plus the standard class-token ViT path; the interventions change intra-block scheduling, gradient flow, or the patch-stem construction rather than the classifier interface. This makes the experiments mostly controlled at the level of parameter count, FLOPs, or fine-tuned parameter subset.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E4",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_parallel",
+              "label": "",
+              "text": "Parallel block flow: MHSA branches consume the same input activation and are summed into one residual update; FFN branches then do the analogous summed update.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_attention_ft",
+              "label": "",
+              "text": "Attention-only fine-tuning flow: inference is unchanged, while optimization computes useful gradients only for MHSA weights and reuses the frozen remainder across tasks or resolutions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_hmlp",
+              "label": "",
+              "text": "hMLP flow: non-overlapping convolution-equivalent stages progressively aggregate image regions into 16x16 patch tokens, flatten them, and pass them to the transformer.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15",
+                "E18"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design choices are deliberately minimal: change one dependency, preserve the ViT interface, and compare against the closest vanilla alternative. The tradeoffs are mostly about when a removed dependency was actually useful.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E10",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_parallel",
+              "label": "",
+              "text": "Need less serial depth without increasing width; choose residual summation of same-size blocks instead of widening, because width raises quadratic parameter/FLOP and memory costs, but more than two branches and larger batch throughput weaken the benefit.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E5",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_attention_ft",
+              "label": "",
+              "text": "Need cheaper adaptation; choose MHSA-only updates instead of full or FFN-only updates, gaining memory/speed/storage savings but losing capacity on large transfer datasets for smaller ViTs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_hmlp",
+              "label": "",
+              "text": "Need patch preprocessing without masked-token leakage; choose patch-independent hMLP instead of overlapping convolutional stems, with batch normalization (BN) slightly stronger and layer normalization (LN) useful for small batches.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E14",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation surface is small: a block container can execute branch modules sequentially or in parallel, fine-tuning is a parameter-freezing policy, and hMLP is given as a short PyTorch-like stem. The paper does not require a new training objective except when reusing BeiT for masked pretraining.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E18"
+          ],
+          "children": [
+            {
+              "id": "mechanism_impl_parallel",
+              "label": "",
+              "text": "The reported parallel implementation is simple and suboptimal; the authors explicitly state that specific hardware or kernels are needed for compelling throughput.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_attention_ft",
+              "label": "",
+              "text": "Attention-only fine-tuning is a training-time parameter-selection change, so the resulting model can share the frozen majority of weights across multiple task or resolution variants.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_impl_hmlp",
+              "label": "",
+              "text": "The hMLP appendix implements the stem as three non-overlapping Conv2d stages with SyncBatchNorm and GELU before flattening to patch tokens.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E18"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "Experiments use vanilla ViT-Ti/S/B/L with 16x16 patches, ImageNet-1k validation top-1 and ImageNet-V2 checks, plus transfer to six classification datasets and BeiT-style masked pretraining. Most experiments are reported with seed 0, while selected stem and baseline measurements report standard deviations over repeated runs.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "Evidence is strongest when the paper isolates one mechanism against a direct baseline, and weaker where hardware or transfer-task coverage is narrow. C2 is most cleanly supported for resolution fine-tuning; C1 and C3 are well motivated but more conditional on model size, kernels, and pretraining recipe.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E10",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1: fixed-block comparisons show two-branch parallel models match or beat sequential variants when optimization is hard, while V100 throughput improves only for small batches.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2: 384-resolution fine-tuning shows attention-only equals full fine-tuning for ViT-B/L, but transfer experiments show substantial iNaturalist gaps for smaller ViTs.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3: hMLP is competitive with the best supervised convolutional stem while giving the clearest improvement in the BeiT plus fine-tuning setting.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline numbers are modest in absolute top-1 points but meaningful because the interventions either keep compute/parameters fixed or reduce trainable state. Missing repeat counts for many architecture and transfer tables should temper interpretation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E10",
+            "E17"
+          ],
+          "children": [
+            {
+              "id": "evaluation_headline_c1",
+              "label": "",
+              "text": "C1 result: ImageNet-1k fixed-module B36, sequential 82.9 versus two-branch 83.4 top-1, delta +0.5 pp; uncertainty not reported and smaller T/S24 models favor sequential variants.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_c2",
+              "label": "",
+              "text": "C2 result: 224-to-384 fine-tuning, full versus attention-only; ViT-B AdamW gives 84.3 versus 84.3 on ImageNet-val and 73.7 versus 74.0 on V2, delta 0.0 and +0.3 pp; repeat count not reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_c3",
+              "label": "",
+              "text": "C3 result: ViT-B12 BeiT plus fine-tuning, hMLP BN 83.43±0.10 versus linear 83.05±0.08 and convolutional 83.04, delta +0.38 and +0.39 pp; hMLP/linear have repeated-run std, convolutional appears single-seed.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The paper includes useful one-axis sensitivities: branch count, model width/depth, LayerScale, optimizer and tuned submodule for fine-tuning, and stem type/normalization for patch preprocessing. The ablations reveal that none of the three tricks is uniformly dominant.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E10",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_c1",
+              "label": "",
+              "text": "C1 sensitivity: more than two branches generally lowers accuracy, shallow/small models can prefer sequential depth, LayerScale narrows sequential-parallel gaps, and latency gains vanish at larger batch sizes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_c2",
+              "label": "",
+              "text": "C2 sensitivity: both AdamW and SGD show attention-only resolution fine-tuning near full fine-tuning, FFN-only is weaker, and transfer quality depends strongly on dataset size and model capacity.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_c3",
+              "label": "",
+              "text": "C3 sensitivity: simple BN/GELU changes to a linear stem do not explain hMLP, convolutional stems help supervised accuracy but not BeiT, and hMLP BN is strongest while hMLP LN remains viable.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16",
+                "E17"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "Reported: public benchmark datasets, seed 0 for the main experimental setting, use of the released BeiT codebase, and PyTorch-like hMLP pseudocode. Not reported: complete experiment scripts/checkpoints, variance for most architecture/transfer/latency tables, exact latency harness details beyond V100 measurements, or custom kernels for the parallel block.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E8",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The durable contribution is methodological: make a minimal dependency rewrite and compare against the closest vanilla alternative under matched compute or trainable-state budgets. Attention-only resolution fine-tuning and hMLP for BeiT have the cleanest evidence because the baselines are direct and the deltas align with the hypothesized bottleneck.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E10",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_may_fail",
+          "label": "Where It May Fail",
+          "text": "The benefits are falsifiably bounded: parallel ViT weakens for shallow/small models and high-batch throughput, attention-only fine-tuning weakens on large transfer datasets for small ViTs, and hMLP evidence is mainly ViT-B12 plus BeiT on ImageNet-1k. A different backbone, optimizer, masking objective, or optimized kernel could change the tradeoff.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E8",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_to_other_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with LayerScale/deeper-ViT work, parallelization changes the residual dependency graph rather than only stabilizing optimization; compared with adapter-style adaptation, MHSA-only fine-tuning reuses existing parameters rather than adding modules; compared with convolutional stems such as LeViT-style preprocessing, hMLP sacrifices cross-patch mixing to preserve masked-patch independence.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E9",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "When a backbone is modular, first test whether the dependency that blocks efficiency or adaptation is actually necessary. Preserving the external interface and parameter budget turns such tests into clean empirical probes rather than new-architecture confounds.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E9",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_vit",
+      "term": "Vision Transformer",
+      "aliases": [
+        "ViT"
+      ],
+      "note": "Image model that splits an image into patch tokens and processes them with a transformer; this paper focuses on vanilla ViT with 16x16 patches."
+    },
+    {
+      "id": "g_mhsa",
+      "term": "Multi-head self-attention",
+      "aliases": [
+        "MHSA",
+        "attention layer"
+      ],
+      "note": "Transformer sublayer that mixes information across tokens; the paper fine-tunes only MHSA weights in its parameter-efficient adaptation experiments."
+    },
+    {
+      "id": "g_ffn",
+      "term": "Feed-forward network",
+      "aliases": [
+        "FFN",
+        "MLP block"
+      ],
+      "note": "Per-token transformer sublayer following attention; in ViT it dominates parameter count relative to MHSA and is frozen in attention-only fine-tuning."
+    },
+    {
+      "id": "g_parallel_vit_notation",
+      "term": "Parallel ViT notation",
+      "aliases": [
+        "B18x2",
+        "S24x2",
+        "NxK"
+      ],
+      "note": "The first number is serial depth in pairs of MHSA/FFN layers and the second is the number of parallel branches; total residual-module count is their product."
+    },
+    {
+      "id": "g_layerscale",
+      "term": "LayerScale",
+      "aliases": [
+        "LS"
+      ],
+      "note": "A training stabilization technique for deeper image transformers used as an optimization baseline and sensitivity factor."
+    },
+    {
+      "id": "g_beit",
+      "term": "BERT pre-training of image transformers",
+      "aliases": [
+        "BeiT"
+      ],
+      "note": "Masked image modeling method used here to test whether patch preprocessing is compatible with BERT-like self-supervised ViT pretraining."
+    },
+    {
+      "id": "g_hmlp",
+      "term": "hierarchical MLP stem",
+      "aliases": [
+        "hMLP stem"
+      ],
+      "note": "Patch preprocessing module introduced by the paper; it progressively aggregates subpatches with independent linear/nonlinear operations so final 16x16 patches do not communicate before masking."
+    },
+    {
+      "id": "g_patch_masking",
+      "term": "patch masking",
+      "aliases": [
+        "masked image modeling",
+        "masked patch prediction"
+      ],
+      "note": "Self-supervised setup where some image patches are hidden and predicted; preprocessing that mixes patches can leak masked information."
+    },
+    {
+      "id": "g_conv_stem",
+      "term": "convolutional stem",
+      "aliases": [
+        "conv stem",
+        "patch preprocessing stem"
+      ],
+      "note": "Pre-transformer image-processing layers based on convolutions; useful for supervised accuracy but problematic for masked pretraining when overlapping kernels communicate across patches."
+    },
+    {
+      "id": "g_bn_ln_gelu",
+      "term": "normalization and activation in stems",
+      "aliases": [
+        "BN",
+        "LN",
+        "GELU"
+      ],
+      "note": "BN means batch normalization, LN means layer normalization, and GELU is the nonlinearity used in the compared hMLP and convolutional stem variants."
+    }
+  ]
+}

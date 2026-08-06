@@ -1,0 +1,21 @@
+{
+  "title": "EasyVideoR1: Easier RL for Video Understanding",
+  "arxiv": "https://arxiv.org/abs/2604.16893",
+  "date": "2026",
+  "date_checked": "2026-07-02",
+  "classification": "adjacent_video_rlvr_framework_not_core_streaming_rl",
+  "unit": "Institute of Information Engineering, Chinese Academy of Sciences; University of Chinese Academy of Sciences; JD.COM",
+  "resources": {
+    "paper": "https://arxiv.org/abs/2604.16893",
+    "code": "https://github.com/cyuQ1n/EasyVideoR1",
+    "local_repo": "context/repos/EasyVideoR1",
+    "local_commit": "7ab338b"
+  },
+  "workflow": {
+    "rollout_unit": "problem-level video/image QA prompt with n sampled responses",
+    "trainer_input": "DataProto batch containing prompt-response sequences, reward tensors, old/ref logprobs, and advantages",
+    "algorithm": "GRPO by default in examples; inherited hooks for other RL algorithms",
+    "architecture": "colocated Actor/Rollout/Reference on one GPU pool with phased vLLM and FSDP execution",
+    "not_streaming_rl": "does not define per-second actions, silence, delayed streaming events, policy-version freshness, or streaming-context sample sealing"
+  }
+}

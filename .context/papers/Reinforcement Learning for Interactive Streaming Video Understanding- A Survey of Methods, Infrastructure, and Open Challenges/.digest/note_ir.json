@@ -1,0 +1,756 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Reinforcement Learning for Interactive Streaming Video Understanding: A Survey of Methods, Infrastructure, and Open Challenges",
+    "summary": "The survey argues that interactive streaming video understanding should be treated as a sequential decision-making problem and maps the architectures, reinforcement-learning methods, infrastructure, data gaps, and open challenges needed to train such systems.",
+    "paper_type": "survey",
+    "venue": "Preprint 2026; venue Unknown",
+    "authors": "Lytton Feng; affiliation Unknown",
+    "keywords": [
+      "streaming video understanding",
+      "VideoLLM",
+      "reinforcement learning",
+      "RLHF",
+      "GRPO",
+      "preference optimization",
+      "multimodal infrastructure",
+      "real-time interaction"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a map of the emerging intersection between real-time Video Large Language Models (VideoLLMs), which understand video with language-model-style reasoning, and reinforcement learning for deciding when to speak, what to say, and how to trade latency against accuracy.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "The survey organizes RL for streaming VideoLLMs by showing that streaming interaction is best viewed as trajectory-level decision making rather than next-token imitation.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a live assistant watching a camera feed like a careful co-pilot: most moments require silence, some require an immediate warning, and every spoken answer changes what happens next.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The survey's strongest support is breadth-of-landscape evidence rather than a new experiment: it catalogs architectures, RL methods, infrastructure, datasets, benchmarks, and gaps.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E5",
+        "E9"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C1: landscape survey; prior work corpus; count of RL-for-video papers and directly streaming works; establishes that streaming-specific RL is still narrow despite rapid offline-video RL growth; support status strong as a catalog claim but dependent on reference completeness.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C2: architecture taxonomy; compared categories; RL-relevant dimensions such as action space, timing-content coupling, and rollout cost; support status useful as conceptual synthesis rather than empirical validation.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: infrastructure and data audit; compared RL frameworks and datasets; finding that no listed framework or dataset natively covers streaming video RL/preference data; support status strong within the survey's tabled resources.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E11"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The paper is a forward-looking survey with many 2025-2026 preprints, blog posts, and unpublished preliminary results, so its roadmap is more useful as a research agenda than as settled empirical fact.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "Streaming video understanding—where models must continuously process unbounded video feeds and interact with users in real time—has emerged as a critical frontier for Video Large Language Models (VideoLLMs).",
+      "confidence": "medium"
+    },
+    {
+      "id": "E2",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "insight",
+      "evidence_type": "paper_statement",
+      "snippet": "reinforcement learning (RL) offers a principled framework for optimizing the temporally extended, reward-sparse decisions that streaming interaction demands: when to respond, what to say, and how to balance latency against accuracy.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E3",
+      "section": "Introduction",
+      "locator": "Scope and Contributions",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We focus on the intersection of three areas: streaming/online video understanding with LLMs, RL-based training (RLHF, DPO, GRPO, reward modeling), and the practical infrastructure enabling this research.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Background",
+      "locator": "Section 2.1",
+      "claim_type": "background",
+      "evidence_type": "paper_statement",
+      "snippet": "The core technical challenges of streaming are: Unbounded context management... The when-to-respond decision... Latency-accuracy tradeoff... Causal information constraint.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E5",
+      "section": "Taxonomy of Streaming VideoLLM Architectures",
+      "locator": "Section 3 and Table 1",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We classify streaming VideoLLMs by architecture, as the architectural choice determines what RL methods are feasible and what additional challenges arise.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E6",
+      "section": "Introduction",
+      "locator": "Paragraph on RL-for-VideoLLM space",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Over 40 papers now apply RL variants—predominantly GRPO—to video understanding tasks... Yet the specific intersection of RL with streaming video understanding remains nascent: only four works... directly address RL in streaming settings.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E7",
+      "section": "RL Methods for Video Language Models",
+      "locator": "Section 4.1",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "Video-R1 introduces T-GRPO (Temporal GRPO), which adds temporal awareness to the standard GRPO framework by rewarding correct identification of when events occur.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E8",
+      "section": "RL for Temporal Decision-Making in Streaming",
+      "locator": "Section 4.4",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "MMDuet2 applies multi-turn RL with a PAUC (Proactive Area Under the Curve) reward to optimize both response quality and timing in streaming video interaction.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "Training Infrastructure and Data",
+      "locator": "Section 5.1",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "None of these frameworks natively support streaming video RL training... Adapting any current framework for streaming video RL requires: (1) a streaming data loader... (2) KV-cache management... and (3) trajectory-level reward computation.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "Training Infrastructure and Data",
+      "locator": "Section 5.3, Table 5",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Table 5 catalogs available datasets for video RL training... No streaming-specific RL/preference datasets exist.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Training Infrastructure and Data",
+      "locator": "Section 5.2",
+      "claim_type": "implementation",
+      "evidence_type": "paper_statement",
+      "snippet": "A consistent finding across the literature is that the rollout (generation) phase accounts for 84–91% of total RL training time, making pipeline efficiency—not algorithmic design—the dominant practical concern.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Core Challenges",
+      "locator": "Section 6 opening",
+      "claim_type": "limitation",
+      "evidence_type": "paper_statement",
+      "snippet": "We now analyze five challenges that are unique to RL in streaming settings—not merely harder versions of existing problems, but qualitatively different obstacles that require new solutions.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Core Challenges",
+      "locator": "Section 6.2",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "No existing reward model captures all three. MMDuet2’s PAUC metric is a start... But PAUC was designed for a narrow setting... and does not generalize to the full range of streaming interactions.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Core Challenges",
+      "locator": "Section 6.4",
+      "claim_type": "system_design",
+      "evidence_type": "paper_statement",
+      "snippet": "Streaming video RL is, to our knowledge, the only RL setting that exhibits simultaneous imbalance on both the rollout and training sides—a compounding effect that existing solutions, designed for only one side, cannot resolve.",
+      "confidence": "low"
+    },
+    {
+      "id": "E15",
+      "section": "Roadmap",
+      "locator": "Section 8",
+      "claim_type": "other",
+      "evidence_type": "paper_statement",
+      "snippet": "We organize actionable research directions by feasibility and timeline... Near-Term: Directly Actionable... Medium-Term: Infrastructure Building... Long-Term: Fundamental Research.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This paper sits at the meeting point of video-language models and reinforcement learning. A Video Large Language Model (VideoLLM) is a language model connected to video input; reinforcement learning (RL) trains a model by rewarding good sequences of actions rather than copying example answers.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A live video assistant must watch continuously, stay quiet most of the time, answer when asked, and sometimes warn the user before it is too late.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The stream never really ends, future frames are unavailable, speaking too soon can be wrong, speaking too late can be useless, and silence is itself a decision.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Treat the assistant as an agent whose whole interaction over time should be rewarded, not as a captioning model trained one answer at a time.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The survey frames streaming video understanding as a shift from offline video QA to real-time interaction where models continuously process unbounded feeds and must make timing-sensitive decisions under latency and causal-information constraints.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper claims supervised fine-tuning (SFT), training by imitating target tokens, is misaligned with deployment because streaming decisions have delayed consequences, while RL-for-video work is mostly offline and only a small set directly targets streaming.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The central insight is that streaming interaction is a trajectory-level control problem: timing, content, silence, memory use, and latency jointly determine success, so architecture and infrastructure choices constrain which RL formulation is feasible.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E5",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The survey advances four main claims about the state of RL for interactive streaming video understanding.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: RL for video understanding has expanded quickly, especially through Group Relative Policy Optimization (GRPO), which compares multiple sampled answers for the same prompt against a reward, but streaming-specific RL remains nascent.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Streaming VideoLLM architectures differ in RL trainability because decoupled trigger-response, unified silence-token, full-duplex multimodal, and continuous micro-turn designs create different action spaces, memory costs, and reward-design problems.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Existing RL training frameworks, video RL datasets, and reward models do not yet natively support streaming video RL, especially incremental frame ingestion, cross-window cache handling, and streaming preference labels.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: The core open problems are temporal credit assignment, real-time reward design, silent-vs-speech exploration, rollout cost and pipeline imbalance, and lack of standardized preference data.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "As a survey, the paper does not introduce one algorithm; its mechanism is a design decomposition that maps streaming VideoLLM architectures to possible RL problem formulations, reward signals, data needs, and systems bottlenecks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E5"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The implied streaming RL loop is: frames arrive incrementally; the model updates limited context; it chooses silence or response; the interaction continues; a trajectory-level reward later evaluates content, timing, and silence decisions together.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E9",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_architecture",
+              "label": "",
+              "text": "In decoupled trigger-response systems, a small trigger policy decides whether to wake a larger response model; in unified systems, a single model emits either words or a silence/end token.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_reward",
+              "label": "",
+              "text": "For streaming, the reward must score not only whether an answer is true, but whether it was emitted at the right time and whether staying silent would have been better.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_system",
+              "label": "",
+              "text": "Training requires rollouts, meaning generated interaction trajectories, while preserving attention state across a sliding video window; the survey identifies this as missing from current frameworks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The survey's main design comparison is not between parameter settings but between decomposition choices for making streaming RL tractable.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E8",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "design_decision_trigger_vs_unified",
+              "label": "",
+              "text": "Need: reduce the when-to-speak problem; choice: separate trigger policy or unified token policy; tradeoff: binary triggers simplify RL but cannot fully condition on what the response model would say.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_grpo_vs_dpo_ppo",
+              "label": "",
+              "text": "Need: train video behavior without expensive human reward models; choice: GRPO dominates because it can use verifiable rewards, while Direct Preference Optimization (DPO), which trains from chosen-versus-rejected pairs, needs paired trajectories and Proximal Policy Optimization (PPO), an on-policy RL method, is costlier.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_cache_infrastructure",
+              "label": "",
+              "text": "Need: keep streaming rollouts feasible; choice: extend RL systems with incremental frame feeding, key-value cache (KV cache: saved attention state reused across tokens) management, and trajectory-level rewards; tradeoff: this adds systems complexity not present in fixed video QA.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The paper audits implementation surfaces including general RLHF frameworks, video-specific RL pipelines, streaming datasets, benchmarks, reward models, and compute costs, but it does not release a new implementation.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E9",
+            "E10"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evidence is survey evidence: literature taxonomy, comparative tables, and a roadmap, not a controlled experimental evaluation of a new model or training system.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The survey supports its claims mainly by cataloging systems and exposing mismatches between what current methods optimize and what streaming interaction requires.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E6",
+            "E9",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1 is supported by the paper's count of over 40 RL-for-video papers and its list of only four directly streaming RL works; evidence is broad but depends on the freshness and inclusion criteria of the survey corpus.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "C2 is supported by the architecture taxonomy and RL-relevant comparison table; evidence is conceptual synthesis, not measured trainability across architectures.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3_c4",
+              "label": "",
+              "text": "C3 and C4 are supported by the framework, dataset, benchmark, and challenge audits; the weakest part is the claim of unique dual imbalance, which is plausible but not experimentally established here.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "Not applicable: this is a survey and does not report a new primary benchmark result; reported numbers belong to cited work and are used as landscape evidence.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "evaluation_headline_streaming_gap",
+              "label": "",
+              "text": "Supports C1: survey corpus; baseline is the broader RL-for-video literature; metric is number of directly streaming works; delta is over 40 video-RL papers versus only four direct streaming-RL works; support status strong as a survey observation.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_infra_gap",
+              "label": "",
+              "text": "Supports C3: framework audit; baseline is existing RL post-training frameworks; metric is native support for streaming video RL; delta is none of the surveyed frameworks natively support it; support status strong within the compared table.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_data_gap",
+              "label": "",
+              "text": "Supports C3: dataset audit; baseline is available video RL and streaming SFT datasets; metric is streaming-specific RL/preference data availability; delta is none reported; support status strong within the paper's dataset table.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "Not applicable: the paper contains no ablations because it is a survey; sensitivity claims such as rollout cost and pipeline imbalance are drawn from cited systems rather than varied in a new experiment.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The main reproducibility gap is not code for the survey but missing field infrastructure: no standard streaming preference dataset, no streaming-aware reward model, and no natively streaming video RL framework are identified.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "evaluation_repro_gap_preprints",
+              "label": "",
+              "text": "Several cited systems are preprints, blog posts, weights-only releases, or unpublished preliminary results, so exact training recipes and independent validation may be unavailable for parts of the roadmap.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The strongest part is the problem decomposition: timing, silence, causal streaming context, reward design, and systems rollout cost are genuinely coupled, and the architecture taxonomy makes clear why offline video QA methods do not transfer directly.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The survey may overstate maturity and consensus because many referenced works are very recent, streaming-specific evidence is sparse, and some strong-sounding claims, such as simultaneous rollout/training imbalance being unique, are not validated by controlled experiments in this paper.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with standard RLHF and DPO work for language models, this survey emphasizes multimodal temporal control; compared with offline VideoLLM RL such as Video-R1-style GRPO, it highlights causal frame access, silence decisions, and sliding context; compared with streaming VideoLLMs such as AURA or VideoLLM-online, it asks how their SFT-trained behavior could become reward-optimized.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "The reusable systems lesson is to identify the decision boundary before choosing an RL algorithm: if the hard part is when to act, decompose timing, memory, and reward instrumentation before scaling up end-to-end generation training.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_videollm",
+      "term": "Video Large Language Model",
+      "aliases": [
+        "VideoLLM",
+        "video LLM"
+      ],
+      "note": "A language-model-based system that accepts video frames or video-derived tokens and produces language outputs such as answers, narration, or alerts."
+    },
+    {
+      "id": "g_streaming_video_understanding",
+      "term": "streaming video understanding",
+      "aliases": [
+        "online video understanding"
+      ],
+      "note": "Understanding video as it arrives over time, without waiting for the complete clip and without access to future frames."
+    },
+    {
+      "id": "g_reinforcement_learning",
+      "term": "reinforcement learning",
+      "aliases": [
+        "RL"
+      ],
+      "note": "Training an agent to choose actions that maximize reward over a sequence; here, actions include staying silent, responding, and generating text."
+    },
+    {
+      "id": "g_sft",
+      "term": "supervised fine-tuning",
+      "aliases": [
+        "SFT"
+      ],
+      "note": "Training a pretrained model to imitate labeled examples, typically by predicting the next target token; the survey argues this is insufficient for trajectory-level streaming decisions."
+    },
+    {
+      "id": "g_rlhf",
+      "term": "reinforcement learning from human feedback",
+      "aliases": [
+        "RLHF"
+      ],
+      "note": "A post-training pipeline that uses human preferences to train a reward model and then optimizes the policy against that reward, often using PPO."
+    },
+    {
+      "id": "g_ppo",
+      "term": "Proximal Policy Optimization",
+      "aliases": [
+        "PPO"
+      ],
+      "note": "An on-policy RL algorithm that updates a policy using newly generated rollouts while limiting how far the policy changes at each update."
+    },
+    {
+      "id": "g_dpo",
+      "term": "Direct Preference Optimization",
+      "aliases": [
+        "DPO"
+      ],
+      "note": "A preference-training method that uses chosen-versus-rejected response pairs without training a separate reward model."
+    },
+    {
+      "id": "g_grpo",
+      "term": "Group Relative Policy Optimization",
+      "aliases": [
+        "GRPO"
+      ],
+      "note": "An RL method that samples multiple responses for the same input and updates the model based on rewards relative to the group; popular for verifiable video reasoning tasks."
+    },
+    {
+      "id": "g_kv_cache",
+      "term": "key-value cache",
+      "aliases": [
+        "KV cache"
+      ],
+      "note": "Saved attention state from previous tokens or frames that lets a transformer continue generation without recomputing the entire past context."
+    },
+    {
+      "id": "g_rollout",
+      "term": "rollout",
+      "aliases": [
+        "trajectory"
+      ],
+      "note": "A generated sequence of model actions and observations used for RL training; in streaming video, this can span many frame arrivals and silence/response decisions."
+    },
+    {
+      "id": "g_pauc",
+      "term": "Proactive Area Under the Curve",
+      "aliases": [
+        "PAUC"
+      ],
+      "note": "A metric used by cited work to jointly score proactive response quality and timing; the survey treats it as useful but too narrow for all streaming interactions."
+    },
+    {
+      "id": "g_temporal_credit_assignment",
+      "term": "temporal credit assignment",
+      "aliases": [],
+      "note": "The problem of deciding which earlier observations and actions deserve credit or blame for a later reward, made harder when old video evidence has left the model's context window."
+    }
+  ]
+}

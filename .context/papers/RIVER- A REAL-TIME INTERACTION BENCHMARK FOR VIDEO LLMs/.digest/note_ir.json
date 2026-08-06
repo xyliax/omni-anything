@@ -1,0 +1,800 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "RIVER: A Real-Time Interaction Benchmark for Video LLMs",
+    "summary": "RIVER reframes video-LLM evaluation around timed human interaction, showing that models need memory, live perception, and future-triggered responses rather than only whole-video question answering.",
+    "paper_type": "benchmark",
+    "venue": "ICLR 2026",
+    "authors": "Yansong Shi (University of Science and Technology of China; Shanghai Artificial Intelligence Laboratory), Qingsong Zhao (Fudan University; Shanghai Artificial Intelligence Laboratory), Tianxiang Jiang (University of Science and Technology of China; Shanghai Artificial Intelligence Laboratory), Xiangyu Zeng (Nanjing University; Shanghai Artificial Intelligence Laboratory), Yi Wang (Shanghai Artificial Intelligence Laboratory), Limin Wang (Nanjing University; Shanghai Artificial Intelligence Laboratory)",
+    "keywords": [
+      "video LLM",
+      "online multimodal interaction",
+      "streaming video understanding",
+      "retrospective memory",
+      "live perception",
+      "proactive response",
+      "benchmark",
+      "long-short term memory"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a benchmark paper for online video-language systems: it targets the gap between whole-video QA and interaction where a model must remember past visual evidence, answer about the current scene, and wait for future visual cues.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3",
+        "E18"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "RIVER improves evaluation of video large language models in streaming interaction by anchoring questions, visual cues, and responses to explicit times instead of treating the whole video as one offline input.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E3",
+        "E4"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a person watching a live camera feed for you: sometimes you ask what just happened, sometimes what is happening now, and sometimes you ask the watcher to interrupt only when a named event appears.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the cross-model evaluation showing that strong offline QA performance does not transfer cleanly to real-time memory and proactive response.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E12",
+        "E13",
+        "E14"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C1: RIVER is compared with prior online-video benchmarks; baseline benchmarks lack several temporal-memory intervals and instant-stream anticipation; metric coverage is broader; support is direct but based on the authors' benchmark taxonomy.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C2: offline video MLLMs adapted to 1 fps streaming are compared with fixed-frame variants; retro-memory and live-perception scores change by task and model; support is moderate because no uncertainty is reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E12",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: VideoLLM-Online plus RIVER training at 4 fps is compared with VideoLLM-Online at 2 fps; pro-response localization rises from 23.88 to 35.16 and MC from 6.67 to 10.53; support is moderate because repeat counts are not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The benchmark is video-only and the reported results mostly lack variance, repeat counts, and error bars, so it is better read as a useful stress test than as a fully calibrated estimate of deployment reliability.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E12",
+        "E17"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Title and metadata",
+      "locator": "title block and arXiv header",
+      "claim_type": "metadata",
+      "evidence_type": "metadata",
+      "snippet": "arXiv:2603.03985v1 [cs.CV] 4 Mar 2026. Published as a conference paper at ICLR 2026. RIVER: A REAL-TIME INTERACTION BENCHMARK FOR VIDEO LLMs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, online interaction motivation",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "Existing benchmarks inadequately address the dynamic requirements of online applications such as augmented reality navigation or robotic task supervision, creating bottlenecks for systematic progress in online interaction research.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Section 1 contribution paragraph",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "RIVER Bench introduces a novel evaluation framework comprising Retrospective Memory, Live-Perception, and Proactive Response tasks, closely mimicking interactive dialogues with humans rather than understanding the entire videos at once.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "RIVER Bench",
+      "locator": "Table 1 and Section 3",
+      "claim_type": "experiment_setup",
+      "evidence_type": "metadata",
+      "snippet": "Table 1 reports RIVER (ours) with 1,067 videos and 4,278 questions, covering General, Short, Medium, Long, Very Long memory and perception categories plus Instant Stream anticipation.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Interactive Task Types",
+      "locator": "Section 3.1",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "We summarize three main task types of RIVER Bench as retro-memory, live-perception, and pro-response, according to the happening time of the queried event or target.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Data Construction",
+      "locator": "Section 3.2, Retro-Memory and Pro-Response",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Retro-memory queries are categorized into short (15-30s), medium (30-60s), long (300-900s), and very long (1800-3600s). Pro-response instant-type questions are further classified into short, medium, long, and very long.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Quality Control",
+      "locator": "Section 3.3 and Appendix A.1",
+      "claim_type": "system_design",
+      "evidence_type": "paper_statement",
+      "snippet": "We employ a multi-stage filtering process combining open-source large language models and rigorous human evaluation. First, we use LLMs to identify and remove questions that can be answered correctly without visual input.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E8",
+      "section": "Metrics",
+      "locator": "Section 3.4",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "The metric assigns a full score to responses falling inside this interval, reflecting acceptable anticipation. It strictly penalizes early responses with a score of zero and applies a linear decay to late responses.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments",
+      "locator": "Section 4, setup paragraph",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We evaluate four categories of video-processing multimodal large language models: commercial closed-source models, open-source models with native online inference support, open-source video multimodal models, and our proposed video multimodal model adapted for online inference.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Making Offline Models Work Online",
+      "locator": "Section 4.1 and Appendix A.3",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "We employ a sliding window approach with a sampling rate of 1 frame per second for processing long video inputs. The long-term memory module comprises compressed tokens from video frames prior to the current window.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "Training the Online Models",
+      "locator": "Section 4.2 and Table 6",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "We employ the SigLIP-Large-Patch16 encoder coupled with a two-layer MLP connector to extract video frame representations at a rate of 4 frames per second. We integrate Low-Rank Adaptation into all linear layers of the LLaMA3-8B backbone.",
+      "confidence": "high"
+    },
+    {
+      "id": "E12",
+      "section": "Evaluation Results and Analysis",
+      "locator": "Table 2 and Section 4.3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2 compares native online inference models and enhanced non-native MLLMs. GPT-4o achieves the best performance, excelling in live-perception, retro-memory, and pro-response tasks.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Evaluation Results and Analysis",
+      "locator": "Table 3 and Section 4.3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "VideoLLM-Online reports 23.88 Loc, 6.67 MC, and 4.41 OE. VideoLLM-Online+RIVER at 4 fps reports 35.16 Loc, 10.53 MC, and 5.47 OE for Pro-Response.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Model Memory Capability",
+      "locator": "Table 4 and Section 4.3.1",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "As recall duration increases, most models exhibit declining visual memory retrieval and reasoning abilities. Flash-VStream is an exception. While its overall performance remains modest, it maintains consistent accuracy across all durations.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "Model Memory Curve",
+      "locator": "Figure 5 and Section 4.3.2",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Adding memory modules significantly boosts retrieval, cutting the performance drop-off (decay slope) by 12% compared to models without memory.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "Performance Across Different Clue Categories",
+      "locator": "Table 5 and Section 4.3.3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "All methods perform poorly on CC questions, revealing their greater difficulty and highlighting the need for future work on visual perception integrated with event attribution.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E17",
+      "section": "Conclusion and Reproducibility Statement",
+      "locator": "Section 5, Reproducibility Statement, Appendix C",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "Currently, our dataset does not include audio data. Given that sound is one of the most readily available modalities for real-time interaction, integrating audio into the evaluation of online video content is crucial.",
+      "confidence": "high"
+    },
+    {
+      "id": "E18",
+      "section": "Related Works",
+      "locator": "Section 2, Online Video Benchmarks",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "OVO-Bench represents the most relevant existing work for defining online video understanding tasks but it lacks fine-grained temporal segmentation of the response or clue intervals.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Video language models answer questions about moving visual scenes. A streaming interaction is harder than a normal video quiz because the model sees the video over time while a person may ask, wait, or expect an interruption.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain_words",
+          "label": "The Problem in Plain Words",
+          "text": "A helpful assistant should remember where something was, describe what is happening now, and speak up only when the right future event appears.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The model must keep useful past details without storing everything, notice current evidence quickly, and avoid answering too early when the visual clue has not happened yet.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Turn live video dialogue into timed questions about past, present, and future visual clues, then score both answer correctness and response timing.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that multimodal large language models (MLLMs), models that combine language reasoning with visual input, are mostly evaluated as offline whole-video question answerers, while practical assistants need online multimodal language models (oMLLMs), models that react while a video stream is still arriving.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior online-video benchmarks cover pieces of the problem but do not jointly formalize memory intervals, live perception, proactive response, and fine-grained timing between cue, question, and answer.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The useful unit of evaluation is not just whether a model can answer a video question, but whether it answers from the correct temporal relationship: past cue, current cue, or future cue.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's core argument is captured by four falsifiable claims.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: RIVER Bench formalizes online video interaction as Retrospective Memory, Live-Perception, and Proactive Response tasks with explicit temporal relationships and broader coverage than prior benchmarks.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: A sliding-window online adaptation with long-short term visual memory can make offline video MLLMs operate in streaming settings and reduce degradation on medium-to-long memory questions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E14",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Training with RIVER-style proactive interaction data improves VideoLLM-Online on Pro-Response localization and answer metrics.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: Questions requiring causal visual cues, where the answer depends on event dynamics and temporal dependencies, are harder than fine-grained object cues or background cues for the evaluated models.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "RIVER's benchmark mechanism is a timed video-text-to-text interaction: each item specifies a visual cue time, a user query time, and an expected response time, then evaluates whether the model answers correctly and at the right moment.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The data flow starts from existing video QA and dense timestamped event annotations, filters out language-only and ambiguous cases, rewrites them into timed interaction formats, and evaluates model outputs with task-specific answer and timing rules.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "mechanism_data_flow_retro_live",
+              "label": "",
+              "text": "For Retrospective Memory and Live-Perception, RIVER samples a query time after or around the referenced event so the same visual fact becomes either a memory test or a current-perception test.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_flow_pro",
+              "label": "",
+              "text": "For Pro-Response, instant questions require a single future-triggered answer, while stream questions require repeated descriptions or guidance over time.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_flow_eval",
+              "label": "",
+              "text": "Multiple-choice answers are extracted with regular expressions when possible, open-ended answers are judged by Qwen2.5-72B, and proactive timing is scored with early false alarms set to zero and late answers decayed.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design choices mainly protect temporal validity: force one grounded visual moment per answer, separate past/current/future relationships, and compress old visual context instead of letting the model see an unlimited stream.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E10"
+          ],
+          "children": [
+            {
+              "id": "mechanism_design_temporal_anchors",
+              "label": "",
+              "text": "Need: avoid questions answerable from broad context; choice: require precise cue, query, and response times; closest alternative: conventional whole-video QA; tradeoff: higher annotation burden.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_memory",
+              "label": "",
+              "text": "Need: keep old visual evidence under bounded memory; choice: a sliding window plus long-term compressed tokens selected by nearest-neighbor averaging; closest alternative: keep only recent frames; tradeoff: compression may blur fine details.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_design_timing_metric",
+              "label": "",
+              "text": "Need: distinguish useful waiting from premature alerts; choice: score responses inside the tolerance window fully, early responses as zero, and late responses with linear decay; tradeoff: the window encodes a human-tolerance assumption.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The evaluated surface includes closed-source models, native streaming models, offline open-source video MLLMs adapted with 1 fps sliding windows, and a VideoLLM-Online-style trained model using SigLIP visual features, an MLP connector, LLaMA3-8B, and LoRA.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E11"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation compares model families under RIVER's three task types, using recommended frame sampling for offline models, streaming frame rates for online models, multiple-choice and open-ended answer metrics, and proactive localization scores.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E9",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest for benchmark coverage and moderately strong for model conclusions because the paper reports broad comparisons but not statistical uncertainty.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E12",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_1",
+              "label": "",
+              "text": "C1: supported by Table 1, task definitions, and comparison to OVO-Bench; the caveat is that coverage categories are the authors' taxonomy rather than an external standard.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E5",
+                "E18"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_2",
+              "label": "",
+              "text": "C2: supported by the long-short term memory design, retro-memory duration table, and memory curve; the caveat is no reported variance or controlled model-by-model ablation for every architecture.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E14",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_3",
+              "label": "",
+              "text": "C3 and C4: supported by proactive training results and clue-category breakdown; the caveat is that generated proactive questions and LLM-judged open-ended metrics add evaluator dependence.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13",
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline pattern is that whole-video strength does not imply online interaction strength: GPT-4o leads the aggregate table, adapted offline models become competitive on live perception, and native streaming models remain weak on RIVER's interactive QA.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12",
+            "E13",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_headline_pro_response",
+              "label": "",
+              "text": "VideoLLM-Online+RIVER at 4 fps improves Pro-Response Loc by 11.28 points over VideoLLM-Online at 2 fps, with smaller gains on MC and OE, but the table does not report repeat counts.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_headline_memory",
+              "label": "",
+              "text": "Retro-memory performance generally declines as the recall interval grows, while memory-based designs are presented as stabilizing retrieval over longer windows.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The paper's main sensitivity evidence is not a dense ablation grid but two targeted probes: memory versus no-memory decay, and performance by visual cue type.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15",
+            "E16"
+          ],
+          "children": [
+            {
+              "id": "evaluation_ablation_memory",
+              "label": "",
+              "text": "Memory modules reduce the reported decay slope by 12%, suggesting that explicit compressed memory helps when the queried evidence is no longer in the current visual window.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_ablation_cues",
+              "label": "",
+              "text": "Causal cues remain difficult across methods, implying that online evaluation exposes event-attribution weaknesses beyond object or scene recognition.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E16"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_repro_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper states that code, data processing, benchmark simulation, and evaluation will be released, but original videos follow index-only release rules; not reported: statistical uncertainty, repeated runs, detailed cost budgets, and full prompt sensitivity.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E8",
+            "E11",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The benchmark framing is the durable part: explicit cue, question, and response times give a cleaner test of streaming behavior than whole-video QA, and the three-task split maps to concrete assistant use cases.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "RIVER may understate multimodal interaction needs because it excludes audio, relies partly on generated proactive QA and LLM-based open-ended judging, and reports tables without variance or repeat-count evidence.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E7",
+            "E8",
+            "E12",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_work",
+          "label": "Relation to Other Work",
+          "text": "Relative to offline video benchmarks, RIVER changes the unit of evaluation from holistic video understanding to timed interaction; relative to OVO-Bench and related online benchmarks, it emphasizes finer response and clue intervals plus memory curves.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E18"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For streaming AI systems, evaluation should encode when evidence becomes available and when an answer becomes useful; adding time to the task definition can expose failures that static accuracy hides.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E8",
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_mllm",
+      "term": "Multimodal large language model",
+      "aliases": [
+        "MLLM"
+      ],
+      "note": "A language model that can condition on non-text inputs such as images or video frames; in this note, it usually means a video-capable model."
+    },
+    {
+      "id": "g_online_mllm",
+      "term": "Online multimodal large language model",
+      "aliases": [
+        "oMLLM"
+      ],
+      "note": "A multimodal model expected to process a stream as it arrives and answer during the stream, not only after seeing the whole video."
+    },
+    {
+      "id": "g_temporal_interaction",
+      "term": "Temporal interaction",
+      "aliases": [
+        "timed interaction"
+      ],
+      "note": "An evaluation format where the visual cue, user question, and model answer each have positions on the video timeline."
+    },
+    {
+      "id": "g_retro_memory",
+      "term": "Retrospective Memory",
+      "aliases": [
+        "Retro-Memory",
+        "recall task"
+      ],
+      "note": "A task where the model answers a current question using evidence from an earlier moment in the video."
+    },
+    {
+      "id": "g_live_perception",
+      "term": "Live-Perception",
+      "aliases": [
+        "current perception"
+      ],
+      "note": "A task where the referenced visual evidence is in the current or very recent video window, so the model should answer immediately."
+    },
+    {
+      "id": "g_pro_response",
+      "term": "Proactive Response",
+      "aliases": [
+        "Pro-Response",
+        "proactive anticipation"
+      ],
+      "note": "A task where the model must wait for a future visual condition and respond when that condition is observed."
+    },
+    {
+      "id": "g_sliding_window",
+      "term": "Sliding window",
+      "aliases": [],
+      "note": "A streaming strategy that processes only a recent span of frames at each step, then advances the span as time moves forward."
+    },
+    {
+      "id": "g_long_short_memory",
+      "term": "Long-short term memory module",
+      "aliases": [
+        "long-term memory",
+        "short-term memory"
+      ],
+      "note": "RIVER's adaptation pattern: keep current-window frame tokens as short-term memory and compressed earlier tokens as long-term memory."
+    },
+    {
+      "id": "g_open_ended_eval",
+      "term": "Open-ended evaluation",
+      "aliases": [
+        "OE"
+      ],
+      "note": "A model-judged answer-consistency check used when the output is not cleanly extractable as a multiple-choice option."
+    },
+    {
+      "id": "g_lora",
+      "term": "Low-Rank Adaptation",
+      "aliases": [
+        "LoRA"
+      ],
+      "note": "A parameter-efficient fine-tuning method that trains small low-rank updates inside a larger neural network instead of updating all parameters."
+    }
+  ]
+}

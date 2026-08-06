@@ -1,0 +1,791 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "ROMA: Real-time Omni-Multimodal Assistant with Interactive Streaming Understanding",
+    "summary": "ROMA shows that a streaming audio-video assistant can combine proactive response timing and reactive question answering by separating when to speak from what to generate while keeping audio and video aligned over time.",
+    "paper_type": "system",
+    "venue": "arXiv preprint 2026",
+    "authors": "Xueyun Tian (University of Chinese Academy of Sciences), Wei Li, Bingbing Xu (Institute of Computing Technology, CAS), Heng Dong (Tsinghua University), Yuanzhuo Wang (Institute of Computing Technology, CAS), Huawei Shen (University of Chinese Academy of Sciences)",
+    "keywords": [
+      "streaming multimodal understanding",
+      "omni-multimodal assistants",
+      "proactive interaction",
+      "audio-video alignment",
+      "response timing",
+      "streaming evaluation"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a streaming multimodal-systems paper about the gap between models that answer after being asked and assistants that must watch, listen, wait, and speak at the right moment.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E3"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "ROMA improves real-time audio-video assistance by making response timing an explicit online decision before text generation, rather than forcing the language model to express silence or speech as ordinary words.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E6"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a live commentator with a mute button: one part keeps watching and listening, another part decides whether the moment is worth speaking about, and only then does the speaker produce the sentence.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is not one benchmark score but the pattern: ROMA improves proactive alert and narration timing, while reactive question answering remains competitive.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E11",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_alerts",
+          "label": "",
+          "text": "Supports C3: QVHighlights and Charades-STA static grounding plus PA/PO/REC dynamic alerts; streaming-capable baselines; localization and success metrics; large gains on QVHighlights mAP and PO/REC, mixed on CRR; supported without variance reporting.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_narration",
+          "label": "",
+          "text": "Supports C3: YouCook2 and OVO-Bench SSR narration; VideoLLM-online and MMDuet baselines; F1, BERTScore, and GPT-4o judging; best F1 and GPT scores, similar BERTScore; supported without statistical uncertainty.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_speak_head",
+          "label": "",
+          "text": "Supports C4: ablations replace the speak head or reduce the layer aggregation; token-based triggering and K=1 variants; dynamic alert and narration metrics drop sharply; supported as a component ablation without repeat counts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The paper's evidence is strongest for curated streaming tasks and finite clips; it explicitly leaves degraded signals, audio-video asynchrony, very long dependencies, and strict efficiency-quality tradeoffs as open risks.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E15"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract, lines 20-23",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We present ROMA, a real-time omni-multimodal assistant for unified reactive and proactive interaction. ROMA processes continuous inputs as synchronized multimodal units, aligning dense audio with discrete video frames to handle granularity mismatches.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, reactive and proactive definition",
+      "claim_type": "problem",
+      "evidence_type": "paper_statement",
+      "snippet": "In the reactive setting, the model answers after the query, whereas in the proactive setting, it follows an instruction to continuously monitor the input stream and respond only when conditions are met.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Introduction",
+      "locator": "Section 1, prior gap paragraph",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Speech-centric streaming models focus on audio generation but lack visual perception. Conversely, while some approaches address streaming video understanding, they typically neglect synchronized audio and are confined to specific tasks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Method",
+      "locator": "Section 3.1, Multimodal units",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "We treat all audio and video signals within each one-second interval as a unit. We align audio with video frames sampled from the same interval, extract their features, and wrap them with special tokens.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Method",
+      "locator": "Section 3.1, Chunk-Level Temporal Position Encoding",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "Each one-second unit interleaves visual and auditory tokens, assigning time-aligned 3D position IDs to preserve their cross-modal correspondence. Audio tokens retain fine-grained temporal IDs at a 40ms resolution.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Method",
+      "locator": "Section 3.1, Speak Head",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "This module is implemented as a two-layer MLP, parallel to the LM head, on top of the streaming backbone. Upon processing each multimodal unit, the speak head evaluates the current stream prefix and outputs a probability.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Method",
+      "locator": "Section 3.2.1 and 3.2.2, dataset and training recipe",
+      "claim_type": "method",
+      "evidence_type": "implementation_detail",
+      "snippet": "We construct a comprehensive streaming dataset structured into two categories and three sub-tasks. Stage 1 adapts the model to the streaming multimodal input format, while Stage 2 learns precise response timing and proactive policies.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Method",
+      "locator": "Section 3.2.3, Inference Procedure",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "Video frames are uniformly sampled at 2 fps, and each frame is resized so that the number of pixels does not exceed 65,536. We maintain a persistent KV cache across the stream.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Unified Streaming Evaluation Framework",
+      "locator": "Section 4, framework overview",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "We establish a unified framework comprising two primary settings: proactive interaction, where the model autonomously monitors the stream to trigger responses, and reactive interaction, where it answers queries based on accumulated context.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Experiment",
+      "locator": "Section 5.2, Tables 2 and 3, Event-Driven Alert",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "ROMA advances temporal localization on QVHighlights (53.7 mAP) and Charades-STA (44.3/19.9 R@0.5/0.7). In the dynamic setting, ROMA demonstrates strong efficacy on single-alert tasks.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Experiment",
+      "locator": "Section 5.2, Table 4, Real-Time Narration",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "ROMA achieves the best temporal triggering accuracy, obtaining an F1 score of 35.21 on YouCook2 and 14.54 on OVO-Bench (SSR). It also achieves the highest GPT-4o score on both benchmarks.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Experiment",
+      "locator": "Section 5.2, Tables 5-7, Reactive QA",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "ROMA leads in both Real-time Visual Perception and Backward Tracing. On Streaming-Bench, ROMA maintains high accuracy and secures the top rank on Omni-Source Understanding benchmark.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Experiment",
+      "locator": "Section 5.3, Ablation Study",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "This variant consistently degrades on tasks that require online timing and triggering. We replace the speak head with a silence token. Last-layer aggregation notably degrades temporal grounding and dynamic triggering.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Experiment",
+      "locator": "Section 5.4 and Appendix A.2, Sensitivity analysis",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "We observe that w_pos is critical for proactive tasks, while reactive understanding and full-modality QA remain insensitive. Sensitivity analysis confirms robust performance and a broad operating regime with smooth degradation.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "Limitations",
+      "locator": "Limitations section",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "The model remains susceptible to distortions such as signal degradation and audio-video asynchrony. Capturing extremely long-term dependencies spanning hours remains constrained by finite context windows and memory.",
+      "confidence": "high"
+    },
+    {
+      "id": "E16",
+      "section": "Appendix",
+      "locator": "Appendix A.5, Implementation Details",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "The model is trained using LLaMA-Factory with a sequence length of 32K on 32 H20 GPUs using a global batch size of 512. Proactive samples are specifically formatted as multi-turn dialogues.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "Appendix",
+      "locator": "Appendix A.1 and Table 10, Related Works",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "Many works described as streaming in fact adopt a question-injection protocol. Overall, Table 10 shows that our method is the first open-source model to enable full omni-modal streaming while natively supporting proactive response, real-time narration, and reactive QA.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This paper sits in live assistant models that process speech, images, and text as events unfold. The key prerequisite is streaming: the model must use only what has already happened, not the whole recording.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A useful assistant should not only answer questions after being asked; it should also keep watching and listening, then speak when something requested actually happens.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "Sound arrives continuously, images arrive as separate snapshots, and the assistant must decide when to interrupt without seeing the future.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Keep sound and images on the same timeline, then use a small gate to decide when the main speaker should talk.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper frames streaming audio-video understanding as a unified interaction problem: reactive question answering (QA), where the model answers after a query, and proactive monitoring, where it must trigger alerts or narration from the stream prefix only. This matters because a real assistant must combine perception, timing, and language rather than solve isolated offline video tasks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The paper argues that prior systems split along the wrong axes: speech-first streaming models often lack visual perception, video-streaming models often ignore synchronized audio, and many benchmark protocols test question injection rather than autonomous response timing.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The load-bearing insight is to separate the two jobs hidden inside live interaction: keep multimodal evidence causally aligned as it arrives, and make the speak-or-wait decision through a dedicated timing signal before generating text.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's argument reduces to four falsifiable claims about unified streaming interaction, training, evaluation, and the timing module.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: ROMA can represent live audio and video as causally ordered aligned units, enabling one model to support proactive alerting, real-time narration, and reactive QA.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E4",
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: A curated streaming dataset plus two-stage fine-tuning can transfer a strong offline omni-multimodal foundation model into an online model with calibrated response timing.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Under the paper's unified evaluation suite, ROMA achieves state-of-the-art proactive alert and narration results while remaining competitive on reactive and full-modality QA.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: Decoupling response timing into a speak head, especially with information from multiple upper layers, is important for proactive triggering and not merely an implementation detail.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "ROMA splits the stream into fixed-duration audio-video chunks, packages dense audio tokens and sparse video-frame tokens together, and assigns them aligned time positions through Time-aligned Multimodal RoPE (TMRoPE, a position-coding scheme that tells the transformer which audio and visual tokens share time). A separate speak head then scores each stream prefix for whether a response should begin, while the normal language modeling head generates content only after that trigger.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "At inference time, each new unit is encoded, appended to the ongoing temporal sequence, and evaluated by the speak head; if the probability crosses the task threshold, the language model emits a response, otherwise ROMA stays silent and consumes the next unit. The system keeps a key-value cache (KV cache, stored attention state from earlier tokens) so each step can reuse prior context instead of re-encoding the whole stream.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E6",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "mechanism_flow_packaging",
+              "label": "",
+              "text": "Packaging step: audio and video from the same interval are wrapped in the base Qwen2.5-Omni token format, preserving compatibility with the foundation model while imposing a streaming order.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_timeline",
+              "label": "",
+              "text": "Timeline step: video tokens inside a unit share the unit's time position, audio tokens keep finer temporal positions, and later units continue from the previous maximum position ID.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_flow_trigger",
+              "label": "",
+              "text": "Trigger step: the speak head reads a learned weighted combination of the last K hidden layers, with K set to four in the reported experiments, and converts it into a binary speak probability.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The major design choices all reduce interference: align modalities before reasoning, score timing outside generation, and train streaming format adaptation before timing specialization. The tradeoff is more task-specific supervision and threshold calibration rather than a purely prompt-only use of the base model.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_decision_alignment",
+              "label": "",
+              "text": "Need: audio is dense and video is sparse; choice: synchronized chunks plus chunked TMRoPE; closest alternative in the paper is treating modalities or full videos less causally; tradeoff: video timing is coarser inside each unit while audio keeps fine positions.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E4",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_speak_head",
+              "label": "",
+              "text": "Need: the model must decide when to speak without confusing timing with content; choice: a two-layer neural timing classifier parallel to the language head; closest alternative is a silence token; tradeoff: explicit probabilities require thresholds and positive-label balancing.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E13",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_curriculum",
+              "label": "",
+              "text": "Need: the base model was optimized for complete inputs; choice: first adapt to streaming templates, then learn time-aware decisions while mixing QA data; closest alternative is single-stage mixed training; tradeoff: more pipeline complexity but better proactive calibration.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "ROMA is implemented as an adaptation of Qwen2.5-Omni with frozen encoders, fine-tuned remaining parameters, two-stage training, and streaming decoding that samples video at 2 fps, caps frame size at 65,536 pixels, and uses a persistent KV cache. Appendix details report LLaMA-Factory training with sequence length 32K, 32 H20 GPUs, global batch size 512, and a 25-token per-segment generation budget for the pipelined real-time approximation.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8",
+            "E16"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The evaluation reorganizes fragmented streaming benchmarks into proactive interaction and reactive interaction: proactive covers event-driven alerts and real-time narration, while reactive covers causal-history QA. Baselines are limited to streaming-capable video models for proactive tasks and include open-source omni-modal models for full-modality QA with spoken queries.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest where the same mechanism is tested through both benchmark comparisons and ablations; it is weaker where results rely on single reported runs, judge prompts, or benchmark reformulations.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "C1 is supported by the framework coverage and implementation path: the paper tests alert, narration, and QA under one streaming protocol, but the strongest proof is functional rather than a formal systems invariant.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8",
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3 is supported by headline proactive gains on QVHighlights, dynamic alerts, and narration, plus competitive QA; support is medium because the paper does not report variance, seeds, or confidence intervals.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c4",
+              "label": "",
+              "text": "C4 is supported most directly by the speak-head and K=1 ablations: proactive timing drops more sharply than timestamp-conditioned understanding, matching the claimed role of the timing module.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The main result pattern is proactive strength: ROMA reports 53.7 mean average precision (mAP) on QVHighlights, 44.3/19.9 recall at 0.5/0.7 overlap on Charades-STA, best reported dynamic alert scores on PA and PO, and best recurring-alert score on REC. For narration, it reports 35.21 F1 on YouCook2 and 14.54 F1 on OVO-Bench SSR, with the highest GPT-4o judge averages but BERTScore close to baselines.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_alert_static",
+              "label": "",
+              "text": "Supported claim: better temporal grounding; configuration: QVHighlights and Charades-STA; closest baseline: MMDuet on the same tables; metric direction: higher is better; delta: QVHighlights mAP 53.7 vs 31.3, Charades R@0.5 44.3 vs 42.4.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_narration",
+              "label": "",
+              "text": "Supported claim: better online narration timing; configuration: YouCook2 and OVO-Bench SSR; closest baseline: MMDuet or VideoLLM-online depending metric; metric direction: higher is better; delta: YouCook2 F1 35.21 vs 18.82 for VideoLLM-online and 17.81 for MMDuet.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_reactive",
+              "label": "",
+              "text": "Supported claim: reactive competence is mostly retained; configuration: OVO-Bench, StreamingBench, Video-MME, and EgoSchema; baselines include Dispider and omni-modal models; caveat: some subcategories remain close or below baselines.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations support the curriculum and timing design: single-stage mixed training degrades online triggering, removing the speak head hurts proactive alert and narration most, and using only the last layer weakens temporal grounding and dynamic triggering. The positive-class weight w_pos, the multiplier on rare speak labels in the binary timing loss, matters for proactive tasks but has little effect on reactive QA.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper reports training hardware, sequence length, batch size, data sources, evaluation prompts, and several decoding thresholds, which helps audit the setup. Not reported in the provided text: model-weight availability, exact re-annotated timestamp data, training seeds, repeat counts, variance, and a full script-level reproduction path for every benchmark reformulation.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E14",
+            "E16",
+            "E17"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The most credible part is the architectural separation between timing and generation: it directly matches the problem structure and is backed by large proactive-task drops when replaced by token-level silence behavior. The aligned-chunk representation is also plausible because it addresses the concrete audio-video granularity mismatch rather than relying only on prompting.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "Benefits may diminish when audio and video are badly desynchronized, when important evidence lies beyond the finite context window, or when the assistant needs long, high-quality responses under a strict real-time budget. The 25-token per-segment decoding cap and finite-context training setup make this boundary concrete rather than hypothetical.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E15",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_to_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with memory or KV-cache based streaming video QA systems, ROMA is less about compressing long histories and more about deciding whether the current prefix warrants action. Compared with proactive video-only assistants, its technical distinction is synchronized audio-video input; compared with omni-modal reactive models, its distinction is explicit proactive response timing.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For live multimodal systems, do not hide control policy inside generation tokens when the product behavior is a timing decision; represent the control signal directly, supervise it at the lifecycle point where it is used, and keep the content generator trained on ordinary language quality.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_streaming_understanding",
+      "term": "Streaming understanding",
+      "aliases": [
+        "online understanding"
+      ],
+      "note": "Processing a time-ordered input as it arrives, using only past and current context rather than the full future recording."
+    },
+    {
+      "id": "g_proactive_reactive",
+      "term": "Proactive vs reactive interaction",
+      "aliases": [
+        "proactive",
+        "reactive"
+      ],
+      "note": "Reactive means answer after a query; proactive means monitor continuously and respond only when the requested condition is met."
+    },
+    {
+      "id": "g_omni_multimodal",
+      "term": "Omni-multimodal large language model",
+      "aliases": [
+        "OLLM",
+        "omni-modal model"
+      ],
+      "note": "A large language model that accepts or generates across several modalities such as text, audio, speech, and vision."
+    },
+    {
+      "id": "g_multimodal_unit",
+      "term": "Multimodal unit",
+      "aliases": [
+        "streaming unit",
+        "chunk"
+      ],
+      "note": "ROMA's per-step input package: audio and video tokens from the same time interval, processed as one causal unit."
+    },
+    {
+      "id": "g_tmrope",
+      "term": "Time-aligned Multimodal RoPE",
+      "aliases": [
+        "TMRoPE",
+        "chunked TMRoPE"
+      ],
+      "note": "A rotary position encoding variant that gives audio and video tokens time-aware positions so the transformer can align modalities on a shared timeline."
+    },
+    {
+      "id": "g_speak_head",
+      "term": "Speak head",
+      "aliases": [
+        "response gate",
+        "timing head"
+      ],
+      "note": "A small classifier parallel to the language head that predicts whether the model should begin responding at the current stream step."
+    },
+    {
+      "id": "g_kv_cache",
+      "term": "Key-value cache",
+      "aliases": [
+        "KV cache"
+      ],
+      "note": "Stored attention state from previous tokens, reused so a transformer can continue from prior context without recomputing the whole prefix."
+    },
+    {
+      "id": "g_qa",
+      "term": "Question answering",
+      "aliases": [
+        "QA"
+      ],
+      "note": "The reactive setting where a model answers a user question from the available stream history."
+    },
+    {
+      "id": "g_metrics",
+      "term": "Streaming evaluation metrics",
+      "aliases": [
+        "mAP",
+        "HIT@1",
+        "R@0.5",
+        "F1",
+        "BERTScore"
+      ],
+      "note": "Metrics used for ranking event times, top timestamp accuracy, temporal overlap recall, trigger-window alignment, and semantic similarity."
+    },
+    {
+      "id": "g_dynamic_tasks",
+      "term": "Dynamic alert task names",
+      "aliases": [
+        "PA",
+        "PO",
+        "CRR",
+        "REC",
+        "SSR"
+      ],
+      "note": "Benchmark subtask abbreviations used by the paper for proactive alert and streaming narration settings; keep the original abbreviations when comparing tables."
+    },
+    {
+      "id": "g_weighted_bce",
+      "term": "Weighted binary cross-entropy",
+      "aliases": [
+        "BCE",
+        "w_pos"
+      ],
+      "note": "A binary classification loss where rare positive speak labels receive a larger weight so the model does not learn to stay silent too often."
+    }
+  ]
+}

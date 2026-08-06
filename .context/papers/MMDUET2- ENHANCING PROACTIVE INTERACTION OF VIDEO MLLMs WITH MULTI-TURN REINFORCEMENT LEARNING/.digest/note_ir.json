@@ -1,0 +1,760 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "MMDuet2: Enhancing Proactive Interaction of Video MLLMs with Multi-Turn Reinforcement Learning",
+    "summary": "MMDuet2 turns the question of when a streaming video assistant should speak into an ordinary text action and trains it with multi-turn rewards that favor early correct answers while penalizing spammy repetition.",
+    "paper_type": "application",
+    "venue": "arXiv preprint 2025",
+    "authors": "Yueqian Wang (Wangxuan Institute of Computer Technology, Peking University); Songxiang Liu, Disong Wang, Nuo Xu, Guanglu Wan (Meituan); Huishuai Zhang, Dongyan Zhao (Wangxuan Institute of Computer Technology, Peking University; State Key Laboratory of General Artificial Intelligence)",
+    "keywords": [
+      "video multimodal large language models",
+      "proactive interaction",
+      "streaming video question answering",
+      "multi-turn reinforcement learning",
+      "PAUC",
+      "GRPO"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a video multimodal large language model (Video MLLM) post-training paper about proactive interaction: a video assistant must decide not only what to answer, but whether now is the right moment to speak.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "MMDuet2 improves streaming video question answering by making the model choose between answering and emitting NO REPLY at each step, then training that choice with reinforcement learning (RL), meaning learning from scalar rewards rather than only fixed target outputs.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E4",
+        "E7"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a tour guide watching a live video with you: every few moments the guide either says something useful about what just happened or deliberately stays quiet, and training rewards the guide for speaking early but not for interrupting with repeats.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is that the RL-trained model improves proactive benchmark scores while the ablations show why anti-repetition and in-span penalties are needed.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E9",
+        "E10",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_1",
+          "label": "",
+          "text": "Supports C1: ProactiveVideoQA WEB split; baseline MMDuet; Proactive Area Under Curve (PAUC), where higher means earlier and more correct answers, improves from 38.9 to 53.3 and duplicate proportion drops from 81.3 to 4.2; supported, with no variance reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_2",
+          "label": "",
+          "text": "Supports C1: StreamingBench proactive output task; baseline MMDuet; accuracy improves from 29.44 to 34.69; supported, with evaluation repeat count not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_3",
+          "label": "",
+          "text": "Supports C3: reward ablation on WEB and EGO; baseline full MMDuet2 reward; removing the repetition reward raises duplicate proportion from 4.2 to 17.3 on WEB and from 8.1 to 31.9 on EGO; supported, but statistical uncertainty is not reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The results are promising but thin on robustness: tables report point estimates without error bars, the LLM-judge details for reward scoring are under-specified, and the model still struggles on surveillance-style and long egocentric videos.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E9",
+        "E14"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "We train our model MMDuet2 on a dataset of 52k videos with two types of dialogues via SFT and RL. Experimental results demonstrate that MMDuet2 outperforms existing proactive Video MLLM baselines in response timing and quality, achieving state-of-the-art performance on the ProactiveVideoQA benchmark.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, prior methods and issues",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "In previous works of proactive interaction... a video MLLM determines whether it should respond after a certain frame by predicting response probability scores... and compares the scores with a pre-defined threshold. However... A threshold must be manually set during inference, and the model may never reply or often reply with duplicated content if this threshold is not set properly.",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Dataset Construction",
+      "locator": "Section 3 and Table 1",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "The videos of our proposed dataset contain two major categories: web videos and ego-centric videos... Web Videos 50228... Ego Centic 2543... We prepare 2 different types of proactive dialogues: “one question, multiple answers” (1QnA) and “multiple questions, multiple answers” (nQnA), each type covers half the number of all videos.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Formulating Proactive Dialogue with Chat Template",
+      "locator": "Section 4.1 and Figure 2",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The assistant can choose to output either a textual response or “NO REPLY” to indicate it does not want to reply right after this frame... a major advantage of the chat template used in MMDuet2 is that it formats the entire interaction process... into messages from the user or the assistant and is therefore compatible with almost all popular post-training and inference frameworks.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Supervised Fine-Tuning",
+      "locator": "Section 4.2",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "We use Qwen2.5-VL 3B... as initialization... The input frames are sampled at an interval of 2 seconds from the video and we use 128 tokens per frame, 2 frames per user turn. To build user-assistant conversations used in the SFT stage, we place model answers at the end of their reply timespans.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Motivation of Using RL",
+      "locator": "Section 4.3.1",
+      "claim_type": "insight",
+      "evidence_type": "paper_statement",
+      "snippet": "Automatically annotating ground-truth response time has been an unsolved challenge... Although providing accurate ground truth reply times is difficult, it is much easier to determine which of the two given proactive interaction outputs is better. An ideal proactive interaction system should generate replies both correctly... and early.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Reward Modeling",
+      "locator": "Section 4.3.2",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "The reward is inspired by the PAUC (Proactive Area Under Curve)... we made two minor modifications... Besides r_PAUC, we also use some additional reward to punish unwanted behaviors... Replication reward... In-span reward... Prefix reward... After some hyperparameter search we find that omega_PAUC = 3, omega_rep = 2, omega_in_span = 0.5, omega_pfx = 2 is good.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Training Details",
+      "locator": "Section 4.3.3",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "To alleviate this problem, in each step we only select a short span (from 20 to 60 seconds) from the video for training and provide ground truth model replies for the dialogue turns that happen before the selected span... We use GRPO... with a number of rollouts as 4, implemented with SGLang... and verl... conducted on 8 H800 GPUs and takes about 20 hours.",
+      "confidence": "high"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments on Proactive Benchmarks",
+      "locator": "Table 2 and surrounding text",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 2: Performance on ProactiveVideoQA. Metrics reported are PAUC (omega = 0.5) up / reply duplicate proportion down... MMDuet2_rl (Ours): WEB 53.3 / 4.2, EGO 33.6 / 8.1, TV 43.4 / 1.0, VAD 28.9 / 15.2... Results show that MMDuet2 outperforms existing proactive interaction models by a large margin.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E10",
+      "section": "Experiments on Proactive Benchmarks",
+      "locator": "Table 5",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table 5: Performance on Proactive Output task of Streaming-Bench. VideoLLM-Online 1.96; Dispider 25.34; MMDuet 29.44; MMDuet2_sft (Ours) 19.59; MMDuet2_rl (Ours) 34.69.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Experiments on Offline Video-Text Benchmarks",
+      "locator": "Section 5.2 and Table 4",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "After fine-tuning and reinforcement learning for enhancing proactive interaction, MMDuet2’s performance on offline video understanding benchmarks remains almost the same as the checkpoint before our post-training... Table 4... Qwen2.5-VL 3B dagger 66.5/57.3, 65.6, 53.1; MMDuet2_rl dagger 67.5/58.1, 66.4, 52.7.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Ablation Studies",
+      "locator": "Section 5.3 and Table 6",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "Results show that r_rep and r_in_span are indispensable: without any of these 2 rewards, the model generates more duplicated responses to achieve an unreasonably high PAUC metric... Table 6... MMDuet2 53.3/4.2/3.3 on WEB; -r_rep 55.5/17.3/4.9; -r_in_span 62.7/9.6/8.4; EGO -r_in_span FAIL.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Ablation Studies",
+      "locator": "Section 5.3 and Table 7",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "In SFT phase, when frame interval is set to 1 second, the model will collapse to always generating “NO REPLY”... In the RL phase, we found that setting different frame intervals does not have a significant impact... in the inference phase... reducing the frame interval from 2 seconds to 1 second leads to a significant performance improvement.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Training Dynamics of the RL Process",
+      "locator": "Section 5.4 and Figure 5",
+      "claim_type": "limitation",
+      "evidence_type": "paper_statement",
+      "snippet": "Stage 3... the model's performance on the [WEB] network video task stabilizes. However, on the [EGO] ego-centric video task which is longer and more challenging for content understanding, the model can have some generalization issues as we observe an increase in repetition.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E15",
+      "section": "Experiments on Proactive Benchmarks",
+      "locator": "Inference Speed paragraph and Table 3",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Inference Speed. Here we report the actual inference speed... select 64 samples from the ProactiveVideoQA [WEB] task and test the inference wall time... Table 3... MMDuet 5.7 (3.4) reply turns, 2m27s; MMDuet2 3.3 (1.9), 2m52s.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E16",
+      "section": "Appendix A: Discussion of Reply Timing Decision Methods",
+      "locator": "Appendix A",
+      "claim_type": "limitation",
+      "evidence_type": "paper_statement",
+      "snippet": "Here we describe a more efficient implementation of reply timing instead of generating “NO REPLY”... if the model chooses not to respond, no additional token will be added to the context... However, this requires introducing new rules into inference frameworks like SGLang or vLLM, which requires significant labor.",
+      "confidence": "high"
+    },
+    {
+      "id": "E17",
+      "section": "Related Works",
+      "locator": "Section 2.2",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "Reinforcement learning has begun to play a transformative role in post-training video-text multimodal language models... However, existing RL-enhanced VideoMLLMs have not explored real-time interaction or multi-turn dialogue, limiting their applicability in more interactive scenarios.",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "A video multimodal large language model is a chatbot-like model that reads both text and video frames. In streaming use, frames arrive over time, so the model sees only the past and present, not the whole video at once.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A user asks a question while a video is playing, and the assistant should speak up when the video actually contains something worth answering, rather than waiting for the video to end or interrupting constantly.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The right moment to answer is fuzzy: the needed evidence may appear gradually, scene boundaries are coarse, and speaking too early, too late, or too often all feel wrong to a user.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Make silence an explicit text choice, then reward the model for answers that become correct as early as possible without repeating itself.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper studies proactive interaction, where a video multimodal large language model (Video MLLM) watches an incoming visual stream and decides when to speak as well as what to say. The stake is real-time assistance: live analysis, surveillance, egocentric helpers, and social agents need timely responses rather than end-of-video answers.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior proactive Video MLLMs usually made timing decisions with a predicted score and a manually chosen threshold, while supervised training needed exact reply timestamps that are expensive and ambiguous to annotate. The paper also positions existing reinforcement learning (RL) for video-language models as mostly not addressing real-time multi-turn interaction.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E6",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The paper’s central insight is to recast the hidden timing decision as a visible dialogue action, NO REPLY, and train multi-turn rollouts with a reward shaped like an area under a correctness-over-time curve. This avoids needing a single annotated best timestamp while still preferring earlier correct responses.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper makes four main falsifiable claims about proactive performance, the value of RL, reward-design necessity, and preservation of ordinary offline video understanding.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E9",
+            "E11"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: MMDuet2_rl improves proactive video interaction quality over open proactive baselines on the reported benchmark suite, especially on WEB, TV, VAD, and StreamingBench, while reducing duplicate replies compared with MMDuet; the EGO PAUC comparison is mixed because MMDuet has higher PAUC but extreme duplication.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Multi-turn RL after supervised fine-tuning (SFT), meaning training first on target examples and then from rewards, improves the SFT-only model’s proactive timing and answer behavior.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: The auxiliary repetition, in-span, and prefix penalties are necessary to prevent the PAUC-style reward from being exploited by redundant or irrelevant responses.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: The proactive post-training procedure mostly preserves offline video understanding performance relative to the authors’ Qwen2.5-VL 3B implementation baseline.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "At each user turn, the model receives a small number of video frames and optional text, then the assistant must either generate an answer or emit NO REPLY as a normal text output. RL uses Proactive Area Under Curve (PAUC), a metric that rewards high answer correctness earlier within a valid reply span, plus penalties for repeated, out-of-span, and prefix-copying replies.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "The data pipeline segments videos into scenes, captions scenes, uses a language model to generate questions and per-scene answers, and converts these into either one-question-many-answer or multi-question-many-answer proactive dialogues. Training then runs SFT with answers placed at the end of their spans, followed by short-span Group Relative Policy Optimization (GRPO), an RL method that compares multiple sampled outputs for the same prompt.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E5",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design favors compatibility and reward shaping over architectural specialization: it uses ordinary chat messages for timing decisions, then compensates for the resulting tendency to over-speak with explicit reward penalties.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E7",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "design_decision_text_action",
+              "label": "",
+              "text": "Need: avoid threshold tuning and framework changes; choice: represent waiting as NO REPLY in the assistant stream; closest alternative: special timing modules or token-level stop/continue rules; tradeoff: more generate calls and extra context tokens.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E2",
+                "E4",
+                "E16"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_sft_labeling",
+              "label": "",
+              "text": "Need: build training targets without exact reply timestamps; choice: place SFT answers at the end of coarse reply timespans; tradeoff: avoids asking the model to answer before evidence appears but teaches late replies that RL must later correct.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "design_decision_reward_balance",
+              "label": "",
+              "text": "Need: reward early useful speech without incentivizing spam; choice: weight PAUC slightly more than repetition, in-span, and prefix penalties; tradeoff: too little penalty yields redundant high-PAUC behavior, while too much penalty can suppress useful replies.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E7",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The model initializes from Qwen2.5-VL 3B, uses two-second frame sampling with two frames per user turn in training, and runs RL with four GRPO rollouts on short video spans using SGLang and verl. Reported resource use is 16 H800 GPUs for about 8 hours for SFT and 8 H800 GPUs for about 20 hours for RL.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E8"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The proactive evaluation covers ProactiveVideoQA splits WEB, EGO, TV, and VAD using PAUC and duplicate proportion, plus the StreamingBench proactive output task using accuracy. Offline retention is checked on Video-MME, MVBench, and LongVideoBench, with proactive baselines limited partly by availability of open inference code.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence supports the main direction of the paper, but the strength varies by claim because results are single reported point estimates and some comparisons are complicated by duplicate-heavy baselines.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_cem_c1",
+              "label": "",
+              "text": "C1: Supported on WEB, TV, VAD, and StreamingBench; partially supported on EGO because MMDuet2_rl has far lower duplicate proportion but lower PAUC than MMDuet.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9",
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_c2",
+              "label": "",
+              "text": "C2: Supported by MMDuet2_rl outperforming MMDuet2_sft on ProactiveVideoQA splits and StreamingBench, and by training dynamics showing a move from low-frequency replies to higher PAUC behavior.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9",
+                "E10",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_c3",
+              "label": "",
+              "text": "C3: Strongly supported qualitatively by ablations where removing r_rep or r_in_span increases duplicate or uncontrolled response density, including EGO failure without r_in_span.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_cem_c4",
+              "label": "",
+              "text": "C4: Supported by near-baseline offline benchmark numbers, though the comparison is to the authors’ reproduced Qwen2.5-VL 3B rather than only the original reported checkpoint.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is not a clean universal win on every metric, but a practical improvement in earlier useful responses with dramatically less duplication than MMDuet on several splits.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E10",
+            "E11"
+          ],
+          "children": [
+            {
+              "id": "headline_result_web",
+              "label": "",
+              "text": "ProactiveVideoQA WEB: MMDuet2_rl versus MMDuet improves PAUC from 38.9 to 53.3 and reduces duplicate proportion from 81.3 to 4.2; no confidence intervals or repeat counts are reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_streamingbench",
+              "label": "",
+              "text": "StreamingBench proactive output: MMDuet2_rl reaches 34.69 accuracy versus 29.44 for MMDuet, 25.34 for Dispider, and 1.96 for VideoLLM-Online; support is point-estimate only.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "headline_result_offline",
+              "label": "",
+              "text": "Offline benchmarks: relative to the authors’ Qwen2.5-VL 3B reproduction, MMDuet2_rl is similar on Video-MME, MVBench, and LongVideoBench, with LongVideoBench moving from 53.1 to 52.7.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The ablations show the reward is doing real control work: removing anti-repetition or in-span rewards can raise PAUC while making outputs much worse as interactions. Frame-rate sensitivity is also important: dense SFT sampling collapses to NO REPLY, while denser inference improves timing because the model gets more chances to decide.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper provides a project homepage, model/training framework names, hardware, and many hyperparameters, but does not report statistical uncertainty, repeat counts, the exact LLM judge identity and prompts for reward scoring, or full dataset release details in the supplied text.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_what_holds_up",
+          "label": "What Holds Up",
+          "text": "The paper’s strongest technical move is aligning the training signal with the real interaction tradeoff: a reply is better if it is correct and arrives earlier, but only if it is not redundant or irrelevant. The reward ablations make the main failure mode visible, showing that PAUC alone can be gamed by over-answering.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "MMDuet2 may be less reliable on long or hard-to-interpret streams: the paper reports poor VAD performance for all models and increasing repetition on longer EGO videos late in RL training. The NO REPLY-as-generation design is easy to implement but less token-efficient than the appendix’s proposed stop/continue format.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E14",
+            "E16"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation_other_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with threshold-based proactive systems such as VideoLLM-Online and MMDuet, MMDuet2 moves timing into the language-model action space instead of tuning an external response score. Compared with recent RL-enhanced video-language models, its distinguishing axis is multi-turn real-time interaction rather than static video reasoning alone.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E17"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "A useful systems pattern is to turn an awkward control decision into an ordinary model output when ecosystem compatibility matters, then add reward terms for the predictable degenerate behaviors that this output space enables. Here, silence-as-text made proactive timing trainable in standard chat infrastructure, but required explicit anti-spam rewards.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E4",
+            "E7",
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_video_mllm",
+      "term": "video multimodal large language model",
+      "aliases": [
+        "Video MLLM",
+        "VideoMLLM"
+      ],
+      "note": "A language model that conditions on video frames as well as text, so it can answer questions or converse about video content."
+    },
+    {
+      "id": "g_proactive_interaction",
+      "term": "proactive interaction",
+      "aliases": [
+        "proactive video dialogue"
+      ],
+      "note": "A streaming setting where the model decides when to respond during video playback, not only how to answer after a user turn."
+    },
+    {
+      "id": "g_sft",
+      "term": "supervised fine-tuning",
+      "aliases": [
+        "SFT"
+      ],
+      "note": "Training a pretrained model on examples with target outputs; in this paper it teaches the chat format and initial proactive behavior before reward training."
+    },
+    {
+      "id": "g_rl",
+      "term": "reinforcement learning",
+      "aliases": [
+        "RL"
+      ],
+      "note": "Training from scalar rewards assigned to generated behavior rather than only from fixed target text; here it rewards early correct replies and penalizes bad speaking patterns."
+    },
+    {
+      "id": "g_grpo",
+      "term": "Group Relative Policy Optimization",
+      "aliases": [
+        "GRPO"
+      ],
+      "note": "An RL optimization method that samples multiple outputs for the same input and updates the model using their relative rewards."
+    },
+    {
+      "id": "g_pauc",
+      "term": "Proactive Area Under Curve",
+      "aliases": [
+        "PAUC",
+        "r_PAUC"
+      ],
+      "note": "A proactive-video metric and reward shape that integrates answer correctness over time within a reply span, so earlier high-quality replies score better."
+    },
+    {
+      "id": "g_reply_timespan",
+      "term": "reply timespan",
+      "aliases": [
+        "ground-truth span"
+      ],
+      "note": "The interval in the video during which a certain ground-truth answer is considered appropriate; the paper avoids requiring a single exact timestamp inside it."
+    },
+    {
+      "id": "g_no_reply",
+      "term": "NO REPLY",
+      "aliases": [
+        "silence action"
+      ],
+      "note": "The literal text output used by MMDuet2 when the assistant chooses not to answer at the current turn."
+    },
+    {
+      "id": "g_1qna_nqna",
+      "term": "proactive dialogue types",
+      "aliases": [
+        "1QnA",
+        "nQnA"
+      ],
+      "note": "1QnA means one question with multiple possible answer turns across a video; nQnA means multiple questions and multiple answer streams in one dialogue."
+    },
+    {
+      "id": "g_reward_penalties",
+      "term": "auxiliary reward penalties",
+      "aliases": [
+        "r_rep",
+        "r_in_span",
+        "r_pfx"
+      ],
+      "note": "Extra reward terms that discourage duplicate replies, replies outside valid spans, and replies that copy a previous prefix before adding new content."
+    }
+  ]
+}

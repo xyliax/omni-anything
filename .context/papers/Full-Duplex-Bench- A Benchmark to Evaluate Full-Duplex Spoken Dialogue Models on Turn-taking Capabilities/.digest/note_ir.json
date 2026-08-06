@@ -1,0 +1,952 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Full-Duplex-Bench: A Benchmark to Evaluate Full-Duplex Spoken Dialogue Models on Turn-taking Capabilities",
+    "summary": "Full-Duplex-Bench turns real-time turn-taking behavior in spoken dialogue models into an automatic benchmark, showing that models trade off waiting, timely takeover, backchannel timing, and interruption coherence in different ways.",
+    "paper_type": "benchmark",
+    "venue": "arXiv/preprint 2025",
+    "authors": "Guan-Ting Lin (National Taiwan University), Jiachen Lian (UC Berkeley), Tingle Li (UC Berkeley), Qirui Wang (University of Washington), Gopala Anumanchipalli (UC Berkeley), Alexander H. Liu (MIT CSAIL), Hung-yi Lee (National Taiwan University)",
+    "keywords": [
+      "full-duplex spoken dialogue",
+      "turn-taking",
+      "backchanneling",
+      "speech benchmark",
+      "spoken dialogue models",
+      "interruption handling"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a speech-interaction benchmark for full-duplex spoken dialogue models, meaning voice systems that can listen while speaking; it targets the missing evaluation layer between task accuracy and the timing behaviors that make conversation feel natural.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "Full-Duplex-Bench improves evaluation of real-time spoken dialogue by turning listener timing, speaker handoff, and interruption recovery into automatically scored audio-stream tests.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E4"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Picture a driving test for voice agents: the benchmark creates awkward but realistic moments, records whether the agent cuts in, waits, nods briefly, or changes course, then scores the timing from the audio traces.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the unified comparison of four systems across four interaction dimensions using the same streamed inputs and automatic timing metrics.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E9",
+        "E10",
+        "E11",
+        "E12",
+        "E13"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_pause_backchannel",
+          "label": "",
+          "text": "Supports C3: Gemini Live on Table III; closest open-source baseline Freeze-Omni; lower pause Takeover Rate and lower backchannel Jensen-Shannon Divergence; 0.255 vs 0.642 synthetic pause TOR and 0.896 vs 0.997 backchannel JSD; medium support because no variance is reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_turn_latency",
+          "label": "",
+          "text": "Supports C3: Candor smooth turn-taking; dGSLM and Moshi compared with Freeze-Omni and Gemini Live; response latency and Takeover Rate; Moshi is fastest at 0.265 seconds while Freeze-Omni and Gemini have lower takeover; medium support because speed and correctness trade off.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_interruption",
+          "label": "",
+          "text": "Supports C3: synthetic interruption task; Freeze-Omni compared with Gemini Live, Moshi, and dGSLM; GPT-4o response-quality score and latency; Freeze-Omni scores 3.615 versus Gemini 3.376 with higher latency; medium support because the evaluator and repeat statistics are not audited.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E13"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The benchmark is diagnostic rather than preference-calibrated: it can say when a model interrupts, delays, or backchannels differently, but not whether that behavior is best for a user, language, or application.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E13",
+        "E14"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract and Introduction",
+      "locator": "Abstract; Introduction near contribution paragraph",
+      "claim_type": "metadata",
+      "evidence_type": "paper_statement",
+      "snippet": "The paper introduces Full-Duplex-Bench for full-duplex spoken dialogue models and centers evaluation on pause handling, backchanneling, turn-taking, and interruption management with automatic metrics.",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction and Related Works",
+      "locator": "Introduction prior benchmark discussion; II.B Evaluation Benchmarks",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "Prior speech benchmarks mainly cover content, instruction following, or paralinguistic perception under turn-based assumptions; dGSLM statistics and Talking-Turns expose reproducibility and generalization limits.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E3",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III, key term definitions before III.A",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Backchanneling is operationalized as brief listener speech under one second and fewer than two words; takeover is non-silent non-backchannel speech, and TOR averages that binary variable.",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III.A Overview; Figure 1",
+      "claim_type": "system_design",
+      "evidence_type": "implementation_detail",
+      "snippet": "The framework streams input.wav to each SDM, records output.wav, uses Nvidia parakeet-tdt-0.6b-v2 ASR for word-level timing, and applies dedicated metrics by dimension.",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III.B.1 Pause Handling",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Pause handling asks whether the model recognizes that the user still holds the floor; the metric is Takeover Rate, where lower values mean fewer premature interruptions.",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III.B.2 Backchanneling",
+      "claim_type": "formula",
+      "evidence_type": "paper_statement",
+      "snippet": "Backchanneling is measured with TOR, backchannel events per second, and Jensen-Shannon Divergence between model and human timing distributions over aligned time windows.",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III.B.3 Smooth Turn Taking",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Smooth turn-taking measures average response latency from the end of user speech to the start of model speech, calculated only when takeover occurs.",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Full-Duplex-Bench Framework",
+      "locator": "III.B.4 User Interruption",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "User interruption evaluation uses TOR, a GPT-4o score from 0 to 5 for coherence and relevance, and latency after interruption when the model takes the turn.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "Data Curation",
+      "locator": "III.C; Table II",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "The benchmark uses Candor for pause and smooth-turn data, ICC for backchannel timing, and synthetic GPT-4o plus ChatTTS data for interruptions and synthetic pauses.",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Models Under Evaluation",
+      "locator": "IV Models Under Evaluation",
+      "claim_type": "experiment_setup",
+      "evidence_type": "implementation_detail",
+      "snippet": "The evaluated systems are dGSLM, Moshi, Freeze-Omni, and Gemini Live, using official implementations or official service access where available.",
+      "confidence": "high"
+    },
+    {
+      "id": "E11",
+      "section": "Results",
+      "locator": "V Results; Table III pause and backchannel columns",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "Table III shows Gemini Live with the lowest pause TORs and best backchannel JSD; dGSLM has the highest open-source backchannel frequency, while Moshi often takes over.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Results",
+      "locator": "V Results; Table III smooth turn-taking columns",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "For Candor smooth turn-taking, dGSLM and Moshi have high TOR and low latency, while Freeze-Omni and Gemini Live have lower takeover rates and slower responses.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Results",
+      "locator": "V Results; Table III user interruption columns",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "On synthetic interruptions, Freeze-Omni gets the highest GPT-4o quality score, Gemini Live is close, and the end-to-end systems struggle with semantic coherence.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E14",
+      "section": "Limitation and Future Work",
+      "locator": "VII Limitation and Future Work",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "The authors state that the framework does not yet connect measured behaviors to human preferences and that the present analysis is limited to English.",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "Introduction and Related Works",
+      "locator": "Contribution footnote; Table I",
+      "claim_type": "implementation",
+      "evidence_type": "paper_statement",
+      "snippet": "The paper reports a public data and code release, while Table I shows many full-duplex systems lack complete public speech-to-speech releases or architectural details.",
+      "confidence": "medium"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "Spoken dialogue models (SDMs) are voice systems that understand speech and respond with speech. Full-duplex means the system can listen while speaking, rather than waiting for one clean turn at a time.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain",
+          "label": "The Problem in Plain Words",
+          "text": "A voice agent must decide when to stay quiet, when to say a tiny acknowledgment, when to answer, and what to do if the user cuts in.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The same short silence can mean hesitation, a sentence break, or an invitation to speak, and the model must decide from timing and audio context.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Test the model with controlled conversational moments and score the observable audio behavior instead of asking only whether the answer content is good.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "Full-duplex spoken dialogue models promise more natural interaction, but existing evaluation mostly measures content, instructions, or broad corpus statistics rather than whether the system respects live conversational timing.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "The prior gap is methodological: dGSLM-style corpus statistics are hard to interpret, Talking-Turns depends on a learned judge and user studies, and many speech benchmarks assume half-duplex interaction, meaning one side talks at a time.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The paper's key insight is that turn-taking can be decomposed into scenario-specific observable events, then scored from time-aligned model output with descriptive metrics rather than one global conversational-quality score.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E4",
+            "E5",
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's logical claims are these four falsifiable statements.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": [
+            {
+              "id": "claim_c1",
+              "label": "",
+              "text": "C1: A scenario-driven benchmark can cover the main real-time behaviors that distinguish full-duplex SDMs: pause handling, backchanneling, smooth turn-taking, and user interruption management.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "claim_c2",
+              "label": "",
+              "text": "C2: These behaviors can be operationalized with automatic metrics over synchronized user and model audio, including Takeover Rate, backchannel frequency, Jensen-Shannon Divergence, response latency, and GPT-4o interruption scoring.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4",
+                "E5",
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "claim_c3",
+              "label": "",
+              "text": "C3: Applying the benchmark to dGSLM, Moshi, Freeze-Omni, and Gemini Live reveals different tradeoffs rather than a single best model across all turn-taking behaviors.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "claim_c4",
+              "label": "",
+              "text": "C4: The benchmark is a reproducible diagnostic tool, but its scores are not yet grounded in human preference or cross-lingual generality.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E14",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "Full-Duplex-Bench feeds each model the same user audio stream, records its time-synchronous speech output, converts the output into word-level timestamps with automatic speech recognition (ASR, software that turns speech into timed text), and computes task-specific behavior metrics.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4"
+          ],
+          "children": [
+            {
+              "id": "mechanism_core_to_tor",
+              "label": "",
+              "text": "Takeover Rate (TOR) turns the question 'did the model seize the conversational floor' into a binary signal averaged across samples.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_to_timing",
+              "label": "",
+              "text": "Jensen-Shannon Divergence (JSD, a bounded distance between two probability distributions) compares the timing of model backchannels with human backchannel timing.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_core_to_interruption",
+              "label": "",
+              "text": "Interruption handling is split into whether the model answers, how good the answer is, and how long it takes after the user interrupts.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_data_flow",
+          "label": "Data / Control Flow",
+          "text": "The flow is sample selection, user audio construction, model streaming, output alignment, behavior classification, and metric aggregation; this keeps model inference separate from the scoring rules.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E9"
+          ],
+          "children": [
+            {
+              "id": "mechanism_data_flow_pause_turn",
+              "label": "",
+              "text": "Candor supplies natural two-channel conversations for pause and smooth-turn cases, with voice activity detection (VAD, software that marks when speech is present) and manual review used to filter candidate segments.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_flow_backchannel",
+              "label": "",
+              "text": "The In Conversation Corpus (ICC) supplies human backchannel timing over small time windows, giving the benchmark a human timing distribution for the JSD comparison.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_data_flow_synthetic",
+              "label": "",
+              "text": "Synthetic interruption and pause cases use GPT-4o text generation and text-to-speech (TTS, software that turns text into spoken audio) to create controlled events that are scarce in public dialogue data.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The benchmark chooses simple descriptive metrics so that each score corresponds to a visible behavior, trading away a direct human-preference verdict for reproducibility and diagnostic clarity.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7",
+            "E8",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_decision_backchannel_definition",
+              "label": "",
+              "text": "Need: avoid counting full responses as acknowledgments; design choice: define backchannels by short duration and very few words; tradeoff: richer listener signals outside that shape are excluded.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_metric_by_event",
+              "label": "",
+              "text": "Need: make timing errors diagnosable; design choice: use different metrics for pauses, backchannels, handoff, and interruption; alternative: one learned global judge, which the paper argues is less reproducible.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E2",
+                "E5",
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_synthetic_events",
+              "label": "",
+              "text": "Need: evaluate rare interruption cases; design choice: generate controlled synthetic dialogues; tradeoff: the event distribution may differ from natural user barge-ins.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The implementation surface is deliberately external-model friendly: each tested system only needs to consume streamed user audio and emit audio that can be aligned back to the original timeline.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E4",
+            "E10",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "mechanism_surface_model_adapters",
+              "label": "",
+              "text": "dGSLM, Moshi, and Freeze-Omni are evaluated through released implementations or servers, while Gemini Live is evaluated through the vendor's live service with 16 kHz audio streaming.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_surface_release",
+              "label": "",
+              "text": "The authors report releasing the benchmark and code, which matters because many candidate full-duplex systems do not release full speech-to-speech pipelines.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The benchmark evaluates dGSLM, Moshi, Freeze-Omni, and Gemini Live on Candor, ICC, and synthetic data, using lower-is-better TOR for pauses, lower-is-better JSD for backchannel timing, lower-is-better latency for handoff, and higher-is-better GPT-4o scores for interruption response quality.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7",
+            "E8",
+            "E9",
+            "E10"
+          ],
+          "children": [
+            {
+              "id": "evaluation_setup_sample_counts",
+              "label": "",
+              "text": "The reported sample counts are 216 Candor pause samples, 119 Candor smooth-turn samples, 55 ICC backchannel samples, 200 synthetic interruption samples, and 137 synthetic pause samples.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E9"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_setup_fairness",
+              "label": "",
+              "text": "Baseline fairness is partial: the same benchmark inputs and metrics are used, but model access differs across local open-source pipelines and the Gemini Live service.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_setup_uncertainty",
+              "label": "",
+              "text": "Statistical uncertainty is not reported: the table gives aggregate scores but no variance, confidence intervals, or repeat-count analysis.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_claim_evidence_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "C1 and C2 are supported mainly by the benchmark design; C3 is supported by the model comparison table; C4 is supported by the authors' own limitation statement and release discussion.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E4",
+            "E11",
+            "E12",
+            "E13",
+            "E14",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1_c2",
+              "label": "",
+              "text": "C1-C2: scenario coverage and automatic metrics are directly described, but the paper does not prove these four dimensions exhaust all full-duplex conversation quality.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E1",
+                "E4",
+                "E5",
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3",
+              "label": "",
+              "text": "C3: Table III supports a tradeoff view because the best model changes by dimension and by metric direction.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c4",
+              "label": "",
+              "text": "C4: reproducibility is helped by release and automatic metrics, but preference and language boundaries are explicitly left open.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E14",
+                "E15"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "The headline result is not a leaderboard win but a behavioral profile: end-to-end systems can be quick, explicit control helps interruption coherence, and the commercial service avoids premature takeover more often on the reported metrics.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E11",
+            "E12",
+            "E13"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_pause_backchannel",
+              "label": "",
+              "text": "Supported claim: C3; configuration: Table III pause and backchannel tasks; closest baseline: Freeze-Omni for Gemini Live; metric and direction: lower TOR/JSD; delta: 0.255 vs 0.642 synthetic pause TOR and 0.896 vs 0.997 backchannel JSD; uncertainty: not reported; caveat: closed-service details are unavailable.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_smooth_turn",
+              "label": "",
+              "text": "Supported claim: C3; configuration: Candor smooth turn-taking; baseline: all evaluated systems; metric and direction: higher TOR but lower latency; delta: Moshi has 0.941 TOR and 0.265 second latency, while Gemini has 0.655 TOR and 1.301 second latency; uncertainty: not reported; caveat: promptness and willingness to take over conflict.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_interruption",
+              "label": "",
+              "text": "Supported claim: C3; configuration: synthetic interruption; baseline: Gemini Live and end-to-end systems; metric and direction: higher GPT-4o quality score and lower latency; delta: Freeze-Omni scores 3.615 at 1.409 seconds versus Gemini 3.376 at 1.183 seconds; uncertainty: not reported; caveat: GPT-4o judging is not a human preference study.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations",
+          "label": "Ablations and Sensitivity",
+          "text": "Not applicable: the paper reports cross-model and cross-dataset comparisons, but no ablation that removes benchmark components or varies metric definitions.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "evaluation_reproducibility_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The benchmark and code are released, but exact reproduction still depends on external model releases, closed-service behavior, the ASR pipeline, GPT-4o judging for interruption quality, and absent variance or repeat-count reporting.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E8",
+            "E10",
+            "E11",
+            "E12",
+            "E13",
+            "E15"
+          ],
+          "children": [
+            {
+              "id": "evaluation_repro_gap_closed",
+              "label": "",
+              "text": "Many compared full-duplex systems lack full public speech-to-speech releases or disclosed internals, so the benchmark is more reusable than the evaluated model set.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_repro_gap_judge",
+              "label": "",
+              "text": "The interruption quality metric uses GPT-4o as an evaluator, so its calibration, prompt sensitivity, and agreement with people remain unreported.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E8",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The benchmark's strongest part is its decomposition of messy conversation into auditable signals: who spoke, when they spoke, whether the speech was a short listener cue, and how quickly the model reacted.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5",
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "judgment_holds_up_profile",
+              "label": "",
+              "text": "The same framework exposes different failure modes across dGSLM, Moshi, Freeze-Omni, and Gemini Live, which is more useful than a single aggregate conversational score.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E11",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "It may fail when the task requires nuanced social preference rather than observable timing: a low TOR can mean patience or missed chances to answer, and a high backchannel frequency can be helpful or annoying depending on context.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E3",
+            "E6",
+            "E12",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "judgment_fail_backchannel_def",
+              "label": "",
+              "text": "The backchannel detector's duration and word-count rule is easy to reproduce but can miss longer acknowledgments, nonverbal cues, or language-specific listener signals.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E3",
+                "E14"
+              ],
+              "children": []
+            },
+            {
+              "id": "judgment_fail_synthetic",
+              "label": "",
+              "text": "Synthetic interruption and pause samples make controlled tests possible, but they may underrepresent messy real user barge-ins, speech repairs, and multilingual behavior.",
+              "claim_kind": "analyst_assessment",
+              "evidence_ids": [
+                "E9",
+                "E14"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_relation_work",
+          "label": "Relation to Other Work",
+          "text": "Compared with content or instruction-following speech benchmarks, this paper evaluates interaction timing; compared with dGSLM's voice-activity statistics or Talking-Turns' trained judge, it favors explicit scenarios and automatic metrics that are easier to rerun.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E2",
+            "E5",
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": [
+            {
+              "id": "judgment_relation_model_categories",
+              "label": "",
+              "text": "The evaluated model categories matter technically: end-to-end systems directly model audio streams, while cascaded systems combine components such as ASR, text generation, and TTS, changing latency and control behavior.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E12",
+                "E13"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For interactive AI systems, benchmark the micro-behaviors that users experience directly before collapsing them into a global score; separate descriptive diagnostics from preference judgments so developers can choose the behavior profile their application needs.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E1",
+            "E5",
+            "E6",
+            "E7",
+            "E8",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_spoken_dialogue_model",
+      "term": "Spoken Dialogue Model",
+      "aliases": [
+        "SDM"
+      ],
+      "note": "A system that takes speech as conversational input and produces a spoken response; in this note, SDM is the evaluated model family."
+    },
+    {
+      "id": "g_full_duplex",
+      "term": "Full-duplex",
+      "aliases": [],
+      "note": "A communication mode where listening and speaking can happen at the same time, unlike half-duplex turn-by-turn interaction."
+    },
+    {
+      "id": "g_turn_taking",
+      "term": "Turn-taking",
+      "aliases": [],
+      "note": "The timing problem of deciding who speaks next and when a speaker has yielded or kept the floor."
+    },
+    {
+      "id": "g_backchannel",
+      "term": "Backchannel",
+      "aliases": [
+        "BC"
+      ],
+      "note": "A short listener cue such as an acknowledgment that signals attention without taking over the conversation."
+    },
+    {
+      "id": "g_takeover_rate",
+      "term": "Takeover Rate",
+      "aliases": [
+        "TOR",
+        "TO"
+      ],
+      "note": "TOR averages a binary takeover signal; lower is better for pause and backchannel tasks, while higher is desired when the model should answer after a turn end or interruption."
+    },
+    {
+      "id": "g_jsd",
+      "term": "Jensen-Shannon Divergence",
+      "aliases": [
+        "JSD"
+      ],
+      "note": "A bounded measure of difference between two probability distributions; here it compares model backchannel timing with human backchannel timing."
+    },
+    {
+      "id": "g_asr",
+      "term": "Automatic Speech Recognition",
+      "aliases": [
+        "ASR"
+      ],
+      "note": "Software that turns speech audio into text, often with timestamps used for alignment."
+    },
+    {
+      "id": "g_vad",
+      "term": "Voice Activity Detection",
+      "aliases": [
+        "VAD"
+      ],
+      "note": "Software that marks when speech is present in an audio stream; used for filtering and segmentation."
+    },
+    {
+      "id": "g_tts",
+      "term": "Text-to-Speech",
+      "aliases": [
+        "TTS"
+      ],
+      "note": "Software that synthesizes spoken audio from text; used to create synthetic benchmark inputs."
+    },
+    {
+      "id": "g_icc",
+      "term": "In Conversation Corpus",
+      "aliases": [
+        "ICC"
+      ],
+      "note": "A dataset used here for human backchannel timing distributions."
+    },
+    {
+      "id": "g_end_to_end",
+      "term": "End-to-end speech model",
+      "aliases": [
+        "E2E"
+      ],
+      "note": "A model that directly models speech streams without relying primarily on an explicit text pipeline."
+    },
+    {
+      "id": "g_cascaded_model",
+      "term": "Cascaded speech system",
+      "aliases": [],
+      "note": "A modular voice system that chains components such as ASR, a language model, and TTS; the modularity can improve control but add latency."
+    }
+  ]
+}

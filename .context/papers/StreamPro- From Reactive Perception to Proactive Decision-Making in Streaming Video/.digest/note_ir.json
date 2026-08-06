@@ -1,0 +1,22 @@
+{
+  "title": "StreamPro: From Reactive Perception to Proactive Decision-Making in Streaming Video",
+  "arxiv": "https://arxiv.org/abs/2605.16381",
+  "date": "2026-05-11",
+  "date_checked": "2026-07-02",
+  "classification": "core_streaming_rl",
+  "unit": "AIM3 Lab, Renmin University of China; MiLM Plus, Xiaomi Inc.; Peking University",
+  "resources": {
+    "paper": "https://arxiv.org/abs/2605.16381",
+    "code": "not found",
+    "demo": "not found",
+    "model": "not found",
+    "data": "not found"
+  },
+  "workflow": {
+    "action_space": ["silence", "response"],
+    "sft": "CB-Stream Loss over streaming decision tokens",
+    "rl": "GRPO with format, turn-level F1, and trajectory-level rubric rewards",
+    "rollout_unit": "generated proactive streaming trajectory",
+    "runtime": "paper reports sliding-window inference rather than a dedicated memory or deployment stack"
+  }
+}

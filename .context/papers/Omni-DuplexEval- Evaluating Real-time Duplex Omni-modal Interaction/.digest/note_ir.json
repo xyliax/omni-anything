@@ -1,0 +1,727 @@
+{
+  "schema_version": 3,
+  "metadata": {
+    "title": "Omni-DuplexEval: Evaluating Real-time Duplex Omni-modal Interaction",
+    "summary": "Omni-DuplexEval turns real-time multimodal interaction into an evaluable benchmark by pairing continuous description and proactive reminder tasks with timestamp-aware judging, exposing that current duplex models still miss both sustained content coverage and response timing.",
+    "paper_type": "benchmark",
+    "venue": "arXiv preprint 2026",
+    "authors": "Chaoqun He, Mingyang Xiang, Yingjing Xu, Bokai Xu, Junbo Cui, Jie Zhou, Yuan Yao, Lijie Wen; Tsinghua University, Tongji University, ModelBest Inc.",
+    "keywords": [
+      "real-time duplex interaction",
+      "multimodal large language models",
+      "streaming video understanding",
+      "omni-modal interaction",
+      "LLM-as-a-Judge",
+      "temporal alignment"
+    ]
+  },
+  "quick_reference": [
+    {
+      "id": "qr_why_read",
+      "label": "Why Read",
+      "text": "Read this as a benchmark paper for multimodal large language models (MLLMs), where the missing evaluation gap is not final video understanding but whether a system can speak at the right moments while video and audio are still arriving.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E2",
+        "E15"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_one_sentence_contribution",
+      "label": "One-Sentence Contribution",
+      "text": "Omni-DuplexEval improves evaluation of real-time video-and-audio assistants by scoring open-ended streaming responses against both their content and their timestamps.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E1",
+        "E6"
+      ],
+      "children": []
+    },
+    {
+      "id": "qr_mental_model",
+      "label": "Mental Model",
+      "text": "Imagine judging a live tour guide: it is not enough that the guide eventually names everything correctly; each sentence must match what the viewer can see or hear at that moment, and reminders must fire when the requested event happens.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [],
+      "children": []
+    },
+    {
+      "id": "qr_best_evidence",
+      "label": "Best Evidence",
+      "text": "The strongest evidence is the benchmark run showing a large human-model gap, plus diagnostic metrics that separate local timing from global content coverage.",
+      "claim_kind": "paper_claim",
+      "evidence_ids": [
+        "E10",
+        "E11",
+        "E12"
+      ],
+      "children": [
+        {
+          "id": "qr_best_evidence_gap",
+          "label": "",
+          "text": "Supports C3: Omni-DuplexEval full benchmark; Human-Duplex as real-time human baseline; average score higher is better; MiniCPM-o 4.5 reaches 39.6 versus 81.8 for Human-Duplex; supported, but no variance or repeat count is reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_rtd_tradeoff",
+          "label": "",
+          "text": "Supports C4: Real-Time Description metric split; model content and temporal scores compared with human scores; MiniCPM-o 4.5 has 79.9 temporal sensitivity but 38.3 content consistency; supported as a diagnostic gap, with judge-dependence caveat.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E11"
+          ],
+          "children": []
+        },
+        {
+          "id": "qr_best_evidence_pr_errors",
+          "label": "",
+          "text": "Supports C3: Proactive Reminder error analysis; error types are No Answer, Partially Correct, and Wrong; MiniCPM-o 4.5 has 49.2% No Answer and MMDuet2 has 75.8% No Answer; supported, but the cause is inferred from their outputs rather than controlled intervention.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E12"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "qr_main_caveat",
+      "label": "Main Caveat",
+      "text": "The benchmark is most trustworthy as a short-interaction diagnostic: the paper itself limits claims about long-term conversation, judge bias, and breadth across real-time public systems.",
+      "claim_kind": "analyst_assessment",
+      "evidence_ids": [
+        "E14"
+      ],
+      "children": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "section": "Abstract",
+      "locator": "Abstract",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "we propose Omni-DuplexEval, a benchmark for systematically evaluating real-time duplex interaction. The benchmark consists of two complementary scenarios: (1) Real-Time Description ... and (2) Proactive Reminder",
+      "confidence": "high"
+    },
+    {
+      "id": "E2",
+      "section": "Introduction",
+      "locator": "Section 1, motivation",
+      "claim_type": "gap",
+      "evidence_type": "paper_statement",
+      "snippet": "most of existing models are designed for static images or offline video processing and must observe the entire video before producing a response. This offline setting differs fundamentally from real-world interaction",
+      "confidence": "high"
+    },
+    {
+      "id": "E3",
+      "section": "Omni-DuplexEval",
+      "locator": "Section 3.1.1, Real-Time Description",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Real-Time Description evaluates the ability to generate responses that follow evolving video content in real time. At the beginning of each sample, the model receives a user instruction that specifies a particular subject or aspect of interest",
+      "confidence": "high"
+    },
+    {
+      "id": "E4",
+      "section": "Omni-DuplexEval",
+      "locator": "Section 3.1.2, Proactive Reminder",
+      "claim_type": "method",
+      "evidence_type": "paper_statement",
+      "snippet": "Proactive Reminder evaluates the ability to identify relevant events and determine when to respond based on streaming video inputs. The model receives a user instruction that specifies a clear and well-defined event",
+      "confidence": "high"
+    },
+    {
+      "id": "E5",
+      "section": "Benchmark Construction",
+      "locator": "Section 3.2 and Figure 4",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "Omni-DuplexEval consists of 660 videos paired with human-curated question-answer annotations, spanning diverse domains such as education, entertainment, sports, and daily activities... All videos are under one minute in length, with an average duration of 34 seconds",
+      "confidence": "high"
+    },
+    {
+      "id": "E6",
+      "section": "Evaluation Pipeline",
+      "locator": "Section 3.3.1 and Figure 5",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "we adopt a two-dimensional evaluation framework consisting of Content Consistency and Temporal Sensitivity. Given a user query q and a model's streaming output S, each sentence is associated with a time interval",
+      "confidence": "high"
+    },
+    {
+      "id": "E7",
+      "section": "Evaluation Pipeline",
+      "locator": "Section 3.3.2 and Appendix A.3",
+      "claim_type": "algorithm",
+      "evidence_type": "implementation_detail",
+      "snippet": "During evaluation, we extract the model's responses within a fixed 10-second window following each event timestamp and assess them using an LLM-as-a-Judge framework... the model must correctly respond to all occurrences",
+      "confidence": "high"
+    },
+    {
+      "id": "E8",
+      "section": "Iterative Design and Human Alignment Analysis",
+      "locator": "Appendix B.3 and B.3.3",
+      "claim_type": "ablation",
+      "evidence_type": "ablation",
+      "snippet": "The final Spearman correlation between automatic evaluation and human judgments exceeds 0.9 for Content Consistency, and approaches 0.8 for Temporal Sensitivity, demonstrating strong alignment with human perception.",
+      "confidence": "medium"
+    },
+    {
+      "id": "E9",
+      "section": "Experiments",
+      "locator": "Section 4.1, Baselines",
+      "claim_type": "experiment_setup",
+      "evidence_type": "paper_statement",
+      "snippet": "we include LiveCC (Base/Instruct), MMDuet2, StreamingVLM, and MiniCPM-o 4.5. All experiments are conducted on a single NVIDIA A100 GPU. For each model, we follow its native duplex inference protocol",
+      "confidence": "high"
+    },
+    {
+      "id": "E10",
+      "section": "Main results",
+      "locator": "Table 2 and Section 4.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "current duplex models fall substantially short of human performance on Omni-DuplexEval, with the best model achieving 39.6 compared to 81.8 for Human-Duplex... performance is noticeably higher on Real-Time Description than on Proactive Reminder",
+      "confidence": "medium"
+    },
+    {
+      "id": "E11",
+      "section": "Main results",
+      "locator": "Table 3, Figure 6, Section 4.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "models achieve relatively strong performance in Temporal Sensitivity but consistently underperform in Content Consistency... they tend to generate sparse and intermittent responses, remaining silent for a large portion of the video",
+      "confidence": "medium"
+    },
+    {
+      "id": "E12",
+      "section": "Main results",
+      "locator": "Table 4, Section 4.2",
+      "claim_type": "result",
+      "evidence_type": "experiment_result",
+      "snippet": "MiniCPM-o 4.5 and MMDuet2 are dominated by No Answer cases... LiveCC and StreamingVLM mainly produce Wrong outputs... these models often generate continuous caption-like descriptions without following the instruction",
+      "confidence": "medium"
+    },
+    {
+      "id": "E13",
+      "section": "Experimental Settings",
+      "locator": "Appendix C.2",
+      "claim_type": "implementation",
+      "evidence_type": "implementation_detail",
+      "snippet": "All inference experiments are conducted on an internal cluster equipped with NVIDIA A100-SXM4 (80GB) GPUs. We employ a single NVIDIA A100 GPU per evaluation run.",
+      "confidence": "high"
+    },
+    {
+      "id": "E14",
+      "section": "Limitations",
+      "locator": "Appendix D",
+      "claim_type": "limitation",
+      "evidence_type": "limitation",
+      "snippet": "the current benchmark mainly focuses on relatively short streaming interactions and does not fully capture long-term conversational scenarios... our evaluation framework relies on LLM-as-a-Judge... the number of evaluated duplex models remains limited",
+      "confidence": "high"
+    },
+    {
+      "id": "E15",
+      "section": "Introduction",
+      "locator": "Table 1 and Section 2.2",
+      "claim_type": "prior_work",
+      "evidence_type": "paper_statement",
+      "snippet": "existing benchmarks do not comprehensively evaluate real-time duplex interaction-the ability to generate continuous responses while maintaining temporal alignment with evolving video streams. They largely focus on discrete question-answering",
+      "confidence": "high"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Orientation",
+      "items": [
+        {
+          "id": "orientation_background",
+          "label": "Background",
+          "text": "This paper sits in video-and-audio AI evaluation. A real-time assistant sees a stream bit by bit, so its answer is judged not only by what it says but by whether it says it while the relevant moment is happening.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_problem_plain_words",
+          "label": "The Problem in Plain Words",
+          "text": "A model can look smart after watching a full video, yet still be a poor live helper if it waits too long, talks at the wrong time, or misses the event the user asked about.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_why_hard",
+          "label": "Why It Is Hard",
+          "text": "The system must keep watching and listening, remember the user's goal, decide whether the current moment matters, and speak without having future context.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        },
+        {
+          "id": "orientation_key_idea",
+          "label": "Key Idea in One Breath",
+          "text": "Evaluate live behavior directly by checking both continuous descriptions and event-triggered reminders against the video timeline.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Argument Map",
+      "items": [
+        {
+          "id": "argument_problem_and_stakes",
+          "label": "Problem and Stakes",
+          "text": "The paper argues that offline video benchmarks miss real-time duplex interaction, meaning a model's ability to process evolving inputs while producing responses at appropriate moments. This matters because practical assistants must coordinate perception, user intent, and speaking time rather than answer after the full clip is known.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E2",
+            "E1"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_prior_gap",
+          "label": "Prior Gap",
+          "text": "Prior benchmarks cover offline video QA, streaming inputs, open-ended answers, or proactive event detection in pieces, but the paper claims they do not jointly test open-ended streaming response quality, proactiveness, and temporal alignment. The gap is therefore an evaluation gap, not a new model architecture gap.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_key_insight",
+          "label": "Key Insight",
+          "text": "The key insight is to split real-time duplex behavior into two observable patterns: continuous narration that must track a changing stream, and event-triggered reminders that must fire when the requested condition occurs. The evaluation then scores both semantic content and timing instead of treating a final answer as sufficient.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "argument_claims",
+          "label": "Claims",
+          "text": "The paper's claim chain is that a purpose-built benchmark can expose failures hidden by final-answer video evaluation and can diagnose whether failures come from content, timing, or event-triggering.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E1",
+            "E10"
+          ],
+          "children": [
+            {
+              "id": "C1",
+              "label": "",
+              "text": "C1: Omni-DuplexEval covers real-time duplex interaction through 660 open-ended video-and-audio samples, two scenarios, and nine sub-tasks with human timestamp annotations.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E5",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "C2",
+              "label": "",
+              "text": "C2: Its automatic evaluation can score both what the model says and when it says it by combining global content consistency, sentence-level temporal sensitivity, and event-window reminder judgment.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "C3",
+              "label": "",
+              "text": "C3: Current duplex multimodal models remain far below human real-time performance, especially on Proactive Reminder where deciding when to answer is the dominant failure.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E12"
+              ],
+              "children": []
+            },
+            {
+              "id": "C4",
+              "label": "",
+              "text": "C4: In Real-Time Description, models show a timeliness-coverage tradeoff: locally timed sentences can still be too sparse to preserve coherent, holistic video understanding.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Mechanism and Design",
+      "items": [
+        {
+          "id": "mechanism_core",
+          "label": "Core Mechanism",
+          "text": "Omni-DuplexEval defines two task families: Real-Time Description (RTD), where the model continuously describes a requested aspect of a changing video, and Proactive Reminder (PR), where the model waits for a specified event or correction opportunity before responding. This makes the benchmark test both always-on tracking and trigger-based decision making.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_data_control_flow",
+          "label": "Data / Control Flow",
+          "text": "A sample starts with a user instruction, then the model receives streaming visual and audio input and emits timestamped text. RTD sends each sentence into content and timing judges, while PR extracts model text in a fixed window after each annotated event and judges whether the reminder or correction succeeded.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7"
+          ],
+          "children": []
+        },
+        {
+          "id": "mechanism_design_decisions",
+          "label": "Design Decisions",
+          "text": "The design choices mostly convert qualitative live interaction into bounded, judgeable units: task taxonomy, human timestamp annotations, sentence-level timing, and strict event success. These choices make the benchmark practical, but they also bind it to short clips and to the reliability of judge prompts.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E6",
+            "E7",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "mechanism_decision_open_ended",
+              "label": "",
+              "text": "Need: final-answer multiple choice hides timing and free-form response quality; choice: use open-ended questions with human-curated timestamp annotations; closest alternative: offline or discrete QA benchmarks; tradeoff: richer behavior but harder automatic judging.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E5",
+                "E15"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_two_scenarios",
+              "label": "",
+              "text": "Need: live systems alternate between narration and waiting; choice: split RTD from PR; closest alternative: one generic streaming QA task; tradeoff: clearer diagnosis, but only these two interaction patterns are covered.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E3",
+                "E4"
+              ],
+              "children": []
+            },
+            {
+              "id": "mechanism_decision_temporal_tolerance",
+              "label": "",
+              "text": "Need: a good live answer may lag perception slightly; choice: Temporal Sensitivity, a metric for whether a sentence matches its local time window, uses multiple shifted candidate windows and takes the best judge score; tradeoff: tolerant to small latency but dependent on window design.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E8"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "mechanism_implementation_surface",
+          "label": "Implementation Surface",
+          "text": "The paper reports a project URL, native duplex inference protocols for evaluated models, and single-GPU evaluation on NVIDIA A100 hardware; it also gives model-specific streaming details such as chunked audio/video processing and key-value cache (KV cache), the saved attention state reused across turns. The implementation surface is enough to understand benchmark operation, but judge-service versions, seeds, and end-to-end scripts are not fully specified in the text.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E13",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Evaluation and Evidence",
+      "items": [
+        {
+          "id": "evaluation_setup",
+          "label": "Setup",
+          "text": "The experiments evaluate four streaming or duplex multimodal baselines, LiveCC, StreamingVLM, MMDuet2, and MiniCPM-o 4.5, using each model's native real-time inference protocol on one NVIDIA A100 GPU. Human-Duplex and Human-Offline provide real-time and offline human reference points rather than trained model baselines.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E9",
+            "E13"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_claim_matrix",
+          "label": "Claim-Evidence Matrix",
+          "text": "The evidence is strongest for benchmark construction and diagnostic failure patterns, and weaker for broad generalization because the model set is small and the evaluation is judge-based.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E8",
+            "E10",
+            "E14"
+          ],
+          "children": [
+            {
+              "id": "evaluation_matrix_c1",
+              "label": "",
+              "text": "Supports C1: the dataset includes 660 short videos, two scenarios, nine sub-tasks, open-ended questions, and human-curated temporal annotations.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E1",
+                "E5"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c2",
+              "label": "",
+              "text": "Supports C2: the paper defines content, timing, and event-window judges, then calibrates Content Consistency above 0.9 Spearman correlation, a rank-correlation measure, and Temporal Sensitivity near 0.8.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E6",
+                "E7",
+                "E8"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_matrix_c3_c4",
+              "label": "",
+              "text": "Supports C3 and C4: Table 2 shows the overall human-model gap, Table 3 separates temporal and content scores, and Table 4 attributes PR failures to no-answer or wrong-answer modes.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10",
+                "E11",
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_headline_results",
+          "label": "Headline Results",
+          "text": "MiniCPM-o 4.5 is the best model overall at 39.6, still far below Human-Duplex at 81.8, and its PR average is only 20.0 despite stronger RTD performance. The reported results support the paper's central diagnosis, but they lack uncertainty intervals or repeated-run statistics.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E10",
+            "E11",
+            "E12"
+          ],
+          "children": [
+            {
+              "id": "evaluation_result_overall_gap",
+              "label": "",
+              "text": "C3 result: full benchmark; baseline Human-Duplex; score higher is better; MiniCPM-o 4.5 gets 39.6 versus 81.8; no uncertainty reported.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E10"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_rtd_split",
+              "label": "",
+              "text": "C4 result: RTD metric split; MiniCPM-o 4.5 gets 79.9 Temporal Sensitivity but 38.3 Content Consistency, while MMDuet2 gets 79.2 and 37.6; timing can look good while global content remains weak.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E11"
+              ],
+              "children": []
+            },
+            {
+              "id": "evaluation_result_pr_errors",
+              "label": "",
+              "text": "C3 result: PR error table; MMDuet2 has 75.8% No Answer and MiniCPM-o 4.5 has 49.2% No Answer, while LiveCC and StreamingVLM are dominated by Wrong outputs; support for event-triggering weakness.",
+              "claim_kind": "paper_claim",
+              "evidence_ids": [
+                "E12"
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "evaluation_ablations_sensitivity",
+          "label": "Ablations and Sensitivity",
+          "text": "The paper reports evaluator-design sensitivity rather than model ablations: Content Consistency works best with two ground-truth references and low frame sampling, while Temporal Sensitivity improves through four-window sampling, sentence-level units, refined prompts, and an irrelevant-sentence penalty. Not applicable: no controlled ablation of model architectures or training choices is reported.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "evaluation_repro_gaps",
+          "label": "Reproducibility Gaps",
+          "text": "The paper gives a project URL, baseline identities, hardware class, and several inference settings, but the text does not fully report seeds, repeated runs, judge model version stability, dataset access details, or scripts sufficient to reproduce every number from the paper alone. The scarcity of public real-time multimodal systems also narrows the external validity of the benchmark comparison.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E9",
+            "E13",
+            "E14"
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "title": "Technical Judgment",
+      "items": [
+        {
+          "id": "judgment_holds_up",
+          "label": "What Holds Up",
+          "text": "The most durable contribution is the decomposition of live multimodal behavior into timestamped units that can be audited separately for global content, local timing, and event-trigger success. The benchmark construction and judge calibration make the paper more useful than a single aggregate leaderboard, even though the judge remains an imperfect proxy.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E5",
+            "E6",
+            "E7",
+            "E8"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_where_fail",
+          "label": "Where It May Fail",
+          "text": "The conclusions may weaken for longer conversations, memory-heavy tasks, richer interaction styles, or deployments where automatic judge bias matters more than benchmark comparability. Model rankings are also fragile because the evaluated public duplex model set is small and no statistical uncertainty is reported.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E10",
+            "E14"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_relation",
+          "label": "Relation to Other Work",
+          "text": "Against offline video benchmarks, Omni-DuplexEval adds streaming and temporal alignment; against streaming QA benchmarks, it emphasizes open-ended continuous output; against proactive video benchmarks, it adds fine-grained response timing and content checking. The paper positions itself as a unifying evaluation surface rather than as a replacement for long-video comprehension, hallucination, or spoken-dialogue turn-taking benchmarks.",
+          "claim_kind": "paper_claim",
+          "evidence_ids": [
+            "E15",
+            "E2"
+          ],
+          "children": []
+        },
+        {
+          "id": "judgment_transferable_lesson",
+          "label": "Transferable Lesson",
+          "text": "For real-time AI systems, evaluate behavior as a time-indexed policy rather than a final answer: attach timestamps to outputs, score local timing and global content separately, and make event-triggered tasks require all target events to be handled. This pattern transfers to live assistants, robotics narration, monitoring alerts, and interactive accessibility tools.",
+          "claim_kind": "analyst_assessment",
+          "evidence_ids": [
+            "E6",
+            "E7"
+          ],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "id": "g_multimodal_large_language_model",
+      "term": "Multimodal Large Language Model",
+      "aliases": [
+        "MLLM"
+      ],
+      "note": "A language-model-centered system that can process non-text inputs such as images, video, and audio alongside text."
+    },
+    {
+      "id": "g_real_time_duplex_interaction",
+      "term": "real-time duplex interaction",
+      "aliases": [
+        "duplex interaction",
+        "full-duplex interaction"
+      ],
+      "note": "Interaction where the model keeps receiving streaming inputs and can respond during the stream instead of after all input is complete."
+    },
+    {
+      "id": "g_omni_modal",
+      "term": "omni-modal",
+      "aliases": [
+        "omnimodal"
+      ],
+      "note": "A model or task setting that combines multiple modalities, especially visual and audio signals in this paper."
+    },
+    {
+      "id": "g_real_time_description",
+      "term": "Real-Time Description",
+      "aliases": [
+        "RTD"
+      ],
+      "note": "The benchmark scenario where the model continuously describes a requested aspect of a changing video as it unfolds."
+    },
+    {
+      "id": "g_proactive_reminder",
+      "term": "Proactive Reminder",
+      "aliases": [
+        "PR"
+      ],
+      "note": "The benchmark scenario where the model monitors the stream and responds only when a user-specified event or correction condition is met."
+    },
+    {
+      "id": "g_content_consistency",
+      "term": "Content Consistency",
+      "aliases": [
+        "Score_content"
+      ],
+      "note": "A global semantic correctness score for whether the model's response matches the instruction and the video-audio content."
+    },
+    {
+      "id": "g_temporal_sensitivity",
+      "term": "Temporal Sensitivity",
+      "aliases": [
+        "Score_temporal"
+      ],
+      "note": "A timing score for whether each substantive sentence matches the video-audio segment around its timestamp."
+    },
+    {
+      "id": "g_llm_as_judge",
+      "term": "LLM-as-a-Judge",
+      "aliases": [
+        "LLM judge"
+      ],
+      "note": "An evaluation method where a large language model scores or classifies another model's output using a prompt and reference context."
+    },
+    {
+      "id": "g_event_window",
+      "term": "event window",
+      "aliases": [
+        "10-second window"
+      ],
+      "note": "For Proactive Reminder, the fixed time span after an annotated event during which model output is collected for judging."
+    },
+    {
+      "id": "g_spearman_correlation",
+      "term": "Spearman correlation",
+      "aliases": [
+        "Spearman rank correlation"
+      ],
+      "note": "A rank-based agreement measure used here to compare automatic judge scores with human judgments."
+    }
+  ]
+}
