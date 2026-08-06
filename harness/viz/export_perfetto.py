@@ -59,11 +59,21 @@ def export(tag: str) -> str:
     for k, t in enumerate(bundle.get("evictions") or []):
         ev.append(dict(ph="i", s="p", pid=3, tid=1, ts=us(t), name=f"EVICTION #{k+1}"))
 
+    # ms-accurate concurrency from the scheduler trace itself (statlog's 1Hz run=
+    # samples alias the 21ms-scale batch dynamics — proven earlier, don't ship them)
+    if steps:
+        for i, (t, ents) in enumerate(steps):
+            ev.append(dict(ph="C", pid=1, ts=us(t), name="batch (concurrent sessions)",
+                           args=dict(n=len(ents))))
+            nxt = steps[i + 1][0] if i + 1 < len(steps) else None
+            if nxt is None or nxt - t > 0.5:      # inter-tick gap or end: concurrency -> 0
+                ev.append(dict(ph="C", pid=1, ts=us(t + 0.021),
+                               name="batch (concurrent sessions)", args=dict(n=0)))
     for t, kv, run, wait, pre in bundle.get("kv") or []:
         ev.append(dict(ph="C", pid=3, ts=us(t), name="KV pool %",
                        args=dict(pct=round(kv * 100, 1))))
-        ev.append(dict(ph="C", pid=3, ts=us(t), name="requests",
-                       args=dict(run=run, wait=wait)))
+        ev.append(dict(ph="C", pid=3, ts=us(t), name="wait queue (1Hz statlog; excludes skipped_waiting)",
+                       args=dict(wait=wait)))
         ev.append(dict(ph="C", pid=3, ts=us(t), name="evictions (cum)",
                        args=dict(n=pre)))
     for t, u in bundle.get("smi") or []:
