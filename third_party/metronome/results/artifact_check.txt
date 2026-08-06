@@ -1,0 +1,13 @@
+=== ARTIFACT CHECK: fresh single-N vanilla vs the contaminated 90s sweep ===
+[fresh vanilla N=128/120s]:
+  OVERALL: ticks=7680 lat p50=4 p90=6 p99=333ms miss=0.00% TTFA p50=343ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 333ms -> last-bucket p99 5ms (drift -328ms) STABLE
+[fresh vanilla N=160/90s]:
+  OVERALL: ticks=7200 lat p50=5 p90=8 p99=394ms miss=0.00% TTFA p50=411ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 394ms -> last-bucket p99 7ms (drift -387ms) STABLE
+
+FRESH single-N vanilla is FLAT to N=160/120s (p50 4-6ms, stable). The earlier hl_vanilla SWEEP
+(N=64,96,128,160 sequential on ONE worker, concurrent with an external GPU job) reported
+1601/1602ms at N=128/160 -- a CONTAMINATION artifact, NOT pure burst capacity.
+The REAL differentiator is LONG-DURATION context growth: fresh N=96/300s genuinely drifts to
+1601ms (unbounded KV); in-engine SWA stays flat 1-2ms. That clean result stands.

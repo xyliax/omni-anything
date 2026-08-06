@@ -1,0 +1,18 @@
+{
+  "model": "qwen3-omni",
+  "capacity": 96,
+  "admission": {
+    "mode": "admission",
+    "offered": 2.0,
+    "miss_rate": 0.0,
+    "blocking": 0.42091616248919617,
+    "mean_active": 96.0
+  },
+  "greedy": {
+    "mode": "greedy",
+    "offered": 2.0,
+    "miss_rate": 0.9192425361325034,
+    "blocking": 0.0,
+    "mean_active": 198.0
+  }
+}

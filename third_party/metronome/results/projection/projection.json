@@ -1,0 +1,17 @@
+{
+  "measured_bandwidth_gibs": 742.9,
+  "kv_bytes_per_token_gqa": 327680,
+  "kv_bytes_per_token_mla": 40960,
+  "kv_full_context_gib_gqa": 305.2,
+  "kv_full_context_gib_mla": 38.1,
+  "single_session_exceeds_80GB_gpu": true,
+  "weights_fp8_gib": 276.0,
+  "fill_time_hours": 3.75,
+  "dense_attn_read_ms_full_gqa": 410.8,
+  "dense_attn_read_ms_full_mla": 51.3,
+  "sparse_attn_read_ms_window_gqa": 1.683,
+  "tick_budget_ms": 200.0,
+  "dense_blows_budget": true,
+  "feasible_dense_context_tokens": 486893,
+  "feasible_dense_context_vs_ceiling": 0.4869
+}

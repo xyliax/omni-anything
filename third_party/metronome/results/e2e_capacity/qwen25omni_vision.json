@@ -1,0 +1,77 @@
+{
+ "uri": "ws://127.0.0.1:8904",
+ "mode": "vision",
+ "budget_ms": 2000.0,
+ "img_px": 448,
+ "q_audio_s": 3.0,
+ "slo": 0.05,
+ "ttfa_slo_ms": 4000.0,
+ "max_concurrency": 512,
+ "rows": [
+  {
+   "N": 64,
+   "mode": "vision",
+   "ttfa_p50": 1489.45951461792,
+   "ttfa_p90": 2281.2474727630615,
+   "ttfa_p99": 2509.871745109558,
+   "miss_rate": 0.0,
+   "ticks": 236,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 128,
+   "feasible": true
+  },
+  {
+   "N": 128,
+   "mode": "vision",
+   "ttfa_p50": 1508.6262226104736,
+   "ttfa_p90": 2306.8432807922363,
+   "ttfa_p99": 2485.2947473526,
+   "miss_rate": 0.0,
+   "ticks": 490,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 256,
+   "feasible": true
+  },
+  {
+   "N": 256,
+   "mode": "vision",
+   "ttfa_p50": 1747.4725246429443,
+   "ttfa_p90": 2538.882613182068,
+   "ttfa_p99": 2748.5784935951233,
+   "miss_rate": 0.0,
+   "ticks": 1087,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 512,
+   "feasible": true
+  },
+  {
+   "N": 384,
+   "mode": "vision",
+   "ttfa_p50": 2050.7900714874268,
+   "ttfa_p90": 2850.543212890625,
+   "ttfa_p99": 3031.80287361145,
+   "miss_rate": 0.0,
+   "ticks": 1788,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 768,
+   "feasible": true
+  },
+  {
+   "N": 512,
+   "mode": "vision",
+   "ttfa_p50": 2437.527060508728,
+   "ttfa_p90": 3234.8249197006226,
+   "ttfa_p99": 3999.957962036133,
+   "miss_rate": 0.0,
+   "ticks": 2547,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 1024,
+   "feasible": true
+  }
+ ]
+}

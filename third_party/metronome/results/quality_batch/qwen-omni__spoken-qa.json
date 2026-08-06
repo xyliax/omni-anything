@@ -1,0 +1,51 @@
+{
+  "model": "qwen-omni",
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "n": 128,
+  "direct_score": 0.7188,
+  "by_batch": [
+    {
+      "batch": 1,
+      "score": 0.7188,
+      "flips": 0,
+      "flip_rate": 0.0
+    },
+    {
+      "batch": 4,
+      "score": 0.7188,
+      "flips": 0,
+      "flip_rate": 0.0
+    },
+    {
+      "batch": 8,
+      "score": 0.7266,
+      "flips": 3,
+      "flip_rate": 0.0234
+    },
+    {
+      "batch": 16,
+      "score": 0.7188,
+      "flips": 2,
+      "flip_rate": 0.0156
+    },
+    {
+      "batch": 32,
+      "score": 0.7266,
+      "flips": 3,
+      "flip_rate": 0.0234
+    },
+    {
+      "batch": 64,
+      "score": 0.7266,
+      "flips": 1,
+      "flip_rate": 0.0078
+    },
+    {
+      "batch": 128,
+      "score": 0.7188,
+      "flips": 0,
+      "flip_rate": 0.0
+    }
+  ]
+}

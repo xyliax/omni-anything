@@ -1,0 +1,21 @@
+{
+  "model": "qwen-omni",
+  "task": "vqa",
+  "dataset": "mmstar",
+  "n": 200,
+  "batch": 12,
+  "score_direct": 0.635,
+  "score_served_solo": 0.64,
+  "score_served_batched": 0.635,
+  "delta_batched_minus_direct": 0.0,
+  "delta_95ci": [
+    0.0,
+    0.0
+  ],
+  "flip_rate_solo": 0.005,
+  "flip_count_solo": 1,
+  "flip_rate_batched": 0.0,
+  "flip_count_batched": 0,
+  "token_agree_direct_vs_solo": 0.995,
+  "token_agree_solo_vs_batched": 0.995
+}

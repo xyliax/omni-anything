@@ -1,0 +1,14 @@
+{
+  "model": "Qwen/Qwen2.5-Omni-7B",
+  "n": 1500,
+  "accuracy": 0.4227,
+  "unparseable": 450,
+  "by_category": {
+    "coarse perception": 0.716,
+    "fine-grained perception": 0.512,
+    "instance reasoning": 0.62,
+    "logical reasoning": 0.304,
+    "math": 0.072,
+    "science & technology": 0.312
+  }
+}

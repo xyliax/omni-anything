@@ -1,0 +1,27 @@
+{
+  "contiguous": {
+    "blocking": 0.1325,
+    "util": 0.9245045389738348
+  },
+  "paged": [
+    {
+      "block_tokens": 16,
+      "blocking": 0.07925,
+      "util": 0.9998901340364755,
+      "frag_overhead": 0.4592613250347827
+    },
+    {
+      "block_tokens": 64,
+      "blocking": 0.07575,
+      "util": 1.0,
+      "frag_overhead": 0.46064781142590583
+    },
+    {
+      "block_tokens": 256,
+      "blocking": 0.07475,
+      "util": 1.0,
+      "frag_overhead": 0.44865986690432713
+    }
+  ],
+  "frag_reduction": 0.053
+}

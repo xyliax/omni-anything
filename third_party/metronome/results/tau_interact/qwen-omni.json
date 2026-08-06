@@ -1,0 +1,293 @@
+{
+  "benchmark": "tau-interact-mm",
+  "agent_model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "usersim_model": "Qwen/Qwen3-1.7B",
+  "n_tasks": 8,
+  "success_rate": 0.875,
+  "mean_turn_latency_s": 1.29,
+  "deadline_met_rate": 0.849,
+  "via": "realtime-api",
+  "tasks": [
+    {
+      "id": "stopsign-identify",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: Can you tell me what this traffic sign means?",
+        "Assistant: The traffic sign means \"STOP.\"",
+        "User: Can you tell me what this traffic sign means?",
+        "Assistant: The traffic sign means \"STOP.\"",
+        "User: This traffic sign means 'STOP.'",
+        "Assistant: The traffic sign means \"STOP.\""
+      ],
+      "rt": [
+        {
+          "latency_s": 0.91,
+          "ticks": 2,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.59,
+          "ticks": 2,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.58,
+          "ticks": 2,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "stopsign-color-shape",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: What color is the sign in the picture and what shape is it?",
+        "Assistant: The sign in the picture is red and octagonal.",
+        "User: Is the sign in the picture visible?",
+        "Assistant: Yes, the sign in the picture is visible.",
+        "User: I think I understand. The sign is red and octagonal, and it's visible.",
+        "Assistant: Yes, the sign in the picture is visible."
+      ],
+      "rt": [
+        {
+          "latency_s": 0.5,
+          "ticks": 3,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.7,
+          "ticks": 3,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.71,
+          "ticks": 3,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "stopsign-action",
+      "image": "stop_sign",
+      "success": false,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        false
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: What should I do when I reach this sign?",
+        "Assistant: Stop.",
+        "User: Do I need to slow down before stopping?",
+        "Assistant: You need to slow down before stopping.",
+        "User: Yes, I should slow down before stopping.",
+        "Assistant: Yes, you should slow down before stopping."
+      ],
+      "rt": [
+        {
+          "latency_s": 0.28,
+          "ticks": 1,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.7,
+          "ticks": 3,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.71,
+          "ticks": 3,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "stopsign-scene",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: Can you describe the scene in this photo for me?",
+        "Assistant: The photo shows a street scene with a prominent red stop sign in the foreground. Behind the stop sign, there is a large, ornate gate with Chinese architectural elements, including red pillars and decorative details. The gate has Chinese characters on it, indicating it might be an entrance to a cultural or commercial area. There are",
+        "User: The photo shows a street scene with a prominent red stop sign in the foreground. Behind the stop sign, there is a large, ornate gate with Chinese architectural elements, including red pillars and decorative details. The gate has Chinese characters on it, indicating it might be an entrance to a cultural or commercial area. There are",
+        "Assistant: a few people walking on the sidewalk and a black car parked on the street. The area appears to be a mix of commercial and cultural elements, with various signs and storefronts visible in the background.",
+        "User: I see, the photo also shows a few people walking on the sidewalk and a black car parked on the street. The area appears to be a mix of commercial and cultural elements, with various signs and storefronts visible in the background.",
+        "Assistant: Recent context: User: The photo shows a street scene with a prominent red stop sign in the foreground. Behind the stop sign, there is a large, ornate gate with Chinese architectural elements, including red pillars and decorative details. The gate has Chinese characters on it, indicating it might be an entrance to a cultural or"
+      ],
+      "rt": [
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 2.4,
+          "ticks": 11,
+          "missed": 1
+        },
+        {
+          "latency_s": 3.38,
+          "ticks": 16,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "blossom-identify",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: I saw a photo of flowering trees. What kind of blossoms are these and when do they bloom?",
+        "Assistant: The blossoms in the photo are cherry blossoms, which typically bloom in spring, around March to early April in temperate regions.",
+        "User: The blossoms are cherry blossoms, and they bloom in spring, around March to early April.",
+        "Assistant: The blossoms in the photo are cherry blossoms, which typically bloom in spring, around March to early April in temperate regions."
+      ],
+      "rt": [
+        {
+          "latency_s": 1.66,
+          "ticks": 7,
+          "missed": 1
+        },
+        {
+          "latency_s": 1.41,
+          "ticks": 7,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "blossom-color",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: Can you describe the dominant color of the blossoms in the image?",
+        "Assistant: The dominant color of the blossoms in the image is pink.",
+        "User: Yes, the dominant color is pink.",
+        "Assistant: The dominant color of the blossoms in the image is pink."
+      ],
+      "rt": [
+        {
+          "latency_s": 0.71,
+          "ticks": 4,
+          "missed": 1
+        },
+        {
+          "latency_s": 0.9,
+          "ticks": 4,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "blossom-season",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: What season do these trees bloom in?",
+        "Assistant: The trees are in bloom, which typically indicates spring.",
+        "User: Can you tell me more about the specific trees? I want to know if they're blooming in spring or another season.",
+        "Assistant: The trees in the image are blooming with pink flowers, which is characteristic of spring.",
+        "User: I can see the pink flowers, which are common in spring. Are they blooming in spring or another season?",
+        "Assistant: The trees in the image are blooming with pink flowers, which is characteristic of spring."
+      ],
+      "rt": [
+        {
+          "latency_s": 0.52,
+          "ticks": 3,
+          "missed": 1
+        },
+        {
+          "latency_s": 1.12,
+          "ticks": 5,
+          "missed": 1
+        },
+        {
+          "latency_s": 1.01,
+          "ticks": 5,
+          "missed": 1
+        }
+      ]
+    },
+    {
+      "id": "blossom-describe",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: Can you describe what is in the picture?",
+        "Assistant: The image shows a view of a tall tower, likely a communication or observation tower, framed by blooming cherry blossom branches. The sky is clear and blue, and the cherry blossoms are in full bloom, creating a beautiful contrast with the tower.",
+        "User: The image shows a view of a tall tower, likely a communication or observation tower, framed by blooming cherry blossom branches. The sky is clear and blue, and the cherry blossoms are in full bloom, creating a beautiful contrast with the tower.",
+        "Assistant: The image shows a view of a tall tower, likely a communication or observation tower, framed by blooming cherry blossom branches. The sky is clear and blue, and the cherry blossoms are in full bloom, creating a beautiful contrast with the tower."
+      ],
+      "rt": [
+        {
+          "latency_s": 2.5,
+          "ticks": 13,
+          "missed": 1
+        },
+        {
+          "latency_s": 2.78,
+          "ticks": 13,
+          "missed": 1
+        }
+      ]
+    }
+  ]
+}

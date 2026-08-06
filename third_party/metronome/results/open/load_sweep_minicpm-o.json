@@ -1,0 +1,119 @@
+{
+  "model": "minicpm-o",
+  "capacity": 96,
+  "seeds": 4,
+  "curve": {
+    "0.5": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "0.75": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.0": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.25": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.5": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.75": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "2.0": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,574 @@
+{
+  "task": "vqa",
+  "dataset": "mmstar",
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "n": 40,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "accuracy",
+  "score": 0.325,
+  "wall_s": 10.6,
+  "traces": [
+    {
+      "question": "Which option describe the object relationship in the image correctly?\nOptions: A",
+      "gold": [
+        "A"
+      ],
+      "pred": "A",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.48,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the main feature in the background of the image?\nOptions: A: A park benc",
+      "gold": [
+        "B"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.32,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What seems to be the theme of the image?\nOptions: A: Hanging Posters, B: Music, ",
+      "gold": [
+        "D"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.14,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the most prominent feature in the image?\nOptions: A: The skyline, B: The",
+      "gold": [
+        "C"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.16,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the center of focus in the image?\nOptions: A: A man writing in a book, B",
+      "gold": [
+        "A"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.17,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main subject of the flyer seen in the image?\nOptions: A: Hair produc",
+      "gold": [
+        "D"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.34,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall theme of the image?\nOptions: A: A woman in different polka d",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.33,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the primary subject in this image?\nOptions: A: a guitar, B: a man on sta",
+      "gold": [
+        "D"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.33,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall theme of the image?\nOptions: A: A businessman with a unique ",
+      "gold": [
+        "B"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What feeling is represented in this image?\nOptions: A: engaged, B: distressed, C",
+      "gold": [
+        "D"
+      ],
+      "pred": "D",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.17,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What time of day is it in the image?\nOptions: A: Noon, B: Evening, C: Night, D: ",
+      "gold": [
+        "D"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the dominant feature in the image?\nOptions: A: The bridge, B: The lake, ",
+      "gold": [
+        "D"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main focus of this image?\nOptions: A: The grassy hill, B: The sculpt",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.14,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "Which mood does this image convey?\nOptions: A: Sad, B: Cozy, C: Happy, D: Angry\n",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.36,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main subject of the image?\nOptions: A: Sky, B: Water, C: Sun, D: Clo",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.14,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What object dominates the image in the foreground?\nOptions: A: A rocky and grass",
+      "gold": [
+        "C"
+      ],
+      "pred": "C",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.33,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What feeling is shown in this image?\nOptions: A: engaged, B: distressed, C: angr",
+      "gold": [
+        "A"
+      ],
+      "pred": "A",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.18,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall theme of the image?\nOptions: A: Beach vacation, B: Athletic ",
+      "gold": [
+        "C"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.12,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What emotion is illustrated in this image?\nOptions: A: love, B: anger, C: happy,",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.19,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "<image 1> Which of the following is the most accurate statement of the cartoonis",
+      "gold": [
+        "B"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.48,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the primary focus of the image?\nOptions: A: A woman riding a horse on a ",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.27,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall theme of this image?\nOptions: A: Sports, B: Sunset, C: Natur",
+      "gold": [
+        "B"
+      ],
+      "pred": "A",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main color scheme of the image?\nOptions: A: Shades of blue and green",
+      "gold": [
+        "C"
+      ],
+      "pred": "A",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall mood of the image?\nOptions: A: Neutral, B: Somber, C: Tense,",
+      "gold": [
+        "A"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.33,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "Which action is performed in this image?\nOptions: A: marching, B: playing cymbal",
+      "gold": [
+        "C"
+      ],
+      "pred": "C",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the weather like in the image?\nOptions: A: Snowy, B: Cloudy, C: Rainy, D",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.18,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main focus of the image?\nOptions: A: the woman's phone, B: the woman",
+      "gold": [
+        "B"
+      ],
+      "pred": "A",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.17,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is happening in the image?\nOptions: A: A group of men are playing soccer on",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.35,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the primary activity depicted in the image?\nOptions: A: A crane lifting ",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.34,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the main purpose of this garden?\nOptions: A: A venue for outdoor events,",
+      "gold": [
+        "A"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.13,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the prominent feature of the setting in the image?\nOptions: A: A bright ",
+      "gold": [
+        "A"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.17,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "Which of the following words best describes the theme of this image?\nOptions: A:",
+      "gold": [
+        "A"
+      ],
+      "pred": "A",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the predominant feature in the image?\nOptions: A: Cars, B: People, C: Bu",
+      "gold": [
+        "D"
+      ],
+      "pred": "C",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.14,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What kind of environment is depicted in the image?\nOptions: A: A historical site",
+      "gold": [
+        "A"
+      ],
+      "pred": "D",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.16,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the dominant color in the image?\nOptions: A: Red, B: Blue, C: Green, D: ",
+      "gold": [
+        "D"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the dominant color in the image?\nOptions: A: White, B: Blue, C: Brown, D",
+      "gold": [
+        "A"
+      ],
+      "pred": "B",
+      "ok": false,
+      "audio_s": 0,
+      "latency_s": 0.14,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the overall scene depicted in this image?\nOptions: A: A group of people ",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.18,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the predominant color in this image?\nOptions: A: Blue, B: White, C: Brow",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "Which of the following best describes the view from the deck?\nOptions: A: A view",
+      "gold": [
+        "A"
+      ],
+      "pred": "A",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "What is the subject of the image?\nOptions: A: A person on stage playing guitar, ",
+      "gold": [
+        "B"
+      ],
+      "pred": "B",
+      "ok": true,
+      "audio_s": 0,
+      "latency_s": 0.15,
+      "rtf": null,
+      "ticks": 1,
+      "missed": 0,
+      "error": null
+    }
+  ]
+}

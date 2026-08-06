@@ -1,0 +1,71 @@
+{
+  "moshi": {
+    "model": "moshi",
+    "n_worst_case": 136,
+    "n_age_aware": 160,
+    "fill_to_budget_s": 40.96,
+    "scenarios": {
+      "worst-case (N=136)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      },
+      "age-aware no-degr (N=160)": {
+        "peak_miss": 0.0375,
+        "recovery_s": 24.72,
+        "final_miss": 0.037500000000000006
+      },
+      "age-aware +degr (N=160)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      }
+    }
+  },
+  "minicpm-o": {
+    "model": "minicpm-o",
+    "n_worst_case": 71,
+    "n_age_aware": 71,
+    "fill_to_budget_s": 128.0,
+    "scenarios": {
+      "worst-case (N=71)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      },
+      "age-aware no-degr (N=71)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      },
+      "age-aware +degr (N=71)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      }
+    }
+  },
+  "qwen3-omni": {
+    "model": "qwen3-omni",
+    "n_worst_case": 158,
+    "n_age_aware": 199,
+    "fill_to_budget_s": 16.384,
+    "scenarios": {
+      "worst-case (N=158)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      },
+      "age-aware no-degr (N=199)": {
+        "peak_miss": 0.11055276381909548,
+        "recovery_s": 63.6,
+        "final_miss": 0.11055276381909548
+      },
+      "age-aware +degr (N=199)": {
+        "peak_miss": 0.0,
+        "recovery_s": 0.0,
+        "final_miss": 0.0
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "model": "moshi",
+  "self_windowing": false,
+  "rows": [
+    {
+      "budget": 256,
+      "frac": 0.062,
+      "timing_onset": 192,
+      "mem_cap": 640,
+      "capacity": 192
+    },
+    {
+      "budget": 512,
+      "frac": 0.125,
+      "timing_onset": 160,
+      "mem_cap": 320,
+      "capacity": 160
+    },
+    {
+      "budget": 1024,
+      "frac": 0.25,
+      "timing_onset": 64,
+      "mem_cap": 160,
+      "capacity": 64
+    },
+    {
+      "budget": 2048,
+      "frac": 0.5,
+      "timing_onset": 48,
+      "mem_cap": 80,
+      "capacity": 48
+    },
+    {
+      "budget": 4096,
+      "frac": 1.0,
+      "timing_onset": 16,
+      "mem_cap": 40,
+      "capacity": 16
+    }
+  ],
+  "full_capacity": 16,
+  "small_capacity": 192,
+  "kv_budget_gain": 12.0,
+  "classification": "essential"
+}

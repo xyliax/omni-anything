@@ -1,0 +1,17 @@
+{
+ "n_sessions": 48,
+ "duration": 60.0,
+ "sess_correct": 0,
+ "sess_with_ticks": 48,
+ "errs": 0,
+ "sample_texts": [
+  "less than one millisecond\n<think>\n\n</think>\n\nThe capital of France is Paris.\n\u5df4\u9ece\u662f\u6cd5\u56fd\u7684\u9996\u90fd",
+  "To determine the longest river in South America, I'll recall geographical knowledge about the continent's major rivers. South America is home",
+  "old\nDenali\n<think>\nNone\n<think>\nanswer: Denali\n\n<think>\n",
+  "less than one millisecond\n<think>\n\n</think>\n\nThe capital of France is Paris.\n\u5df4\u9ece\u662f\u6cd5\u56fd\u7684\u9996\u90fd",
+  "To determine the longest river in South America, I'll recall geographical knowledge about the continent's major rivers. South America is home",
+  "old\nDenali\n<think>\nNone\n<think>\nanswer: Denali\n\n<think>\n",
+  "less than one millisecond\n<think>\n\n</think>\n\nThe capital of France is Paris.\n\u5df4\u9ece\u662f\u6cd5\u56fd\u7684\u9996\u90fd",
+  "To determine the longest river in South America, I'll recall geographical knowledge about the continent's major rivers. South America is known"
+ ]
+}

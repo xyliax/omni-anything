@@ -1,0 +1,48 @@
+{
+  "model": "qwen-omni",
+  "mode": "continuous_full_duplex",
+  "budget_ms": 200.0,
+  "per_frame_audio_in": 10,
+  "per_frame_out": 15,
+  "window": 512,
+  "quantization": "fp8",
+  "capacity": 32,
+  "curve": [
+    {
+      "N": 1,
+      "frame_p50_ms": 92.3,
+      "frame_p99_ms": 93.7,
+      "meets_budget": true
+    },
+    {
+      "N": 8,
+      "frame_p50_ms": 104.9,
+      "frame_p99_ms": 107.7,
+      "meets_budget": true
+    },
+    {
+      "N": 32,
+      "frame_p50_ms": 132.8,
+      "frame_p99_ms": 145.9,
+      "meets_budget": true
+    },
+    {
+      "N": 64,
+      "frame_p50_ms": 174.7,
+      "frame_p99_ms": 216.4,
+      "meets_budget": false
+    },
+    {
+      "N": 128,
+      "frame_p50_ms": 248.9,
+      "frame_p99_ms": 309.1,
+      "meets_budget": false
+    },
+    {
+      "N": 192,
+      "frame_p50_ms": 373.1,
+      "frame_p99_ms": 465.9,
+      "meets_budget": false
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+\documentclass[11pt]{article}
+\pdfoutput=1 % force pdflatex on arXiv
+
+% Encoding
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Professional preprint style.
+\usepackage{arxiv}
+
+% Content packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing}
+
+\usepackage{hyperref}
+\usepackage{url}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=arxivaccent,
+  citecolor=arxivaccent,
+  urlcolor=arxivaccent,
+  filecolor=arxivaccent,
+  breaklinks=true,
+  pdftitle={Metronome: Bound the Cache, Keep the Beat for Real-Time Interaction Model Serving},
+  pdfauthor={Jiaying Meng, Bojie Li},
+  pdfsubject={Real-time serving of interaction models: frame-budget scheduling and KV-budget admission control},
+  pdfkeywords={LLM serving, real-time systems, interaction models, full-duplex, KV cache, admission control, deadline scheduling},
+}
+
+% Code / log listing styles
+\definecolor{codebg}{rgb}{0.95,0.95,0.97}
+\definecolor{codegreen}{rgb}{0.0,0.5,0.0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{codeblue}{rgb}{0.0,0.0,0.7}
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    language=Python,
+    showstringspaces=false,
+    numbers=left,
+    numbersep=5pt,
+    frame=single,
+    rulecolor=\color{codegray},
+    tabsize=4,
+}
+\lstset{style=pythonstyle}
+
+\title{Metronome: Bound the Cache, Keep the Beat for Real-Time Interaction Model Serving}
+
+\author{%
+  \begin{tabular}{c@{\hspace{4em}}c}
+    Jiaying Meng & Bojie Li \\
+    Independent Researcher & Pine AI
+  \end{tabular}
+}
+
+\date{}
+\runningtitle{Metronome: Bound the Cache, Keep the Beat for Real-Time Interaction Model Serving}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Real-time interaction models --- Moshi, MiniCPM-o, Qwen-Omni --- turn serving into a \emph{periodic
+real-time task}: on every frame a session ingests streaming audio and must respond by a recurring
+wall-clock deadline, while its KV cache grows monotonically and stays pinned for the whole conversation.
+This regime hides a dangerous failure mode. On a real full-duplex stack, sustained load does not degrade
+serving gracefully: it \textbf{falls off a cliff}, jumping in one step from milliseconds per frame to a
+stalled engine when accumulated session state exhausts the KV pool. The collapse is \emph{metastable} ---
+identical five-minute runs collapse or survive on run-to-run variance --- and \emph{silent}: latency
+and deadline-miss metrics read healthy throughout.
+
+We show one move restores both stability and observability: \textbf{bound each
+session's resident state, and latency starts telling the truth.} Metronome's in-engine KV window
+eliminates the collapse ($0/20$ vs.\ $14/20$ runs across two batches) and turns per-frame latency into a monotone load
+signal, on which an online admission controller discovers the schedulable concurrency; without the
+window, the identical controller over-admits into the wall. A first-order model predicts the collapse time within a
+few percent on the headline model, and a quality probe validates the bound's design by ablation: the
+window alone is quality-free in turn-based decoding, and its few pinned attention-sink tokens are what
+keep free-running generation healthy. Everything is measured end-to-end on real audio, across four
+interaction models on one GPU.
+\end{abstract}
+
+\begin{center}
+{\footnotesize Code: \url{https://github.com/19PINE-AI/metronome}}\\
+{\footnotesize Website: \url{https://01.me/research/metronome}}\\[0.5em]
+\includegraphics[width=0.71\linewidth]{figures/headline.pdf}
+\vspace{-0.4em}
+\captionof{figure}{\textbf{Existing serving falls off a latency cliff; Metronome stays on beat.} One
+five-minute call at 128 sessions (Qwen3-Omni-30B): unbounded resident KV jumps in one step from a few ms
+to a ${\sim}1.6$\,s ceiling where the stalled engine stops producing tokens; windowed KV stays flat for
+the whole call.}
+\label{fig:headline}
+\end{center}
+
+\input{body}
+
+\section*{Acknowledgements}
+This paper was produced using Pine Copilot's voice-directed \emph{whisper coding} workflow~\citep{pineai2026whispercoding}, in which the authors specify, discuss, and review the work by voice while a coding agent, Claude Code with Claude Opus 4.8 and Claude Fable 5, carries out the planning, coding, experiments, and paper writing.
+The authors thank BSQL Networking for hosting the NVIDIA RTX PRO 6000 GPU.
+
+\bibliographystyle{plainnat}
+\bibliography{reference}
+
+\input{appendix}
+
+\end{document}

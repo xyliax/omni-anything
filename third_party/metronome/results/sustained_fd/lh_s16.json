@@ -1,0 +1,124 @@
+{
+ "tag": "lh_s16",
+ "n": 32,
+ "seg_hits": [
+  [
+   20,
+   22
+  ],
+  [
+   11,
+   22
+  ],
+  [
+   11,
+   21
+  ],
+  [
+   11,
+   21
+  ],
+  [
+   12,
+   22
+  ],
+  [
+   12,
+   21
+  ],
+  [
+   10,
+   21
+  ],
+  [
+   8,
+   21
+  ],
+  [
+   9,
+   20
+  ],
+  [
+   6,
+   18
+  ]
+ ],
+ "seg_names": [
+  "seg0(0-30s)",
+  "seg1(30-60s)",
+  "seg2(60-90s)",
+  "seg3(90-120s)",
+  "seg4(120-150s)",
+  "seg5(150-180s)",
+  "seg6(180-210s)",
+  "seg7(210-240s)",
+  "espeak-known(240-270s)",
+  "espeak-RECALL(270-300s)"
+ ],
+ "recall": [
+  6,
+  18
+ ],
+ "rep_late": 0.2463422363014546,
+ "lat_p50": 0.35109720192849636,
+ "lat_p99": 2.548422198742628,
+ "errs": 0,
+ "rotation": [
+  "Which river is the longest in South America?",
+  "What is the highest mountain peak in North America?",
+  "Who was the first president of the United States?",
+  "Which city is located at the intersection of the Tigris and Euphrates rivers?",
+  "What is the largest planet in our solar system?",
+  "Which country borders Canada and Mexico?",
+  "What is the smallest country in the world?",
+  "Which African country has the largest population?"
+ ],
+ "golds": [
+  [
+   "Amazon"
+  ],
+  [
+   "Denali"
+  ],
+  [
+   "George Washington"
+  ],
+  [
+   "Baghdad"
+  ],
+  [
+   "Jupiter"
+  ],
+  [
+   "United States"
+  ],
+  [
+   "Vatican City"
+  ],
+  [
+   "Nigeria"
+  ]
+ ],
+ "samples": {
+  "seg0(0-30s)": [
+   "\n\n\nThe country that borders both Canada and Mexico is the United States.\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\nIt seems like your question is incomplete. Could you please provide the full question so I can assist you properly?\n \n\n\nIt seems like your question is incomplete. Could you please provide the full question so ",
+   "\nAssistant: The longest river in South America is the Amazon River.\n.com\nuser\n\nassistant\nThe Amazon \nAssistant: The longest river in North America is the Mississippi River.\n.com\nuser\n\nassistant\nThe \n\nAssistant: The longest river in South America is the Amazon River.\n.com\nuser\n\nAssistant: The longest",
+   "\n:\n:\n:\n:\n:\n:\n:\n: \n:\n:\n:\n:\n:\n:\n:\n: \n:\n:\n:\n:\n:\n:\n:\n: \n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n: \n\n:\n:\n:\n:\n:\n:\n:\n:"
+  ],
+  "seg7(210-240s)": [
+   "\n\nThe first President of the United States was George Washington.\n\n\nThe first President of the United States \n\nThe first President of the United States was George Washington.\n\n\nThe first President of the United States \n\nThe first President of the United States was George Washington.\n\n\nThe first Pres",
+   "\n user\n\n Assistant\nThe city located at the intersection of the Tigris and Euphrates rivers is Baghdad, the capital \n\n Assistant\nThe city located at the intersection of the Tigris and Euphrates rivers is Baghdad, the capital of Iraq.\n \n user\n\n Assistant\nThe city located at the intersection of the Tig",
+   ":\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n \n:\n:\n:\n:\n:\n:\n:\n: :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n \n:\n:\n:\n:\n:\n:\n:\n: :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n"
+  ],
+  "espeak-known(240-270s)": [
+   "\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n",
+   "\n user\n\n Assistant\nThe capital of France is Paris.\n\n user\n\n Assistant\nThe capital \n user\n\n Assistant\nThe capital of France is Paris.\n\n user\n\n Assistant\nThe capital \n user\n\n Assistant\nThe capital of France is Paris.\n\n user\n\n Assistant\nThe capital \n user\n\n Assistant\nThe capital of France is Paris.\n\n u",
+   ":\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n"
+  ],
+  "espeak-RECALL(270-300s)": [
+   "\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n",
+   "\n\n user\n\n Assistant\nThe first king of France was Hugh Capet.\n\n user\n\n Assistant \n\n user\n\n Assistant\nThe first king of France was Hugh Capet.\n\n\n user\n\n \n user\n\n Assistant\nThe first king of France was Hugh Capet.\n\n\n user\n\n \n user\n\n Assistant\nThe first question I asked you at the start of this conversa",
+   ":\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n :\n:\n:\n:\n:\n:\n:\n:\n"
+  ]
+ }
+}

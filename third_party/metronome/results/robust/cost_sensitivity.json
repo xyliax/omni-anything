@@ -1,0 +1,209 @@
+{
+  "moshi": {
+    "true_capacity": 136,
+    "budget_ms": 72.0,
+    "curve": [
+      {
+        "cost_error": -0.3,
+        "admitted": 160,
+        "true_frame_ms": 82.6,
+        "overshoot": 0.1475,
+        "misses": true
+      },
+      {
+        "cost_error": -0.2,
+        "admitted": 160,
+        "true_frame_ms": 82.6,
+        "overshoot": 0.1475,
+        "misses": true
+      },
+      {
+        "cost_error": -0.1,
+        "admitted": 157,
+        "true_frame_ms": 81.3,
+        "overshoot": 0.129,
+        "misses": true
+      },
+      {
+        "cost_error": -0.05,
+        "admitted": 145,
+        "true_frame_ms": 76.0,
+        "overshoot": 0.0551,
+        "misses": true
+      },
+      {
+        "cost_error": 0.0,
+        "admitted": 136,
+        "true_frame_ms": 72.0,
+        "overshoot": -0.0004,
+        "misses": false
+      },
+      {
+        "cost_error": 0.05,
+        "admitted": 127,
+        "true_frame_ms": 68.0,
+        "overshoot": -0.0558,
+        "misses": false
+      },
+      {
+        "cost_error": 0.1,
+        "admitted": 119,
+        "true_frame_ms": 64.4,
+        "overshoot": -0.1051,
+        "misses": false
+      },
+      {
+        "cost_error": 0.2,
+        "admitted": 106,
+        "true_frame_ms": 58.7,
+        "overshoot": -0.1852,
+        "misses": false
+      },
+      {
+        "cost_error": 0.3,
+        "admitted": 94,
+        "true_frame_ms": 53.3,
+        "overshoot": -0.2591,
+        "misses": false
+      }
+    ]
+  },
+  "minicpm-o": {
+    "true_capacity": 71,
+    "budget_ms": 900.0,
+    "curve": [
+      {
+        "cost_error": -0.3,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": -0.2,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": -0.1,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": -0.05,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": 0.0,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": 0.05,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": 0.1,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": 0.2,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      },
+      {
+        "cost_error": 0.3,
+        "admitted": 71,
+        "true_frame_ms": 277.5,
+        "overshoot": -0.6917,
+        "misses": false
+      }
+    ]
+  },
+  "qwen3-omni": {
+    "true_capacity": 158,
+    "budget_ms": 180.0,
+    "curve": [
+      {
+        "cost_error": -0.3,
+        "admitted": 183,
+        "true_frame_ms": 206.0,
+        "overshoot": 0.1445,
+        "misses": true
+      },
+      {
+        "cost_error": -0.2,
+        "admitted": 174,
+        "true_frame_ms": 196.3,
+        "overshoot": 0.0905,
+        "misses": true
+      },
+      {
+        "cost_error": -0.1,
+        "admitted": 166,
+        "true_frame_ms": 187.6,
+        "overshoot": 0.0425,
+        "misses": true
+      },
+      {
+        "cost_error": -0.05,
+        "admitted": 162,
+        "true_frame_ms": 183.3,
+        "overshoot": 0.0185,
+        "misses": true
+      },
+      {
+        "cost_error": 0.0,
+        "admitted": 158,
+        "true_frame_ms": 179.0,
+        "overshoot": -0.0055,
+        "misses": false
+      },
+      {
+        "cost_error": 0.05,
+        "admitted": 155,
+        "true_frame_ms": 175.8,
+        "overshoot": -0.0235,
+        "misses": false
+      },
+      {
+        "cost_error": 0.1,
+        "admitted": 152,
+        "true_frame_ms": 172.5,
+        "overshoot": -0.0415,
+        "misses": false
+      },
+      {
+        "cost_error": 0.2,
+        "admitted": 145,
+        "true_frame_ms": 165.0,
+        "overshoot": -0.0835,
+        "misses": false
+      },
+      {
+        "cost_error": 0.3,
+        "admitted": 139,
+        "true_frame_ms": 158.5,
+        "overshoot": -0.1195,
+        "misses": false
+      }
+    ]
+  }
+}

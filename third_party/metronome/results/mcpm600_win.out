@@ -1,0 +1,76 @@
+### [10:44:20] vLLM-0.23 STREAMING worker: openbmb/MiniCPM-o-4_5 (period 1000ms, append-to-resident-KV, max_seqs 192)
+### [10:44:53] worker ready
+### [10:44:57] openbmb/MiniCPM-o-4_5 N=96 sustained 600s @ 20ms (STREAMING append-to-resident-KV)
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+=== SUSTAINED continuous full-duplex: 96 streams, 600s, budget 1000ms ===
+        window   ticks   lat p50   lat p99    miss
+         0-10s     672      801ms      828ms   0.0%
+        10-20s     960        1ms        3ms   0.0%
+        20-30s     960        2ms      128ms   0.0%
+        30-40s     960        3ms        3ms   0.0%
+        40-50s     960        3ms        5ms   0.0%
+        50-60s     960        3ms        4ms   0.0%
+        60-70s     960        4ms        6ms   0.0%
+        70-80s     960        4ms        5ms   0.0%
+        80-90s     960        3ms        7ms   0.0%
+       90-100s     960        4ms        6ms   0.0%
+      100-110s     960        3ms        6ms   0.0%
+      110-120s     960        6ms        9ms   0.0%
+      120-130s     960        6ms        7ms   0.0%
+      130-140s     960        5ms        9ms   0.0%
+      140-150s     960        8ms        8ms   0.0%
+      150-160s     960        7ms        8ms   0.0%
+      160-170s     960        8ms        8ms   0.0%
+      170-180s     960        7ms       10ms   0.0%
+      180-190s     960        7ms        9ms   0.0%
+      190-200s     960        8ms       10ms   0.0%
+      200-210s     960        7ms       11ms   0.0%
+      210-220s     960        7ms        8ms   0.0%
+      220-230s     960        7ms       12ms   0.0%
+      230-240s     960        8ms       13ms   0.0%
+      240-250s     960       13ms       15ms   0.0%
+      250-260s     960       10ms      231ms   0.0%
+      260-270s     960        9ms       29ms   0.0%
+      270-280s     960       14ms       17ms   0.0%
+      280-290s     960       10ms       29ms   0.0%
+      290-300s     960       11ms      229ms   0.0%
+      300-310s     960       16ms       18ms   0.0%
+      310-320s     960       11ms       17ms   0.0%
+      320-330s     960       18ms       34ms   0.0%
+      330-340s     960       12ms       19ms   0.0%
+      340-350s     960       18ms       19ms   0.0%
+      350-360s     960       16ms       25ms   0.0%
+      360-370s     960       12ms       24ms   0.0%
+      370-380s     960       16ms       32ms   0.0%
+      380-390s     960        1ms        1ms   0.0%
+      390-400s     960        1ms        1ms   0.0%
+      400-410s     960        1ms        2ms   0.0%
+      410-420s     960        1ms        2ms   0.0%
+      420-430s     960        1ms        1ms   0.0%
+      430-440s     960        1ms        1ms   0.0%
+      440-450s     960        2ms        2ms   0.0%
+      450-460s     960        1ms        1ms   0.0%
+      460-470s     960        1ms        2ms   0.0%
+      470-480s     960        1ms        2ms   0.0%
+      480-490s     960        1ms        2ms   0.0%
+      490-500s     960        1ms        2ms   0.0%
+      500-510s     960        1ms        1ms   0.0%
+      510-520s     960        1ms        1ms   0.0%
+      520-530s     960        1ms        1ms   0.0%
+      530-540s     960        1ms        1ms   0.0%
+      540-550s     960        1ms        2ms   0.0%
+      550-560s     960        1ms        1ms   0.0%
+      560-570s     960        1ms        2ms   0.0%
+      570-580s     960        1ms        2ms   0.0%
+      580-590s     960        1ms        1ms   0.0%
+      590-600s     960        1ms        2ms   0.0%
+  OVERALL: ticks=57408 lat p50=4 p90=14 p99=229ms miss=0.00% TTFA p50=809ms voice_out_frames=0 err=0
+  CADENCE: delivered 100% of frames (598/600 per session) -> real frame period 1003ms vs budget 1000ms => REAL-TIME
+  DEGRADATION: first-bucket p99 828ms -> last-bucket p99 2ms (drift -826ms) STABLE
+### teardown
+experiments/run_stream_gateway.sh: line 55: 310921 Killed                  setsid ./gateway-go/gateway --port 8904 --worker 127.0.0.1:50051 --period-ms "$PERIOD_MS" --tpt "$TPT" --max-sessions "$MAXSESS" $GWADMIT > results/stream023_gw.log 2>&1
+experiments/run_stream_gateway.sh: line 56: 310232 Killed                  setsid "$VENV/bin/python" -u worker/stream_server.py --model "$MODEL" --port 50051 --gpu-mem "$GPU_MEM" --max-model-len "$MML" --max-num-seqs "$MAXSEQS" --tpt "$TPT" --max-audio-chunks "$MAXCHUNKS" --window-frames "$WINDOW" --window-overlap "$WINOV" --wait-budget-s "${WAITBUDGET:-$(python3 -c "print(${PERIOD_MS}/1000.0*0.8)")}" --ready-file $WREADY > results/stream023_worker.log 2>&1
+STREAM023 GATEWAY SWEEP DONE (0 MiB)

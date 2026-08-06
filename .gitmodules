@@ -1,4 +1,0 @@
-[submodule "metronome"]
-	path = metronome
-	url = https://github.com/19PINE-AI/metronome
-	ignore = untracked

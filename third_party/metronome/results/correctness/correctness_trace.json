@@ -1,0 +1,40 @@
+{
+  "model": "Qwen/Qwen3-0.6B",
+  "n_prompts": 4,
+  "mean_exact_frac": 0.865,
+  "mean_lcp": 20.8,
+  "per_prompt": [
+    {
+      "prompt": "The capital of France is",
+      "gen": 24,
+      "lcp": 24,
+      "exact_frac": 1.0,
+      "ref_text": " Paris. The capital of France is also the capital of the Republic of France. The capital of France is also the capital",
+      "served_text": " Paris. The capital of France is also the capital of the Republic of France. The capital of France is also the capital"
+    },
+    {
+      "prompt": "Here is a simple Python function to add two numbers:\n\ndef add(a, b):",
+      "gen": 24,
+      "lcp": 24,
+      "exact_frac": 1.0,
+      "ref_text": "\n    return a + b\n\nIf we call this function with add(2, 3), what is the result",
+      "served_text": "\n    return a + b\n\nIf we call this function with add(2, 3), what is the result"
+    },
+    {
+      "prompt": "Once upon a time, in a quiet village by the sea, there lived",
+      "gen": 24,
+      "lcp": 24,
+      "exact_frac": 1.0,
+      "ref_text": " a young man named Tom. He was known for his kindness and generosity. One day, he decided to start a small",
+      "served_text": " a young man named Tom. He was known for his kindness and generosity. One day, he decided to start a small"
+    },
+    {
+      "prompt": "The three primary colors are red, yellow, and",
+      "gen": 24,
+      "lcp": 11,
+      "exact_frac": 0.458,
+      "ref_text": " blue. The three secondary colors are red and yellow, and blue and yellow. The three primary colors are red, yellow",
+      "served_text": " blue. The three secondary colors are red and yellow, blue and yellow, and red and blue. What is the number"
+    }
+  ]
+}

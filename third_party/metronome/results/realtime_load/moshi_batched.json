@@ -1,0 +1,49 @@
+{
+  "model": "moshi",
+  "budget_ms": 80.0,
+  "batched_fullduplex_capacity": 48,
+  "curve": [
+    {
+      "B": 1,
+      "step_p50_ms": 19.56,
+      "step_p99_ms": 19.71,
+      "meets_budget": true
+    },
+    {
+      "B": 2,
+      "step_p50_ms": 20.09,
+      "step_p99_ms": 20.12,
+      "meets_budget": true
+    },
+    {
+      "B": 4,
+      "step_p50_ms": 20.9,
+      "step_p99_ms": 20.93,
+      "meets_budget": true
+    },
+    {
+      "B": 8,
+      "step_p50_ms": 26.44,
+      "step_p99_ms": 26.48,
+      "meets_budget": true
+    },
+    {
+      "B": 16,
+      "step_p50_ms": 33.24,
+      "step_p99_ms": 33.28,
+      "meets_budget": true
+    },
+    {
+      "B": 32,
+      "step_p50_ms": 50.17,
+      "step_p99_ms": 50.22,
+      "meets_budget": true
+    },
+    {
+      "B": 48,
+      "step_p50_ms": 67.69,
+      "step_p99_ms": 67.71,
+      "meets_budget": true
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+% The workload contrast (Sec. 2): a chatbot/agent request is turn-based (KV parked out of
+% GPU memory between turns -- swapped or recomputed -- with a reactivation toll that grows);
+% an interaction session is persistent and periodic (small work every frame, no idle gap,
+% resident KV grows monotonically and stays pinned for the whole conversation).
+\begin{figure}[t]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  >={Stealth[length=2.0mm]},
+  lbl/.style={font=\scriptsize\itshape, text=arxivink},
+  rowlbl/.style={font=\small\bfseries, text=arxivink, anchor=east, align=right},
+]
+\def\TL{118mm}   % timeline length
+
+% =============== row (a): chatbot / agent request (turn-based) ===============
+\begin{scope}[shift={(0,0)}]
+  \node[rowlbl, text width=24mm] at (-3mm, 4mm) {chatbot /\\[-2pt]agent request};
+  \draw[->, line width=0.8pt, draw=arxivink!85] (0,0) -- (\TL+5mm,0)
+      node[anchor=west, font=\scriptsize, text=arxivink]{time};
+  % turn 1: prefill + decode burst
+  \fill[arxivink!16]    (2mm,0.8mm)  rectangle (10mm,6.2mm);
+  \draw[arxivink!60, line width=0.6pt]  (2mm,0.8mm)  rectangle (10mm,6.2mm);
+  \fill[arxivaccent!16] (10mm,0.8mm) rectangle (26mm,6.2mm);
+  \draw[arxivaccent!70, line width=0.6pt] (10mm,0.8mm) rectangle (26mm,6.2mm);
+  \node[font=\scriptsize, text=arxivink, anchor=south] at (6mm,6.4mm) {prefill};
+  \node[font=\scriptsize, text=arxivink, anchor=south] at (18mm,6.4mm) {decode};
+  % idle gap
+  \node[lbl, anchor=center, text=arxivink!70] at (44mm,3.4mm) {idle: user thinks, tool runs\ldots};
+  % turn 2: bigger re-prefill + decode
+  \fill[arxivink!16]    (62mm,0.8mm) rectangle (74mm,6.2mm);
+  \draw[arxivink!60, line width=0.6pt]  (62mm,0.8mm) rectangle (74mm,6.2mm);
+  \fill[arxivaccent!16] (74mm,0.8mm) rectangle (92mm,6.2mm);
+  \draw[arxivaccent!70, line width=0.6pt] (74mm,0.8mm) rectangle (92mm,6.2mm);
+  \node[font=\scriptsize, text=arxivink, anchor=south] at (77mm,6.4mm) {turn 2};
+  % KV footprint sawtooth: rises in turn 1, parked between turns, restored + grows in turn 2
+  \draw[line width=1.2pt, draw=arxivink!70]
+      (2mm,-9mm) -- (26mm,-5.4mm) -- (26mm,-9mm) -- (60mm,-9mm) -- (60mm,-6.2mm)
+      -- (62mm,-6.2mm) -- (92mm,-4.2mm) -- (92mm,-9mm) -- (\TL,-9mm);
+  \node[font=\scriptsize, text=arxivink!70, anchor=east, rotate=90] at (-0.5mm,-7mm) {KV};
+  % swap out / swap in arrows to the host band
+  \draw[->, line width=0.9pt, draw=arxivink!60] (28mm,-5.6mm) -- (28mm,-12mm);
+  \draw[->, line width=0.9pt, draw=arxivink!60] (57mm,-12mm) -- (57mm,-6.6mm);
+  \node[font=\scriptsize, text=arxivink!85, anchor=east] at (27mm,-11mm) {swap out};
+  \node[font=\scriptsize, text=arxivink!85, anchor=west] at (58mm,-11mm) {swap in};
+  % host memory band
+  \draw[line width=0.6pt, draw=arxivink!35, dashed] (2mm,-13mm) -- (\TL,-13mm);
+  \node[lbl, anchor=west, text=arxivink!70] at (2mm,-15.8mm)
+      {host DRAM across PCIe (or drop and recompute) --- movement hidden inside the idle gaps};
+  % reactivation toll annotation
+  \node[lbl, anchor=west, text=arxivink] at (94mm,-4.8mm)
+      {context accumulates $\rightarrow$};
+  \node[lbl, anchor=west, text=arxivink] at (94mm,-7.2mm)
+      {each reactivation costs more};
+\end{scope}
+
+% =============== row (b): interaction session (persistent, periodic) ===============
+\begin{scope}[shift={(0,-32mm)}]
+  \node[rowlbl, text width=24mm] at (-3mm, 4mm) {interaction\\[-2pt]session};
+  \draw[->, line width=0.8pt, draw=arxivink!85] (0,0) -- (\TL+5mm,0)
+      node[anchor=west, font=\scriptsize, text=arxivink]{time};
+  % periodic frames: small prefill+decode every period B, for the whole conversation
+  \foreach \i in {0,...,7}{
+    \pgfmathsetmacro{\x}{2 + \i*14.5}
+    \fill[arxivink!16]    (\x mm,0.8mm) rectangle (\x mm + 3.2mm,6.2mm);
+    \draw[arxivink!60, line width=0.5pt]  (\x mm,0.8mm) rectangle (\x mm + 3.2mm,6.2mm);
+    \fill[arxivaccent!16] (\x mm + 3.2mm,0.8mm) rectangle (\x mm + 5.6mm,6.2mm);
+    \draw[arxivaccent!70, line width=0.5pt] (\x mm + 3.2mm,0.8mm) rectangle (\x mm + 5.6mm,6.2mm);
+    % recurring deadline tick
+    \draw[line width=0.7pt, draw=arxivaccent] (\x mm + 12.5mm,-1.2mm) -- (\x mm + 12.5mm,7.0mm);
+  }
+  \node[font=\scriptsize, text=arxivink, anchor=west] at (33mm,9.7mm)
+      {audio chunk in $\rightarrow$ tokens out, every frame};
+  \draw[decorate, decoration={brace, amplitude=2.5pt}, arxivaccent]
+      (14.5mm,8.6mm) -- (29mm,8.6mm)
+      node[midway, above=2.5pt, font=\scriptsize, text=arxivaccent]{recurring deadline $B$};
+  \node[lbl, anchor=west, text=arxivink!75] at (\TL-13mm,10.5mm) {\ldots for minutes};
+  % KV footprint staircase: grows monotonically, never freed
+  \draw[line width=1.2pt, draw=arxivaccent!85]
+      (2mm,-6.5mm) \foreach \i in {0,...,7}{ -- ++(11.0mm,0) -- ++(0,0.3mm) -- ++(3.5mm,0.3mm)};
+  \node[lbl, anchor=west, text=arxivaccent] at (40mm,-8.4mm)
+      {resident KV grows \emph{every} frame and stays pinned --- it never leaves on its own};
+  \node[font=\scriptsize, text=arxivink!70, anchor=east, rotate=90] at (-0.5mm,-4.5mm) {KV};
+\end{scope}
+\end{tikzpicture}}
+\caption{\textbf{The workload engines were not built for.} \textbf{(a)}~A chatbot or agent request is
+\emph{turn-based}: bursts of prefill and decode separated by idle gaps. Its context accumulates, so
+between turns the engine parks the KV out of GPU memory --- swapped to host, or dropped and
+recomputed --- and pays a \emph{reactivation toll} that grows with the conversation; the idle gaps hide
+the movement, and a slow reactivation delays only one reply. \textbf{(b)}~An interaction session is
+\emph{persistent and periodic}: a small prefill and a short decode against a recurring wall-clock
+deadline $B$ on every frame, with no idle gap, for the whole conversation --- its KV must stay resident
+(\S\ref{sec:bg}), and resident it grows monotonically, pinned for the session's life. Periodic
+deadlines plus unbounded per-session state is the combination this paper studies.}
+\label{fig:workload}
+\end{figure}

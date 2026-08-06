@@ -1,0 +1,17 @@
+{
+  "model": "qwen3-omni",
+  "device": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+  "c_fixed_p50": 10.784074811390314,
+  "alpha_p50": 0.00040475681137417947,
+  "c_fixed_p99": 11.802779088130961,
+  "alpha_p99": 0.0004228433677383787,
+  "batch_base_p99": 11.626314107922544,
+  "batch_per_session_p99": 0.9786089901218628,
+  "batch_alpha_p99": 0.0003331657332116267,
+  "single_r2_p99": 0.6337611475422971,
+  "batch_r2_p99": 0.9756756569761665,
+  "single_max_rel_resid_p99": 0.11009502772441178,
+  "batch_max_rel_resid_p99": 0.17885474541764437,
+  "kv_bytes_per_token": 98304,
+  "notes": "qwen3-omni on NVIDIA RTX PRO 6000 Blackwell Workstation Edition"
+}

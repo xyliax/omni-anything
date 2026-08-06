@@ -1,0 +1,574 @@
+{
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "n": 40,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "accuracy",
+  "score": 0.775,
+  "wall_s": 27.5,
+  "traces": [
+    {
+      "question": "What is the capital of France?",
+      "gold": [
+        "Paris"
+      ],
+      "pred": "The capital of France is Paris.",
+      "ok": true,
+      "audio_s": 2.0,
+      "latency_s": 1.08,
+      "rtf": 1.87,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which river is the longest in South America?",
+      "gold": [
+        "Amazon"
+      ],
+      "pred": "The Amazon River.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.53,
+      "rtf": 5.81,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the highest mountain peak in North America?",
+      "gold": [
+        "Denali"
+      ],
+      "pred": "Mount McKinley.",
+      "ok": false,
+      "audio_s": 3.2,
+      "latency_s": 0.62,
+      "rtf": 5.09,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who was the first president of the United States?",
+      "gold": [
+        "George Washington"
+      ],
+      "pred": "George Washington.",
+      "ok": true,
+      "audio_s": 2.9,
+      "latency_s": 0.64,
+      "rtf": 4.53,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which city is located at the intersection of the Tigris and Euphrates rivers?",
+      "gold": [
+        "Baghdad"
+      ],
+      "pred": "Baghdad",
+      "ok": true,
+      "audio_s": 5.2,
+      "latency_s": 0.61,
+      "rtf": 8.67,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the largest planet in our solar system?",
+      "gold": [
+        "Jupiter"
+      ],
+      "pred": "Jupiter.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.59,
+      "rtf": 5.24,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which country borders Canada and Mexico?",
+      "gold": [
+        "United States"
+      ],
+      "pred": "The United States.",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 0.6,
+      "rtf": 4.67,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the smallest country in the world?",
+      "gold": [
+        "Vatican City"
+      ],
+      "pred": "The smallest country in the world is Vatican City.",
+      "ok": true,
+      "audio_s": 2.6,
+      "latency_s": 0.81,
+      "rtf": 3.19,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which African country has the largest population?",
+      "gold": [
+        "Nigeria"
+      ],
+      "pred": "Nigeria",
+      "ok": true,
+      "audio_s": 3.2,
+      "latency_s": 0.52,
+      "rtf": 6.1,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who was the leader of the Soviet Union during World War II?",
+      "gold": [
+        "Joseph Stalin"
+      ],
+      "pred": "Stalin",
+      "ok": false,
+      "audio_s": 4.1,
+      "latency_s": 0.57,
+      "rtf": 7.28,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the capital of Australia?",
+      "gold": [
+        "Canberra"
+      ],
+      "pred": "The capital of Australia is Canberra.",
+      "ok": true,
+      "audio_s": 2.1,
+      "latency_s": 0.69,
+      "rtf": 3.08,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the currency used in Japan",
+      "gold": [
+        "Yen"
+      ],
+      "pred": "Yen.",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 0.48,
+      "rtf": 5.78,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who painted the famous painting \"Mona Lisa\"?",
+      "gold": [
+        "Leonardo da Vinci"
+      ],
+      "pred": "Leonardo da Vinci.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.66,
+      "rtf": 4.72,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which lake is the largest by surface area in Africa?",
+      "gold": [
+        "Lake Victoria"
+      ],
+      "pred": "Lake Victoria.",
+      "ok": true,
+      "audio_s": 3.8,
+      "latency_s": 0.48,
+      "rtf": 7.96,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the smallest continent in the world?",
+      "gold": [
+        "Antarctica"
+      ],
+      "pred": "Australia.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 0.56,
+      "rtf": 4.69,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who wrote the book \"To Kill a Mockingbird\"?",
+      "gold": [
+        "Harper Lee"
+      ],
+      "pred": "Harper Lee.",
+      "ok": true,
+      "audio_s": 2.7,
+      "latency_s": 0.63,
+      "rtf": 4.34,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which mountain range runs between France and Spain?",
+      "gold": [
+        "Pyrenees"
+      ],
+      "pred": "Pyrenees.",
+      "ok": true,
+      "audio_s": 3.4,
+      "latency_s": 0.58,
+      "rtf": 5.83,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the name of the largest desert in the world?",
+      "gold": [
+        "Antarctica"
+      ],
+      "pred": "The largest desert in the world is the Sahara Desert.",
+      "ok": false,
+      "audio_s": 3.0,
+      "latency_s": 0.78,
+      "rtf": 3.85,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who discovered the theory of gravity?",
+      "gold": [
+        "Newton"
+      ],
+      "pred": "Isaac Newton",
+      "ok": true,
+      "audio_s": 2.3,
+      "latency_s": 0.58,
+      "rtf": 4.02,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the largest island in the Mediterranean Sea?",
+      "gold": [
+        "Sicily"
+      ],
+      "pred": "Sicily.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.65,
+      "rtf": 4.8,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which city is known as the \"City of Canals\"?",
+      "gold": [
+        "Venice"
+      ],
+      "pred": "Venice",
+      "ok": true,
+      "audio_s": 3.3,
+      "latency_s": 0.44,
+      "rtf": 7.37,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the highest mountain peak in the contiguous United States?",
+      "gold": [
+        "Whitney"
+      ],
+      "pred": "Mount Whitney.",
+      "ok": true,
+      "audio_s": 3.9,
+      "latency_s": 0.53,
+      "rtf": 7.28,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the name of the largest rainforest in the world?",
+      "gold": [
+        "Amazon"
+      ],
+      "pred": "The largest rainforest in the world is the Amazon Rainforest.",
+      "ok": true,
+      "audio_s": 3.3,
+      "latency_s": 0.96,
+      "rtf": 3.44,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the name of the largest waterfall in the world?",
+      "gold": [
+        "Victoria Falls"
+      ],
+      "pred": "The largest waterfall in the world is called Victoria Falls.",
+      "ok": true,
+      "audio_s": 3.2,
+      "latency_s": 0.95,
+      "rtf": 3.34,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the capital of Greenland?",
+      "gold": [
+        "Nuuk"
+      ],
+      "pred": "The capital of Greenland is Nuuk.",
+      "ok": true,
+      "audio_s": 2.1,
+      "latency_s": 0.71,
+      "rtf": 2.96,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the currency used in India?",
+      "gold": [
+        "Rupee"
+      ],
+      "pred": "Indian rupee.",
+      "ok": true,
+      "audio_s": 2.5,
+      "latency_s": 0.58,
+      "rtf": 4.22,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who painted the famous painting \"The Starry Night\"?",
+      "gold": [
+        "Vincent van Gogh"
+      ],
+      "pred": "Vincent van Gogh.",
+      "ok": true,
+      "audio_s": 3.2,
+      "latency_s": 0.63,
+      "rtf": 5.18,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which lake is the largest in Asia?",
+      "gold": [
+        "Caspian Sea"
+      ],
+      "pred": "Lake Baikal.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 0.48,
+      "rtf": 5.33,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who wrote the famous book \"Pride and Prejudice\"?",
+      "gold": [
+        "Jane Austen"
+      ],
+      "pred": "Jane Austen.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.62,
+      "rtf": 5.04,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who discovered the theory of evolution?",
+      "gold": [
+        "Charles Darwin"
+      ],
+      "pred": "Charles Darwin.",
+      "ok": true,
+      "audio_s": 2.5,
+      "latency_s": 0.56,
+      "rtf": 4.45,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which element is the lightest in the periodic table?",
+      "gold": [
+        "Hydrogen"
+      ],
+      "pred": "Hydrogen",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.55,
+      "rtf": 5.69,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which bird can fly faster than any other bird?",
+      "gold": [
+        "Peregrine falcon"
+      ],
+      "pred": "The bird that can fly faster than any other bird is the Peregrine falcon.",
+      "ok": true,
+      "audio_s": 3.3,
+      "latency_s": 1.13,
+      "rtf": 2.9,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the deepest part of the ocean?",
+      "gold": [
+        "Challenger Deep, Mariana Trench"
+      ],
+      "pred": "The deepest part of the ocean is the Mariana Trench.",
+      "ok": false,
+      "audio_s": 2.5,
+      "latency_s": 1.02,
+      "rtf": 2.43,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who was the first person to walk on the moon?",
+      "gold": [
+        "Armstrong"
+      ],
+      "pred": "Neil Armstrong",
+      "ok": true,
+      "audio_s": 2.7,
+      "latency_s": 0.55,
+      "rtf": 4.8,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Which animal has the largest eyes in the world?",
+      "gold": [
+        "Giant squid"
+      ],
+      "pred": "The animal with the largest eyes in the world is the giant squid.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.9,
+      "rtf": 3.41,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who was the youngest President of the United States?",
+      "gold": [
+        "Roosevelt"
+      ],
+      "pred": "John F. Kennedy.",
+      "ok": false,
+      "audio_s": 3.0,
+      "latency_s": 0.57,
+      "rtf": 5.31,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who was the first woman to fly solo across the Atlantic Ocean?",
+      "gold": [
+        "Earhart"
+      ],
+      "pred": "The first woman to fly solo across the Atlantic Ocean was Jean Batten.",
+      "ok": false,
+      "audio_s": 4.3,
+      "latency_s": 0.97,
+      "rtf": 4.41,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the largest living thing on Earth?",
+      "gold": [
+        "Great Barrier Reef"
+      ],
+      "pred": "The largest living thing on Earth is the giant sequoia.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 0.99,
+      "rtf": 2.61,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "What is the driest place on Earth?",
+      "gold": [
+        "Atacama Desert"
+      ],
+      "pred": "The Atacama Desert.",
+      "ok": true,
+      "audio_s": 2.4,
+      "latency_s": 0.61,
+      "rtf": 3.89,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "Who won the first season of American Idol?",
+      "gold": [
+        "Kelly Clarkson"
+      ],
+      "pred": "The winner of the first season of American Idol was Kelly Clarkson.",
+      "ok": true,
+      "audio_s": 2.7,
+      "latency_s": 0.85,
+      "rtf": 3.12,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    }
+  ]
+}

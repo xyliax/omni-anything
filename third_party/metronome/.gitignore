@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Build / packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs / run markers
+*.log
+results/*.log
+results/**/*.pt
+results/*.flag
+
+# Third-party / generated data (see docs/DATA.md)
+external/
+data/
+
+# Binaries
+gateway-go/gateway
+worker/__pycache__/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.tar.gz

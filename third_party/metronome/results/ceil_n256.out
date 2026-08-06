@@ -1,0 +1,28 @@
+### [10:58:19] vLLM-0.23 STREAMING worker: sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic (period 2000ms, append-to-resident-KV, max_seqs 384)
+### [10:58:58] worker ready
+### [10:59:02] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=256 sustained 120s @ 20ms (STREAMING append-to-resident-KV)
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+[audio] 64 REAL clips from llama-questions
+=== SUSTAINED continuous full-duplex: 256 streams, 120s, budget 2000ms ===
+        window   ticks   lat p50   lat p99    miss
+         0-10s    1280        7ms      522ms   0.0%
+        10-20s    1280        6ms        8ms   0.0%
+        20-30s    1280        6ms      157ms   0.0%
+        30-40s    1280        7ms        8ms   0.0%
+        40-50s    1280        9ms      162ms   0.0%
+        50-60s    1280        6ms        9ms   0.0%
+        60-70s    1280        8ms      176ms   0.0%
+        70-80s    1280        9ms       14ms   0.0%
+        80-90s    1280        8ms       13ms   0.0%
+       90-100s    1280       12ms      204ms   0.0%
+      100-110s    1280        9ms       11ms   0.0%
+      110-120s    1280        7ms       11ms   0.0%
+  OVERALL: ticks=15368 lat p50=8 p90=14 p99=522ms miss=0.00% TTFA p50=557ms voice_out_frames=0 err=0
+  CADENCE: delivered 100% of frames (60/60 per session) -> real frame period 1999ms vs budget 2000ms => REAL-TIME
+  DEGRADATION: first-bucket p99 522ms -> last-bucket p99 11ms (drift -511ms) STABLE
+### teardown
+experiments/run_stream_gateway.sh: line 55: 324046 Killed                  setsid ./gateway-go/gateway --port 8904 --worker 127.0.0.1:50051 --period-ms "$PERIOD_MS" --tpt "$TPT" --max-sessions "$MAXSESS" $GWADMIT > results/stream023_gw.log 2>&1
+experiments/run_stream_gateway.sh: line 55: 323194 Killed                  setsid "$VENV/bin/python" -u worker/stream_server.py --model "$MODEL" --port 50051 --gpu-mem "$GPU_MEM" --max-model-len "$MML" --max-num-seqs "$MAXSEQS" --tpt "$TPT" --max-audio-chunks "$MAXCHUNKS" --window-frames "$WINDOW" --window-overlap "$WINOV" --wait-budget-s "${WAITBUDGET:-$(python3 -c "print(${PERIOD_MS}/1000.0*0.8)")}" --ready-file $WREADY > results/stream023_worker.log 2>&1
+STREAM023 GATEWAY SWEEP DONE (0 MiB)

@@ -1,0 +1,19 @@
+=== Correctness under load, EOS-terminated (clean, N=96, 75s) ===
+[VANILLA unbounded]
+         0-15s        768    62.5%      112ms   0.0%
+        15-30s        672    73.8%        4ms   0.0%
+        30-45s        768    70.8%        4ms   0.0%
+        45-60s        672    57.1%        3ms   0.0%
+        60-75s        768    76.2%        4ms   0.0%
+  SESSIONS: 32/96 answered correctly in >=80% of steady ticks; 96/96 stated the answer at least once (assembled); 0 errored
+[WINDOWED-KV W=15 ov=7]
+         0-15s        672    61.0%      170ms   0.0%
+        15-30s        768    81.1%        2ms   0.0%
+        30-45s        672    66.7%        3ms   0.0%
+        45-60s        768    60.8%        4ms   0.0%
+        60-75s        672    68.2%        2ms   0.0%
+  SESSIONS: 32/96 answered correctly in >=80% of steady ticks; 96/96 stated the answer at least once (assembled); 0 errored
+[sample clean answers (windowed):]
+  'The capital of France is Paris.' | 'The longest river in South America is the Amazon River.'
+  'Mount Denali, formerly known as Mount McKinley, is the highest mountain peak in North America.'
+=> vanilla ~70% / windowed ~68% per-frame, 96/96 both state the answer => windowing no correctness cost

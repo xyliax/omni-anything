@@ -1,0 +1,16 @@
+{
+  "model": "qwen-omni",
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "n": 300,
+  "batch": 16,
+  "score_direct": 0.6567,
+  "score_served_batched": 0.6567,
+  "delta": 0.0,
+  "delta_95ci": [
+    -0.01,
+    0.01
+  ],
+  "flip_count": 2,
+  "flip_rate": 0.0067
+}

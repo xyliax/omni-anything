@@ -1,0 +1,38 @@
+=== FOUR-MODEL streaming-path capacity (through the gateway, real audio) ===
+[Qwen3-Omni-30B-A3B-FP8, 2s budget] (headline run):
+  ### [00:26:36] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=64 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=2880 lat p50=2 p90=3 p99=638ms miss=0.00% TTFA p50=642ms voice_out_frames=0 err=0
+  ### [00:28:12] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=96 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=4320 lat p50=4 p90=5 p99=521ms miss=0.00% TTFA p50=245ms voice_out_frames=0 err=0
+  ### [00:29:51] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=128 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=5765 lat p50=1601 p90=1602 p99=1603ms miss=0.00% TTFA p50=453ms voice_out_frames=0 err=0
+  ### [00:31:27] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=160 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=7240 lat p50=1602 p90=1603 p99=1603ms miss=0.00% TTFA p50=0ms voice_out_frames=0 err=0
+[MiniCPM-o-4.5, 1s budget]:
+  ### [06:36:13] openbmb/MiniCPM-o-4_5 N=16 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=928 lat p50=0 p90=803 p99=995ms miss=0.00% TTFA p50=446ms voice_out_frames=0 err=0
+  ### [06:37:18] openbmb/MiniCPM-o-4_5 N=32 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=1920 lat p50=0 p90=1 p99=280ms miss=0.00% TTFA p50=281ms voice_out_frames=0 err=0
+  ### [06:38:25] openbmb/MiniCPM-o-4_5 N=64 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=3841 lat p50=2 p90=3 p99=489ms miss=0.00% TTFA p50=491ms voice_out_frames=0 err=0
+  ### [06:39:31] openbmb/MiniCPM-o-4_5 N=96 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=5735 lat p50=3 p90=802 p99=804ms miss=0.00% TTFA p50=636ms voice_out_frames=0 err=0
+[Qwen2.5-Omni-7B, 2s budget]:
+  ### [06:41:47] Qwen/Qwen2.5-Omni-7B N=16 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=480 lat p50=0 p90=1 p99=1601ms miss=0.00% TTFA p50=1518ms voice_out_frames=0 err=0
+  ### [06:42:53] Qwen/Qwen2.5-Omni-7B N=32 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=960 lat p50=1602 p90=1603 p99=1603ms miss=0.00% TTFA p50=1607ms voice_out_frames=0 err=0
+  ### [06:43:59] Qwen/Qwen2.5-Omni-7B N=64 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=1920 lat p50=1602 p90=1603 p99=1708ms miss=0.00% TTFA p50=0ms voice_out_frames=0 err=0
+  ### [06:45:05] Qwen/Qwen2.5-Omni-7B N=96 sustained 60s @ 20ms (STREAMING append-to-resident-KV)
+    OVERALL: ticks=2904 lat p50=1602 p90=1603 p99=1603ms miss=0.00% TTFA p50=0ms voice_out_frames=0 err=0
+[Moshi, 80ms budget, native voice-out]:
+  ### [06:46:40] Moshi N=8 sustained 60s @ 20ms chunks (voice-out)
+    OVERALL: ticks=5688 lat p50=53 p90=53 p99=55ms miss=0.28% TTFA p50=54ms voice_out_frames=5688 err=0
+    CADENCE: delivered 95% of frames (711/750 per session) -> real frame period 84ms vs budget 80ms => REAL-TIME
+  ### [06:47:44] Moshi N=16 sustained 60s @ 20ms chunks (voice-out)
+    OVERALL: ticks=11920 lat p50=53 p90=53 p99=53ms miss=0.00% TTFA p50=54ms voice_out_frames=11936 err=0
+    CADENCE: delivered 99% of frames (745/750 per session) -> real frame period 81ms vs budget 80ms => REAL-TIME
+  ### [06:48:49] Moshi N=24 sustained 60s @ 20ms chunks (voice-out)
+    OVERALL: ticks=5960 lat p50=53 p90=53 p99=55ms miss=0.00% TTFA p50=54ms voice_out_frames=5968 err=0
+    CADENCE: delivered 33% of frames (248/750 per session) -> real frame period 242ms vs budget 80ms => CADENCE SLIP (over capacity)

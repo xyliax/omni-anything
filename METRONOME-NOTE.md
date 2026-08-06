@@ -1,12 +1,14 @@
 # 这个仓库为什么在这里（本地标记，不属于 Metronome 原仓库）
 
 这是 [github.com/19PINE-AI/metronome](https://github.com/19PINE-AI/metronome)（论文 arXiv:2607.02640，
-截至 2026-08 唯一的真双工 GPU serving 公开工作）的**只读参考 clone**，2026-08-04 clone，
-放在 omni-anything 下面（父仓库已 gitignore，本文件也在本 clone 的 `.git/info/exclude` 中）。
+截至 2026-08 唯一的真双工 GPU serving 公开工作）的**只读参考代码**，以 **git-subrepo** 挂在
+`third_party/metronome/`（钉死 `2783a90`，与原先 submodule pin 相同）。
+
+更新上游：`git subrepo pull third_party/metronome`（不要在该目录里直接改代码再当上游回推）。
 
 ## 用途：复用它的 baseline harness，不是复用它的 idea
 
-omni-anything 的下一步实验（见 `../IDEA-KV-CONVEYOR.md` §五验证计划）
+omni-anything 的下一步实验（见 `IDEA-KV-CONVEYOR.md` §五验证计划）
 要在真栈上搭 baseline。Metronome 论文对比用的 baseline 谱系正是我们要的：
 
 - **vanilla vLLM-realtime**（vLLM 0.23 resumable requests，KV 无界常驻）——我们的主 baseline，
@@ -35,5 +37,5 @@ omni-anything 的下一步实验（见 `../IDEA-KV-CONVEYOR.md` §五验证计�
 sweep 污染 artifact；**真实的墙是分钟级 drift**（fresh N=96/300s 从 3ms 漂到 1601ms）。
 omni-anything 文档中引用的"N=128 于 ~148s 撞悬崖"口径待复查（见 memory: metronome-repo-baseline-reuse）。
 
-**不要修改这个 clone 里的代码来做我们的实验**——需要改动（如加注入路径）时，fork 或把改动
-以 patch 形式放在 omni-anything 里管理，保持这里可随时 `git pull` 对齐上游。
+**不要修改 `third_party/metronome/` 里的代码来做我们的实验**——需要改动（如加注入路径）时，fork 或把改动
+以 patch / `harness/` 副本形式放在 omni-anything 里管理，保持 subrepo 可随时 `git subrepo pull` 对齐上游。

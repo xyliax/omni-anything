@@ -1,0 +1,9 @@
+{
+  "benchmark": "Full-Duplex-Bench v1",
+  "task": "pause_handling",
+  "model": "moshi",
+  "served": "kyutai/moshiko-pytorch-bf16 (native full-duplex streaming)",
+  "n_examples": 138,
+  "avg_takeover_TOR": 1.0,
+  "note": "Pause handling: TOR is the take-OVER rate during user pauses (LOWER is better). Moshi TOR=1.0 -> it resumes/barges in at every pause: a highly interruptive, eager full-duplex behaviour. Output audio transcribed with whisper base.en (CPU)."
+}

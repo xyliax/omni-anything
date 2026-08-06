@@ -1,0 +1,24 @@
+{
+ "n_sessions": 16,
+ "duration": 30.0,
+ "sess_correct": 0,
+ "sess_ever": 5,
+ "sess_with_ticks": 15,
+ "errs": 0,
+ "sample_texts": [
+  ".",
+  ".",
+  ".",
+  ".",
+  "",
+  ".",
+  ".",
+  "."
+ ],
+ "sample_assembled": [
+  " true  and  can  be  proven .  capital  of  France  is  Paris .  The  capital  of  France  is  Paris .  The  capital  of  France  is  Paris .  The  capital  of  France  is  Paris .  capital  of  France  is  Paris .  The  capital  of  France  is  Paris .",
+  " What ' s  wrong ?  I  don ' t  know  what  that  is .  No ,  I  don ' t  think  I  have .  What  does  it  do ?  Okay ,  I  see .",
+  "' m  not  sure .  I ' m  not  sure  what  that  is .  I ' m  not  sure  what  that  is .  I '  not  sure .  I ' m  not  sure .  I  not  sure .  I  not  sure .  I ' m  not  sure .  think  I ' m  not  sure .  think  I ' m  not  sure .  I  not  sure .  I ' m  not  sure .  I ' m  not  sure .",
+  " I  mean ,  I  know  I ' m  good  at  my  job ,  but  I  feel  like  I ' m  not  good  enough .  I  don ' t  know .  I  just  feel  like  I ' m  falling  short ."
+ ]
+}

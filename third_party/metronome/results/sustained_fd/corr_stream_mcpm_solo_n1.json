@@ -1,0 +1,14 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 0,
+ "sess_ever": 0,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "### 1. **Identify the Core Question**  \nThe user is asking for the capital of France. This is a"
+ ],
+ "sample_assembled": [
+  "### 1. **Understanding the Question**  \nThe user is asking for the capital of France. This is a straightforward factual ### 1. **Understanding the Question**  \nThe user is asking for the capital of France. This is a straightforward factual ### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understanding the Questi"
+ ]
+}

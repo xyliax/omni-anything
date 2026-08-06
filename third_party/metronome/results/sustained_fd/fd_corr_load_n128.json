@@ -1,0 +1,17 @@
+{
+ "n_sessions": 128,
+ "duration": 75.0,
+ "sess_correct": 128,
+ "sess_with_ticks": 128,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but",
+  "The longest river in South America is the **Amazon River**. It is also considered the largest river in the world by volume",
+  "The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range",
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but",
+  "The longest river in South America is the **Amazon River**. It is also considered the largest river in the world by volume",
+  "The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range",
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but",
+  "The longest river in South America is the **Amazon River**. It is also considered the largest river in the world by volume"
+ ]
+}

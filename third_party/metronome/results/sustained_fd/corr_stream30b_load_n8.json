@@ -1,0 +1,24 @@
+{
+ "n_sessions": 8,
+ "duration": 60.0,
+ "sess_correct": 8,
+ "sess_ever": 8,
+ "sess_with_ticks": 8,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic heart of France but",
+  "The longest river in South America is the Amazon River. It is not only the longest river in South America but also the largest",
+  "The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range",
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but",
+  "The longest river in South America is the Amazon River. It is not only the longest river in South America but also the largest",
+  "The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range",
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic heart of France but",
+  "The longest river in South America is the Amazon River. It is not only the longest river in South America but also the largest"
+ ],
+ "sample_assembled": [
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of",
+  "The longest river in South America is the **Amazon River**. It is not only the longest river in South America but also The longest river in South America is the Amazon River. It is also considered the largest river in the world by volume of water The longest river in South America is the Amazon River. It is also the largest river in the world by volume of water discharged The longest river in Sout",
+  "The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in the Alaska Range The highest mountain peak in North",
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of France but The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and economic center of"
+ ]
+}

@@ -1,0 +1,11 @@
+{
+  "benchmark": "Full-Duplex-Bench v1",
+  "task": "user_interruption",
+  "model": "moshi",
+  "served": "kyutai/moshiko-pytorch-bf16 (native full-duplex streaming)",
+  "n_examples": 200,
+  "judge": "openai/gpt-4o via OpenRouter",
+  "avg_rating_0to5": 2.215,
+  "avg_takeover_TOR": 1.0,
+  "note": "Moshi takes the turn at every interruption (TOR 1.0) but the GPT-4o judge rates its handling 2.2/5: it tends to continue the prior topic instead of addressing the user barge-in. Transcribed with faster-whisper(GPU)."
+}

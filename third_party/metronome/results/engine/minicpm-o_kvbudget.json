@@ -1,0 +1,45 @@
+{
+  "model": "minicpm-o",
+  "self_windowing": false,
+  "rows": [
+    {
+      "budget": 2048,
+      "frac": 0.062,
+      "timing_onset": 192,
+      "mem_cap": 284,
+      "capacity": 192
+    },
+    {
+      "budget": 4096,
+      "frac": 0.125,
+      "timing_onset": 128,
+      "mem_cap": 142,
+      "capacity": 128
+    },
+    {
+      "budget": 8192,
+      "frac": 0.25,
+      "timing_onset": 128,
+      "mem_cap": 71,
+      "capacity": 71
+    },
+    {
+      "budget": 16384,
+      "frac": 0.5,
+      "timing_onset": 96,
+      "mem_cap": 35,
+      "capacity": 35
+    },
+    {
+      "budget": 32768,
+      "frac": 1.0,
+      "timing_onset": 48,
+      "mem_cap": 17,
+      "capacity": 17
+    }
+  ],
+  "full_capacity": 17,
+  "small_capacity": 192,
+  "kv_budget_gain": 11.29,
+  "classification": "essential"
+}

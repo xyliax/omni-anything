@@ -1,0 +1,24 @@
+{
+ "n_sessions": 96,
+ "duration": 75.0,
+ "sess_correct": 32,
+ "sess_ever": 96,
+ "sess_with_ticks": 96,
+ "errs": 0,
+ "sample_texts": [
+  " | The capital of France is Paris.",
+  " | The Mississippi River is the river that flows through America.",
+  " | The highest mountain on Earth is Mount Everest.",
+  " | The capital of France is Paris.",
+  " | The Mississippi River is the river that flows through America.",
+  " | The highest mountain on Earth is Mount Everest.",
+  " | The capital of France is Paris.",
+  " | The Mississippi River is the river that flows through America."
+ ],
+ "sample_assembled": [
+  " | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital ",
+  " | The longest river in South America is the Amazon River.  | The Mississippi River is the longest river in North America.  | The longest river in South America is the Amazon River.  | The longest river in South America is the Amazon River.  | The Amazon River is the largest river in South America.  | The longest river in South America is the Amazon River.  | The longest river in South America is ",
+  " | The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in Alaska and has an elevation of 20,310 feet (6,190 meters) above sea level.  | The highest mountain in North America is Denali, formerly known as Mount McKinley. It is located in Alaska and has an elevation of 20,310 feet (6,190 meters) above sea level.  | The highest mountain peak in North A",
+  " | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital of France is Paris.  | The capital "
+ ]
+}

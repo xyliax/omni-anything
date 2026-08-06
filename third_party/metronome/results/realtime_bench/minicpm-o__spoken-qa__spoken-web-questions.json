@@ -1,0 +1,595 @@
+{
+  "task": "spoken-qa",
+  "dataset": "spoken-web-questions",
+  "model": "minicpm-o",
+  "served_hf": "openbmb/MiniCPM-o-4_5",
+  "n": 40,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "accuracy",
+  "score": 0.45,
+  "wall_s": 179.9,
+  "traces": [
+    {
+      "question": "what does jamaican people speak?",
+      "gold": [
+        "Jamaican Creole English Language",
+        "Jamaican English"
+      ],
+      "pred": "The Jamaican people primarily speak English, with",
+      "ok": false,
+      "audio_s": 2.0,
+      "latency_s": 10.83,
+      "rtf": 0.18,
+      "ticks": 24,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what did james k polk do before he was president?",
+      "gold": [
+        "Lawyer"
+      ],
+      "pred": "<think>\nGot it, let's tackle this question. The user is asking what James K. Polk did before becoming president. First, I need to recall historical facts about ",
+      "ok": false,
+      "audio_s": 3.0,
+      "latency_s": 4.81,
+      "rtf": 0.63,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what is the oregon ducks 2012 football schedule?",
+      "gold": [
+        "University of Oregon"
+      ],
+      "pred": "<think>\nGot it, let's find the 2012 Oregon Ducks football schedule. I need to recall or look up their game dates for that year. Since I can't browse, I'll rely ",
+      "ok": false,
+      "audio_s": 3.1,
+      "latency_s": 4.81,
+      "rtf": 0.64,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who plays ken barlow in coronation street?",
+      "gold": [
+        "Tony Warren"
+      ],
+      "pred": "The actor who plays Ken Barlow in Coronation Street is William Roache.",
+      "ok": false,
+      "audio_s": 2.5,
+      "latency_s": 4.81,
+      "rtf": 0.52,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what happened after mr. sugihara died?",
+      "gold": [
+        "Yaotsu"
+      ],
+      "pred": "<think>\nGot it, let me think. The question is about what happened after Mr. Sugihara died. First, I need to recall who Mr. Sugihara is. Oh right, Chiune Sugihar",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 4.81,
+      "rtf": 0.43,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who did mozart write his four horn concertos for?",
+      "gold": [
+        "wolfgang amadeus mozart used story by pierre beaumarchais"
+      ],
+      "pred": "<think>\nGot it, let's tackle this question. The user is asking who Mozart wrote his four horn concertos for. I need to recall or know the historical context. Mo",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 4.81,
+      "rtf": 0.54,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "where is jamarcus russell from?",
+      "gold": [
+        "Mobile"
+      ],
+      "pred": "<think>\nGot it, let me think. The question is asking about where Jamarcus Russell is from. I need to recall or know his background. Jamarcus Russell is a former",
+      "ok": false,
+      "audio_s": 2.2,
+      "latency_s": 4.81,
+      "rtf": 0.46,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "where was george washington carver from?",
+      "gold": [
+        "Diamond"
+      ],
+      "pred": "<think>\n\n\n<think>",
+      "ok": false,
+      "audio_s": 2.4,
+      "latency_s": 0.42,
+      "rtf": 5.6,
+      "ticks": 2,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what else did ben franklin invent?",
+      "gold": [
+        "Lightning rod",
+        "Franklin stove",
+        "Bifocals"
+      ],
+      "pred": "<think>\nGot it, let me think. The user is asking about other inventions by Ben Franklin. I know he's famous for the lightning rod and bifocals, but also things ",
+      "ok": true,
+      "audio_s": 1.8,
+      "latency_s": 4.79,
+      "rtf": 0.38,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who was richard nixon married to?",
+      "gold": [
+        "Pat Nixon"
+      ],
+      "pred": "Richard Nixon was married to Pat Nixon.",
+      "ok": true,
+      "audio_s": 2.9,
+      "latency_s": 3.01,
+      "rtf": 0.96,
+      "ticks": 15,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what country did germany invade first in ww1?",
+      "gold": [
+        "Belgium"
+      ],
+      "pred": "<think>\nGot it, let's tackle this question. The user is asking which country Germany invaded first in WW1. I need to recall WW1 history. Germany's initial actio",
+      "ok": true,
+      "audio_s": 3.4,
+      "latency_s": 4.81,
+      "rtf": 0.71,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what is the best sandals resort in st lucia?",
+      "gold": [
+        "Micoud Quarter",
+        "Choiseul Quarter",
+        "Praslin Quarter"
+      ],
+      "pred": "<think>\nGot it, let's tackle this. The user is asking for the best sandals resort in Saint Lucia. First, I need to recall or know which resorts in Saint Lucia a",
+      "ok": false,
+      "audio_s": 2.9,
+      "latency_s": 4.81,
+      "rtf": 0.61,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who is governor of ohio 2011?",
+      "gold": [
+        "John Kasich"
+      ],
+      "pred": "The governor of Ohio in",
+      "ok": false,
+      "audio_s": 2.2,
+      "latency_s": 4.81,
+      "rtf": 0.46,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who was vice president after kennedy died?",
+      "gold": [
+        "Lyndon B. Johnson"
+      ],
+      "pred": "<think>\nGot it, let's see. The question is asking who was vice president after Kennedy died. I remember that John F. Kennedy was president, and his vice preside",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 4.81,
+      "rtf": 0.58,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "where is the fukushima daiichi nuclear plant located?",
+      "gold": [
+        "Japan",
+        "Okuma"
+      ],
+      "pred": "The Fukushima Daiichi nuclear plant is located in Fukushima, Japan.",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 3.41,
+      "rtf": 0.82,
+      "ticks": 17,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who is the minority leader of the house of representatives now?",
+      "gold": [
+        "Nancy Pelosi"
+      ],
+      "pred": "<think>\nGot it, let me think. The user is asking for the current Minority Leader of the House of Representatives. I need to recall recent political information.",
+      "ok": false,
+      "audio_s": 3.3,
+      "latency_s": 4.82,
+      "rtf": 0.69,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what countries are part of the uk?",
+      "gold": [
+        "Scotland",
+        "England",
+        "Wales"
+      ],
+      "pred": "The countries that are part of the UK are England, Scotland, Wales, and Northern Ireland.",
+      "ok": true,
+      "audio_s": 2.0,
+      "latency_s": 4.61,
+      "rtf": 0.43,
+      "ticks": 23,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who plays bilbo baggins in the hobbit?",
+      "gold": [
+        "Norman Bird",
+        "Martin Freeman",
+        "Ian Holm"
+      ],
+      "pred": "Martin Freeman",
+      "ok": true,
+      "audio_s": 2.1,
+      "latency_s": 3.21,
+      "rtf": 0.65,
+      "ticks": 16,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what things did martin luther king do?",
+      "gold": [
+        "Civil rights movement",
+        "Civil disobedience",
+        "Nonviolence"
+      ],
+      "pred": "Martin Luther King led civil rights movement, organized protests, gave \"I Have a Dream\" speech,",
+      "ok": true,
+      "audio_s": 2.7,
+      "latency_s": 4.81,
+      "rtf": 0.56,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what is my timezone in louisiana?",
+      "gold": [
+        "Central Time Zone",
+        "UTC\u221206:00"
+      ],
+      "pred": "The time zone in Louisiana is Central Time Zone.",
+      "ok": true,
+      "audio_s": 2.4,
+      "latency_s": 3.21,
+      "rtf": 0.75,
+      "ticks": 16,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what did st augustine do?",
+      "gold": [
+        "Physician",
+        "Writer",
+        "Philosopher"
+      ],
+      "pred": "Certainly! St. Augustine was a prominent Christian theologian and philosopher who wrote influential works on faith, grace",
+      "ok": true,
+      "audio_s": 1.4,
+      "latency_s": 4.82,
+      "rtf": 0.29,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who is keyshia cole dad?",
+      "gold": [
+        "Leon Cole"
+      ],
+      "pred": "<think>\nGot it, let me try to figure out who Kishore Kumar's dad is. First, I need to recall information about Kishore Kumar. Kishore Kumar was a famous Indian ",
+      "ok": false,
+      "audio_s": 1.9,
+      "latency_s": 4.81,
+      "rtf": 0.4,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what kind government does egypt have?",
+      "gold": [
+        "Semi-presidential system",
+        "Constitutional republic",
+        "Republic"
+      ],
+      "pred": "<think>\nGot it, let's answer the question. The user is asking about Egypt's government type. I need to recall that Egypt is a republic, specifically a president",
+      "ok": true,
+      "audio_s": 2.6,
+      "latency_s": 4.81,
+      "rtf": 0.53,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what town was martin luther king assassinated in?",
+      "gold": [
+        "Memphis"
+      ],
+      "pred": "Martin Luther King was assassinated in Memphis.",
+      "ok": true,
+      "audio_s": 3.0,
+      "latency_s": 3.61,
+      "rtf": 0.84,
+      "ticks": 18,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "where did edgar allan poe died?",
+      "gold": [
+        "Baltimore"
+      ],
+      "pred": "Edgar Allan Poe died in Baltimore, Maryland.",
+      "ok": true,
+      "audio_s": 1.9,
+      "latency_s": 2.81,
+      "rtf": 0.69,
+      "ticks": 14,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "when did charles goodyear invented rubber?",
+      "gold": [
+        "During the early 1830's he began inventing, filing six patents between 1830 and 1834, and during this period became interested in rubber, which he tried - unsuccessfully - to use in some of his mechanical inventions."
+      ],
+      "pred": "<think>\nGot it, let's tackle this question. The user is asking when Charles Goodyear invented rubber. First, I need to recall historical facts about Charles Goo",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 4.82,
+      "rtf": 0.44,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what to do today in atlanta with kids?",
+      "gold": [
+        "Atlanta History Center",
+        "Atlanta Cyclorama & Civil War Museum",
+        "Atlanta Ballet"
+      ],
+      "pred": "<think>\n\n\nOkay, the user is asking for ideas on what to do today in Atlanta with kids. I need to think of family-friendly activities in Atlanta. Let me recall s",
+      "ok": true,
+      "audio_s": 2.5,
+      "latency_s": 4.81,
+      "rtf": 0.52,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who did france surrender to in ww2?",
+      "gold": [
+        "Germany"
+      ],
+      "pred": "France",
+      "ok": false,
+      "audio_s": 2.3,
+      "latency_s": 4.81,
+      "rtf": 0.47,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what electorate does anna bligh represent?",
+      "gold": [
+        "Electoral district of South Brisbane"
+      ],
+      "pred": "<think>\nGot it, let me try to figure out this question. The user is asking about Anna Blyth's electorate. First, I need to recall who Anna Blyth is. Wait, maybe",
+      "ok": false,
+      "audio_s": 2.7,
+      "latency_s": 4.81,
+      "rtf": 0.57,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what channel is the usa pageant on?",
+      "gold": [
+        "us"
+      ],
+      "pred": "<think>\nGot it, let me think. The user is asking about the channel for the USA pageant. I need to recall or know which channel broadcasts it. Wait, maybe it's a",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 4.81,
+      "rtf": 0.65,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what are some of the traditions of islam?",
+      "gold": [
+        "Zak\u0101t",
+        "Salah",
+        "Hajj"
+      ],
+      "pred": "Some key Islamic traditions include the Five Pillars (prayer, fasting, charity, pilgrimage, and declaration of faith), daily",
+      "ok": false,
+      "audio_s": 2.2,
+      "latency_s": 4.81,
+      "rtf": 0.45,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "where did andy murray started playing tennis?",
+      "gold": [
+        "United Kingdom"
+      ],
+      "pred": "<think>\nGot it, let's answer the question. The user is asking where Andy Murray started playing tennis. I need to recall or know that Andy Murray is from Scotla",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 4.81,
+      "rtf": 0.44,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what is the australian dollar called?",
+      "gold": [
+        "Australian dollar"
+      ],
+      "pred": "",
+      "ok": false,
+      "audio_s": 2.3,
+      "latency_s": 4.81,
+      "rtf": 0.48,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what timezone is sweden?",
+      "gold": [
+        "Central European Time"
+      ],
+      "pred": "<think>\nGot it, let's find the time zone for Sweden. I remember that Sweden is in the Central European Time zone, which is usually UTC+1, but during daylight sa",
+      "ok": true,
+      "audio_s": 1.6,
+      "latency_s": 4.81,
+      "rtf": 0.33,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who did cam newton sign with?",
+      "gold": [
+        "Carolina Panthers"
+      ],
+      "pred": "<think>\n\n<think>\nGot it, let me answer. Cam Newton signed with the Patriots.",
+      "ok": false,
+      "audio_s": 1.9,
+      "latency_s": 1.0,
+      "rtf": 1.86,
+      "ticks": 5,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what county is frederick md in?",
+      "gold": [
+        "Frederick County"
+      ],
+      "pred": "The county for Frederick, MD is Frederick County.",
+      "ok": true,
+      "audio_s": 1.7,
+      "latency_s": 4.01,
+      "rtf": 0.42,
+      "ticks": 20,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what highschool did harper lee go to?",
+      "gold": [
+        "Monroe County High School"
+      ],
+      "pred": "Okay, the user is asking about the high school Harper Lee attended. I need to recall information about Harper Lee, the author of To Kill a Mockingbird. I rememb",
+      "ok": false,
+      "audio_s": 2.3,
+      "latency_s": 4.81,
+      "rtf": 0.47,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "what timezone is utah in?",
+      "gold": [
+        "Mountain Time Zone"
+      ],
+      "pred": "<think>\nGot it, let me think. The user is asking about the timezone of Utah. I need to recall that Utah is in the Mountain Time Zone. Wait, but maybe I should c",
+      "ok": true,
+      "audio_s": 1.7,
+      "latency_s": 4.81,
+      "rtf": 0.35,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who did george w. bush run against for the second term?",
+      "gold": [
+        "Al Gore"
+      ],
+      "pred": "To determine who George W.",
+      "ok": false,
+      "audio_s": 3.2,
+      "latency_s": 4.81,
+      "rtf": 0.68,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    },
+    {
+      "question": "who is niall ferguson's wife?",
+      "gold": [
+        "Ayaan Hirsi Ali"
+      ],
+      "pred": "To answer the question: Niall Ferguson's wife is Alexandra Ferguson.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 4.81,
+      "rtf": 0.53,
+      "ticks": 24,
+      "missed": 0,
+      "error": null
+    }
+  ]
+}

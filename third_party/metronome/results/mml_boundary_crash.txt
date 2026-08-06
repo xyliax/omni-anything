@@ -1,0 +1,4 @@
+(EngineCore pid=265027) ERROR 07-02 10:04:44 [core.py:1197] ValueError: could not broadcast input array from shape (8221,) into shape (8192,)
+(EngineCore pid=265027) ValueError: could not broadcast input array from shape (8221,) into shape (8192,)
+(EngineCore pid=265027) ERROR 07-02 10:04:44 [dump_input.py:79]         1., 1., 1., 1.]), field=MultiModalBatchedField(keep_on_cpu=False)), 'audio_feature_lengths': MultiModalFieldElem(data=tensor(202), field=MultiModalBatchedField(keep_on_cpu=False))}, modality='audio', identifier='88cbfdc71380564dd08649ce34048c3c8995b8a175028cab5e332e2c556a005e', mm_position=PlaceholderRange(offset=8192, length=
+# Vanilla resident request (N=32, ~30 tok/s growth) hit max_model_len=8192 at ~270s; EngineCore died (broadcast 8221 -> 8192), killing ALL 32 sessions (EngineDeadError). kv usage at crash: 0.499. Full trace: results/rev_worker_lh_swa0.log

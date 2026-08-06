@@ -1,0 +1,155 @@
+{
+  "moshi": {
+    "model": "moshi",
+    "Ks": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "capacity_vs_K": [
+      136,
+      108,
+      56,
+      0,
+      0
+    ],
+    "N_hetero": 136,
+    "hetero": [
+      {
+        "K": 1,
+        "prem_miss": 1.0,
+        "std_miss": 0.0,
+        "total_period_ms": 71.97263204779502
+      },
+      {
+        "K": 2,
+        "prem_miss": 1.0,
+        "std_miss": 0.8292682926829268,
+        "total_period_ms": 83.62444608020897
+      },
+      {
+        "K": 4,
+        "prem_miss": 0.37037037037037035,
+        "std_miss": 0.8292682926829268,
+        "total_period_ms": 106.92807414503685
+      },
+      {
+        "K": 8,
+        "prem_miss": 0.6851851851851852,
+        "std_miss": 0.8292682926829268,
+        "total_period_ms": 153.53533027469263
+      },
+      {
+        "K": 16,
+        "prem_miss": 0.6666666666666666,
+        "std_miss": 1.0,
+        "total_period_ms": 250.29812594667365
+      }
+    ],
+    "capacity_loss_K2": 0.206
+  },
+  "minicpm-o": {
+    "model": "minicpm-o",
+    "Ks": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "capacity_vs_K": [
+      236,
+      232,
+      228,
+      216,
+      192
+    ],
+    "N_hetero": 236,
+    "hetero": [
+      {
+        "K": 1,
+        "prem_miss": 1.0,
+        "std_miss": 0.0,
+        "total_period_ms": 897.6480458235166
+      },
+      {
+        "K": 2,
+        "prem_miss": 1.0,
+        "std_miss": 0.0,
+        "total_period_ms": 908.294807165714
+      },
+      {
+        "K": 4,
+        "prem_miss": 0.3723404255319149,
+        "std_miss": 0.0,
+        "total_period_ms": 929.5883298501093
+      },
+      {
+        "K": 8,
+        "prem_miss": 0.0425531914893617,
+        "std_miss": 0.0,
+        "total_period_ms": 987.2092952948545
+      },
+      {
+        "K": 16,
+        "prem_miss": 0.20212765957446807,
+        "std_miss": 0.18309859154929578,
+        "total_period_ms": 1072.3833860324357
+      }
+    ],
+    "capacity_loss_K2": 0.017
+  },
+  "qwen3-omni": {
+    "model": "qwen3-omni",
+    "Ks": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "capacity_vs_K": [
+      158,
+      150,
+      132,
+      104,
+      32
+    ],
+    "N_hetero": 158,
+    "hetero": [
+      {
+        "K": 1,
+        "prem_miss": 1.0,
+        "std_miss": 0.0,
+        "total_period_ms": 179.00551036076513
+      },
+      {
+        "K": 2,
+        "prem_miss": 1.0,
+        "std_miss": 0.0,
+        "total_period_ms": 187.38210210505812
+      },
+      {
+        "K": 4,
+        "prem_miss": 0.36507936507936506,
+        "std_miss": 0.4,
+        "total_period_ms": 206.29514532296648
+      },
+      {
+        "K": 8,
+        "prem_miss": 0.36507936507936506,
+        "std_miss": 0.4,
+        "total_period_ms": 239.8015123001384
+      },
+      {
+        "K": 16,
+        "prem_miss": 0.36507936507936506,
+        "std_miss": 0.6105263157894737,
+        "total_period_ms": 306.8142462544822
+      }
+    ],
+    "capacity_loss_K2": 0.051
+  }
+}

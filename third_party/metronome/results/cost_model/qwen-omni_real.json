@@ -1,0 +1,16 @@
+{
+  "model": "qwen-omni",
+  "device": "cuda-vllm",
+  "c_fixed": 249.33114941177678,
+  "alpha": 0.0009149419136620821,
+  "batch_base": 242.60421264170145,
+  "batch_per_session": 1.2681595383955346,
+  "batch_alpha": 0.0008293727198311895,
+  "tail_factor": 1.0047831876611226,
+  "single_r2": 0.9860392825469663,
+  "single_max_rel_resid": 0.0019072209433195547,
+  "batch_r2": 0.9130621308766738,
+  "batch_max_rel_resid": 0.07833870588750479,
+  "kv_bytes_per_token": 98304,
+  "notes": "qwen-omni REAL vLLM (sequential decode, persistent request)"
+}

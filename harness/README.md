@@ -2,7 +2,7 @@
 
 **使用手册（依次敲什么）见 `USAGE.md`**；本文是文件索引。
 
-克隆纪律：`../metronome/` 只读；一切改动以副本/补丁形式放在这里。运行产物入
+克隆纪律：`../third_party/metronome/` 只读；一切改动以副本/补丁形式放在这里。运行产物入
 `../results/paper/baseline/`（证据，永不清理）；图入 `../results/figures/`；交互产物入 `../results/viz/`。
 
 ## Workers（metronome worker 的插桩副本）

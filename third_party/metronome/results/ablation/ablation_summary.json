@@ -1,0 +1,35 @@
+{
+  "moshi": {
+    "M-core (sched only)": 136,
+    "\u2212 admission (mem-only)": 160,
+    "FIFO (\u2212 EDF)": 136,
+    "LRF order (anti-EDF)": 136,
+    "full KV (\u2212 budget)": 30,
+    "+ degradation ladder": 136,
+    "worst-case admit": 136,
+    "+ silence (talk .5)": 136,
+    "\u2212 silence (talk .5)": 136
+  },
+  "minicpm-o": {
+    "M-core (sched only)": 71,
+    "\u2212 admission (mem-only)": 71,
+    "FIFO (\u2212 EDF)": 71,
+    "LRF order (anti-EDF)": 71,
+    "full KV (\u2212 budget)": 17,
+    "+ degradation ladder": 71,
+    "worst-case admit": 71,
+    "+ silence (talk .5)": 71,
+    "\u2212 silence (talk .5)": 71
+  },
+  "qwen3-omni": {
+    "M-core (sched only)": 158,
+    "\u2212 admission (mem-only)": 128,
+    "FIFO (\u2212 EDF)": 158,
+    "LRF order (anti-EDF)": 158,
+    "full KV (\u2212 budget)": 71,
+    "+ degradation ladder": 158,
+    "worst-case admit": 158,
+    "+ silence (talk .5)": 158,
+    "\u2212 silence (talk .5)": 158
+  }
+}

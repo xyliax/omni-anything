@@ -1,0 +1,30 @@
+{
+  "task": "av",
+  "dataset": "llama-questions",
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "n": 1,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "accuracy",
+  "score": 1.0,
+  "wall_s": 2.8,
+  "traces": [
+    {
+      "question": "",
+      "gold": [
+        "stop",
+        "lamb",
+        "mary"
+      ],
+      "pred": "I see a street  scene with a red  stop sign in the  foreground and a large  red gate in the  background. I hear  applause and a man  speaking.<|im_end|>",
+      "ok": true,
+      "audio_s": 15.9,
+      "latency_s": 2.54,
+      "rtf": 6.28,
+      "ticks": 8,
+      "missed": 1,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "model": "moshi",
+  "capacity": 64,
+  "admission": {
+    "mode": "admission",
+    "offered": 2.0,
+    "miss_rate": 0.0,
+    "blocking": 0.40697674418604646,
+    "mean_active": 64.0
+  },
+  "greedy": {
+    "mode": "greedy",
+    "offered": 2.0,
+    "miss_rate": 0.5195447798119742,
+    "blocking": 0.0,
+    "mean_active": 114.0
+  }
+}

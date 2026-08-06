@@ -23,7 +23,7 @@
 - `harness/` — E 系列真栈实验全部组件（worker/driver/仪器/可视化导出）：索引 `harness/README.md`，**使用手册 `harness/USAGE.md`**
 - `calibration/` — E0 DMA 干扰微基准（工具 + 数据；PCIe 带宽标定）
 - `results/paper/` — E 系列运行证据（五件套日志）；`results/figures/` — E1 图组；`results/viz/` — Perfetto trace（入库，双击可下载到 ui.perfetto.dev 打开）
-- `metronome/` — **git submodule**（钉死 `2783a90`，只读纪律不变）：Metronome 论文开源 harness，用于复用其 baseline 谱系——为什么在这里、怎么用、引用时的坑，见 `METRONOME-NOTE.md`（`git clone --recursive` 获取）
+- `third_party/` — 第三方参考代码，统一用 **git-subrepo** 挂入（无需 `git clone --recursive`）。当前含 `third_party/metronome/`（钉死 `2783a90`，只读）：Metronome 论文开源 harness，baseline 谱系与引用纪律见 `METRONOME-NOTE.md`；目录清单见 `third_party/README.md`
 
 ## 快速事实（防止被过时信息带偏）
 

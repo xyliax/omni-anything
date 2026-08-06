@@ -1,0 +1,14 @@
+{
+  "model": "minicpm-o",
+  "self_windowing": false,
+  "full_mscs": 17,
+  "mscs_by_budget": {
+    "2048": 284,
+    "4096": 142,
+    "8192": 71,
+    "16384": 35,
+    "32768": 17
+  },
+  "kv_budget_gain": 8.352941176470589,
+  "classification": "essential"
+}

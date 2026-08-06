@@ -1,0 +1,15 @@
+{
+  "name": "projected-large (TML-Interaction-Small-like)",
+  "total_params_b": 276,
+  "active_params_b": 12,
+  "num_layers": 80,
+  "num_kv_heads_gqa": 8,
+  "num_kv_heads_mla_equiv": 1,
+  "head_dim": 128,
+  "kv_dtype_bytes": 2,
+  "context_ceiling_tokens": 1000000,
+  "tick_s": 0.2,
+  "token_rate_per_s": 74.0,
+  "weights_fp8_gib": 276.0,
+  "sparse_window_tokens": 4096
+}

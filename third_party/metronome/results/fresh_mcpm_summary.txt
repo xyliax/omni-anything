@@ -1,0 +1,9 @@
+=== FRESH MiniCPM-o-4.5 (1s budget) ===
+######## FRESH point: fresh_mcpm N=16 (14:26:44) ########
+  OVERALL: ticks=944 lat p50=0 p90=0 p99=806ms miss=0.00% TTFA p50=198ms voice_out_frames=0 err=0
+######## FRESH point: fresh_mcpm N=32 (14:28:50) ########
+  OVERALL: ticks=1832 lat p50=0 p90=1 p99=828ms miss=0.00% TTFA p50=435ms voice_out_frames=0 err=0
+######## FRESH point: fresh_mcpm N=64 (14:30:47) ########
+  OVERALL: ticks=3728 lat p50=2 p90=4 p99=808ms miss=0.00% TTFA p50=790ms voice_out_frames=0 err=0
+######## FRESH point: fresh_mcpm N=96 (14:32:45) ########
+  OVERALL: ticks=5502 lat p50=2 p90=801 p99=857ms miss=0.00% TTFA p50=11ms voice_out_frames=0 err=0

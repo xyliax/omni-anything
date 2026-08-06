@@ -1,0 +1,45 @@
+{
+  "model": "minicpm-o",
+  "served_hf": "openbmb/MiniCPM-o-4_5",
+  "L": 2600,
+  "n_positions": 400,
+  "full_context_perplexity": 29.482,
+  "essential_window": 1024,
+  "curve": [
+    {
+      "window": 32,
+      "perplexity": 66.775,
+      "n": 400
+    },
+    {
+      "window": 64,
+      "perplexity": 58.74,
+      "n": 400
+    },
+    {
+      "window": 128,
+      "perplexity": 46.087,
+      "n": 400
+    },
+    {
+      "window": 256,
+      "perplexity": 38.724,
+      "n": 400
+    },
+    {
+      "window": 512,
+      "perplexity": 30.327,
+      "n": 400
+    },
+    {
+      "window": 1024,
+      "perplexity": 27.263,
+      "n": 400
+    },
+    {
+      "window": 2048,
+      "perplexity": 29.482,
+      "n": 400
+    }
+  ]
+}

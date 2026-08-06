@@ -1,0 +1,491 @@
+{
+  "moshi": {
+    "model": "moshi",
+    "wc_cap": 180,
+    "fill_budget_s": 40.96,
+    "age_aware_max_miss": 0.0,
+    "coaging_safe_max_miss": 0.0,
+    "coaging_safe_short_life_gain": 1.18,
+    "rows": {
+      "worst_case": [
+        {
+          "hold": 8.2,
+          "hold_over_fill": 0.2,
+          "served": 135.71163166397415,
+          "miss": 0.0,
+          "blocking": 0.5972640853234408
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 0.4,
+          "served": 135.6696284329564,
+          "miss": 0.0,
+          "blocking": 0.6355394378966455
+        },
+        {
+          "hold": 28.7,
+          "hold_over_fill": 0.7,
+          "served": 135.64620355411955,
+          "miss": 0.0,
+          "blocking": 0.6283255086071988
+        },
+        {
+          "hold": 41.0,
+          "hold_over_fill": 1.0,
+          "served": 135.52907915993538,
+          "miss": 0.0,
+          "blocking": 0.6143344709897611
+        },
+        {
+          "hold": 61.4,
+          "hold_over_fill": 1.5,
+          "served": 135.39903069466882,
+          "miss": 0.0,
+          "blocking": 0.6039933444259568
+        },
+        {
+          "hold": 81.9,
+          "hold_over_fill": 2.0,
+          "served": 135.2075928917609,
+          "miss": 0.0,
+          "blocking": 0.5443645083932853
+        },
+        {
+          "hold": 122.9,
+          "hold_over_fill": 3.0,
+          "served": 135.09693053311793,
+          "miss": 0.0,
+          "blocking": 0.45914396887159536
+        }
+      ],
+      "age_aware": [
+        {
+          "hold": 8.2,
+          "hold_over_fill": 0.2,
+          "served": 159.64297253634896,
+          "miss": 0.0,
+          "blocking": 0.563455303381195
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 0.4,
+          "served": 159.5080775444265,
+          "miss": 0.0,
+          "blocking": 0.5534562211981566
+        },
+        {
+          "hold": 28.7,
+          "hold_over_fill": 0.7,
+          "served": 159.25605815831986,
+          "miss": 0.0,
+          "blocking": 0.5205254515599342
+        },
+        {
+          "hold": 41.0,
+          "hold_over_fill": 1.0,
+          "served": 159.3497576736672,
+          "miss": 0.0,
+          "blocking": 0.49882629107981225
+        },
+        {
+          "hold": 61.4,
+          "hold_over_fill": 1.5,
+          "served": 159.05654281098546,
+          "miss": 0.0,
+          "blocking": 0.46492659053833607
+        },
+        {
+          "hold": 81.9,
+          "hold_over_fill": 2.0,
+          "served": 159.07108239095314,
+          "miss": 0.0,
+          "blocking": 0.4786516853932584
+        },
+        {
+          "hold": 122.9,
+          "hold_over_fill": 3.0,
+          "served": 157.86348949919224,
+          "miss": 0.0,
+          "blocking": 0.38801261829653
+        }
+      ],
+      "coaging_safe": [
+        {
+          "hold": 8.2,
+          "hold_over_fill": 0.2,
+          "served": 159.64297253634896,
+          "miss": 0.0,
+          "blocking": 0.563455303381195
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 0.4,
+          "served": 159.5080775444265,
+          "miss": 0.0,
+          "blocking": 0.5534562211981566
+        },
+        {
+          "hold": 28.7,
+          "hold_over_fill": 0.7,
+          "served": 159.25605815831986,
+          "miss": 0.0,
+          "blocking": 0.5205254515599342
+        },
+        {
+          "hold": 41.0,
+          "hold_over_fill": 1.0,
+          "served": 159.3497576736672,
+          "miss": 0.0,
+          "blocking": 0.49882629107981225
+        },
+        {
+          "hold": 61.4,
+          "hold_over_fill": 1.5,
+          "served": 159.05654281098546,
+          "miss": 0.0,
+          "blocking": 0.46492659053833607
+        },
+        {
+          "hold": 81.9,
+          "hold_over_fill": 2.0,
+          "served": 159.07108239095314,
+          "miss": 0.0,
+          "blocking": 0.4786516853932584
+        },
+        {
+          "hold": 122.9,
+          "hold_over_fill": 3.0,
+          "served": 157.86348949919224,
+          "miss": 0.0,
+          "blocking": 0.38801261829653
+        }
+      ]
+    }
+  },
+  "minicpm-o": {
+    "model": "minicpm-o",
+    "wc_cap": 259,
+    "fill_budget_s": 128.0,
+    "age_aware_max_miss": 0.0,
+    "coaging_safe_max_miss": 0.0,
+    "coaging_safe_short_life_gain": 1.0,
+    "rows": {
+      "worst_case": [
+        {
+          "hold": 25.6,
+          "hold_over_fill": 0.2,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8509277031349968
+        },
+        {
+          "hold": 51.2,
+          "hold_over_fill": 0.4,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.845859872611465
+        },
+        {
+          "hold": 89.6,
+          "hold_over_fill": 0.7,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8552631578947368
+        },
+        {
+          "hold": 128.0,
+          "hold_over_fill": 1.0,
+          "served": 70.875,
+          "miss": 0.0,
+          "blocking": 0.8635014836795252
+        },
+        {
+          "hold": 192.0,
+          "hold_over_fill": 1.5,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8125
+        },
+        {
+          "hold": 256.0,
+          "hold_over_fill": 2.0,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8729281767955801
+        },
+        {
+          "hold": 384.0,
+          "hold_over_fill": 3.0,
+          "served": 70.925,
+          "miss": 0.0,
+          "blocking": 0.8411214953271028
+        }
+      ],
+      "age_aware": [
+        {
+          "hold": 25.6,
+          "hold_over_fill": 0.2,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8509277031349968
+        },
+        {
+          "hold": 51.2,
+          "hold_over_fill": 0.4,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.845859872611465
+        },
+        {
+          "hold": 89.6,
+          "hold_over_fill": 0.7,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8552631578947368
+        },
+        {
+          "hold": 128.0,
+          "hold_over_fill": 1.0,
+          "served": 70.875,
+          "miss": 0.0,
+          "blocking": 0.8635014836795252
+        },
+        {
+          "hold": 192.0,
+          "hold_over_fill": 1.5,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8125
+        },
+        {
+          "hold": 256.0,
+          "hold_over_fill": 2.0,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8729281767955801
+        },
+        {
+          "hold": 384.0,
+          "hold_over_fill": 3.0,
+          "served": 70.925,
+          "miss": 0.0,
+          "blocking": 0.8411214953271028
+        }
+      ],
+      "coaging_safe": [
+        {
+          "hold": 25.6,
+          "hold_over_fill": 0.2,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8509277031349968
+        },
+        {
+          "hold": 51.2,
+          "hold_over_fill": 0.4,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.845859872611465
+        },
+        {
+          "hold": 89.6,
+          "hold_over_fill": 0.7,
+          "served": 71.0,
+          "miss": 0.0,
+          "blocking": 0.8552631578947368
+        },
+        {
+          "hold": 128.0,
+          "hold_over_fill": 1.0,
+          "served": 70.875,
+          "miss": 0.0,
+          "blocking": 0.8635014836795252
+        },
+        {
+          "hold": 192.0,
+          "hold_over_fill": 1.5,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8125
+        },
+        {
+          "hold": 256.0,
+          "hold_over_fill": 2.0,
+          "served": 70.9625,
+          "miss": 0.0,
+          "blocking": 0.8729281767955801
+        },
+        {
+          "hold": 384.0,
+          "hold_over_fill": 3.0,
+          "served": 70.925,
+          "miss": 0.0,
+          "blocking": 0.8411214953271028
+        }
+      ]
+    }
+  },
+  "qwen3-omni": {
+    "model": "qwen3-omni",
+    "wc_cap": 168,
+    "fill_budget_s": 16.384,
+    "age_aware_max_miss": 0.025474732800664108,
+    "coaging_safe_max_miss": 0.0,
+    "coaging_safe_short_life_gain": 1.42,
+    "rows": {
+      "worst_case": [
+        {
+          "hold": 3.3,
+          "hold_over_fill": 0.2,
+          "served": 157.96278317152104,
+          "miss": 0.0,
+          "blocking": 0.5569338422391857
+        },
+        {
+          "hold": 6.6,
+          "hold_over_fill": 0.4,
+          "served": 157.87216828478964,
+          "miss": 0.0,
+          "blocking": 0.5340381226974211
+        },
+        {
+          "hold": 11.5,
+          "hold_over_fill": 0.7,
+          "served": 157.71197411003237,
+          "miss": 0.0,
+          "blocking": 0.5052895322939867
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 1.0,
+          "served": 157.68608414239483,
+          "miss": 0.0,
+          "blocking": 0.5289288506645817
+        },
+        {
+          "hold": 24.6,
+          "hold_over_fill": 1.5,
+          "served": 157.55177993527508,
+          "miss": 0.0,
+          "blocking": 0.5044563279857397
+        },
+        {
+          "hold": 32.8,
+          "hold_over_fill": 2.0,
+          "served": 157.3770226537217,
+          "miss": 0.0,
+          "blocking": 0.4611872146118722
+        },
+        {
+          "hold": 49.2,
+          "hold_over_fill": 3.0,
+          "served": 155.00485436893203,
+          "miss": 0.0,
+          "blocking": 0.38746803069053704
+        }
+      ],
+      "age_aware": [
+        {
+          "hold": 3.3,
+          "hold_over_fill": 0.2,
+          "served": 198.8527508090615,
+          "miss": 0.0,
+          "blocking": 0.42162162162162165
+        },
+        {
+          "hold": 6.6,
+          "hold_over_fill": 0.4,
+          "served": 198.57605177993528,
+          "miss": 0.0,
+          "blocking": 0.4094841396988145
+        },
+        {
+          "hold": 11.5,
+          "hold_over_fill": 0.7,
+          "served": 198.31877022653723,
+          "miss": 0.0,
+          "blocking": 0.3902970836740256
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 1.0,
+          "served": 198.0566343042071,
+          "miss": 0.0,
+          "blocking": 0.40843979868370117
+        },
+        {
+          "hold": 24.6,
+          "hold_over_fill": 1.5,
+          "served": 198.08252427184465,
+          "miss": 0.0015180823192380206,
+          "blocking": 0.389308541545613
+        },
+        {
+          "hold": 32.8,
+          "hold_over_fill": 2.0,
+          "served": 197.3398058252427,
+          "miss": 0.013577791230649486,
+          "blocking": 0.35708692247454976
+        },
+        {
+          "hold": 49.2,
+          "hold_over_fill": 3.0,
+          "served": 187.7928802588997,
+          "miss": 0.025474732800664108,
+          "blocking": 0.18774445893089964
+        }
+      ],
+      "coaging_safe": [
+        {
+          "hold": 3.3,
+          "hold_over_fill": 0.2,
+          "served": 224.32038834951456,
+          "miss": 0.0,
+          "blocking": 0.3637524950099801
+        },
+        {
+          "hold": 6.6,
+          "hold_over_fill": 0.4,
+          "served": 208.13430420711975,
+          "miss": 0.0,
+          "blocking": 0.3696854749486328
+        },
+        {
+          "hold": 11.5,
+          "hold_over_fill": 0.7,
+          "served": 191.7200647249191,
+          "miss": 0.0,
+          "blocking": 0.4501510574018127
+        },
+        {
+          "hold": 16.4,
+          "hold_over_fill": 1.0,
+          "served": 186.60194174757282,
+          "miss": 0.0,
+          "blocking": 0.4084234930448223
+        },
+        {
+          "hold": 24.6,
+          "hold_over_fill": 1.5,
+          "served": 178.33333333333334,
+          "miss": 0.0,
+          "blocking": 0.4248166259168704
+        },
+        {
+          "hold": 32.8,
+          "hold_over_fill": 2.0,
+          "served": 174.08576051779934,
+          "miss": 0.0,
+          "blocking": 0.44296875
+        },
+        {
+          "hold": 49.2,
+          "hold_over_fill": 3.0,
+          "served": 166.4061488673139,
+          "miss": 0.0,
+          "blocking": 0.40222222222222226
+        }
+      ]
+    }
+  }
+}

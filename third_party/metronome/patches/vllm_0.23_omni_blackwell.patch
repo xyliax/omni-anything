@@ -1,0 +1,161 @@
+# Verified fixes to make Qwen3-Omni (and Qwen2.5-Omni / MiniCPM-o) INITIALIZE in vLLM 0.23.0 on
+# Blackwell (SM120, capability (12,0)). Both were applied to an isolated vLLM 0.23 venv and verified
+# to clear the omni model-init crashes documented in docs/vllm_omni_streaming_triage.md.
+#
+# Status after these fixes: Qwen3-Omni-30B-A3B-FP8 FULLY LOADS and GENERATES on this Blackwell
+# (SM120) box under vLLM 0.23 — verified end-to-end (experiments/run_v023_omni_smoke.sh -> "V023_SMOKE_OK":
+# loads all 8 shards, passes memory profiling through the omni audio encoder, JIT-compiles the SM120f
+# flashinfer kernels, captures CUDA graphs, and decodes "...Paris..."). FIX 1 is the real vLLM bug fix;
+# FIX 2 + FIX 3 clear the flashinfer toolchain so the model can actually run here. FIX 4 fixes a
+# Qwen3-Omni mrope off-by-one that crashed STREAMING audio -> the append-to-resident-KV path now runs
+# for AUDIO at flat ~5 ms/frame (verified). All four are validated on this box.
+
+# ── FIX 1 — THE vLLM omni bug ───────────────────────────────────────────────────────────────────
+# Omni audio/vision encoders build cu_seqlens on the feature-length tensor's device (CPU during
+# memory profiling), while q/k/v are on CUDA; the varlen flash-attn op requires cu_seqlens on the
+# query device → "RuntimeError: cu_seqlens_q must be on CUDA" at EngineCore startup.
+# Fix in the SHARED MMEncoderAttention (fixes all ~40 consumers, incl. qwen3_omni_moe_thinker,
+# qwen2_5_omni_thinker, minicpmv*).
+#
+# File: vllm/model_executor/layers/attention/mm_encoder_attention.py  (MMEncoderAttention.forward_cuda)
+@@ def forward_cuda(self, query, key, value, cu_seqlens=None, max_seqlen=None, sequence_lengths=None):
+     ) -> torch.Tensor:
++        # Omni encoders build cu_seqlens on the feature-length tensor (often CPU, esp. during memory
++        # profiling) while q/k/v are on CUDA; FA/flashinfer varlen ops require it on the query device.
++        if cu_seqlens is not None and cu_seqlens.device != query.device:
++            cu_seqlens = cu_seqlens.to(query.device, non_blocking=True)
+         if self.is_flash_attn_backend:
+             return self._forward_fa(query, key, value, cu_seqlens, max_seqlen)
+         elif self.attn_backend == AttentionBackendEnum.TRITON_ATTN:
+             ...
+
+# ── FIX 2 — capability gate (secondary; flashinfer) ─────────────────────────────────────────────
+# flashinfer gates SM12.x support on the *toolkit/nvcc* CUDA version via is_cuda_version_at_least
+# ("12.9"); on a box whose local nvcc is < 12.9 it raises "SM 12.x requires CUDA >= 12.9" (or later
+# "FlashInfer requires GPUs with sm75 or higher" once capability detection is left empty), even though
+# the torch RUNTIME CUDA is >= 12.9. Gate on the runtime version (nvcc is only needed to compile).
+#
+# File: flashinfer/jit/cpp_ext.py  (get_cuda_version)
+@@ def get_cuda_version() -> Version:
++    # Prefer the runtime CUDA (torch) for capability gating; the toolkit nvcc is only used to compile.
++    if torch.version.cuda is not None:
++        return Version(torch.version.cuda)
+     try:
+         cuda_home = get_cuda_path()
+         nvcc = os.path.join(cuda_home, "bin/nvcc")
+         ...
+
+# ── FIX 3 — flashinfer JIT toolchain (cccl vs CUDA-13.2) ────────────────────────────────────────
+# With FIX 1+2, flashinfer 0.6.12 JIT-compiles its SM120f kernels (e.g. `sampling`) using the local
+# CUDA-13.2 nvcc. flashinfer's BUNDLED cccl headers (flashinfer/data/cccl/.../cuda_toolkit.h) then
+# fail with: error "CUDA compiler and CUDA toolkit headers are incompatible". That check is wrapped in
+#   #ifndef CCCL_DISABLE_CTK_COMPATIBILITY_CHECK
+# whose own comment says: "Some users might want to use a newer version of the CTK than the compiler
+# ships. Enable that on their own peril." Across a CUDA minor (13.0 bundled vs 13.2 nvcc) the kernels
+# are ABI/source-compatible, so defining that macro is safe and unblocks the JIT.
+#
+# NO source edit needed — define the macro via nvcc's env hook so it applies to every JIT compile:
+#
+#     export NVCC_APPEND_FLAGS="-DCCCL_DISABLE_CTK_COMPATIBILITY_CHECK"
+#     export CUDA_HOME=<venv>/lib/python3.10/site-packages/nvidia/cu13   # nvcc that targets sm_120
+#
+# (Both are set by experiments/run_v023_omni_smoke.sh.) Verified: the JIT compiles the SM120f sampling
+# kernel, the model loads, and generation succeeds.
+
+# ── FIX 4 — Qwen3-Omni mrope off-by-one crashes streaming AUDIO ──────────────────────────────────
+# Plain (non-streaming) audio works, but a resumable/STREAMING request whose chunk ENDS at an audio
+# block crashes EngineCore with: RuntimeError: "Position ids length mismatch with input ids length".
+# Root cause: Qwen3OmniMoeThinker.get_mrope_input_positions models each mm block as text+bos+content+
+# eos, but mm_position.offset already points to the FIRST audio embedding (the audio_start token is
+# counted in the preceding text_len AND re-added as the explicit bos) -> the position layout overshoots
+# seq_len by 1 at the block boundary. It is MASKED whenever trailing text follows the audio (the
+# trailing-text branch absorbs the +1), so it only manifests when audio is the final content -- exactly
+# the per-frame append-to-resident-KV streaming case. Empirically isolated:
+#   prompt with text after audio  -> OK ;  audio at end / bare audio append -> CRASH.
+#
+# Fix: reconcile the position count to seq_len instead of hard-crashing. The guard only triggers on the
+# mismatch (`shape[1] != seq_len`), so EVERY currently-working input is byte-identical (no behavior
+# change); only the previously-crashing boundary case is repaired. Verified: the audio-at-end and
+# bare-append cases now decode coherently (e.g. "Hello! How") at FLAT ~5 ms/frame resident-KV append.
+#
+# File: vllm/model_executor/models/qwen3_omni_moe_thinker.py  (get_mrope_input_positions, ~line 2374)
+@@ llm_positions = np.concatenate(llm_pos_ids_list, axis=1).reshape(3, -1)
+-        if llm_positions.shape[1] != seq_len:
+-            raise RuntimeError("Position ids length mismatch with input ids length")
++        if llm_positions.shape[1] != seq_len:
++            # mrope off-by-one when an audio block ends the sequence with no trailing text (the
++            # block start token is double-counted). Reconcile to seq_len instead of crashing;
++            # only fires on the mismatch, so all working inputs are unchanged. Unblocks streaming audio.
++            if llm_positions.shape[1] > seq_len:
++                llm_positions = llm_positions[:, :seq_len]
++            else:
++                extra = seq_len - llm_positions.shape[1]
++                base = int(llm_positions.max()) + 1 if llm_positions.shape[1] else 0
++                tail = np.broadcast_to(np.arange(extra) + base, (3, extra))
++                llm_positions = np.concatenate([llm_positions, tail], axis=1)
+         mrope_position_delta = int(llm_positions.max()) + 1 - seq_len
+#
+# Belt-and-suspenders (worker side): a streaming worker can also just emit >=1 trailing token after
+# each audio placeholder (e.g. "\n") to avoid the boundary entirely -- verified equivalent.
+
+# ── FIX 5 — IN-ENGINE windowed KV (sliding-window attention) ─────────────────────────────────────
+# Make vLLM bound per-frame attention compute (and, where the hybrid KV manager allows, free KV blocks)
+# for resident streaming requests WITHOUT app-level request recycling/re-encode. Force a sliding window
+# on the text DECODER layers so Attention.get_kv_cache_spec returns SlidingWindowSpec and the FA backend
+# uses a windowed causal mask. All omni text backbones use the shared Attention class.
+#
+# File: vllm/model_executor/layers/attention/attention.py  (Attention.__init__, after sliding_window calc)
++        import os as _os
++        _swa = int(_os.environ.get("METRONOME_INENGINE_SWA", "0") or "0")
++        if _swa > 0 and attn_type == AttentionType.DECODER and sliding_window is None:
++            sliding_window = _swa     # -> windowed FA compute (flat latency) + SlidingWindowSpec
+#
+# Verified: 48 decoder layers forced sliding_window=1024; N=96/300s through the gateway stays FLAT at
+# ~1-2 ms/frame (vs vanilla drift to 1601 ms, and better than the app-level recycling proxy's 14-36 ms).
+# NOTE: on this build vLLM keeps the windowed *compute* but its hybrid KV manager may not drop blocks
+# outside the window (memory) -- see RESULTS_METRONOME_OVER_VLLM.md for the memory vs compute split.
+
+# ── FIX 6 — SINK-TOKEN RETENTION inside the in-engine window (StreamingLLM) ──────────────────────
+# The long-horizon probe showed the post-hoc window (FIX 5) degrades FREE-RUNNING generation once
+# the window slides past the session start -- the StreamingLLM attention-sink effect. Standard
+# mitigation: keep the first few absolute positions ("sink tokens") attendable and resident. FA2's
+# window_size=(l,r) cannot express the union mask [0,sink) ∪ [t-W,t], so the sink path routes the
+# text-decoder layers to the TRITON_ATTN backend and extends its unified-attention kernel.
+# Opt-in via METRONOME_SWA_SINK=<tokens> (0 = every touched file byte-identical in behavior);
+# METRONOME_SWA_TRITON=1 forces the Triton routing without sinks (backend-control experiments).
+#
+# File: vllm/v1/attention/ops/triton_attention_helpers.py
+#   - compute_kv_seq_mask: SINK_LEN constexpr; window branch becomes
+#       seq_mask &= ((q_abs - k) < SLIDING_WINDOW) | (k < SINK_LEN)
+#   - compute_tile_loop_bounds: also returns tile_start (how many leading tiles the
+#     window pruning skipped) so the kernel can schedule the sink tiles.
+#
+# File: vllm/v1/attention/ops/triton_unified_attention.py
+#   - kernel_unified_attention: SINK_LEN constexpr. The tile loop gains
+#     min(ceil(SINK/TILE), tile_start) extra leading iterations remapped onto tiles [0, n_sink)
+#     -- the online softmax is order-invariant, so accumulating sink tiles first is exact.
+#     In 3D (segmented-decode) mode only segment 0 takes the sink tiles; reduce_segments then
+#     merges them exactly once. The V-zeroing boundary guard gains the same sink OR-term.
+#   - launcher: SINK_LEN from METRONOME_SWA_SINK, zeroed for chunked-attention masks.
+#
+# File: vllm/v1/core/single_type_kv_cache_manager.py
+#   - remove_skipped_blocks walks down to `self._retain_first_blocks` instead of 0;
+#     SlidingWindowManager sets it to ceil(sink/block_size) so the sink blocks stay resident
+#     while everything between sink and window is still freed.
+#
+# File: vllm/v1/kv_cache_interface.py
+#   - SlidingWindowSpec.max_admission_blocks_per_request += ceil(sink/block_size) so the startup
+#     pool sizer and runtime admission cap count the retained blocks (keeps the
+#     sum(reservations) <= pool invariant that prevents allocation deadlock).
+#
+# File: vllm/model_executor/layers/attention/attention.py  (inside the FIX 5 block)
+#   - when METRONOME_SWA_SINK>0 (or METRONOME_SWA_TRITON=1), pass
+#     attn_backend=TritonAttentionBackend for the forced-window decoder layers. MMEncoderAttention
+#     (audio/vision) resolves its backend separately and is untouched.
+#
+# Verified: kernel unit test vs float32 torch reference of the union mask (2D + 3D segmented
+# decode, GQA 32/4, mixed prefill+decode, boundary ages; freed blocks NaN-poisoned to prove the
+# kernel never reads outside sinks ∪ window) -- max_abs_err < 2e-3 in bf16, and byte-identical
+# stock behavior with SINK=0. KV-manager unit test: sink blocks survive repeated
+# remove_skipped_blocks; admission cap grows by exactly ceil(sink/bs); stock path unchanged.
+# End-to-end: see results/sustained_fd/lh_sink32.json / lh_tri0.json (long-horizon probe).

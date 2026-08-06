@@ -1,0 +1,116 @@
+{
+  "moshi": {
+    "model": "moshi",
+    "capacity": 180,
+    "rows": [
+      {
+        "offered": 144,
+        "m_premium": 0.0,
+        "m_standard": 0.8949450549450549,
+        "m_admitted": 136,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 216,
+        "m_premium": 0.0,
+        "m_standard": 0.8949450549450549,
+        "m_admitted": 136,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 288,
+        "m_premium": 0.0,
+        "m_standard": 0.8949450549450549,
+        "m_admitted": 136,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 360,
+        "m_premium": 0.0,
+        "m_standard": 0.8949450549450549,
+        "m_admitted": 136,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      }
+    ]
+  },
+  "minicpm-o": {
+    "model": "minicpm-o",
+    "capacity": 259,
+    "rows": [
+      {
+        "offered": 207,
+        "m_premium": 0.0,
+        "m_standard": 0.0,
+        "m_admitted": 71,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 310,
+        "m_premium": 0.0,
+        "m_standard": 0.0,
+        "m_admitted": 71,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 414,
+        "m_premium": 0.0,
+        "m_standard": 0.0,
+        "m_admitted": 71,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 518,
+        "m_premium": 0.0,
+        "m_standard": 0.0,
+        "m_admitted": 71,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      }
+    ]
+  },
+  "qwen3-omni": {
+    "model": "qwen3-omni",
+    "capacity": 168,
+    "rows": [
+      {
+        "offered": 134,
+        "m_premium": 0.0,
+        "m_standard": 0.755561797752809,
+        "m_admitted": 134,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 201,
+        "m_premium": 0.0,
+        "m_standard": 0.85303738317757,
+        "m_admitted": 158,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 268,
+        "m_premium": 0.0,
+        "m_standard": 0.85303738317757,
+        "m_admitted": 158,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      },
+      {
+        "offered": 336,
+        "m_premium": 0.0,
+        "m_standard": 0.85303738317757,
+        "m_admitted": 158,
+        "g_premium": 1.0,
+        "g_standard": 1.0
+      }
+    ]
+  }
+}

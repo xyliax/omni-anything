@@ -1,0 +1,54 @@
+{
+  "model": "minicpm-o",
+  "mode": "continuous_full_duplex",
+  "budget_ms": 1000.0,
+  "per_frame_audio_in": 25,
+  "per_frame_out": 25,
+  "window": 512,
+  "quantization": "bf16",
+  "capacity": 128,
+  "curve": [
+    {
+      "N": 1,
+      "frame_p50_ms": 251.7,
+      "frame_p99_ms": 253.3,
+      "meets_budget": true
+    },
+    {
+      "N": 8,
+      "frame_p50_ms": 278.4,
+      "frame_p99_ms": 287.5,
+      "meets_budget": true
+    },
+    {
+      "N": 32,
+      "frame_p50_ms": 354.6,
+      "frame_p99_ms": 383.8,
+      "meets_budget": true
+    },
+    {
+      "N": 64,
+      "frame_p50_ms": 502.3,
+      "frame_p99_ms": 566.2,
+      "meets_budget": true
+    },
+    {
+      "N": 128,
+      "frame_p50_ms": 690.1,
+      "frame_p99_ms": 830.8,
+      "meets_budget": true
+    },
+    {
+      "N": 192,
+      "frame_p50_ms": 924.4,
+      "frame_p99_ms": 1142.1,
+      "meets_budget": false
+    },
+    {
+      "N": 256,
+      "frame_p50_ms": 1146.0,
+      "frame_p99_ms": 14500.8,
+      "meets_budget": false
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+ "n_sessions": 8,
+ "duration": 60.0,
+ "sess_correct": 8,
+ "sess_ever": 8,
+ "sess_with_ticks": 8,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. It is the largest city in France and is known for its rich history, culture, and",
+  "The longest river in South America is the Amazon River. It is approximately 4,000 miles (6,4",
+  "The highest mountain peak in North America is Mount McKinley, also known as Denali, located in Alaska. It stands at",
+  "The capital of France is Paris. It is a major city in the northern part of the country and is known for its rich",
+  "The longest river in South America is the Amazon River. It is approximately 4,000 miles (6,4",
+  "The highest mountain peak in North America is Mount McKinley, also known as Denali, located in Alaska. It stands at",
+  "The capital of France is Paris. It is a major city in the northern part of the country and is known for its rich",
+  "The longest river in South America is the Amazon River. It is approximately 4,000 miles (6,4"
+ ],
+ "sample_assembled": [
+  "The capital of France is Paris. It is located in the northern part of the country and is known for its iconic landmarks such The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E The capital of France is Paris. It is the",
+  "The longest river in South America is the **Amazon River**. It is approximately 6,400 kilometers (4 The longest river in South America is the **Amazon River**. It is approximately 6,400 kilometers (4 The longest river in South America is the Amazon River. It is approximately 4,000 miles (6,4 The longest river in South America is the Amazon River. It is approximately 4,000 miles (6,4 The longest ri",
+  "The highest mountain peak in North America is **Denali** (formerly known as Mount McKinley), located in Alaska, United The highest mountain peak in North America is **Denali** (formerly known as Mount McKinley), located in Alaska. It The highest mountain peak in North America is Mount McKinley, also known as Denali, located in Alaska. It stands at The highest mountain peak in North America is Moun",
+  "The capital of France is Paris. It is located in the northern part of the country and is known for its iconic landmarks such The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E The capital of France is Paris. It is the"
+ ]
+}

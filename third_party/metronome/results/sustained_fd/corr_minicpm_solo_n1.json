@@ -1,0 +1,10 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 0,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "old\nThe capital of France is Paris.\n\n\n</think>\n\nThe capital of France is Paris.\n,\n\nAnd"
+ ]
+}

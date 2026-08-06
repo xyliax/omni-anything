@@ -1,0 +1,14 @@
+=== FRESH-per-point Moshi (80ms budget, voice-out) ===
+######## FRESH moshi N=8 (14:36:30) ########
+  OVERALL: ticks=5728 lat p50=53 p90=53 p99=54ms miss=0.28% TTFA p50=54ms voice_out_frames=5728 err=0
+  CADENCE: delivered 95% of frames (716/750 per session) -> real frame period 84ms vs budget 80ms => REAL-TIME
+######## FRESH moshi N=16 (14:37:55) ########
+  OVERALL: ticks=11496 lat p50=53 p90=53 p99=55ms miss=0.21% TTFA p50=54ms voice_out_frames=11504 err=0
+  CADENCE: delivered 96% of frames (718/750 per session) -> real frame period 84ms vs budget 80ms => REAL-TIME
+######## FRESH moshi N=24 (14:39:20) ########
+  OVERALL: ticks=17220 lat p50=53 p90=53 p99=54ms miss=0.21% TTFA p50=54ms voice_out_frames=17229 err=0
+  CADENCE: delivered 96% of frames (718/750 per session) -> real frame period 84ms vs budget 80ms => REAL-TIME
+######## FRESH moshi N=32 (14:40:45) ########
+  OVERALL: ticks=22928 lat p50=53 p90=53 p99=56ms miss=0.21% TTFA p50=55ms voice_out_frames=22943 err=0
+  CADENCE: delivered 96% of frames (716/750 per session) -> real frame period 84ms vs budget 80ms => REAL-TIME
+=> fresh holds N=24 AND N=32 REAL-TIME (96% delivery); the sweep's 'cliff at 24' was contamination.

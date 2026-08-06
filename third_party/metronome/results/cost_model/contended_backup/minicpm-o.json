@@ -1,0 +1,17 @@
+{
+  "model": "minicpm-o",
+  "device": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+  "c_fixed_p50": 16.842905333721973,
+  "alpha_p50": 0.00021524933619372372,
+  "c_fixed_p99": 20.3480664716667,
+  "alpha_p99": 0.0002606339401090483,
+  "batch_base_p99": 17.497223010961573,
+  "batch_per_session_p99": 3.0307781734931156,
+  "batch_alpha_p99": 0.00029487790910343037,
+  "single_r2_p99": 0.9301890893198935,
+  "batch_r2_p99": 0.9745100664989065,
+  "single_max_rel_resid_p99": 0.05346174625657529,
+  "batch_max_rel_resid_p99": 0.10025798786027777,
+  "kv_bytes_per_token": 147456,
+  "notes": "minicpm-o on NVIDIA RTX PRO 6000 Blackwell Workstation Edition"
+}

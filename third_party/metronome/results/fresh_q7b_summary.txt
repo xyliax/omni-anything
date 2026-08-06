@@ -1,0 +1,9 @@
+=== FRESH-per-point Qwen2.5-Omni-7B (2s budget) ===
+######## FRESH point: fresh_q7b N=8 (14:17:47) ########
+  OVERALL: ticks=240 lat p50=0 p90=0 p99=943ms miss=0.00% TTFA p50=944ms voice_out_frames=0 err=0
+######## FRESH point: fresh_q7b N=16 (14:19:44) ########
+  OVERALL: ticks=480 lat p50=0 p90=0 p99=1601ms miss=0.00% TTFA p50=3ms voice_out_frames=0 err=0
+######## FRESH point: fresh_q7b N=32 (14:21:35) ########
+  OVERALL: ticks=960 lat p50=1601 p90=1603 p99=1603ms miss=0.00% TTFA p50=1607ms voice_out_frames=0 err=0
+######## FRESH point: fresh_q7b N=64 (14:23:27) ########
+  OVERALL: ticks=1920 lat p50=1601 p90=1603 p99=1686ms miss=0.00% TTFA p50=1611ms voice_out_frames=0 err=0

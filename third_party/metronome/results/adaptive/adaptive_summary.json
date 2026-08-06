@@ -1,0 +1,356 @@
+{
+  "moshi": {
+    "model": "moshi",
+    "small": 256,
+    "large": 2048,
+    "rows": {
+      "fixed-small": [
+        {
+          "offered": 441.59999999999997,
+          "served": 221.0656,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.7194586740530946
+        },
+        {
+          "offered": 883.1999999999999,
+          "served": 468.532,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.7172386617837697
+        },
+        {
+          "offered": 1472.0,
+          "served": 602.3472,
+          "miss": 0.0,
+          "blocking": 0.36348684210526316,
+          "quality": 0.6926987325533978
+        },
+        {
+          "offered": 2208.0,
+          "served": 630.3488,
+          "miss": 0.0,
+          "blocking": 0.5590316573556797,
+          "quality": 0.6947348354017785
+        },
+        {
+          "offered": 2944.0,
+          "served": 639.8376,
+          "miss": 0.0,
+          "blocking": 0.7357612267250822,
+          "quality": 0.6793513119362626
+        }
+      ],
+      "fixed-large": [
+        {
+          "offered": 441.59999999999997,
+          "served": 61.8536,
+          "miss": 0.0,
+          "blocking": 0.8413926499032882,
+          "quality": 0.9960167028824591
+        },
+        {
+          "offered": 883.1999999999999,
+          "served": 61.9496,
+          "miss": 0.0,
+          "blocking": 0.9197416974169742,
+          "quality": 0.9961444228367419
+        },
+        {
+          "offered": 1472.0,
+          "served": 61.9816,
+          "miss": 0.0,
+          "blocking": 0.9510686164229472,
+          "quality": 0.9962215622890966
+        },
+        {
+          "offered": 2208.0,
+          "served": 61.9936,
+          "miss": 0.0,
+          "blocking": 0.9686931197670186,
+          "quality": 0.9957600069191761
+        },
+        {
+          "offered": 2944.0,
+          "served": 61.9944,
+          "miss": 0.0,
+          "blocking": 0.9752770673486786,
+          "quality": 0.9950004561348471
+        }
+      ],
+      "adaptive": [
+        {
+          "offered": 441.59999999999997,
+          "served": 221.0656,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.8725014223961238
+        },
+        {
+          "offered": 883.1999999999999,
+          "served": 463.484,
+          "miss": 0.0,
+          "blocking": 0.06144256455921637,
+          "quality": 0.7704695763184458
+        },
+        {
+          "offered": 1472.0,
+          "served": 583.088,
+          "miss": 0.0,
+          "blocking": 0.3498591549295774,
+          "quality": 0.7166388151627666
+        },
+        {
+          "offered": 2208.0,
+          "served": 621.824,
+          "miss": 0.0,
+          "blocking": 0.5766590389016018,
+          "quality": 0.6960355322013025
+        },
+        {
+          "offered": 2944.0,
+          "served": 634.6464,
+          "miss": 0.0,
+          "blocking": 0.7032204330927263,
+          "quality": 0.6861545151156722
+        }
+      ]
+    }
+  },
+  "minicpm-o": {
+    "model": "minicpm-o",
+    "small": 2048,
+    "large": 16384,
+    "rows": {
+      "fixed-small": [
+        {
+          "offered": 121.8,
+          "served": 58.94,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.963408156920329
+        },
+        {
+          "offered": 243.6,
+          "served": 129.06,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.9526623593885536
+        },
+        {
+          "offered": 406.0,
+          "served": 178.36,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.9583457227767236
+        },
+        {
+          "offered": 609.0,
+          "served": 259.02,
+          "miss": 0.0,
+          "blocking": 0.21449704142011838,
+          "quality": 0.9535578278248324
+        },
+        {
+          "offered": 812.0,
+          "served": 276.85,
+          "miss": 0.0,
+          "blocking": 0.428921568627451,
+          "quality": 0.9458929775516259
+        }
+      ],
+      "fixed-large": [
+        {
+          "offered": 121.8,
+          "served": 34.45,
+          "miss": 0.0,
+          "blocking": 0.4821428571428571,
+          "quality": 1.0
+        },
+        {
+          "offered": 243.6,
+          "served": 34.95,
+          "miss": 0.0,
+          "blocking": 0.8347457627118644,
+          "quality": 1.0
+        },
+        {
+          "offered": 406.0,
+          "served": 34.98,
+          "miss": 0.0,
+          "blocking": 0.8974358974358975,
+          "quality": 1.0
+        },
+        {
+          "offered": 609.0,
+          "served": 35.0,
+          "miss": 0.0,
+          "blocking": 0.9215384615384615,
+          "quality": 1.0
+        },
+        {
+          "offered": 812.0,
+          "served": 35.0,
+          "miss": 0.0,
+          "blocking": 0.9459459459459459,
+          "quality": 1.0
+        }
+      ],
+      "adaptive": [
+        {
+          "offered": 121.8,
+          "served": 35.66,
+          "miss": 0.0,
+          "blocking": 0.48120300751879697,
+          "quality": 1.0
+        },
+        {
+          "offered": 243.6,
+          "served": 51.33,
+          "miss": 0.0,
+          "blocking": 0.6038461538461539,
+          "quality": 1.0
+        },
+        {
+          "offered": 406.0,
+          "served": 120.54,
+          "miss": 0.0,
+          "blocking": 0.23448275862068968,
+          "quality": 0.9741653441267565
+        },
+        {
+          "offered": 609.0,
+          "served": 199.45,
+          "miss": 0.0,
+          "blocking": 0.22021116138763197,
+          "quality": 0.9670875876343715
+        },
+        {
+          "offered": 812.0,
+          "served": 232.49,
+          "miss": 0.0,
+          "blocking": 0.36708860759493667,
+          "quality": 0.956367779167152
+        }
+      ]
+    }
+  },
+  "qwen3-omni": {
+    "model": "qwen3-omni",
+    "small": 512,
+    "large": 4096,
+    "rows": {
+      "fixed-small": [
+        {
+          "offered": 72.6,
+          "served": 59.922,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.740843584281693
+        },
+        {
+          "offered": 145.2,
+          "served": 99.278,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.7610130229437135
+        },
+        {
+          "offered": 242.0,
+          "served": 192.988,
+          "miss": 0.0,
+          "blocking": 0.0025316455696202667,
+          "quality": 0.7516046505645315
+        },
+        {
+          "offered": 363.0,
+          "served": 219.736,
+          "miss": 0.0,
+          "blocking": 0.2647569444444444,
+          "quality": 0.7471128739611249
+        },
+        {
+          "offered": 484.0,
+          "served": 226.29,
+          "miss": 0.0,
+          "blocking": 0.4487359550561798,
+          "quality": 0.7380269874402198
+        }
+      ],
+      "fixed-large": [
+        {
+          "offered": 72.6,
+          "served": 59.922,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.9719482392940224
+        },
+        {
+          "offered": 145.2,
+          "served": 96.926,
+          "miss": 0.0,
+          "blocking": 0.04618937644341803,
+          "quality": 0.9817573619654303
+        },
+        {
+          "offered": 242.0,
+          "served": 111.792,
+          "miss": 0.0,
+          "blocking": 0.46303501945525294,
+          "quality": 0.9753402968622831
+        },
+        {
+          "offered": 363.0,
+          "served": 112.792,
+          "miss": 0.0,
+          "blocking": 0.6582959641255606,
+          "quality": 0.9723248974923989
+        },
+        {
+          "offered": 484.0,
+          "served": 112.898,
+          "miss": 0.0,
+          "blocking": 0.7547297297297297,
+          "quality": 0.9669964219366063
+        }
+      ],
+      "adaptive": [
+        {
+          "offered": 72.6,
+          "served": 59.922,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.9719482392940224
+        },
+        {
+          "offered": 145.2,
+          "served": 99.278,
+          "miss": 0.0,
+          "blocking": 0.0,
+          "quality": 0.9556891041476545
+        },
+        {
+          "offered": 242.0,
+          "served": 192.988,
+          "miss": 0.0,
+          "blocking": 0.0025316455696202667,
+          "quality": 0.7593336858477452
+        },
+        {
+          "offered": 363.0,
+          "served": 219.736,
+          "miss": 0.0,
+          "blocking": 0.2647569444444444,
+          "quality": 0.7475368807449624
+        },
+        {
+          "offered": 484.0,
+          "served": 226.29,
+          "miss": 0.0,
+          "blocking": 0.4487359550561798,
+          "quality": 0.7380269874402198
+        }
+      ]
+    }
+  }
+}

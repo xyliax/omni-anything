@@ -1,0 +1,32 @@
+{
+  "moshi": {
+    "n_seeds": 20,
+    "mean_gain": 3.4,
+    "gain_95ci": [
+      3.4,
+      3.4
+    ],
+    "mean_M": 136,
+    "mean_B1": 40
+  },
+  "minicpm-o": {
+    "n_seeds": 20,
+    "mean_gain": 4.176,
+    "gain_95ci": [
+      4.176,
+      4.176
+    ],
+    "mean_M": 71,
+    "mean_B1": 17
+  },
+  "qwen3-omni": {
+    "n_seeds": 20,
+    "mean_gain": 2.469,
+    "gain_95ci": [
+      2.469,
+      2.469
+    ],
+    "mean_M": 158,
+    "mean_B1": 64
+  }
+}

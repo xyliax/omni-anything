@@ -1,0 +1,182 @@
+{
+  "moshi": {
+    "silence_gain": [
+      {
+        "talk_frac": 0.3,
+        "served_on": 130.9792,
+        "served_off": 119.0072,
+        "gain": 1.1,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.5,
+        "served_on": 130.9792,
+        "served_off": 119.0072,
+        "gain": 1.1,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.7,
+        "served_on": 130.9792,
+        "served_off": 119.0072,
+        "gain": 1.1,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 1.0,
+        "served_on": 120.3416,
+        "served_off": 119.0072,
+        "gain": 1.01,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      }
+    ],
+    "miss_runs": {
+      "model": "moshi",
+      "cap": 180,
+      "m": {
+        "miss": 0.0,
+        "fairness": 1.0,
+        "run_p99": 0,
+        "run_max": 0,
+        "blocking": 0.6746626686656672
+      },
+      "g": {
+        "miss": 0.0,
+        "fairness": 1.0,
+        "run_p99": 0,
+        "run_max": 0,
+        "blocking": 0.5882352941176471
+      }
+    },
+    "adversarial": {
+      "model": "moshi",
+      "peak_miss": 0.0,
+      "mean_miss": 0.0,
+      "blocking": 0.07246376811594202
+    }
+  },
+  "minicpm-o": {
+    "silence_gain": [
+      {
+        "talk_frac": 0.3,
+        "served_on": 71.0,
+        "served_off": 70.98,
+        "gain": 1.0,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.5,
+        "served_on": 71.0,
+        "served_off": 70.98,
+        "gain": 1.0,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.7,
+        "served_on": 71.0,
+        "served_off": 70.98,
+        "gain": 1.0,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 1.0,
+        "served_on": 71.0,
+        "served_off": 70.98,
+        "gain": 1.0,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      }
+    ],
+    "miss_runs": {
+      "model": "minicpm-o",
+      "cap": 259,
+      "m": {
+        "miss": 0.0,
+        "fairness": 1.0,
+        "run_p99": 0,
+        "run_max": 0,
+        "blocking": 0.8835616438356164
+      },
+      "g": {
+        "miss": 0.0,
+        "fairness": 1.0,
+        "run_p99": 0,
+        "run_max": 0,
+        "blocking": 0.8901734104046243
+      }
+    },
+    "adversarial": {
+      "model": "minicpm-o",
+      "peak_miss": 0.0,
+      "mean_miss": 0.0,
+      "blocking": 0.5932203389830508
+    }
+  },
+  "qwen3-omni": {
+    "silence_gain": [
+      {
+        "talk_frac": 0.3,
+        "served_on": 182.702,
+        "served_off": 154.0,
+        "gain": 1.19,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.5,
+        "served_on": 182.702,
+        "served_off": 154.0,
+        "gain": 1.19,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 0.7,
+        "served_on": 185.712,
+        "served_off": 154.0,
+        "gain": 1.21,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      },
+      {
+        "talk_frac": 1.0,
+        "served_on": 150.136,
+        "served_off": 154.0,
+        "gain": 0.97,
+        "miss_on": 0.0,
+        "miss_off": 0.0
+      }
+    ],
+    "miss_runs": {
+      "model": "qwen3-omni",
+      "cap": 168,
+      "m": {
+        "miss": 0.0,
+        "fairness": 1.0,
+        "run_p99": 0,
+        "run_max": 0,
+        "blocking": 0.6509554140127389
+      },
+      "g": {
+        "miss": 1.0,
+        "fairness": 1.0,
+        "run_p99": 320,
+        "run_max": 371,
+        "blocking": 0.005273566249175965
+      }
+    },
+    "adversarial": {
+      "model": "qwen3-omni",
+      "peak_miss": 0.0,
+      "mean_miss": 0.0,
+      "blocking": 0.15578947368421048
+    }
+  }
+}

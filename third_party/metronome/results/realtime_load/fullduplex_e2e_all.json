@@ -1,0 +1,4 @@
+{"mode":"continuous_full_duplex_END_TO_END","stack":"client->Go gateway (full_duplex)->gRPC->worker->output",
+ "minicpm-o":{"capacity":128,"frame_p99_ms_at_cap":942,"miss_at_cap":0.0,"ttfa_ms":563,"note":"real-audio re-encode fits 1s budget; matches worker-level 128"},
+ "qwen-omni-fp8":{"capacity":0,"note":"INFEASIBLE: 100% miss @16 streams (frame 1497ms >> 200ms). fd_step re-encodes audio window/frame (no vLLM incremental mm-KV); too costly for 200ms budget. token-proxy worker-level 32 was optimistic (assumed cacheable context). Needs streaming encoder."},
+ "moshi":{"e2e_capacity_80ms":"~16-24","gpu_capacity":48,"note":"native streaming codec — no re-encode (unlike omni). e2e cadence holds to ~16-24 streams (16=99% frames delivered, 32=74%), overhead-limited at the tight 80ms budget + fixed-batch worker; GPU alone sustains 48 (batched_moshi synchronized)."}}

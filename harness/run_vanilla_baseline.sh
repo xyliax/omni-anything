@@ -6,7 +6,7 @@
 # 用法: GPUS=1 NS="6 8" DUR=600 bash harness/run_vanilla_baseline.sh
 set -u
 cd "$(dirname "$0")/.."
-MET=metronome
+MET=third_party/metronome
 OUT=results/paper/baseline; mkdir -p $OUT
 GPU="${GPUS:-1}"; NS="${NS:-2 4 6 8}"; DUR="${DUR:-300}"
 MODEL="${MODEL:-Qwen/Qwen2.5-Omni-7B}"; PERIOD_MS=2000; MML="${MML:-16384}"; MAXSEQS="${MAXSEQS:-16}"; GPU_MEM="${GPU_MEM:-0.9}"

@@ -1,0 +1,36 @@
+{
+  "model": "qwen-omni",
+  "facts": "qwen3-omni",
+  "budget_ms": 200.0,
+  "tpt": 25,
+  "response_tokens": 200,
+  "slo": 0.05,
+  "levers": {
+    "cuda_graphs": true,
+    "chunked_prefill": true,
+    "quantization": "bf16",
+    "kv_cache_dtype": "auto",
+    "max_num_seqs": 144,
+    "with_image": false
+  },
+  "deadline_aware_capacity": 0,
+  "responsive_capacity": 0,
+  "ttfa_budget_ms": 1500.0,
+  "curve": [
+    {
+      "N": 1,
+      "turns_done": 1,
+      "errors": 0,
+      "tick_p50_ms": 246.7,
+      "tick_p99_ms": 251.2,
+      "frame_miss_rate": 1.0,
+      "ttfa_p50_ms": 319.5,
+      "ttfa_p99_ms": 319.5,
+      "batch_p50": 1,
+      "batch_max": 1,
+      "goodput_turns_ok": 0,
+      "budget_ms": 200.0
+    }
+  ],
+  "tag": "bf16_kvauto"
+}

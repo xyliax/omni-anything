@@ -1,0 +1,10 @@
+### [14:34:48] online-admit demo: online=1 swa=1024 offer=512 rate=8
+### worker ready
+[audio] 64 REAL clips from llama-questions
+=== RAMP: offered N=512 @ 8.0/s, 150s, budget 2000ms ===
+  ADMITTED=209  REJECTED=303  err=0
+  admitted latency: p50=7ms p99=644ms  steady-half p99=12ms
+  => online N* (admitted holding deadline) ~ 209
+experiments/run_online_admit.sh: line 37: 3464811 Killed                  METRONOME_ADMITLOG="results/admit_trace_${TAG}.log" setsid ./gateway-go/gateway --port 8904 --worker 127.0.0.1:50051 --period-ms "$PERIOD_MS" --tpt "$TPT" $GWA > results/oa_gw.log 2>&1
+experiments/run_online_admit.sh: line 37: 3439311 Killed                  setsid "$VENV/bin/python" -u worker/stream_server.py --model "$MODEL" --port 50051 --gpu-mem "$GPU_MEM" --max-model-len "$MML" --max-num-seqs "$MAXSEQS" --tpt "$TPT" --max-audio-chunks 64 --window-frames 0 --wait-budget-s 1.6 --ready-file $WREADY > results/oa_worker.log 2>&1
+ONLINE-ADMIT DONE (0 MiB)

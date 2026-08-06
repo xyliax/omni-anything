@@ -1,0 +1,10 @@
+=== W ABLATION: in-engine SWA window size vs latency, N=128, 60s ===
+==================== in-engine SWA W=512 tokens, N=128 ====================
+  OVERALL: ticks=3845 lat p50=2 p90=5 p99=364ms miss=0.00% TTFA p50=373ms voice_out_frames=0 err=0
+==================== in-engine SWA W=1024 tokens, N=128 ====================
+  OVERALL: ticks=3875 lat p50=3 p90=5 p99=330ms miss=0.00% TTFA p50=344ms voice_out_frames=0 err=0
+==================== in-engine SWA W=2048 tokens, N=128 ====================
+  OVERALL: ticks=3840 lat p50=2 p90=5 p99=296ms miss=0.00% TTFA p50=309ms voice_out_frames=0 err=0
+==================== in-engine SWA W=4096 tokens, N=128 ====================
+  OVERALL: ticks=3840 lat p50=3 p90=161 p99=357ms miss=0.00% TTFA p50=342ms voice_out_frames=0 err=0
+=> W<=2048 tok (~80s ctx) essentially free (p90<=5ms); W=4096 tail rises (p90 161ms)

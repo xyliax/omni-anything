@@ -1,0 +1,21 @@
+{
+  "model": "qwen-omni",
+  "task": "asr",
+  "dataset": "librispeech",
+  "n": 200,
+  "batch": 12,
+  "score_direct": 0.9805,
+  "score_served_solo": 0.9805,
+  "score_served_batched": 0.9808,
+  "delta_batched_minus_direct": 0.0004,
+  "delta_95ci": [
+    -0.0004,
+    0.0015
+  ],
+  "flip_rate_solo": 0.0,
+  "flip_count_solo": 0,
+  "flip_rate_batched": 0.01,
+  "flip_count_batched": 2,
+  "token_agree_direct_vs_solo": 0.9797,
+  "token_agree_solo_vs_batched": 0.9746
+}

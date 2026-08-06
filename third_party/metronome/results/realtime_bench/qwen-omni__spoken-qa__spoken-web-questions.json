@@ -1,0 +1,595 @@
+{
+  "task": "spoken-qa",
+  "dataset": "spoken-web-questions",
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "n": 40,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "accuracy",
+  "score": 0.45,
+  "wall_s": 29.3,
+  "traces": [
+    {
+      "question": "what does jamaican people speak?",
+      "gold": [
+        "Jamaican Creole English Language",
+        "Jamaican English"
+      ],
+      "pred": "Jamaican people speak English.",
+      "ok": false,
+      "audio_s": 2.0,
+      "latency_s": 1.04,
+      "rtf": 1.92,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what did james k polk do before he was president?",
+      "gold": [
+        "Lawyer"
+      ],
+      "pred": "He was a politician.",
+      "ok": false,
+      "audio_s": 3.0,
+      "latency_s": 0.58,
+      "rtf": 5.19,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what is the oregon ducks 2012 football schedule?",
+      "gold": [
+        "University of Oregon"
+      ],
+      "pred": "The Oregon Ducks' 2012 football schedule included games against teams like Washington, Oregon State, and California.",
+      "ok": false,
+      "audio_s": 3.1,
+      "latency_s": 1.55,
+      "rtf": 1.98,
+      "ticks": 7,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who plays ken barlow in coronation street?",
+      "gold": [
+        "Tony Warren"
+      ],
+      "pred": "Ken Barlow is played by David Platt.",
+      "ok": false,
+      "audio_s": 2.5,
+      "latency_s": 0.73,
+      "rtf": 3.44,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what happened after mr. sugihara died?",
+      "gold": [
+        "Yaotsu"
+      ],
+      "pred": "The story ends.",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 0.64,
+      "rtf": 3.28,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who did mozart write his four horn concertos for?",
+      "gold": [
+        "wolfgang amadeus mozart used story by pierre beaumarchais"
+      ],
+      "pred": "Mozart wrote his four horn concertos for Joseph Haydn.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 0.98,
+      "rtf": 2.65,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "where is jamarcus russell from?",
+      "gold": [
+        "Mobile"
+      ],
+      "pred": "Jamarcus Russell is from Las Vegas.",
+      "ok": false,
+      "audio_s": 2.2,
+      "latency_s": 0.74,
+      "rtf": 3.03,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "where was george washington carver from?",
+      "gold": [
+        "Diamond"
+      ],
+      "pred": "He was from Alabama.",
+      "ok": false,
+      "audio_s": 2.4,
+      "latency_s": 0.56,
+      "rtf": 4.2,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what else did ben franklin invent?",
+      "gold": [
+        "Lightning rod",
+        "Franklin stove",
+        "Bifocals"
+      ],
+      "pred": "Bolt",
+      "ok": false,
+      "audio_s": 1.8,
+      "latency_s": 0.51,
+      "rtf": 3.55,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who was richard nixon married to?",
+      "gold": [
+        "Pat Nixon"
+      ],
+      "pred": "Richard Nixon was married to Pat Nixon.",
+      "ok": true,
+      "audio_s": 2.9,
+      "latency_s": 0.8,
+      "rtf": 3.6,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what country did germany invade first in ww1?",
+      "gold": [
+        "Belgium"
+      ],
+      "pred": "Belgium",
+      "ok": true,
+      "audio_s": 3.4,
+      "latency_s": 0.52,
+      "rtf": 6.64,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what is the best sandals resort in st lucia?",
+      "gold": [
+        "Micoud Quarter",
+        "Choiseul Quarter",
+        "Praslin Quarter"
+      ],
+      "pred": "The best sandals resort in St. Lucia is Sandals Grande St. Lucian.",
+      "ok": false,
+      "audio_s": 2.9,
+      "latency_s": 1.15,
+      "rtf": 2.55,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who is governor of ohio 2011?",
+      "gold": [
+        "John Kasich"
+      ],
+      "pred": "John Kasich",
+      "ok": true,
+      "audio_s": 2.2,
+      "latency_s": 0.58,
+      "rtf": 3.85,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who was vice president after kennedy died?",
+      "gold": [
+        "Lyndon B. Johnson"
+      ],
+      "pred": "Lyndon B. Johnson",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 0.64,
+      "rtf": 4.33,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "where is the fukushima daiichi nuclear plant located?",
+      "gold": [
+        "Japan",
+        "Okuma"
+      ],
+      "pred": "Fukushima Prefecture, Japan.",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 0.7,
+      "rtf": 4.0,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who is the minority leader of the house of representatives now?",
+      "gold": [
+        "Nancy Pelosi"
+      ],
+      "pred": "Nancy Pelosi.",
+      "ok": true,
+      "audio_s": 3.3,
+      "latency_s": 0.54,
+      "rtf": 6.14,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what countries are part of the uk?",
+      "gold": [
+        "Scotland",
+        "England",
+        "Wales"
+      ],
+      "pred": "The UK consists of England, Scotland, Wales, and Northern Ireland.",
+      "ok": true,
+      "audio_s": 2.0,
+      "latency_s": 0.89,
+      "rtf": 2.24,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who plays bilbo baggins in the hobbit?",
+      "gold": [
+        "Norman Bird",
+        "Martin Freeman",
+        "Ian Holm"
+      ],
+      "pred": "Martin Freeman.",
+      "ok": true,
+      "audio_s": 2.1,
+      "latency_s": 0.6,
+      "rtf": 3.49,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what things did martin luther king do?",
+      "gold": [
+        "Civil rights movement",
+        "Civil disobedience",
+        "Nonviolence"
+      ],
+      "pred": "Marches, speeches, nonviolent protests.",
+      "ok": false,
+      "audio_s": 2.7,
+      "latency_s": 0.81,
+      "rtf": 3.34,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what is my timezone in louisiana?",
+      "gold": [
+        "Central Time Zone",
+        "UTC\u221206:00"
+      ],
+      "pred": "Central Time Zone",
+      "ok": true,
+      "audio_s": 2.4,
+      "latency_s": 0.54,
+      "rtf": 4.48,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what did st augustine do?",
+      "gold": [
+        "Physician",
+        "Writer",
+        "Philosopher"
+      ],
+      "pred": "He wrote.",
+      "ok": false,
+      "audio_s": 1.4,
+      "latency_s": 0.53,
+      "rtf": 2.65,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who is keyshia cole dad?",
+      "gold": [
+        "Leon Cole"
+      ],
+      "pred": "Kishia Cole's father is Kishia Cole's father.",
+      "ok": false,
+      "audio_s": 1.9,
+      "latency_s": 0.95,
+      "rtf": 2.0,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what kind government does egypt have?",
+      "gold": [
+        "Semi-presidential system",
+        "Constitutional republic",
+        "Republic"
+      ],
+      "pred": "Egypt has a parliamentary republic.",
+      "ok": true,
+      "audio_s": 2.6,
+      "latency_s": 0.69,
+      "rtf": 3.72,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what town was martin luther king assassinated in?",
+      "gold": [
+        "Memphis"
+      ],
+      "pred": "Memphis.",
+      "ok": true,
+      "audio_s": 3.0,
+      "latency_s": 0.51,
+      "rtf": 5.94,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "where did edgar allan poe died?",
+      "gold": [
+        "Baltimore"
+      ],
+      "pred": "Edgar Allan Poe died in Baltimore.",
+      "ok": true,
+      "audio_s": 1.9,
+      "latency_s": 0.75,
+      "rtf": 2.61,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "when did charles goodyear invented rubber?",
+      "gold": [
+        "During the early 1830's he began inventing, filing six patents between 1830 and 1834, and during this period became interested in rubber, which he tried - unsuccessfully - to use in some of his mechanical inventions."
+      ],
+      "pred": "Charles Goodyear invented rubber in 1839.",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 1.01,
+      "rtf": 2.11,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what to do today in atlanta with kids?",
+      "gold": [
+        "Atlanta History Center",
+        "Atlanta Cyclorama & Civil War Museum",
+        "Atlanta Ballet"
+      ],
+      "pred": "Visit the Georgia Aquarium.",
+      "ok": false,
+      "audio_s": 2.5,
+      "latency_s": 0.66,
+      "rtf": 3.8,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who did france surrender to in ww2?",
+      "gold": [
+        "Germany"
+      ],
+      "pred": "Germany",
+      "ok": true,
+      "audio_s": 2.3,
+      "latency_s": 0.47,
+      "rtf": 4.83,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what electorate does anna bligh represent?",
+      "gold": [
+        "Electoral district of South Brisbane"
+      ],
+      "pred": "Anna Bligh represents the Brisbane electorate.",
+      "ok": false,
+      "audio_s": 2.7,
+      "latency_s": 0.75,
+      "rtf": 3.63,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what channel is the usa pageant on?",
+      "gold": [
+        "us"
+      ],
+      "pred": "USA pageant is on ABC.",
+      "ok": true,
+      "audio_s": 3.1,
+      "latency_s": 0.64,
+      "rtf": 4.83,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what are some of the traditions of islam?",
+      "gold": [
+        "Zak\u0101t",
+        "Salah",
+        "Hajj"
+      ],
+      "pred": "Prayer, fasting, charity, pilgrimage.",
+      "ok": false,
+      "audio_s": 2.2,
+      "latency_s": 0.7,
+      "rtf": 3.12,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "where did andy murray started playing tennis?",
+      "gold": [
+        "United Kingdom"
+      ],
+      "pred": "Andy Murray started playing tennis in Scotland.",
+      "ok": false,
+      "audio_s": 2.1,
+      "latency_s": 0.87,
+      "rtf": 2.46,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what is the australian dollar called?",
+      "gold": [
+        "Australian dollar"
+      ],
+      "pred": "Australian dollar is called AUD.",
+      "ok": true,
+      "audio_s": 2.3,
+      "latency_s": 0.63,
+      "rtf": 3.68,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what timezone is sweden?",
+      "gold": [
+        "Central European Time"
+      ],
+      "pred": "CET",
+      "ok": false,
+      "audio_s": 1.6,
+      "latency_s": 0.43,
+      "rtf": 3.64,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who did cam newton sign with?",
+      "gold": [
+        "Carolina Panthers"
+      ],
+      "pred": "Cam Newton signed with the Carolina Panthers.",
+      "ok": true,
+      "audio_s": 1.9,
+      "latency_s": 0.75,
+      "rtf": 2.49,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what county is frederick md in?",
+      "gold": [
+        "Frederick County"
+      ],
+      "pred": "Frederick is in Frederick County.",
+      "ok": true,
+      "audio_s": 1.7,
+      "latency_s": 0.74,
+      "rtf": 2.26,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what highschool did harper lee go to?",
+      "gold": [
+        "Monroe County High School"
+      ],
+      "pred": "Harper Lee went to Anniston High School.",
+      "ok": false,
+      "audio_s": 2.3,
+      "latency_s": 0.75,
+      "rtf": 3.05,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "what timezone is utah in?",
+      "gold": [
+        "Mountain Time Zone"
+      ],
+      "pred": "Utah is in the Mountain Time Zone.",
+      "ok": true,
+      "audio_s": 1.7,
+      "latency_s": 0.79,
+      "rtf": 2.11,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who did george w. bush run against for the second term?",
+      "gold": [
+        "Al Gore"
+      ],
+      "pred": "John Kerry.",
+      "ok": false,
+      "audio_s": 3.2,
+      "latency_s": 0.6,
+      "rtf": 5.41,
+      "ticks": 1,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "who is niall ferguson's wife?",
+      "gold": [
+        "Ayaan Hirsi Ali"
+      ],
+      "pred": "Niall Ferguson's wife is Emma.",
+      "ok": false,
+      "audio_s": 2.6,
+      "latency_s": 0.8,
+      "rtf": 3.19,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+=== IN-ENGINE windowed KV (SWA W=1024 tok), N=96/300s ===
+         0-10s     480        4ms      317ms   0.0%
+        10-20s     480        3ms        3ms   0.0%
+        20-30s     480        3ms        4ms   0.0%
+        30-40s     480        3ms        4ms   0.0%
+        40-50s     480        4ms        5ms   0.0%
+        50-60s     480        5ms      248ms   0.0%
+        60-70s     480        5ms      248ms   0.0%
+        70-80s     480        5ms        5ms   0.0%
+        80-90s     480        4ms        5ms   0.0%
+       90-100s     480        4ms        4ms   0.0%
+      100-110s     480        4ms        6ms   0.0%
+      110-120s     480        5ms        6ms   0.0%
+      120-130s     480        6ms        6ms   0.0%
+      130-140s     480        4ms        5ms   0.0%
+      140-150s     480        5ms        6ms   0.0%
+      150-160s     480        6ms        6ms   0.0%
+      160-170s     480        4ms        6ms   0.0%
+      170-180s     480        5ms        7ms   0.0%
+      180-190s     480        5ms        5ms   0.0%
+      190-200s     480        5ms      166ms   0.0%
+      200-210s     480        5ms        7ms   0.0%
+      210-220s     480        5ms        7ms   0.0%
+      220-230s     480        6ms        7ms   0.0%
+      230-240s     480        7ms       11ms   0.0%
+      240-250s     480        6ms        8ms   0.0%
+      250-260s     480        5ms        7ms   0.0%
+      260-270s     480        8ms       11ms   0.0%
+      270-280s     480        1ms       11ms   0.0%
+      280-290s     480        1ms        1ms   0.0%
+      290-300s     480        1ms        2ms   0.0%
+  OVERALL: ticks=14496 lat p50=5 p90=7 p99=278ms miss=0.00% TTFA p50=288ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 317ms -> last-bucket p99 2ms (drift -314ms) STABLE
+
+=== IN-ENGINE SWA (W=1024) capacity, 90s ===
+### [13:12:59] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=128 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+  OVERALL: ticks=5763 lat p50=3 p90=6 p99=361ms miss=0.00% TTFA p50=372ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 361ms -> last-bucket p99 5ms (drift -356ms) STABLE
+### [13:14:36] sammysun0711/Qwen3-Omni-30B-A3B-Instruct-FP8-Dynamic N=160 sustained 90s @ 20ms (STREAMING append-to-resident-KV)
+  OVERALL: ticks=7205 lat p50=4 p90=8 p99=449ms miss=0.00% TTFA p50=269ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 449ms -> last-bucket p99 8ms (drift -441ms) STABLE

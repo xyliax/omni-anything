@@ -1,0 +1,32 @@
+{
+  "model": "qwen-omni",
+  "facts": "qwen3-omni",
+  "cost_real": {
+    "c_fixed": 249.3311,
+    "alpha": 0.000915,
+    "batch_base": 242.6042,
+    "batch_per_session": 1.2682,
+    "batch_alpha": 0.000829,
+    "tail_factor": 1.0048,
+    "single_max_rel_resid": 0.0019,
+    "batch_r2": 0.9131
+  },
+  "cost_synth": {
+    "c_fixed": 6.8029,
+    "alpha": 0.000499,
+    "batch_base": 7.9044,
+    "batch_per_session": 0.6083,
+    "batch_alpha": 0.000201
+  },
+  "mscs_real": {
+    "B1": 0,
+    "M": 0
+  },
+  "mscs_synth": {
+    "B1": 64,
+    "M": 158
+  },
+  "gain_real": 0.0,
+  "gain_synth": 2.47,
+  "synth_optimism_cfixed": 36.65
+}

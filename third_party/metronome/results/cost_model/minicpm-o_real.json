@@ -1,0 +1,16 @@
+{
+  "model": "minicpm-o",
+  "device": "cuda-vllm",
+  "c_fixed": 674.4774292255175,
+  "alpha": 0.0059347869479053645,
+  "batch_base": 658.7757407445597,
+  "batch_per_session": 4.3876841156524495,
+  "batch_alpha": 0.005742618424660506,
+  "tail_factor": 1.0253575843454081,
+  "single_r2": 0.9978683707907898,
+  "single_max_rel_resid": 0.004190361590444568,
+  "batch_r2": 0.9951709861343402,
+  "batch_max_rel_resid": 0.03227544788148599,
+  "kv_bytes_per_token": 147456,
+  "notes": "minicpm-o REAL vLLM (sequential decode, persistent request)"
+}

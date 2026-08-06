@@ -1,0 +1,207 @@
+{
+  "model": "qwen-omni",
+  "budget_ms": 200.0,
+  "tpt": 25,
+  "think_s": 0.0,
+  "turns": 1,
+  "warmup_turns": 0,
+  "slo": 0.05,
+  "ttfa_budget_ms": 1500.0,
+  "tag": "qwen_fp8w",
+  "decode_capacity": 256,
+  "responsive_capacity": 256,
+  "curve": [
+    {
+      "N": 1,
+      "turns_done": 1,
+      "errors": 0,
+      "n_ttfa": 1,
+      "n_tick": 1,
+      "tick_p50_ms": 0.2,
+      "tick_p99_ms": 0.2,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 349.7,
+      "ttfa_p50_ci": [
+        349.66087341308594,
+        349.66087341308594
+      ],
+      "ttfa_p99_ms": 349.7,
+      "ttfa_p99_ci": [
+        349.66087341308594,
+        349.66087341308594
+      ],
+      "batch_p50": 1,
+      "batch_max": 1,
+      "goodput_turns_ok": 1,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 8,
+      "turns_done": 8,
+      "errors": 0,
+      "n_ttfa": 8,
+      "n_tick": 15,
+      "tick_p50_ms": 1.9,
+      "tick_p99_ms": 1.9,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 279.3,
+      "ttfa_p50_ci": [
+        228.9,
+        331.4
+      ],
+      "ttfa_p99_ms": 350.5,
+      "ttfa_p99_ci": [
+        289.9,
+        351.9
+      ],
+      "batch_p50": 8,
+      "batch_max": 8,
+      "goodput_turns_ok": 8,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 32,
+      "turns_done": 32,
+      "errors": 0,
+      "n_ttfa": 32,
+      "n_tick": 211,
+      "tick_p50_ms": 0.9,
+      "tick_p99_ms": 1.1,
+      "frame_miss_rate": 0.1498,
+      "ttfa_p50_ms": 2724.1,
+      "ttfa_p50_ci": [
+        2266.5,
+        3124.5
+      ],
+      "ttfa_p99_ms": 3960.1,
+      "ttfa_p99_ci": [
+        3684.7,
+        4009.8
+      ],
+      "batch_p50": 20,
+      "batch_max": 32,
+      "goodput_turns_ok": 0,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 64,
+      "turns_done": 64,
+      "errors": 0,
+      "n_ttfa": 64,
+      "n_tick": 365,
+      "tick_p50_ms": 0.9,
+      "tick_p99_ms": 1113.6,
+      "frame_miss_rate": 0.1831,
+      "ttfa_p50_ms": 1228.3,
+      "ttfa_p50_ci": [
+        1076.8,
+        2470.5
+      ],
+      "ttfa_p99_ms": 3764.6,
+      "ttfa_p99_ci": [
+        3707.8,
+        3768.7
+      ],
+      "batch_p50": 30,
+      "batch_max": 50,
+      "goodput_turns_ok": 1,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 96,
+      "turns_done": 96,
+      "errors": 0,
+      "n_ttfa": 96,
+      "n_tick": 521,
+      "tick_p50_ms": 1.0,
+      "tick_p99_ms": 1864.2,
+      "frame_miss_rate": 0.1496,
+      "ttfa_p50_ms": 386.6,
+      "ttfa_p50_ci": [
+        321.9,
+        1048.4
+      ],
+      "ttfa_p99_ms": 5127.8,
+      "ttfa_p99_ci": [
+        4806.2,
+        5147.3
+      ],
+      "batch_p50": 34,
+      "batch_max": 63,
+      "goodput_turns_ok": 23,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 128,
+      "turns_done": 128,
+      "errors": 0,
+      "n_ttfa": 128,
+      "n_tick": 685,
+      "tick_p50_ms": 1.6,
+      "tick_p99_ms": 1971.8,
+      "frame_miss_rate": 0.1815,
+      "ttfa_p50_ms": 457.3,
+      "ttfa_p50_ci": [
+        369.4,
+        897.8
+      ],
+      "ttfa_p99_ms": 5773.3,
+      "ttfa_p99_ci": [
+        5448.3,
+        5830.9
+      ],
+      "batch_p50": 39,
+      "batch_max": 66,
+      "goodput_turns_ok": 43,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 192,
+      "turns_done": 192,
+      "errors": 0,
+      "n_ttfa": 192,
+      "n_tick": 849,
+      "tick_p50_ms": 8.9,
+      "tick_p99_ms": 14.7,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 590.4,
+      "ttfa_p50_ci": [
+        527.0,
+        673.6
+      ],
+      "ttfa_p99_ms": 1192.0,
+      "ttfa_p99_ci": [
+        1158.3,
+        1204.6
+      ],
+      "batch_p50": 52,
+      "batch_max": 68,
+      "goodput_turns_ok": 192,
+      "budget_ms": 200.0
+    },
+    {
+      "N": 256,
+      "turns_done": 256,
+      "errors": 0,
+      "n_ttfa": 256,
+      "n_tick": 1378,
+      "tick_p50_ms": 9.0,
+      "tick_p99_ms": 16.2,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 798.5,
+      "ttfa_p50_ci": [
+        695.1,
+        894.8
+      ],
+      "ttfa_p99_ms": 1590.7,
+      "ttfa_p99_ci": [
+        1561.3,
+        1608.4
+      ],
+      "batch_p50": 58,
+      "batch_max": 85,
+      "goodput_turns_ok": 256,
+      "budget_ms": 200.0
+    }
+  ]
+}

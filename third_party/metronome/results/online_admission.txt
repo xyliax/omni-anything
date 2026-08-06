@@ -1,0 +1,12 @@
+=== ONLINE AIMD admission (gateway --online-admit), open-system ramp ===
+offer 200 (target 1000ms): ADMITTED 200 REJECTED 0, p99 689ms (fit under target -> no shed)
+offer 384 (target 600ms):  ADMITTED 175 REJECTED 209, steady-half p99 8ms
+  => controller DISCOVERS N* online from latency feedback, sheds excess, admitted hold deadline
+=== DERIVED N* (offline, from capacity-probe sweep) ===
+config                        budget    N*@5%budget   N*@25%budget   N*@50%budget
+vanilla vLLM-realtime           2000             96             96             96
+in-engine SWA (W=1024)          2000          >=160          >=160          >=160
+MiniCPM-o-4.5                   1000           >=96           >=96           >=96
+Qwen2.5-Omni-7B                 2000             16             16             16
+
+N* = largest swept N with steady p50 <= SLO. The online AIMD admission controller (--online-admit) converges to this knee from latency feedback; this table derives the same from the capacity-probe sweep (measured, not hand-set).

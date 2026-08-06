@@ -1,0 +1,29 @@
+[
+  {
+    "model": "moshi",
+    "n": 270,
+    "capacity": 180,
+    "edf_tight": 0.41858024691358026,
+    "edf_loose": 0.1997530864197531,
+    "fifo_tight": 0.7764197530864198,
+    "fifo_loose": 0.0
+  },
+  {
+    "model": "minicpm-o",
+    "n": 388,
+    "capacity": 259,
+    "edf_tight": 0.3104810996563574,
+    "edf_loose": 0.2939432989690722,
+    "fifo_tight": 0.7155068728522337,
+    "fifo_loose": 0.0
+  },
+  {
+    "model": "qwen3-omni",
+    "n": 252,
+    "capacity": 168,
+    "edf_tight": 0.3203042328042328,
+    "edf_loose": 0.25145502645502643,
+    "fifo_tight": 0.700925925925926,
+    "fifo_loose": 0.0
+  }
+]

@@ -1,0 +1,41 @@
+{
+  "model": "minicpm-o",
+  "budget_ms": 1000.0,
+  "tpt": 25,
+  "think_s": 0.0,
+  "turns": 1,
+  "warmup_turns": 0,
+  "slo": 0.05,
+  "ttfa_budget_ms": 2000.0,
+  "tag": "tickdbg",
+  "decode_capacity": 128,
+  "responsive_capacity": 0,
+  "curve": [
+    {
+      "N": 128,
+      "turns_done": 256,
+      "errors": 0,
+      "n_ttfa": 256,
+      "n_tick": 1094,
+      "tick_p50_ms": 6.8,
+      "tick_p99_ms": 41.8,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 2357.8,
+      "ttfa_p50_ci": [
+        2204.1,
+        2516.4
+      ],
+      "ttfa_p99_ms": 4992.2,
+      "ttfa_p99_ci": [
+        4938.8,
+        5013.8
+      ],
+      "server_ttfa_p50_ms": 2357.4,
+      "server_ttfa_p99_ms": 4991.1,
+      "batch_p50": 79,
+      "batch_max": 125,
+      "goodput_turns_ok": 256,
+      "budget_ms": 1000.0
+    }
+  ]
+}

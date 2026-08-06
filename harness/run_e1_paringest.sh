@@ -10,7 +10,7 @@
 # 用法: GPUS=3 N=8 DUR=600 bash harness/run_e1_perreq.sh
 set -u
 cd "$(dirname "$0")/.."
-ROOT=$PWD; MET=$ROOT/metronome
+ROOT=$PWD; MET=$ROOT/third_party/metronome
 OUT=$ROOT/results/paper/baseline; mkdir -p "$OUT"
 GPU="${GPUS:-3}"; N="${N:-8}"; DUR="${DUR:-600}"
 MODEL="${MODEL:-Qwen/Qwen2.5-Omni-7B}"; PERIOD_MS=2000; MML="${MML:-32768}"

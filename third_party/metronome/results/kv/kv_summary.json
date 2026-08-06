@@ -1,0 +1,44 @@
+[
+  {
+    "model": "moshi",
+    "self_windowing": false,
+    "full_mscs": 30,
+    "mscs_by_budget": {
+      "256": 640,
+      "512": 320,
+      "1024": 136,
+      "2048": 62,
+      "4096": 30
+    },
+    "kv_budget_gain": 10.666666666666666,
+    "classification": "essential"
+  },
+  {
+    "model": "minicpm-o",
+    "self_windowing": false,
+    "full_mscs": 17,
+    "mscs_by_budget": {
+      "2048": 284,
+      "4096": 142,
+      "8192": 71,
+      "16384": 35,
+      "32768": 17
+    },
+    "kv_budget_gain": 8.352941176470589,
+    "classification": "essential"
+  },
+  {
+    "model": "qwen3-omni",
+    "self_windowing": true,
+    "full_mscs": 71,
+    "mscs_by_budget": {
+      "512": 227,
+      "1024": 199,
+      "2048": 158,
+      "4096": 113,
+      "8192": 71
+    },
+    "kv_budget_gain": 2.8028169014084505,
+    "classification": "complementary"
+  }
+]

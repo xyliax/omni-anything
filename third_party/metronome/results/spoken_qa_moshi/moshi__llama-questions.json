@@ -1,0 +1,370 @@
+{
+  "model": "moshi",
+  "served_hf": "kyutai/moshiko-pytorch-bf16",
+  "dataset": "llama-questions",
+  "n": 40,
+  "accuracy": 0.775,
+  "via": "moshi-native-streaming",
+  "traces": [
+    {
+      "gold": [
+        "Paris"
+      ],
+      "pred": "Hey, what's up? The capital of France is Paris.",
+      "correct": true,
+      "dur": 2.0,
+      "gen_s": 8.4
+    },
+    {
+      "gold": [
+        "Amazon"
+      ],
+      "pred": "Hey, how was your day? The Amazon River is the longest river in South America.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Denali"
+      ],
+      "pred": "Hello, how can I help you? The highest mountain peak in North America is Denali, which stands at 20,310 feet in Alaska.",
+      "correct": true,
+      "dur": 3.2,
+      "gen_s": 7.9
+    },
+    {
+      "gold": [
+        "George Washington"
+      ],
+      "pred": "Hi, how are you doing? The first president of the United States was George Washington.",
+      "correct": true,
+      "dur": 2.9,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Baghdad"
+      ],
+      "pred": "Hello, how can I help you? The city located at the intersection of the Tigris and Euphrates Rivers is Babylon.",
+      "correct": false,
+      "dur": 5.2,
+      "gen_s": 9.4
+    },
+    {
+      "gold": [
+        "Jupiter"
+      ],
+      "pred": "Hi, how is it going? Jupiter is the largest planet in our solar system.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "United States"
+      ],
+      "pred": "Hello, how is it going? The United States borders Canada and Mexico.",
+      "correct": true,
+      "dur": 2.8,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Vatican City"
+      ],
+      "pred": "day, how are you doing? smallest country in the world is the Vatican City, with a population of approximately 1,000 people and an area of 0.44 square kilometers.",
+      "correct": true,
+      "dur": 2.6,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Nigeria"
+      ],
+      "pred": "Hi, how is it going? Nigeria has the largest population in Africa.",
+      "correct": true,
+      "dur": 3.2,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Joseph Stalin"
+      ],
+      "pred": "Hi there, how's your day? Joseph Stalin was the leader of the Soviet Union during World War II.",
+      "correct": true,
+      "dur": 4.1,
+      "gen_s": 8.7
+    },
+    {
+      "gold": [
+        "Canberra"
+      ],
+      "pred": "Hey, what's up? The capital of Australia is Canberra. result of subtracting 7",
+      "correct": true,
+      "dur": 2.1,
+      "gen_s": 7.2
+    },
+    {
+      "gold": [
+        "Yen"
+      ],
+      "pred": "Hello, how was your day? In Japan, the official currency is the Japanese Yen.",
+      "correct": true,
+      "dur": 2.8,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Leonardo da Vinci"
+      ],
+      "pred": "Hi, how is it going? Leonardo da Vinci painted the famous painting, Mona Lisa.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Lake Victoria"
+      ],
+      "pred": "Good day. How are you doing? Lake Victoria is the largest lake by surface area in Africa.",
+      "correct": true,
+      "dur": 3.8,
+      "gen_s": 8.4
+    },
+    {
+      "gold": [
+        "Antarctica"
+      ],
+      "pred": "Hi, how is it going? Australia is the smallest continent in the world. capital of France is Paris.",
+      "correct": false,
+      "dur": 2.6,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Harper Lee"
+      ],
+      "pred": "Hello, what's up? Harper Lee wrote the book To Kill a Mockingbird.",
+      "correct": true,
+      "dur": 2.7,
+      "gen_s": 7.6
+    },
+    {
+      "gold": [
+        "Pyrenees"
+      ],
+      "pred": "Hi, how is your day? Pyrenees mountain range runs between France and Spain. is the sum of 16 and",
+      "correct": true,
+      "dur": 3.4,
+      "gen_s": 8.1
+    },
+    {
+      "gold": [
+        "Antarctica"
+      ],
+      "pred": "Hello, how is it going? largest desert in the world is the Antarctic Desert, which covers an area of about 14 million square kilometers.",
+      "correct": false,
+      "dur": 3.0,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Newton"
+      ],
+      "pred": "Hey, how can I help you? Sir Isaac Newton discovered the theory of gravity.",
+      "correct": true,
+      "dur": 2.3,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Sicily"
+      ],
+      "pred": "Hey, how are you doing? The largest island in the Mediterranean Sea is Sicily, located in Italy.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Venice"
+      ],
+      "pred": "Hey, how was your day? Venice, Italy is known as the city of canals.",
+      "correct": true,
+      "dur": 3.3,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Whitney"
+      ],
+      "pred": "Hello, how is it going? highest mountain peak in the contiguous United States is Denali, located in Alaska.",
+      "correct": false,
+      "dur": 3.9,
+      "gen_s": 9.0
+    },
+    {
+      "gold": [
+        "Amazon"
+      ],
+      "pred": "Hello, how are you today? The largest rainforest in the world is the Amazon rainforest, located in South America.",
+      "correct": true,
+      "dur": 3.3,
+      "gen_s": 8.6
+    },
+    {
+      "gold": [
+        "Victoria Falls"
+      ],
+      "pred": "Hi, how was your day? The largest waterfall in the world is the Victoria Falls, located on the Zambezi River in southern Africa.",
+      "correct": true,
+      "dur": 3.2,
+      "gen_s": 8.0
+    },
+    {
+      "gold": [
+        "Nuuk"
+      ],
+      "pred": "Hi, what's going on? The capital of Greenland is Nuuk",
+      "correct": true,
+      "dur": 2.1,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "Rupee"
+      ],
+      "pred": "Hi how can I help you?",
+      "correct": false,
+      "dur": 2.5,
+      "gen_s": 7.2
+    },
+    {
+      "gold": [
+        "Vincent van Gogh"
+      ],
+      "pred": "day, how are you doing? Vincent van Gogh painted The Starry Night.",
+      "correct": true,
+      "dur": 3.2,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Caspian Sea"
+      ],
+      "pred": "Hi, how is it going? Lake Baikal in Siberia, Russia is the largest lake in Asia.",
+      "correct": false,
+      "dur": 2.6,
+      "gen_s": 7.4
+    },
+    {
+      "gold": [
+        "Jane Austen"
+      ],
+      "pred": "Hello! How was your day? Jane Austen wrote the famous book Pride and Prejudice.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Charles Darwin"
+      ],
+      "pred": "Hi, how was your day? Charles Darwin is credited with the discovery of the theory of evolution, through his work on the theory of natural selection, which proposed that species evolve over",
+      "correct": true,
+      "dur": 2.5,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Hydrogen"
+      ],
+      "pred": "Hey, how is it going? The element with the highest atomic number in the periodic table is Oganesson, with an atomic number of 118.",
+      "correct": false,
+      "dur": 3.1,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Peregrine falcon"
+      ],
+      "pred": "Hey, what's going on? The Peregrine Falcon is the fastest bird, capable of reaching speeds of up to 240 mph.",
+      "correct": true,
+      "dur": 3.3,
+      "gen_s": 8.0
+    },
+    {
+      "gold": [
+        "Challenger Deep, Mariana Trench"
+      ],
+      "pred": "Hi, how are you doing? The deepest part of the ocean is the Challenger Deep, located in the Mariana Trench.",
+      "correct": false,
+      "dur": 2.5,
+      "gen_s": 7.4
+    },
+    {
+      "gold": [
+        "Armstrong"
+      ],
+      "pred": "Hello, how is it going? Neil Armstrong was the first person to walk on the moon. The smallest bird in the world is the be",
+      "correct": true,
+      "dur": 2.7,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Giant squid"
+      ],
+      "pred": "Hello! How was your day? The humbuck is the largest eye in the world. The largest city in the world is",
+      "correct": false,
+      "dur": 3.1,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Roosevelt"
+      ],
+      "pred": "Hey, how are you doing? The youngest president of the United States was Theodore Roosevelt, who served from 1901 to 1909, at the age of 42.",
+      "correct": true,
+      "dur": 3.0,
+      "gen_s": 7.7
+    },
+    {
+      "gold": [
+        "Earhart"
+      ],
+      "pred": "Hi, how is it going? The first woman to fly solo across the Atlantic Ocean was Amelia Earhart in 1932.",
+      "correct": true,
+      "dur": 4.3,
+      "gen_s": 8.7
+    },
+    {
+      "gold": [
+        "Great Barrier Reef"
+      ],
+      "pred": "Hi, how was your day? The largest living thing on Earth is the Great Barrier Reef, a vast network of coral reefs and marine life located off the coast of Australia.",
+      "correct": true,
+      "dur": 2.6,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Atacama Desert"
+      ],
+      "pred": "Hi there, how can I help you? The driest place on Earth is the Atacama Desert in Chile, which has not received any significant precipitation for more than 400 years.",
+      "correct": true,
+      "dur": 2.4,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Kelly Clarkson"
+      ],
+      "pred": "Hi, there, how can I help you? Kelly Clarkson won the first season of American Idol.",
+      "correct": true,
+      "dur": 2.7,
+      "gen_s": 7.7
+    }
+  ]
+}

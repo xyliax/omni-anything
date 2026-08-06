@@ -1,0 +1,14 @@
+{
+  "model": "moshi",
+  "self_windowing": false,
+  "full_mscs": 30,
+  "mscs_by_budget": {
+    "256": 640,
+    "512": 320,
+    "1024": 136,
+    "2048": 62,
+    "4096": 30
+  },
+  "kv_budget_gain": 10.666666666666666,
+  "classification": "essential"
+}

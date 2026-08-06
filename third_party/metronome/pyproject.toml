@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metronome-serve"
+version = "0.1.0"
+description = "Frame-budget scheduling and KV-budget admission control for real-time serving of interaction models."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Metronome" }]
+keywords = ["llm-serving", "real-time", "scheduling", "admission-control", "kv-cache", "vllm"]
+dependencies = [
+    "numpy>=1.23",
+]
+
+[project.optional-dependencies]
+# the analysis / benchmark stack
+bench = ["scipy>=1.9", "matplotlib>=3.6", "pandas>=1.5"]
+# the real serving engine (architecture-faithful timing engine)
+engine = ["torch>=2.2", "flash-attn>=2.5"]
+# the vLLM backend (real-model serving)
+vllm = ["vllm>=0.6"]
+# the OpenAI Realtime-like WebSocket server
+realtime = ["websockets>=11"]
+dev = ["pytest>=7", "pytest-asyncio>=0.21"]
+
+[project.scripts]
+metronome-realtime = "metronome.realtime:main"
+
+[project.urls]
+Homepage = "https://github.com/19PINE-AI/metronome"
+
+[tool.setuptools]
+packages = ["metronome", "metronome.backends", "sim", "bench"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md"]

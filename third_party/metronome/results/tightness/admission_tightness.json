@@ -1,0 +1,146 @@
+{
+  "moshi": {
+    "predicted_capacity": 136,
+    "true_max_feasible": 170,
+    "tightness": 0.8,
+    "budget_ms": 80.0,
+    "curve": [
+      {
+        "N": 68,
+        "p99_ms": 34.3,
+        "meets_budget": true
+      },
+      {
+        "N": 102,
+        "p99_ms": 46.4,
+        "meets_budget": true
+      },
+      {
+        "N": 136,
+        "p99_ms": 62.4,
+        "meets_budget": true
+      },
+      {
+        "N": 170,
+        "p99_ms": 75.1,
+        "meets_budget": true
+      },
+      {
+        "N": 204,
+        "p99_ms": 90.5,
+        "meets_budget": false
+      },
+      {
+        "N": 238,
+        "p99_ms": 99.6,
+        "meets_budget": false
+      },
+      {
+        "N": 272,
+        "p99_ms": 116.1,
+        "meets_budget": false
+      },
+      {
+        "N": 340,
+        "p99_ms": 139.2,
+        "meets_budget": false
+      }
+    ]
+  },
+  "qwen3-omni": {
+    "predicted_capacity": 158,
+    "true_max_feasible": 158,
+    "tightness": 1.0,
+    "budget_ms": 200.0,
+    "curve": [
+      {
+        "N": 79,
+        "p99_ms": 108.4,
+        "meets_budget": true
+      },
+      {
+        "N": 118,
+        "p99_ms": 114.2,
+        "meets_budget": true
+      },
+      {
+        "N": 158,
+        "p99_ms": 186.5,
+        "meets_budget": true
+      },
+      {
+        "N": 197,
+        "p99_ms": 265.1,
+        "meets_budget": false
+      },
+      {
+        "N": 237,
+        "p99_ms": 310.4,
+        "meets_budget": false
+      },
+      {
+        "N": 276,
+        "p99_ms": 367.8,
+        "meets_budget": false
+      },
+      {
+        "N": 316,
+        "p99_ms": 419.4,
+        "meets_budget": false
+      },
+      {
+        "N": 395,
+        "p99_ms": 539.6,
+        "meets_budget": false
+      }
+    ]
+  },
+  "minicpm-o": {
+    "predicted_capacity": 71,
+    "true_max_feasible": 177,
+    "tightness": 0.401,
+    "budget_ms": 1000.0,
+    "curve": [
+      {
+        "N": 35,
+        "p99_ms": 125.6,
+        "meets_budget": true
+      },
+      {
+        "N": 53,
+        "p99_ms": 194.0,
+        "meets_budget": true
+      },
+      {
+        "N": 71,
+        "p99_ms": 272.0,
+        "meets_budget": true
+      },
+      {
+        "N": 88,
+        "p99_ms": 334.8,
+        "meets_budget": true
+      },
+      {
+        "N": 106,
+        "p99_ms": 423.9,
+        "meets_budget": true
+      },
+      {
+        "N": 124,
+        "p99_ms": 519.8,
+        "meets_budget": true
+      },
+      {
+        "N": 142,
+        "p99_ms": 618.2,
+        "meets_budget": true
+      },
+      {
+        "N": 177,
+        "p99_ms": 843.7,
+        "meets_budget": true
+      }
+    ]
+  }
+}

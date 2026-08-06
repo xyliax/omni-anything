@@ -1,0 +1,356 @@
+{
+  "moshi": {
+    "capacity": 180,
+    "offered_sweep": [
+      {
+        "offered": 54.0,
+        "rate": 0.6591796875,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 27,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 30
+      },
+      {
+        "offered": 90.0,
+        "rate": 1.0986328125,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 46,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 45
+      },
+      {
+        "offered": 125.99999999999999,
+        "rate": 1.5380859374999998,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 70,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 61
+      },
+      {
+        "offered": 162.0,
+        "rate": 1.9775390625,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 86,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 74
+      },
+      {
+        "offered": 198.00000000000003,
+        "rate": 2.4169921875000004,
+        "m_miss": 0.0,
+        "m_block": 0.08984375,
+        "m_served": 106,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 101
+      },
+      {
+        "offered": 270.0,
+        "rate": 3.2958984375,
+        "m_miss": 0.0,
+        "m_block": 0.173469387755102,
+        "m_served": 120,
+        "g_miss": 0.0,
+        "g_block": 0.08860759493670889,
+        "g_served": 132
+      },
+      {
+        "offered": 360.0,
+        "rate": 4.39453125,
+        "m_miss": 0.0,
+        "m_block": 0.34466019417475724,
+        "m_served": 125,
+        "g_miss": 0.0,
+        "g_block": 0.28378378378378377,
+        "g_served": 148
+      },
+      {
+        "offered": 450.0,
+        "rate": 5.4931640625,
+        "m_miss": 0.0,
+        "m_block": 0.6345811051693404,
+        "m_served": 135,
+        "g_miss": 0.0,
+        "g_block": 0.48399246704331456,
+        "g_served": 153
+      },
+      {
+        "offered": 540.0,
+        "rate": 6.591796875,
+        "m_miss": 0.0,
+        "m_block": 0.6746626686656672,
+        "m_served": 135,
+        "g_miss": 0.0,
+        "g_block": 0.5882352941176471,
+        "g_served": 158
+      }
+    ],
+    "age_aware": {
+      "model": "moshi",
+      "wc_served": 125.9352,
+      "wc_miss": 0.0,
+      "wc_block": 0.34466019417475724,
+      "aa_served": 140.732,
+      "aa_miss": 0.0,
+      "aa_block": 0.2465753424657534,
+      "aa_quality": 0.9723074266272413,
+      "served_gain": 1.12
+    },
+    "spike": {
+      "Metronome": {
+        "recovery_s": 0.0,
+        "peak_miss": 0.0,
+        "blocking": 0.48289738430583506
+      },
+      "greedy": {
+        "recovery_s": 0.0,
+        "peak_miss": 0.0,
+        "blocking": 0.3984526112185687
+      }
+    }
+  },
+  "minicpm-o": {
+    "capacity": 259,
+    "offered_sweep": [
+      {
+        "offered": 77.7,
+        "rate": 0.8633333333333334,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 35,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 41
+      },
+      {
+        "offered": 129.5,
+        "rate": 1.4388888888888889,
+        "m_miss": 0.0,
+        "m_block": 0.08661417322834641,
+        "m_served": 56,
+        "g_miss": 0.0,
+        "g_block": 0.1079136690647482,
+        "g_served": 58
+      },
+      {
+        "offered": 181.29999999999995,
+        "rate": 2.014444444444444,
+        "m_miss": 0.0,
+        "m_block": 0.33673469387755106,
+        "m_served": 67,
+        "g_miss": 0.0,
+        "g_block": 0.2616279069767442,
+        "g_served": 67
+      },
+      {
+        "offered": 233.1,
+        "rate": 2.59,
+        "m_miss": 0.0,
+        "m_block": 0.575091575091575,
+        "m_served": 69,
+        "g_miss": 0.0,
+        "g_block": 0.5938697318007663,
+        "g_served": 70
+      },
+      {
+        "offered": 284.90000000000003,
+        "rate": 3.165555555555556,
+        "m_miss": 0.0,
+        "m_block": 0.6592356687898089,
+        "m_served": 70,
+        "g_miss": 0.0,
+        "g_block": 0.705685618729097,
+        "g_served": 70
+      },
+      {
+        "offered": 388.5,
+        "rate": 4.316666666666666,
+        "m_miss": 0.0,
+        "m_block": 0.7978723404255319,
+        "m_served": 71,
+        "g_miss": 0.0,
+        "g_block": 0.7990543735224587,
+        "g_served": 70
+      },
+      {
+        "offered": 518.0,
+        "rate": 5.7555555555555555,
+        "m_miss": 0.0,
+        "m_block": 0.8612040133779264,
+        "m_served": 70,
+        "g_miss": 0.0,
+        "g_block": 0.7913793103448276,
+        "g_served": 70
+      },
+      {
+        "offered": 647.5,
+        "rate": 7.194444444444445,
+        "m_miss": 0.0,
+        "m_block": 0.8489795918367347,
+        "m_served": 70,
+        "g_miss": 0.0,
+        "g_block": 0.871977240398293,
+        "g_served": 70
+      },
+      {
+        "offered": 777.0,
+        "rate": 8.633333333333333,
+        "m_miss": 0.0,
+        "m_block": 0.8835616438356164,
+        "m_served": 71,
+        "g_miss": 0.0,
+        "g_block": 0.8901734104046243,
+        "g_served": 71
+      }
+    ],
+    "age_aware": {
+      "model": "minicpm-o",
+      "wc_served": 70.97,
+      "wc_miss": 0.0,
+      "wc_block": 0.8612040133779264,
+      "aa_served": 70.97,
+      "aa_miss": 0.0,
+      "aa_block": 0.8612040133779264,
+      "aa_quality": 1.0,
+      "served_gain": 1.0
+    },
+    "spike": {
+      "Metronome": {
+        "recovery_s": 0.0,
+        "peak_miss": 0.0,
+        "blocking": 0.7950937950937951
+      },
+      "greedy": {
+        "recovery_s": 0.0,
+        "peak_miss": 0.0,
+        "blocking": 0.7938931297709924
+      }
+    }
+  },
+  "qwen3-omni": {
+    "capacity": 168,
+    "offered_sweep": [
+      {
+        "offered": 50.4,
+        "rate": 1.5380859375,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 35,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 36
+      },
+      {
+        "offered": 84.0,
+        "rate": 2.5634765625,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 58,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 60
+      },
+      {
+        "offered": 117.6,
+        "rate": 3.5888671874999996,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 93,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 96
+      },
+      {
+        "offered": 151.20000000000002,
+        "rate": 4.6142578125,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 112,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 108
+      },
+      {
+        "offered": 184.8,
+        "rate": 5.6396484375,
+        "m_miss": 0.0,
+        "m_block": 0.0,
+        "m_served": 131,
+        "g_miss": 0.0,
+        "g_block": 0.0,
+        "g_served": 156
+      },
+      {
+        "offered": 252.0,
+        "rate": 7.6904296875,
+        "m_miss": 0.0,
+        "m_block": 0.22651933701657456,
+        "m_served": 150,
+        "g_miss": 0.7397536695465009,
+        "g_block": 0.0,
+        "g_served": 202
+      },
+      {
+        "offered": 336.0,
+        "rate": 10.25390625,
+        "m_miss": 0.0,
+        "m_block": 0.532967032967033,
+        "m_served": 157,
+        "g_miss": 0.8661871183397706,
+        "g_block": 0.0,
+        "g_served": 256
+      },
+      {
+        "offered": 420.0,
+        "rate": 12.8173828125,
+        "m_miss": 0.0,
+        "m_block": 0.6268311488049345,
+        "m_served": 157,
+        "g_miss": 0.9786914902320846,
+        "g_block": 0.0,
+        "g_served": 329
+      },
+      {
+        "offered": 504.0,
+        "rate": 15.380859375,
+        "m_miss": 0.0,
+        "m_block": 0.6509554140127389,
+        "m_served": 157,
+        "g_miss": 1.0,
+        "g_block": 0.005273566249175965,
+        "g_served": 369
+      }
+    ],
+    "age_aware": {
+      "model": "qwen3-omni",
+      "wc_served": 157.344,
+      "wc_miss": 0.0,
+      "wc_block": 0.532967032967033,
+      "aa_served": 195.102,
+      "aa_miss": 0.0,
+      "aa_block": 0.3695238095238095,
+      "aa_quality": 0.9196995321373327,
+      "served_gain": 1.24
+    },
+    "spike": {
+      "Metronome": {
+        "recovery_s": 0.0,
+        "peak_miss": 0.0,
+        "blocking": 0.533678756476684
+      },
+      "greedy": {
+        "recovery_s": 65.8,
+        "peak_miss": 1.0,
+        "blocking": 0.19320066334991703
+      }
+    }
+  }
+}

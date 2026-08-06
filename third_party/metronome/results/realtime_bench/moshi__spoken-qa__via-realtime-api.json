@@ -1,0 +1,50 @@
+{
+  "model": "moshi",
+  "served_via": "metronome-realtime-api",
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "n": 8,
+  "accuracy": 1.0,
+  "traces": [
+    {
+      "gold": "Paris",
+      "pred": "Hi, how was your day? The capital of France is Paris.",
+      "ok": true
+    },
+    {
+      "gold": "Amazon",
+      "pred": "Good day, how is it going? The Amazon River is the longest river in South America.",
+      "ok": true
+    },
+    {
+      "gold": "Denali",
+      "pred": "Hello, what's up? The highest mountain peak in North America is Denali, located in Alaska, USA.",
+      "ok": true
+    },
+    {
+      "gold": "George Washington",
+      "pred": "there! How is it going? George Washington was the first president of the United States.",
+      "ok": true
+    },
+    {
+      "gold": "Baghdad",
+      "pred": "Hello, how is it going? The city located at the intersection of the Tigris and Euphrates rivers is Baghdad, Iraq.",
+      "ok": true
+    },
+    {
+      "gold": "Jupiter",
+      "pred": "Hello, how is it going? Jupiter is the largest planet in our solar system.",
+      "ok": true
+    },
+    {
+      "gold": "United States",
+      "pred": "Hey what's up? United States borders Canada and Mexico.",
+      "ok": true
+    },
+    {
+      "gold": "Vatican City",
+      "pred": "there, what's going on? smallest country in the world is the Vatican City, with an area of 0.44 square kilometers.",
+      "ok": true
+    }
+  ]
+}

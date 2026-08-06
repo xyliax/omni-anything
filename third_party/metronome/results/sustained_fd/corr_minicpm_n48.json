@@ -1,0 +1,17 @@
+{
+ "n_sessions": 48,
+ "duration": 60.0,
+ "sess_correct": 0,
+ "sess_with_ticks": 48,
+ "errs": 0,
+ "sample_texts": [
+  "old\nThe capital of France is Paris.\n\n\n/one_think\nTo determine the capital of France,",
+  "Alright, let's see. The user is asking which river is the longest in South America. I need to recall my geography",
+  "old\nOkay, the user is asking about the highest mountain peak in North America. I need to recall the correct answer.",
+  "old\nThe capital of France is Paris.\n\n\n</think>\n\nThe capital of France is Paris.\n,\n\n\u5df4\u9ece",
+  "Alright, let's see. The user is asking which river is the longest in South America. I need to recall my geography",
+  "old\nOkay, the user is asking about the highest mountain peak in North America. I need to recall which mountain that is",
+  "old\nThe capital of France is Paris.\n\n\n/one_think\nTo determine the capital of France,",
+  "Alright, let's see. The user is asking which river is the longest in South America. I need to recall my geography"
+ ]
+}

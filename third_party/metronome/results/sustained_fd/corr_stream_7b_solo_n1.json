@@ -1,0 +1,14 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 1,
+ "sess_ever": 1,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. It is located in the northern part of the country and is known for its rich history,"
+ ],
+ "sample_assembled": [
+  "The capital of France is Paris. It is the largest city in France and serves as the country's political, cultural, and The capital of France is Paris. It is the largest city in France and serves as the country's political, cultural, and The capital of France is Paris. It is the largest city in France and serves as the country's political, cultural, and The capital of France is Paris. It is the larg"
+ ]
+}

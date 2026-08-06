@@ -1,0 +1,67 @@
+=== LONG-DURATION (N=96, 300s): unbounded vs windowed-KV (per-frame latency by 10s bucket) ===
+[VANILLA unbounded]
+         0-10s     480        2ms      253ms   0.0%
+        10-20s     480        4ms        5ms   0.0%
+        20-30s     480        3ms        5ms   0.0%
+        30-40s     480        3ms        4ms   0.0%
+        40-50s     480        3ms        4ms   0.0%
+        50-60s     480        4ms      217ms   0.0%
+        60-70s     480        4ms        5ms   0.0%
+        70-80s     480        4ms        4ms   0.0%
+        80-90s     480        5ms        5ms   0.0%
+       90-100s     480        4ms        5ms   0.0%
+      100-110s     480        4ms        5ms   0.0%
+      110-120s     480        5ms        5ms   0.0%
+      120-130s     480        4ms        6ms   0.0%
+      130-140s     480        5ms        6ms   0.0%
+      140-150s     480        5ms        7ms   0.0%
+      150-160s     480        4ms        6ms   0.0%
+      160-170s     480        5ms        7ms   0.0%
+      170-180s     480        4ms        6ms   0.0%
+      180-190s     480        2ms        8ms   0.0%
+      190-200s     480        2ms        3ms   0.0%
+      200-210s     480        2ms        2ms   0.0%
+      210-220s     480        3ms        3ms   0.0%
+      220-230s     480        2ms        3ms   0.0%
+      230-240s     384        3ms        3ms   0.0%
+      240-250s     480     1601ms     1602ms   0.0%
+      250-260s     480     1601ms     1603ms   0.0%
+      260-270s     480     1602ms     1603ms   0.0%
+      270-280s     480     1601ms     1603ms   0.0%
+      280-290s     480     1603ms     1603ms   0.0%
+      290-300s     480     1601ms     1602ms   0.0%
+  OVERALL: ticks=14400 lat p50=4 p90=1601 p99=1603ms miss=0.00% TTFA p50=266ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 253ms -> last-bucket p99 1602ms (drift +1348ms) DEGRADING
+[WINDOWED-KV W=15 ov=7]
+         0-10s     480        2ms      276ms   0.0%
+        10-20s     480        2ms        4ms   0.0%
+        20-30s     480        2ms        4ms   0.0%
+        30-40s     480        3ms        5ms   0.0%
+        40-50s     480        3ms        4ms   0.0%
+        50-60s     480        2ms        4ms   0.0%
+        60-70s     480        2ms        4ms   0.0%
+        70-80s     480        4ms        5ms   0.0%
+        80-90s     480        3ms        4ms   0.0%
+       90-100s     480        3ms        4ms   0.0%
+      100-110s     480        4ms        6ms   0.0%
+      110-120s     480        5ms        6ms   0.0%
+      120-130s     480        5ms        6ms   0.0%
+      130-140s     480        3ms        8ms   0.0%
+      140-150s     480        8ms        8ms   0.0%
+      150-160s     480        8ms       21ms   0.0%
+      160-170s     480        8ms        9ms   0.0%
+      170-180s     480        8ms       23ms   0.0%
+      180-190s     480        7ms       16ms   0.0%
+      190-200s     480       10ms       18ms   0.0%
+      200-210s     480        8ms       18ms   0.0%
+      210-220s     480        8ms       13ms   0.0%
+      220-230s     480       12ms       14ms   0.0%
+      230-240s     480       13ms       16ms   0.0%
+      240-250s     480       10ms       15ms   0.0%
+      250-260s     480        9ms       15ms   0.0%
+      260-270s     480        9ms       18ms   0.0%
+      270-280s     480       17ms       32ms   0.0%
+      280-290s     480       16ms       30ms   0.0%
+      290-300s     480       14ms       36ms   0.0%
+  OVERALL: ticks=14400 lat p50=6 p90=16 p99=218ms miss=0.00% TTFA p50=287ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 276ms -> last-bucket p99 36ms (drift -240ms) STABLE

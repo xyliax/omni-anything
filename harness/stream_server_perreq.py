@@ -13,7 +13,7 @@ Bridge: gRPC Step (sync, gRPC threadpool) <-> a single asyncio loop thread that 
 long-lived engine.generate() per session fed by a per-session asyncio.Queue. Step pushes each due
 session's chunk and waits (bounded) for up to tpt new tokens, then returns them.
 
-PERREQ variant (omni-anything, instrumented copy of metronome/worker/stream_server.py — the clone
+PERREQ variant (omni-anything, instrumented copy of third_party/metronome/worker/stream_server.py — the clone
 stays untouched; upstream logic is byte-identical, only logging added). PERREQ_LOG=<path> appends
 per-request event lines on one shared clock (seconds since process start):
   P <t> <sid>                          gateway tick pushed this session's 2s audio to its queue
@@ -27,7 +27,7 @@ from concurrent import futures
 
 _MET = os.environ.get(
     "METRONOME_ROOT",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "metronome"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "third_party", "metronome"))
 sys.path.insert(0, _MET)
 sys.path.insert(0, os.path.join(_MET, "worker"))
 os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")

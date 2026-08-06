@@ -1,0 +1,10 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 1,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E"
+ ]
+}

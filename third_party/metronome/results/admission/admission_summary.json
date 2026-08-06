@@ -1,0 +1,60 @@
+{
+  "predicted_vs_measured": [
+    {
+      "model": "moshi",
+      "budget": 1024,
+      "predicted_worst_case": 136,
+      "predicted_age_aware": 160,
+      "measured": 160,
+      "wc_safe": true,
+      "wc_rel_err": 0.15,
+      "aa_rel_err": 0.0
+    },
+    {
+      "model": "minicpm-o",
+      "budget": 8192,
+      "predicted_worst_case": 71,
+      "predicted_age_aware": 71,
+      "measured": 71,
+      "wc_safe": true,
+      "wc_rel_err": 0.0,
+      "aa_rel_err": 0.0
+    },
+    {
+      "model": "qwen3-omni",
+      "budget": 2048,
+      "predicted_worst_case": 158,
+      "predicted_age_aware": 189,
+      "measured": 160,
+      "wc_safe": true,
+      "wc_rel_err": 0.013,
+      "aa_rel_err": 0.181
+    }
+  ],
+  "graceful_vs_cliff": [
+    {
+      "model": "moshi",
+      "capacity": 160,
+      "overload_offered": 320,
+      "miss_no_admission": 0.0,
+      "miss_with_admission": 0.0,
+      "admitted_with_admission": 136
+    },
+    {
+      "model": "minicpm-o",
+      "capacity": 71,
+      "overload_offered": 142,
+      "miss_no_admission": 0.0,
+      "miss_with_admission": 0.0,
+      "admitted_with_admission": 71
+    },
+    {
+      "model": "qwen3-omni",
+      "capacity": 160,
+      "overload_offered": 320,
+      "miss_no_admission": 1.0,
+      "miss_with_admission": 0.0,
+      "admitted_with_admission": 158
+    }
+  ]
+}

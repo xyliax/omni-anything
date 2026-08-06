@@ -1,0 +1,41 @@
+{
+  "model": "minicpm-o",
+  "budget_ms": 1000.0,
+  "tpt": 25,
+  "think_s": 0.0,
+  "turns": 1,
+  "warmup_turns": 0,
+  "slo": 0.05,
+  "ttfa_budget_ms": 2000.0,
+  "tag": "gapdbg",
+  "decode_capacity": 128,
+  "responsive_capacity": 0,
+  "curve": [
+    {
+      "N": 128,
+      "turns_done": 256,
+      "errors": 0,
+      "n_ttfa": 256,
+      "n_tick": 1111,
+      "tick_p50_ms": 4.9,
+      "tick_p99_ms": 25.7,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 2347.6,
+      "ttfa_p50_ci": [
+        2196.5,
+        2508.2
+      ],
+      "ttfa_p99_ms": 4986.3,
+      "ttfa_p99_ci": [
+        4934.1,
+        5007.4
+      ],
+      "server_ttfa_p50_ms": 2346.9,
+      "server_ttfa_p99_ms": 4985.6,
+      "batch_p50": 79,
+      "batch_max": 125,
+      "goodput_turns_ok": 256,
+      "budget_ms": 1000.0
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "n": 60,
+  "conc": 64,
+  "acc_solo": 0.8167,
+  "acc_load": 0.8167,
+  "flips": 16,
+  "examples": [
+    {
+      "pred": "The play *Julius Caesar* was written by William Shakespeare.",
+      "gold": [
+        "shakespeare"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The famous painting \"The Starry Night\" was painted by Vincen",
+      "gold": [
+        "Vincent van Gogh"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The capital of Australia is Canberra.",
+      "gold": [
+        "Canberra"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The capital of China is Beijing.",
+      "gold": [
+        "Beijing"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The Pyrenees.",
+      "gold": [
+        "Pyrenees"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The capital of France is Paris.",
+      "gold": [
+        "Paris"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The United States borders both Canada and Mexico.",
+      "gold": [
+        "United States"
+      ],
+      "ok": true
+    },
+    {
+      "pred": "The classic rock band formed in London in 1968 is **The Who*",
+      "gold": [
+        "Led Zeppelin"
+      ],
+      "ok": false
+    }
+  ]
+}

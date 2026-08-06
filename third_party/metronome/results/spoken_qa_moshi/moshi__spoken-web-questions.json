@@ -1,0 +1,391 @@
+{
+  "model": "moshi",
+  "served_hf": "kyutai/moshiko-pytorch-bf16",
+  "dataset": "spoken-web-questions",
+  "n": 40,
+  "accuracy": 0.175,
+  "via": "moshi-native-streaming",
+  "traces": [
+    {
+      "gold": [
+        "Jamaican Creole English Language",
+        "Jamaican English"
+      ],
+      "pred": "Hey what's up?",
+      "correct": false,
+      "dur": 2.0,
+      "gen_s": 9.1
+    },
+    {
+      "gold": [
+        "Lawyer"
+      ],
+      "pred": "Hi, how is your day? Jane James Cabot Poit, he's known for being a businessman, diplomat, and author who was also the 31st governor of Massachusetts.",
+      "correct": false,
+      "dur": 3.0,
+      "gen_s": 7.9
+    },
+    {
+      "gold": [
+        "University of Oregon"
+      ],
+      "pred": "Hello, how are you today? The Order of Constanza was a prestigious award given to the most outstanding players in the German football league system.",
+      "correct": false,
+      "dur": 3.1,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Tony Warren"
+      ],
+      "pred": "Hey, how are you doing? The building you're referring to is the former headquarters of the Bank of England, which is now a Grade I listed building. It's known as the Cornhill Building and was",
+      "correct": false,
+      "dur": 2.5,
+      "gen_s": 7.4
+    },
+    {
+      "gold": [
+        "Yaotsu"
+      ],
+      "pred": "Hey, what's going on? After Mr. Suekarta died, his family tried to find a new president to replace him, but it was difficult as they had to follow the rules and the constitution.",
+      "correct": false,
+      "dur": 2.1,
+      "gen_s": 7.2
+    },
+    {
+      "gold": [
+        "wolfgang amadeus mozart used story by pierre beaumarchais"
+      ],
+      "pred": "Hi, how is it going? Mozart did not write his four horn concertos. The four horn concertos were written by Haydn, not Mozart.",
+      "correct": false,
+      "dur": 2.6,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Mobile"
+      ],
+      "pred": "Hi, how is it going?",
+      "correct": false,
+      "dur": 2.2,
+      "gen_s": 7.2
+    },
+    {
+      "gold": [
+        "Diamond"
+      ],
+      "pred": "day, how are you doing? George Washington was born in a small farmhouse in Westmoreland County, Virginia.",
+      "correct": false,
+      "dur": 2.4,
+      "gen_s": 7.4
+    },
+    {
+      "gold": [
+        "Lightning rod",
+        "Franklin stove",
+        "Bifocals"
+      ],
+      "pred": "Hi, how is it going?",
+      "correct": false,
+      "dur": 1.8,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Pat Nixon"
+      ],
+      "pred": "Hey, what's up? Richard Nixon is the 37th President of the United States, and he was married to Pat Nixon.",
+      "correct": true,
+      "dur": 2.9,
+      "gen_s": 8.0
+    },
+    {
+      "gold": [
+        "Belgium"
+      ],
+      "pred": "Hi, how are you doing? Germany invaded Poland first as part of their plan to expand their territory, also known as Lebensraum. This led to the start of World War II.",
+      "correct": false,
+      "dur": 3.4,
+      "gen_s": 8.7
+    },
+    {
+      "gold": [
+        "Micoud Quarter",
+        "Choiseul Quarter",
+        "Praslin Quarter"
+      ],
+      "pred": "Hello, what's up? The best resort in St. Lucia is the St. Lucia Resort, which offers luxurious accommodations,",
+      "correct": false,
+      "dur": 2.9,
+      "gen_s": 7.6
+    },
+    {
+      "gold": [
+        "John Kasich"
+      ],
+      "pred": "Hi, how is it going? That's easy. The Governor of Ohio is the head of government of the Ohio State. They're elected by instate citizens for",
+      "correct": false,
+      "dur": 2.2,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "Lyndon B. Johnson"
+      ],
+      "pred": "Hi, how is your day? John F. Kennedy. Well, I' not sure if you know this, but the speaker of the House is the highest ranking member of the S.",
+      "correct": false,
+      "dur": 2.8,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Japan",
+        "Okuma"
+      ],
+      "pred": "Hello, how is it going? The Fukushima Daiichi nuclear power plant is located in Fukushima Prefecture, Japan.",
+      "correct": true,
+      "dur": 2.8,
+      "gen_s": 7.5
+    },
+    {
+      "gold": [
+        "Nancy Pelosi"
+      ],
+      "pred": "Hello, what's up? Good afternoon. I'm still the minority leader, but I' been working with the new majority leader to ensure smooth transition and",
+      "correct": false,
+      "dur": 3.3,
+      "gen_s": 7.8
+    },
+    {
+      "gold": [
+        "Scotland",
+        "England",
+        "Wales"
+      ],
+      "pred": "day, how are you doing? countries that are part of the UK are England, Scotland, Wales, and Northern Ireland.",
+      "correct": true,
+      "dur": 2.0,
+      "gen_s": 7.0
+    },
+    {
+      "gold": [
+        "Norman Bird",
+        "Martin Freeman",
+        "Ian Holm"
+      ],
+      "pred": "Hey, what's going on?",
+      "correct": false,
+      "dur": 2.1,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "Civil rights movement",
+        "Civil disobedience",
+        "Nonviolence"
+      ],
+      "pred": "Hello, how is it going?",
+      "correct": false,
+      "dur": 2.7,
+      "gen_s": 7.6
+    },
+    {
+      "gold": [
+        "Central Time Zone",
+        "UTC\u221206:00"
+      ],
+      "pred": "what's up? Louisiana is in the same time zone as Central Time.",
+      "correct": false,
+      "dur": 2.4,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Physician",
+        "Writer",
+        "Philosopher"
+      ],
+      "pred": "Hey, how are you doing? Oh, we are just talking about the game.",
+      "correct": false,
+      "dur": 1.4,
+      "gen_s": 6.5
+    },
+    {
+      "gold": [
+        "Leon Cole"
+      ],
+      "pred": "Hi, how are you doing?",
+      "correct": false,
+      "dur": 1.9,
+      "gen_s": 6.9
+    },
+    {
+      "gold": [
+        "Semi-presidential system",
+        "Constitutional republic",
+        "Republic"
+      ],
+      "pred": "Hello, what's up? Egypt has a parliamentary republic with an elected president and a legislature. Yes",
+      "correct": true,
+      "dur": 2.6,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Memphis"
+      ],
+      "pred": "Hey, what's up?",
+      "correct": false,
+      "dur": 3.0,
+      "gen_s": 8.0
+    },
+    {
+      "gold": [
+        "Baltimore"
+      ],
+      "pred": "Hey, how can I help you? Edwin Allen Poe died in Baltimore, Maryland, on October 7, 1849.",
+      "correct": true,
+      "dur": 1.9,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "During the early 1830's he began inventing, filing six patents between 1830 and 1834, and during this period became interested in rubber, which he tried - unsuccessfully - to use in some of his mechanical inventions."
+      ],
+      "pred": "Hi, how is it going? The invention of rubber is attributed to Charlemagne.",
+      "correct": false,
+      "dur": 2.1,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Atlanta History Center",
+        "Atlanta Cyclorama & Civil War Museum",
+        "Atlanta Ballet"
+      ],
+      "pred": "Hey, how are you doing? Well, today we're going to the Georgia Aquarium. It's the largest aquatic facility in North America with over one million gallons of water. There are over",
+      "correct": false,
+      "dur": 2.5,
+      "gen_s": 7.6
+    },
+    {
+      "gold": [
+        "Germany"
+      ],
+      "pred": "Hey, what's going on? Napoleon Bonaparte, during the Napoleonic Wars, ceded the territory of the Duchy of Warsaw to Prussia, effectively ending French rule in the region.",
+      "correct": false,
+      "dur": 2.3,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "Electoral district of South Brisbane"
+      ],
+      "pred": "Hey, what's up?",
+      "correct": false,
+      "dur": 2.7,
+      "gen_s": 7.6
+    },
+    {
+      "gold": [
+        "us"
+      ],
+      "pred": "Hi, how was your day? USA Network airs the pageant.",
+      "correct": true,
+      "dur": 3.1,
+      "gen_s": 7.9
+    },
+    {
+      "gold": [
+        "Zak\u0101t",
+        "Salah",
+        "Hajj"
+      ],
+      "pred": "Hello, what's up? Islam is a religion that has a lot of traditions that have evolved over time. Some of the most well known traditions of Islam include the five pillars of Islam,",
+      "correct": false,
+      "dur": 2.2,
+      "gen_s": 7.1
+    },
+    {
+      "gold": [
+        "United Kingdom"
+      ],
+      "pred": "Hey, how your day? Andy Murray started playing tennis at the age of three. largest",
+      "correct": false,
+      "dur": 2.1,
+      "gen_s": 7.2
+    },
+    {
+      "gold": [
+        "Australian dollar"
+      ],
+      "pred": "Hi, how are you doing?",
+      "correct": false,
+      "dur": 2.3,
+      "gen_s": 7.4
+    },
+    {
+      "gold": [
+        "Central European Time"
+      ],
+      "pred": "Hey, how are you doing? Sweden is 12 hours ahead of New York City.",
+      "correct": false,
+      "dur": 1.6,
+      "gen_s": 6.8
+    },
+    {
+      "gold": [
+        "Carolina Panthers"
+      ],
+      "pred": "Hey what's up? Newton signed his name at the bottom of the document. The man was sitting on a bench",
+      "correct": false,
+      "dur": 1.9,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Frederick County"
+      ],
+      "pred": "Hi, how are you doing?",
+      "correct": false,
+      "dur": 1.7,
+      "gen_s": 6.9
+    },
+    {
+      "gold": [
+        "Monroe County High School"
+      ],
+      "pred": "Hello, what's up? He attends Harland College.",
+      "correct": false,
+      "dur": 2.3,
+      "gen_s": 7.3
+    },
+    {
+      "gold": [
+        "Mountain Time Zone"
+      ],
+      "pred": "Hi, how is it going?",
+      "correct": false,
+      "dur": 1.7,
+      "gen_s": 7.0
+    },
+    {
+      "gold": [
+        "Al Gore"
+      ],
+      "pred": "Hey, how can I help you? George W. Bush ran against Al Gore for the second time in the 2000 election.",
+      "correct": true,
+      "dur": 3.2,
+      "gen_s": 8.4
+    },
+    {
+      "gold": [
+        "Ayaan Hirsi Ali"
+      ],
+      "pred": "Hello, what's up? Niles Ferguson's wife's name is Anne Ferguson.",
+      "correct": false,
+      "dur": 2.6,
+      "gen_s": 7.9
+    }
+  ]
+}

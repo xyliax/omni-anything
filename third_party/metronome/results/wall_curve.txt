@@ -1,0 +1,8 @@
+=== LONG-DURATION wall-curve (fresh single-N, 300s): vanilla vs in-engine SWA ===
+[N=96]  vanilla 3->1601ms DEGRADING ; in-engine 1-2ms flat
+[N=128] vanilla:
+  OVERALL: ticks=19200 lat p50=5 p90=1602 p99=1603ms miss=0.00% TTFA p50=321ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 307ms -> last-bucket p99 1603ms (drift +1296ms) DEGRADING
+        in-engine:
+  OVERALL: ticks=19328 lat p50=5 p90=8 p99=182ms miss=0.00% TTFA p50=369ms voice_out_frames=0 err=0
+  DEGRADATION: first-bucket p99 355ms -> last-bucket p99 2ms (drift -354ms) STABLE

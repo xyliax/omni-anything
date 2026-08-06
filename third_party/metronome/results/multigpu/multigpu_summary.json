@@ -1,0 +1,88 @@
+{
+  "model": "qwen3-omni",
+  "policies": [
+    {
+      "policy": "random",
+      "G": 8,
+      "offered": 1.3,
+      "served": 1538,
+      "blocking": 0.24356474258970362,
+      "balance": 0.9990414196575066,
+      "cap1": 211
+    },
+    {
+      "policy": "round_robin",
+      "G": 8,
+      "offered": 1.3,
+      "served": 1532,
+      "blocking": 0.21767328739359548,
+      "balance": 0.999466894593919,
+      "cap1": 211
+    },
+    {
+      "policy": "first_fit",
+      "G": 8,
+      "offered": 1.3,
+      "served": 1526,
+      "blocking": 0.21696392379408191,
+      "balance": 0.9996100532822749,
+      "cap1": 211
+    },
+    {
+      "policy": "best_fit",
+      "G": 8,
+      "offered": 1.3,
+      "served": 1529,
+      "blocking": 0.21868666396432912,
+      "balance": 0.9984471592116415,
+      "cap1": 211
+    }
+  ],
+  "scaling": [
+    {
+      "policy": "best_fit",
+      "G": 1,
+      "offered": 0.9,
+      "served": 174,
+      "blocking": 0.0,
+      "balance": 1.0,
+      "cap1": 211
+    },
+    {
+      "policy": "best_fit",
+      "G": 2,
+      "offered": 0.9,
+      "served": 359,
+      "blocking": 0.013411078717201153,
+      "balance": 0.9999777507890218,
+      "cap1": 211
+    },
+    {
+      "policy": "best_fit",
+      "G": 4,
+      "offered": 0.9,
+      "served": 750,
+      "blocking": 0.0,
+      "balance": 0.9999989800271628,
+      "cap1": 211
+    },
+    {
+      "policy": "best_fit",
+      "G": 8,
+      "offered": 0.9,
+      "served": 1499,
+      "blocking": 0.0,
+      "balance": 0.9994383956539877,
+      "cap1": 211
+    },
+    {
+      "policy": "best_fit",
+      "G": 16,
+      "offered": 0.9,
+      "served": 3000,
+      "blocking": 0.0,
+      "balance": 0.999506653687307,
+      "cap1": 211
+    }
+  ]
+}

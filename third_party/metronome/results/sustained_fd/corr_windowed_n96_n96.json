@@ -1,0 +1,24 @@
+{
+ "n_sessions": 96,
+ "duration": 75.0,
+ "sess_correct": 0,
+ "sess_ever": 96,
+ "sess_with_ticks": 96,
+ "errs": 0,
+ "sample_texts": [
+  "\nuser\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n\nuser\n\nuser\n\nuser\n\nuser\n",
+  "\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n",
+  "\nuser\n\nuser\n\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser",
+  "user\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n",
+  "user\n\nuser\n\nuser\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n",
+  "\nend\nend\nend\nendend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\nend\n",
+  "user\n\nuser\n\nuser\n\nuser\nThe capital of France is Paris.\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n",
+  "user\n\nuser\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n"
+ ],
+ "sample_assembled": [
+  "\n with the capital of France.\n with the capital of France.\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n The capital of France is Paris.\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser \n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n",
+  ":\nuser\n\nuser\n\n\n\n\n\n :\nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n \nuser\n\n\n\n\n\n\n\n\n The longest river in South America is the Amazon River.\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n \nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n",
+  "\nust\nust\nust\nust\nust\nust\nust\n \nust\nust\nust\nust\nust\nust\nust\nust ust\nust\nust\nust\nust\nust\nust\nust\n \nust\nust\nust\nust\nust\nust\nust\nust \nust\nust\nust\nust\nust\nust\nust\nust ust\nust\nust\nust\nust\nust\nust\nust\n \nust\nust\nust\nust\nust\nust\nust\nust ust\nust\nust\nust\nust\nust\nust\nust\n \nust\nust\nust\nust\nust\nust\nust\nust \nust\nust\nust\nust\nust\nust\nust\nust ust\nust\nust\nust\nust\nust\nust\nust\n \nust\nust\nust\nust\nust\nust\nust\nust \nust\nus",
+  "\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n \n\n\n\n\n\n\n\n\n\n\n\n\n The capital of France is Paris.\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser \n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\nuser\n\n"
+ ]
+}

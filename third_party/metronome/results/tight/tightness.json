@@ -1,0 +1,26 @@
+[
+  {
+    "model": "moshi",
+    "deadline_ms": 80.0,
+    "mscs_b1": 40,
+    "mscs_m": 136,
+    "gain": 3.4,
+    "fixed_overhead_frac_of_budget": 0.11415278600609935
+  },
+  {
+    "model": "minicpm-o",
+    "deadline_ms": 1000.0,
+    "mscs_b1": 17,
+    "mscs_m": 71,
+    "gain": 4.176470588235294,
+    "fixed_overhead_frac_of_budget": 0.009709499829057337
+  },
+  {
+    "model": "qwen3-omni",
+    "deadline_ms": 200.0,
+    "mscs_b1": 64,
+    "mscs_m": 158,
+    "gain": 2.46875,
+    "fixed_overhead_frac_of_budget": 0.03952202900596288
+  }
+]

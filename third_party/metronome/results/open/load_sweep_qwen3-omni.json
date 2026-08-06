@@ -1,0 +1,119 @@
+{
+  "model": "qwen3-omni",
+  "capacity": 96,
+  "seeds": 4,
+  "curve": {
+    "0.5": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "0.75": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.0": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.25": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.5": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      }
+    },
+    "1.75": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.2152,
+        "ci": [
+          0,
+          0.435
+        ]
+      }
+    },
+    "2.0": {
+      "admission": {
+        "mean_miss": 0.0,
+        "ci": [
+          0,
+          0.0
+        ]
+      },
+      "greedy": {
+        "mean_miss": 0.4261,
+        "ci": [
+          0.2092,
+          0.643
+        ]
+      }
+    }
+  }
+}

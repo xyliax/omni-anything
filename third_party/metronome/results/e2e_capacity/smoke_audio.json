@@ -1,0 +1,38 @@
+{
+ "uri": "ws://127.0.0.1:8904",
+ "mode": "audio",
+ "budget_ms": 2000.0,
+ "img_px": 448,
+ "q_audio_s": 2.0,
+ "slo": 0.05,
+ "ttfa_slo_ms": 4000.0,
+ "max_concurrency": 4,
+ "rows": [
+  {
+   "N": 1,
+   "mode": "audio",
+   "ttfa_p50": 2315.6542778015137,
+   "ttfa_p90": 2315.6542778015137,
+   "ttfa_p99": 2315.6542778015137,
+   "miss_rate": 0.0,
+   "ticks": 1,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 1,
+   "feasible": true
+  },
+  {
+   "N": 4,
+   "mode": "audio",
+   "ttfa_p50": 1879.6247243881226,
+   "ttfa_p90": 3067.517518997193,
+   "ttfa_p99": 3525.5675792694087,
+   "miss_rate": 0.0,
+   "ticks": 8,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 4,
+   "feasible": true
+  }
+ ]
+}

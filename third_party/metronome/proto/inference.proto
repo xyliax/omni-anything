@@ -1,0 +1,44 @@
+syntax = "proto3";
+package metronome;
+option go_package = "metronome/gateway/pb";
+
+// Inference service: the Go gateway batches each tick's per-session input and calls Step;
+// the Python/vLLM worker (owns the GPU) runs one batched prefill+decode and returns new tokens.
+service Inference {
+  rpc Step(StepRequest) returns (StepResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message SessionInput {
+  uint64 sid = 1;          // session id (gateway-assigned, stable for the session)
+  bool   new_turn = 2;     // begin a response: prefill the audio/text below
+  bytes  audio_pcm16 = 3;  // raw little-endian PCM16 mono (the whole utterance on new_turn)
+  uint32 sample_rate = 4;
+  string text = 5;         // optional text prompt / instruction
+  bool   cancel = 6;       // abort the in-flight response for this sid
+  uint32 max_tokens = 7;   // response cap (used on new_turn)
+  repeated bytes images = 8;  // VISION: encoded image bytes (PNG/JPEG), decoded worker-side to PIL
+}
+
+message StepRequest {
+  repeated SessionInput sessions = 1;  // every session needing compute this tick
+  uint32 tokens_per_tick = 2;
+}
+
+message SessionOutput {
+  uint64 sid = 1;
+  repeated int32 tokens = 2;  // new token ids generated this tick
+  string text = 3;            // detokenized delta
+  bool   finished = 4;        // response ended (EOS / max tokens)
+  bytes  audio_out = 5;       // AUDIO OUTPUT: synthesized PCM16 mono delta (empty if text-only)
+  uint32 audio_sr = 6;        // sample rate of audio_out
+}
+
+message StepResponse {
+  repeated SessionOutput outputs = 1;
+  double gpu_ms = 2;          // measured GPU step latency for this tick
+  uint32 in_flight = 3;       // engine's unfinished-request count
+}
+
+message HealthRequest {}
+message HealthResponse { bool ready = 1; uint32 in_flight = 2; string model = 3; }

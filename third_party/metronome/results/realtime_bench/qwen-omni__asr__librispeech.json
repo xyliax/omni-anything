@@ -1,0 +1,574 @@
+{
+  "task": "asr",
+  "dataset": "librispeech",
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "n": 40,
+  "via": "realtime-api",
+  "concurrency": 1,
+  "metric": "WER",
+  "score": 0.026,
+  "wall_s": 56.5,
+  "traces": [
+    {
+      "question": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+      "gold": [
+        "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS"
+      ],
+      "pred": "Concord returned to its place amidst the tents.",
+      "ok": true,
+      "audio_s": 3.5,
+      "latency_s": 1.15,
+      "rtf": 3.06,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE ENGLISH FORWARDED TO THE FRENCH BASKETS OF FLOWERS OF WHICH THEY HAD MADE A ",
+      "gold": [
+        "THE ENGLISH FORWARDED TO THE FRENCH BASKETS OF FLOWERS OF WHICH THEY HAD MADE A PLENTIFUL PROVISION TO GREET THE ARRIVAL OF THE YOUNG PRINCESS THE FRENCH IN RETURN INVITED THE ENGLISH TO A SUPPER WHICH WAS TO BE GIVEN THE NEXT DAY"
+      ],
+      "pred": "The English forwarded to the French baskets of flowers of which they had made a plentiful provision to greet the arrival of the young princess. The French, in r",
+      "ok": true,
+      "audio_s": 14.2,
+      "latency_s": 2.66,
+      "rtf": 5.34,
+      "ticks": 12,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "CONGRATULATIONS WERE POURED IN UPON THE PRINCESS EVERYWHERE DURING HER JOURNEY",
+      "gold": [
+        "CONGRATULATIONS WERE POURED IN UPON THE PRINCESS EVERYWHERE DURING HER JOURNEY"
+      ],
+      "pred": "Congratulations were poured in upon the princess everywhere during her journey.",
+      "ok": true,
+      "audio_s": 5.0,
+      "latency_s": 0.93,
+      "rtf": 5.41,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "FROM THE RESPECT PAID HER ON ALL SIDES SHE SEEMED LIKE A QUEEN AND FROM THE ADOR",
+      "gold": [
+        "FROM THE RESPECT PAID HER ON ALL SIDES SHE SEEMED LIKE A QUEEN AND FROM THE ADORATION WITH WHICH SHE WAS TREATED BY TWO OR THREE SHE APPEARED AN OBJECT OF WORSHIP THE QUEEN MOTHER GAVE THE FRENCH THE MOST AFFECTIONATE RECEPTION FRANCE WAS HER NATIVE COUNTRY AND SHE HAD SUFFERED TOO MUCH UNHAPPINESS IN ENGLAND FOR ENGLAND TO HAVE MADE HER FORGET FRANCE"
+      ],
+      "pred": "From the respect paid her on all sides she seemed like a queen and from the adoration with which she was treated by two or three she appeared an object of worsh",
+      "ok": true,
+      "audio_s": 23.3,
+      "latency_s": 3.75,
+      "rtf": 6.21,
+      "ticks": 17,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "SHE TAUGHT HER DAUGHTER THEN BY HER OWN AFFECTION FOR IT THAT LOVE FOR A COUNTRY",
+      "gold": [
+        "SHE TAUGHT HER DAUGHTER THEN BY HER OWN AFFECTION FOR IT THAT LOVE FOR A COUNTRY WHERE THEY HAD BOTH BEEN HOSPITABLY RECEIVED AND WHERE A BRILLIANT FUTURE OPENED BEFORE THEM"
+      ],
+      "pred": "She taught her daughter then by her own affection for it that love for a country where they had both been hospitably received and where a brilliant future opene",
+      "ok": true,
+      "audio_s": 11.1,
+      "latency_s": 2.02,
+      "rtf": 5.48,
+      "ticks": 9,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE COUNT HAD THROWN HIMSELF BACK ON HIS SEAT LEANING HIS SHOULDERS AGAINST THE ",
+      "gold": [
+        "THE COUNT HAD THROWN HIMSELF BACK ON HIS SEAT LEANING HIS SHOULDERS AGAINST THE PARTITION OF THE TENT AND REMAINED THUS HIS FACE BURIED IN HIS HANDS WITH HEAVING CHEST AND RESTLESS LIMBS"
+      ],
+      "pred": "The count had thrown himself back on his seat, leaning his shoulders against the partition of the tent and remained thus, his face buried in his hands, with hea",
+      "ok": true,
+      "audio_s": 13.2,
+      "latency_s": 2.15,
+      "rtf": 6.12,
+      "ticks": 10,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THIS HAS INDEED BEEN A HARASSING DAY CONTINUED THE YOUNG MAN HIS EYES FIXED UPON",
+      "gold": [
+        "THIS HAS INDEED BEEN A HARASSING DAY CONTINUED THE YOUNG MAN HIS EYES FIXED UPON HIS FRIEND"
+      ],
+      "pred": "This has indeed been a harassing day continued the young man his eyes fixed upon his friend",
+      "ok": true,
+      "audio_s": 5.8,
+      "latency_s": 1.14,
+      "rtf": 5.15,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "YOU WILL BE FRANK WITH ME I ALWAYS AM",
+      "gold": [
+        "YOU WILL BE FRANK WITH ME I ALWAYS AM"
+      ],
+      "pred": "You will be frank with me? I always am.",
+      "ok": true,
+      "audio_s": 3.3,
+      "latency_s": 0.83,
+      "rtf": 3.98,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "CAN YOU IMAGINE WHY BUCKINGHAM HAS BEEN SO VIOLENT I SUSPECT",
+      "gold": [
+        "CAN YOU IMAGINE WHY BUCKINGHAM HAS BEEN SO VIOLENT I SUSPECT"
+      ],
+      "pred": "Can you imagine why Buckingham has been so violent I suspect",
+      "ok": true,
+      "audio_s": 4.8,
+      "latency_s": 0.72,
+      "rtf": 6.64,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "IT IS YOU WHO ARE MISTAKEN RAOUL I HAVE READ HIS DISTRESS IN HIS EYES IN HIS EVE",
+      "gold": [
+        "IT IS YOU WHO ARE MISTAKEN RAOUL I HAVE READ HIS DISTRESS IN HIS EYES IN HIS EVERY GESTURE AND ACTION THE WHOLE DAY"
+      ],
+      "pred": "it is you who are mistaken raoul i have read his distress in his eyes in his every gesture and action the whole day",
+      "ok": true,
+      "audio_s": 7.3,
+      "latency_s": 1.53,
+      "rtf": 4.76,
+      "ticks": 7,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "I CAN PERCEIVE LOVE CLEARLY ENOUGH",
+      "gold": [
+        "I CAN PERCEIVE LOVE CLEARLY ENOUGH"
+      ],
+      "pred": "I can perceive love clearly enough.",
+      "ok": true,
+      "audio_s": 3.0,
+      "latency_s": 0.65,
+      "rtf": 4.67,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "I AM CONVINCED OF WHAT I SAY SAID THE COUNT",
+      "gold": [
+        "I AM CONVINCED OF WHAT I SAY SAID THE COUNT"
+      ],
+      "pred": "I am convinced of what I say, said the count.",
+      "ok": true,
+      "audio_s": 3.2,
+      "latency_s": 0.81,
+      "rtf": 3.95,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "IT IS ANNOYANCE THEN",
+      "gold": [
+        "IT IS ANNOYANCE THEN"
+      ],
+      "pred": "it is annoyance then",
+      "ok": true,
+      "audio_s": 1.9,
+      "latency_s": 0.62,
+      "rtf": 3.11,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "IN THOSE VERY TERMS I EVEN ADDED MORE",
+      "gold": [
+        "IN THOSE VERY TERMS I EVEN ADDED MORE"
+      ],
+      "pred": "in those very terms i even added more",
+      "ok": true,
+      "audio_s": 2.9,
+      "latency_s": 0.72,
+      "rtf": 4.09,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "BUT CONTINUED RAOUL NOT INTERRUPTED BY THIS MOVEMENT OF HIS FRIEND HEAVEN BE PRA",
+      "gold": [
+        "BUT CONTINUED RAOUL NOT INTERRUPTED BY THIS MOVEMENT OF HIS FRIEND HEAVEN BE PRAISED THE FRENCH WHO ARE PRONOUNCED TO BE THOUGHTLESS AND INDISCREET RECKLESS EVEN ARE CAPABLE OF BRINGING A CALM AND SOUND JUDGMENT TO BEAR ON MATTERS OF SUCH HIGH IMPORTANCE"
+      ],
+      "pred": "But continued Raoul not interrupted by this movement of his friend heaven be praised the French who are pronounced to be thoughtless and indiscreet reckless eve",
+      "ok": true,
+      "audio_s": 16.8,
+      "latency_s": 2.58,
+      "rtf": 6.53,
+      "ticks": 12,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THUS IT IS THAT THE HONOR OF THREE IS SAVED OUR COUNTRY'S OUR MASTER'S AND OUR O",
+      "gold": [
+        "THUS IT IS THAT THE HONOR OF THREE IS SAVED OUR COUNTRY'S OUR MASTER'S AND OUR OWN"
+      ],
+      "pred": "Thus it is that the honor of three is saved our country our masters and our own",
+      "ok": true,
+      "audio_s": 6.4,
+      "latency_s": 1.22,
+      "rtf": 5.25,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "YES I NEED REPOSE MANY THINGS HAVE AGITATED ME TO DAY BOTH IN MIND AND BODY WHEN",
+      "gold": [
+        "YES I NEED REPOSE MANY THINGS HAVE AGITATED ME TO DAY BOTH IN MIND AND BODY WHEN YOU RETURN TO MORROW I SHALL NO LONGER BE THE SAME MAN"
+      ],
+      "pred": "Yes, I need repose. Many things have agitated me to-day, both in mind and body. When you return to-morrow, I shall no longer be the same man.",
+      "ok": true,
+      "audio_s": 10.0,
+      "latency_s": 2.18,
+      "rtf": 4.59,
+      "ticks": 10,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "BUT IN THIS FRIENDLY PRESSURE RAOUL COULD DETECT THE NERVOUS AGITATION OF A GREA",
+      "gold": [
+        "BUT IN THIS FRIENDLY PRESSURE RAOUL COULD DETECT THE NERVOUS AGITATION OF A GREAT INTERNAL CONFLICT"
+      ],
+      "pred": "But in this friendly pressure, Rowl could detect the nervous agitation of a great internal conflict.",
+      "ok": true,
+      "audio_s": 6.2,
+      "latency_s": 1.21,
+      "rtf": 5.11,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE NIGHT WAS CLEAR STARLIT AND SPLENDID THE TEMPEST HAD PASSED AWAY AND THE SWE",
+      "gold": [
+        "THE NIGHT WAS CLEAR STARLIT AND SPLENDID THE TEMPEST HAD PASSED AWAY AND THE SWEET INFLUENCES OF THE EVENING HAD RESTORED LIFE PEACE AND SECURITY EVERYWHERE"
+      ],
+      "pred": "The night was clear, starlit and splendid. The tempest had passed away and the sweet influences of the evening had restored life, peace and security everywhere.",
+      "ok": true,
+      "audio_s": 10.8,
+      "latency_s": 2.05,
+      "rtf": 5.27,
+      "ticks": 9,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "UPON THE LARGE SQUARE IN FRONT OF THE HOTEL THE SHADOWS OF THE TENTS INTERSECTED",
+      "gold": [
+        "UPON THE LARGE SQUARE IN FRONT OF THE HOTEL THE SHADOWS OF THE TENTS INTERSECTED BY THE GOLDEN MOONBEAMS FORMED AS IT WERE A HUGE MOSAIC OF JET AND YELLOW FLAGSTONES"
+      ],
+      "pred": "Upon the large square in front of the hotel, the shadows of the tents intersected by the golden moonbeams formed as it were a huge mosaic of jet and yellow flag",
+      "ok": true,
+      "audio_s": 11.6,
+      "latency_s": 2.16,
+      "rtf": 5.38,
+      "ticks": 10,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "BRAGELONNE WATCHED FOR SOME TIME THE CONDUCT OF THE TWO LOVERS LISTENED TO THE L",
+      "gold": [
+        "BRAGELONNE WATCHED FOR SOME TIME THE CONDUCT OF THE TWO LOVERS LISTENED TO THE LOUD AND UNCIVIL SLUMBERS OF MANICAMP WHO SNORED AS IMPERIOUSLY AS THOUGH HE WAS WEARING HIS BLUE AND GOLD INSTEAD OF HIS VIOLET SUIT"
+      ],
+      "pred": "bragelonne watched for some time the conduct of the two lovers listened to the loud and uncivil slumbers of manicamp who snored as imperiously as though he was ",
+      "ok": true,
+      "audio_s": 14.4,
+      "latency_s": 2.54,
+      "rtf": 5.68,
+      "ticks": 12,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "GOLIATH MAKES ANOTHER DISCOVERY",
+      "gold": [
+        "GOLIATH MAKES ANOTHER DISCOVERY"
+      ],
+      "pred": "Goliath makes another discovery.",
+      "ok": true,
+      "audio_s": 3.0,
+      "latency_s": 0.64,
+      "rtf": 4.74,
+      "ticks": 2,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THEY WERE CERTAINLY NO NEARER THE SOLUTION OF THEIR PROBLEM",
+      "gold": [
+        "THEY WERE CERTAINLY NO NEARER THE SOLUTION OF THEIR PROBLEM"
+      ],
+      "pred": "There were certainly no near the solution of their problem.",
+      "ok": true,
+      "audio_s": 3.2,
+      "latency_s": 0.7,
+      "rtf": 4.55,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE POOR LITTLE THINGS CRIED CYNTHIA THINK OF THEM HAVING BEEN TURNED TO THE WAL",
+      "gold": [
+        "THE POOR LITTLE THINGS CRIED CYNTHIA THINK OF THEM HAVING BEEN TURNED TO THE WALL ALL THESE YEARS"
+      ],
+      "pred": "The poor little things cried Cynthia think of them having been turned to the wall all these years",
+      "ok": true,
+      "audio_s": 5.6,
+      "latency_s": 1.18,
+      "rtf": 4.73,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "NOW WHAT WAS THE SENSE OF IT TWO INNOCENT BABIES LIKE THAT",
+      "gold": [
+        "NOW WHAT WAS THE SENSE OF IT TWO INNOCENT BABIES LIKE THAT"
+      ],
+      "pred": "now what is the sense of it two innocent babies like that",
+      "ok": true,
+      "audio_s": 3.4,
+      "latency_s": 0.93,
+      "rtf": 3.64,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "BUT JOYCE HAD NOT BEEN LISTENING ALL AT ONCE SHE PUT DOWN HER CANDLE ON THE TABL",
+      "gold": [
+        "BUT JOYCE HAD NOT BEEN LISTENING ALL AT ONCE SHE PUT DOWN HER CANDLE ON THE TABLE AND FACED HER COMPANION"
+      ],
+      "pred": "But Joyce had not been listening all at once she put down her candle on the table and faced her companion.",
+      "ok": true,
+      "audio_s": 6.2,
+      "latency_s": 1.41,
+      "rtf": 4.35,
+      "ticks": 6,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE TWIN BROTHER DID SOMETHING SHE DIDN'T LIKE AND SHE TURNED HIS PICTURE TO THE",
+      "gold": [
+        "THE TWIN BROTHER DID SOMETHING SHE DIDN'T LIKE AND SHE TURNED HIS PICTURE TO THE WALL"
+      ],
+      "pred": "The twin brother did something she didn't like and she turned his picture to the wall.",
+      "ok": true,
+      "audio_s": 5.0,
+      "latency_s": 1.12,
+      "rtf": 4.5,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "HERS HAPPENED TO BE IN THE SAME FRAME TOO BUT SHE EVIDENTLY DIDN'T CARE ABOUT TH",
+      "gold": [
+        "HERS HAPPENED TO BE IN THE SAME FRAME TOO BUT SHE EVIDENTLY DIDN'T CARE ABOUT THAT"
+      ],
+      "pred": "hers happened to be on the same frame too but she evidently didn't care about it",
+      "ok": true,
+      "audio_s": 4.5,
+      "latency_s": 1.21,
+      "rtf": 3.7,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "NOW WHAT HAVE YOU TO SAY CYNTHIA SPRAGUE",
+      "gold": [
+        "NOW WHAT HAVE YOU TO SAY CYNTHIA SPRAGUE"
+      ],
+      "pred": "Now what have you to say, Cynthia Sprague?",
+      "ok": true,
+      "audio_s": 2.8,
+      "latency_s": 0.72,
+      "rtf": 3.89,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "I THOUGHT WE WERE STUMPED AGAIN WHEN I FIRST SAW THAT PICTURE BUT IT'S BEEN OF S",
+      "gold": [
+        "I THOUGHT WE WERE STUMPED AGAIN WHEN I FIRST SAW THAT PICTURE BUT IT'S BEEN OF SOME USE AFTER ALL"
+      ],
+      "pred": "I thought we were stumped again when I first saw that picture, but it's been of some use after all.",
+      "ok": true,
+      "audio_s": 5.2,
+      "latency_s": 1.51,
+      "rtf": 3.43,
+      "ticks": 7,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "DO YOU SUPPOSE THE MINIATURE WAS A COPY OF THE SAME THING",
+      "gold": [
+        "DO YOU SUPPOSE THE MINIATURE WAS A COPY OF THE SAME THING"
+      ],
+      "pred": "Do you suppose the miniature was a copy of the same thing?",
+      "ok": true,
+      "audio_s": 3.4,
+      "latency_s": 0.99,
+      "rtf": 3.43,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "WHAT IN THE WORLD IS THAT QUERIED JOYCE",
+      "gold": [
+        "WHAT IN THE WORLD IS THAT QUERIED JOYCE"
+      ],
+      "pred": "What in the world is it queried Joyce",
+      "ok": true,
+      "audio_s": 2.7,
+      "latency_s": 0.77,
+      "rtf": 3.5,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THEY WORRY ME TERRIBLY AND BESIDES I'D LIKE TO SEE WHAT THIS LOVELY FURNITURE LO",
+      "gold": [
+        "THEY WORRY ME TERRIBLY AND BESIDES I'D LIKE TO SEE WHAT THIS LOVELY FURNITURE LOOKS LIKE WITHOUT SUCH QUANTITIES OF DUST ALL OVER IT GOOD SCHEME CYN"
+      ],
+      "pred": "They worry me terribly and besides I'd like to see what this lovely furniture looks like without such quantities of dust all over it. Good scheme, Sim.",
+      "ok": true,
+      "audio_s": 9.2,
+      "latency_s": 1.7,
+      "rtf": 5.43,
+      "ticks": 8,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "WE'LL COME IN HERE THIS AFTERNOON WITH OLD CLOTHES ON AND HAVE A REGULAR HOUSE C",
+      "gold": [
+        "WE'LL COME IN HERE THIS AFTERNOON WITH OLD CLOTHES ON AND HAVE A REGULAR HOUSE CLEANING"
+      ],
+      "pred": "We'll come in here this afternoon with old clothes on and have a regular house cleaning.",
+      "ok": true,
+      "audio_s": 4.7,
+      "latency_s": 1.2,
+      "rtf": 3.86,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "IT CAN'T HURT ANYTHING I'M SURE FOR WE WON'T DISTURB THINGS AT ALL",
+      "gold": [
+        "IT CAN'T HURT ANYTHING I'M SURE FOR WE WON'T DISTURB THINGS AT ALL"
+      ],
+      "pred": "it can't hurt anything i'm sure for we won't disturb things at all",
+      "ok": true,
+      "audio_s": 4.3,
+      "latency_s": 1.2,
+      "rtf": 3.58,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THIS THOUGHT HOWEVER DID NOT ENTER THE HEADS OF THE ENTHUSIASTIC PAIR",
+      "gold": [
+        "THIS THOUGHT HOWEVER DID NOT ENTER THE HEADS OF THE ENTHUSIASTIC PAIR"
+      ],
+      "pred": "this thought however did not enter the heads of the enthusiastic pair",
+      "ok": true,
+      "audio_s": 4.7,
+      "latency_s": 0.99,
+      "rtf": 4.76,
+      "ticks": 4,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "SMUGGLING THE HOUSE CLEANING PARAPHERNALIA INTO THE CELLAR WINDOW UNOBSERVED THA",
+      "gold": [
+        "SMUGGLING THE HOUSE CLEANING PARAPHERNALIA INTO THE CELLAR WINDOW UNOBSERVED THAT AFTERNOON PROVED NO EASY TASK FOR CYNTHIA HAD ADDED A WHISK BROOM AND DUST PAN TO THE OUTFIT"
+      ],
+      "pred": "smuggling the housecleaning paraphernalia into the cellar window unobserved that afternoon proved no easy task for Cynthia had added a whisk broom and dustpan t",
+      "ok": true,
+      "audio_s": 12.4,
+      "latency_s": 2.19,
+      "rtf": 5.67,
+      "ticks": 10,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "THE LURE PROVED TOO MUCH FOR HIM AND HE CAME SPORTING AFTER IT AS FRISKILY AS A ",
+      "gold": [
+        "THE LURE PROVED TOO MUCH FOR HIM AND HE CAME SPORTING AFTER IT AS FRISKILY AS A YOUNG KITTEN MUCH TO CYNTHIA'S DELIGHT WHEN SHE CAUGHT SIGHT OF HIM"
+      ],
+      "pred": "The lure proved too much for him and he came sporting after it as friskily as a young kitten much to Cynthia's delight when she caught sight of him.",
+      "ok": true,
+      "audio_s": 9.2,
+      "latency_s": 1.99,
+      "rtf": 4.64,
+      "ticks": 9,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "OH LET HIM COME ALONG SHE URGED I DO LOVE TO SEE HIM ABOUT THAT OLD HOUSE",
+      "gold": [
+        "OH LET HIM COME ALONG SHE URGED I DO LOVE TO SEE HIM ABOUT THAT OLD HOUSE"
+      ],
+      "pred": "Oh let him come along she urged I do love to see him about that old house",
+      "ok": true,
+      "audio_s": 5.4,
+      "latency_s": 1.22,
+      "rtf": 4.45,
+      "ticks": 5,
+      "missed": 1,
+      "error": null
+    },
+    {
+      "question": "HE MAKES IT SORT OF COZIER",
+      "gold": [
+        "HE MAKES IT SORT OF COZIER"
+      ],
+      "pred": "He makes it sort of cozier.",
+      "ok": true,
+      "audio_s": 2.1,
+      "latency_s": 0.79,
+      "rtf": 2.69,
+      "ticks": 3,
+      "missed": 1,
+      "error": null
+    }
+  ]
+}

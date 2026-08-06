@@ -1,0 +1,16 @@
+{
+  "model": "qwen-omni",
+  "task": "vqa",
+  "dataset": "mmstar",
+  "n": 1500,
+  "batch": 16,
+  "score_direct": 0.6093,
+  "score_served_batched": 0.6093,
+  "delta": 0.0,
+  "delta_95ci": [
+    -0.0027,
+    0.0027
+  ],
+  "flip_count": 4,
+  "flip_rate": 0.0027
+}

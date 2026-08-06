@@ -1,0 +1,21 @@
+{
+  "model": "qwen-omni",
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "n": 200,
+  "batch": 12,
+  "score_direct": 0.705,
+  "score_served_solo": 0.695,
+  "score_served_batched": 0.69,
+  "delta_batched_minus_direct": -0.015,
+  "delta_95ci": [
+    -0.035,
+    0.0
+  ],
+  "flip_rate_solo": 0.01,
+  "flip_count_solo": 2,
+  "flip_rate_batched": 0.015,
+  "flip_count_batched": 3,
+  "token_agree_direct_vs_solo": 0.9731,
+  "token_agree_solo_vs_batched": 0.9626
+}

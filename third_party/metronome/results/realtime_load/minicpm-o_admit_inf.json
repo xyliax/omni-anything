@@ -1,0 +1,87 @@
+{
+  "model": "minicpm-o",
+  "budget_ms": 1000.0,
+  "tpt": 25,
+  "think_s": 0.0,
+  "turns": 1,
+  "warmup_turns": 0,
+  "slo": 0.05,
+  "ttfa_budget_ms": 2000.0,
+  "tag": "admit_inf",
+  "decode_capacity": 256,
+  "responsive_capacity": 256,
+  "curve": [
+    {
+      "N": 64,
+      "turns_done": 128,
+      "errors": 0,
+      "n_ttfa": 128,
+      "n_tick": 317,
+      "tick_p50_ms": 5.3,
+      "tick_p99_ms": 6.0,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 1206.9,
+      "ttfa_p50_ci": [
+        1188.4,
+        1227.8
+      ],
+      "ttfa_p99_ms": 1312.6,
+      "ttfa_p99_ci": [
+        1307.4,
+        1315.1
+      ],
+      "batch_p50": 60,
+      "batch_max": 64,
+      "goodput_turns_ok": 128,
+      "budget_ms": 1000.0
+    },
+    {
+      "N": 128,
+      "turns_done": 256,
+      "errors": 0,
+      "n_ttfa": 256,
+      "n_tick": 628,
+      "tick_p50_ms": 9.9,
+      "tick_p99_ms": 11.4,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 1083.8,
+      "ttfa_p50_ci": [
+        1059.4,
+        1116.6
+      ],
+      "ttfa_p99_ms": 1312.8,
+      "ttfa_p99_ci": [
+        1306.6,
+        1315.0
+      ],
+      "batch_p50": 112,
+      "batch_max": 126,
+      "goodput_turns_ok": 256,
+      "budget_ms": 1000.0
+    },
+    {
+      "N": 256,
+      "turns_done": 512,
+      "errors": 0,
+      "n_ttfa": 512,
+      "n_tick": 1323,
+      "tick_p50_ms": 22.6,
+      "tick_p99_ms": 24.7,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 945.7,
+      "ttfa_p50_ci": [
+        909.6,
+        987.1
+      ],
+      "ttfa_p99_ms": 1365.2,
+      "ttfa_p99_ci": [
+        1356.4,
+        1370.9
+      ],
+      "batch_p50": 232,
+      "batch_max": 251,
+      "goodput_turns_ok": 512,
+      "budget_ms": 1000.0
+    }
+  ]
+}

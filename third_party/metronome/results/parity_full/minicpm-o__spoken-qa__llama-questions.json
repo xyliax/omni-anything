@@ -1,0 +1,16 @@
+{
+  "model": "minicpm-o",
+  "task": "spoken-qa",
+  "dataset": "llama-questions",
+  "n": 300,
+  "batch": 16,
+  "score_direct": 0.7567,
+  "score_served_batched": 0.76,
+  "delta": 0.0033,
+  "delta_95ci": [
+    -0.0133,
+    0.02
+  ],
+  "flip_count": 7,
+  "flip_rate": 0.0233
+}

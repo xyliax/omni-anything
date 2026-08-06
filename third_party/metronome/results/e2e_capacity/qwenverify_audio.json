@@ -1,0 +1,84 @@
+{
+ "uri": "ws://127.0.0.1:8904",
+ "mode": "audio",
+ "budget_ms": 2000.0,
+ "img_px": 448,
+ "q_audio_s": 3.0,
+ "slo": 0.05,
+ "ttfa_slo_ms": 4000.0,
+ "max_concurrency": 256,
+ "rows": [
+  {
+   "N": 64,
+   "mode": "audio",
+   "ttfa_p50": 1358.86812210083,
+   "ttfa_p90": 2144.8928356170654,
+   "ttfa_p99": 2322.5541758537292,
+   "batch_p50": 54.0,
+   "batch_max": 64,
+   "gpu_p50": 8.992095943540335,
+   "gpu_p99": 337.209795601666,
+   "miss_rate": 0.0,
+   "ticks": 159,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 64,
+   "sample_texts": [
+    "The famous painting \"The Starry Night\" was painted by Vincent van Gogh.",
+    "The United States borders both Canada and Mexico.",
+    "The capital of China is Beijing.",
+    "The capital of Australia is Canberra.",
+    "The name of the music festival held in Indio is Coachella."
+   ],
+   "feasible": true
+  },
+  {
+   "N": 128,
+   "mode": "audio",
+   "ttfa_p50": 1394.9522972106934,
+   "ttfa_p90": 2189.6142959594727,
+   "ttfa_p99": 2368.87193441391,
+   "batch_p50": 109.0,
+   "batch_max": 127,
+   "gpu_p50": 19.081822130829096,
+   "gpu_p99": 354.60382606834173,
+   "miss_rate": 0.0,
+   "ticks": 321,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 128,
+   "sample_texts": [
+    "The name of the music festival held in Indio is Coachella.",
+    "The capital of Australia is Canberra.",
+    "The name of the music festival held in Indio is Coachella.",
+    "The Mediterranean Sea lies between Africa and Europe.",
+    "The play \"Julius Caesar\" was written by William Shakespeare."
+   ],
+   "feasible": true
+  },
+  {
+   "N": 256,
+   "mode": "audio",
+   "ttfa_p50": 1501.9389390945435,
+   "ttfa_p90": 2305.3512573242188,
+   "ttfa_p99": 2474.501359462738,
+   "batch_p50": 210.0,
+   "batch_max": 256,
+   "gpu_p50": 18.29140679910779,
+   "gpu_p99": 452.04268116503954,
+   "miss_rate": 0.0,
+   "ticks": 629,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 256,
+   "sample_texts": [
+    "The most popular music streaming service is Spotify.",
+    "The capital of France is Paris.",
+    "The capital of Australia is Canberra.",
+    "The country that borders both Canada and Mexico is the United States.",
+    "The Mediterranean Sea lies between Africa and Europe."
+   ],
+   "feasible": true
+  }
+ ]
+}

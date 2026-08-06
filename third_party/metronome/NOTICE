@@ -1,0 +1,31 @@
+Metronome
+Copyright 2026 Metronome authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------
+
+This repository includes code derived from the vLLM project
+(https://github.com/vllm-project/vllm), which is licensed under the
+Apache License, Version 2.0.
+
+  metronome/patches/metronome_sink_kernel.py
+      Derived from vLLM's Triton attention kernel.
+      Copyright contributors to the vLLM project.
+      Original authors: Burkhard Ringlein, Jan van Lunteren,
+      Chih-Chieh Yang, Thomas Parnell (IBM Research, Zurich).
+      Modified by the Metronome authors to add pinned-sink KV support.
+
+  patches/vllm_0.23_omni_blackwell.patch
+      A patch against vLLM 0.23 (Apache-2.0); apply to a vLLM checkout.
+
+------------------------------------------------------------------------
+Benchmark data
+------------------------------------------------------------------------
+
+The full-duplex audio benchmark used by this project derives from
+third-party corpora (e.g. the CANDOR conversational corpus) that carry
+their own licenses and redistribution terms. The audio is NOT included
+in this repository. See docs/DATA.md for how to obtain and stage it.

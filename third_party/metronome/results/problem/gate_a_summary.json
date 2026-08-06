@@ -1,0 +1,26 @@
+{
+  "moshi": {
+    "gate_a": false,
+    "mscs": {
+      "B1": 40,
+      "B2": 40,
+      "M": 136
+    }
+  },
+  "minicpm-o": {
+    "gate_a": false,
+    "mscs": {
+      "B1": 17,
+      "B2": 17,
+      "M": 71
+    }
+  },
+  "qwen3-omni": {
+    "gate_a": false,
+    "mscs": {
+      "B1": 64,
+      "B2": 64,
+      "M": 158
+    }
+  }
+}

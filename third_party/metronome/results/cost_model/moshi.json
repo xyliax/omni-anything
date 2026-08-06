@@ -1,0 +1,16 @@
+{
+  "model": "moshi",
+  "device": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+  "c_fixed": 9.506894184494662,
+  "alpha": 0.0006572281363054949,
+  "batch_base": 9.132222880487948,
+  "batch_per_session": -0.0589640284470955,
+  "batch_alpha": 0.0003970598091263128,
+  "tail_factor": 1.2759011891080094,
+  "single_r2": 0.9374083157757787,
+  "single_max_rel_resid": 0.03974489947066627,
+  "batch_r2": 0.9935371512475679,
+  "batch_max_rel_resid": 0.04906198550235742,
+  "kv_bytes_per_token": 524288,
+  "notes": "moshi on NVIDIA RTX PRO 6000 Blackwell Workstation Edition"
+}

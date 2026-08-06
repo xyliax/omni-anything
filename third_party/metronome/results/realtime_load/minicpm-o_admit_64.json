@@ -1,0 +1,87 @@
+{
+  "model": "minicpm-o",
+  "budget_ms": 1000.0,
+  "tpt": 25,
+  "think_s": 0.0,
+  "turns": 1,
+  "warmup_turns": 0,
+  "slo": 0.05,
+  "ttfa_budget_ms": 2000.0,
+  "tag": "admit_64",
+  "decode_capacity": 256,
+  "responsive_capacity": 64,
+  "curve": [
+    {
+      "N": 64,
+      "turns_done": 128,
+      "errors": 0,
+      "n_ttfa": 128,
+      "n_tick": 320,
+      "tick_p50_ms": 5.4,
+      "tick_p99_ms": 11.1,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 1204.1,
+      "ttfa_p50_ci": [
+        1186.4,
+        1222.9
+      ],
+      "ttfa_p99_ms": 1309.3,
+      "ttfa_p99_ci": [
+        1300.7,
+        1312.7
+      ],
+      "batch_p50": 58,
+      "batch_max": 64,
+      "goodput_turns_ok": 128,
+      "budget_ms": 1000.0
+    },
+    {
+      "N": 128,
+      "turns_done": 256,
+      "errors": 0,
+      "n_ttfa": 256,
+      "n_tick": 914,
+      "tick_p50_ms": 6.6,
+      "tick_p99_ms": 10.4,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 2423.1,
+      "ttfa_p50_ci": [
+        1294.1,
+        3583.7
+      ],
+      "ttfa_p99_ms": 3787.7,
+      "ttfa_p99_ci": [
+        3769.3,
+        3793.1
+      ],
+      "batch_p50": 105,
+      "batch_max": 128,
+      "goodput_turns_ok": 256,
+      "budget_ms": 1000.0
+    },
+    {
+      "N": 256,
+      "turns_done": 512,
+      "errors": 0,
+      "n_ttfa": 512,
+      "n_tick": 2850,
+      "tick_p50_ms": 7.4,
+      "tick_p99_ms": 62.6,
+      "frame_miss_rate": 0.0,
+      "ttfa_p50_ms": 5111.2,
+      "ttfa_p50_ci": [
+        3810.3,
+        6403.1
+      ],
+      "ttfa_p99_ms": 9361.1,
+      "ttfa_p99_ci": [
+        9349.5,
+        9366.2
+      ],
+      "batch_p50": 167,
+      "batch_max": 234,
+      "goodput_turns_ok": 512,
+      "budget_ms": 1000.0
+    }
+  ]
+}

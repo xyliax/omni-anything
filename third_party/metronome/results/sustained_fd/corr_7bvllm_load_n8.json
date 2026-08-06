@@ -1,0 +1,17 @@
+{
+ "n_sessions": 8,
+ "duration": 60.0,
+ "sess_correct": 8,
+ "sess_with_ticks": 8,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E",
+  "The longest river in South America is the **Amazon River**. It is approximately 6,400 kilometers (4",
+  "The highest mountain peak in North America is **Denali** (formerly known as Mount McKinley), located in Alaska. It",
+  "The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E",
+  "The longest river in South America is the **Amazon River**. It is approximately 6,400 kilometers (4",
+  "The highest mountain peak in North America is **Denali** (formerly known as Mount McKinley), located in Alaska. It",
+  "The capital of France is Paris. It is the largest city in France and is known for its iconic landmarks such as the E",
+  "The longest river in South America is the **Amazon River**. It is approximately 6,400 kilometers (4"
+ ]
+}

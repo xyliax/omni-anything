@@ -1,0 +1,9 @@
+{
+  "n": 1500,
+  "rule_correct": 634,
+  "unparseable": 450,
+  "judge_recovered": 274,
+  "still_unparseable": 4,
+  "final_accuracy": 0.6053,
+  "paper": 0.64
+}

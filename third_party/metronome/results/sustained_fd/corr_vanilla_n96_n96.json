@@ -1,0 +1,24 @@
+{
+ "n_sessions": 96,
+ "duration": 75.0,
+ "sess_correct": 62,
+ "sess_ever": 66,
+ "sess_with_ticks": 96,
+ "errs": 0,
+ "sample_texts": [
+  "net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n",
+  "\n\nAssistant: The Amazon River is the longest river in South America.\n.com\n user\n\n",
+  "\nuser\n\nAssistant: The highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located",
+  "net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n",
+  "\n\nAssistant: The longest river in South America is the Amazon River.\n.com\nuser\n\nAssistant: The longest river",
+  "wise\nwise\nwise\nwise\nwise\nwise\nwise\nwise\n",
+  "\n\n user\nThe capital of France is Paris.\n user\n\n user\n\n user\n\n\n",
+  "\n user\nThe Amazon River is the longest river in South America.\n user\n\n user\n\n user\nWhich"
+ ],
+ "sample_assembled": [
+  "net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\n",
+  "\n\n\nassistant\nThe Amazon River is the longest river in South America.\n.com\nuser\n\n \n\nassistant\nThe Amazon River is the longest river in South America.\n.com\nuser\n\n \n\nassistant\nThe Amazon River is the longest river in South America.\n.com\nuser\n\n \n\nassistant\nThe Amazon River is the longest river in South America.\n.com\nuser\n\n \n\nassistant\nThe Amazon River is the longest river in South America.\n.com\nuser\n\n",
+  "ased\nuser\n\n:\nassistant\nThe highest mountain peak in North America is Denali, formerly known as Mount McKinley \nuser\n\nassistant\nThe highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in \nuser\n\nassistant\nThe highest mountain peak in North America is Denali, formerly known as Mount McKinley. It is located in \nuser\n\nAssistant: The highest mountain peak in",
+  "net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\nnet\nnet\nnet\nnet\nnet\nnet\nnet\n net\n"
+ ]
+}

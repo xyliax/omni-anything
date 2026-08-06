@@ -1,0 +1,32 @@
+{
+  "model": "minicpm-o",
+  "facts": "minicpm-o",
+  "cost_real": {
+    "c_fixed": 674.4774,
+    "alpha": 0.005935,
+    "batch_base": 658.7757,
+    "batch_per_session": 4.3877,
+    "batch_alpha": 0.005743,
+    "tail_factor": 1.0254,
+    "single_max_rel_resid": 0.0042,
+    "batch_r2": 0.9952
+  },
+  "cost_synth": {
+    "c_fixed": 12.8793,
+    "alpha": 9e-05,
+    "batch_base": 9.7095,
+    "batch_per_session": 1.7759,
+    "batch_alpha": 0.000202
+  },
+  "mscs_real": {
+    "B1": 2,
+    "M": 4
+  },
+  "mscs_synth": {
+    "B1": 17,
+    "M": 71
+  },
+  "gain_real": 2.0,
+  "gain_synth": 4.18,
+  "synth_optimism_cfixed": 52.37
+}

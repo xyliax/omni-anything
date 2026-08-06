@@ -1,0 +1,10 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 0,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "The audio says: 'the capital of France what is the'.\n\u8bf7\u7ee7\u7eed\u8fd9\u4e2a\u53e5\u5b50\u3002\nThe capital of France"
+ ]
+}

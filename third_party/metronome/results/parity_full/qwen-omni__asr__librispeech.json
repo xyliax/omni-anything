@@ -1,0 +1,16 @@
+{
+  "model": "qwen-omni",
+  "task": "asr",
+  "dataset": "librispeech",
+  "n": 1000,
+  "batch": 16,
+  "score_direct": 0.9707,
+  "score_served_batched": 0.9711,
+  "delta": 0.0004,
+  "delta_95ci": [
+    -0.0002,
+    0.0012
+  ],
+  "flip_count": 10,
+  "flip_rate": 0.01
+}

@@ -1,0 +1,14 @@
+{
+  "benchmark": "Full-Duplex-Bench v1",
+  "task": "backchannel",
+  "model": "moshi",
+  "served": "kyutai/moshiko-pytorch-bf16 (native full-duplex streaming)",
+  "n_examples": 55,
+  "TOR_mean": 0.4,
+  "TOR_std": 0.49,
+  "frequency_mean": 0.1754,
+  "frequency_std": 0.0782,
+  "JSD_mean": 0.6813,
+  "JSD_std": 0.0702,
+  "note": "Moshi backchannels far more frequently (0.175 vs ~0.025 for paper models) -- eager full-duplex behaviour. Fixed: correct nested data root, silero_vad install, and torchaudio->soundfile load (torchcodec broken under torch 2.10)."
+}

@@ -1,0 +1,14 @@
+{
+ "n_sessions": 1,
+ "duration": 30.0,
+ "sess_correct": 0,
+ "sess_ever": 1,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "."
+ ],
+ "sample_assembled": [
+  " Hello ,  how  are  you  today ?  The  capital  of  France  is  Paris .  The  capital  of  France  is  Paris .  The  capital  of  Australia  is  Canberra .  capital  of  New  Zealand  is  Wellington .  capital  of  France  is  Paris .  capital  of  France  is  Paris .  capital  of  France  is  Paris ."
+ ]
+}

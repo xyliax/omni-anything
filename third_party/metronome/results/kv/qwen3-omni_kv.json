@@ -1,0 +1,14 @@
+{
+  "model": "qwen3-omni",
+  "self_windowing": true,
+  "full_mscs": 71,
+  "mscs_by_budget": {
+    "512": 227,
+    "1024": 199,
+    "2048": 158,
+    "4096": 113,
+    "8192": 71
+  },
+  "kv_budget_gain": 2.8028169014084505,
+  "classification": "complementary"
+}

@@ -1,0 +1,45 @@
+{
+  "model": "qwen-omni",
+  "served_hf": "Qwen/Qwen2.5-Omni-7B",
+  "L": 2600,
+  "n_positions": 400,
+  "full_context_perplexity": 22.876,
+  "essential_window": 512,
+  "curve": [
+    {
+      "window": 32,
+      "perplexity": 33.909,
+      "n": 400
+    },
+    {
+      "window": 64,
+      "perplexity": 28.648,
+      "n": 400
+    },
+    {
+      "window": 128,
+      "perplexity": 25.179,
+      "n": 400
+    },
+    {
+      "window": 256,
+      "perplexity": 24.272,
+      "n": 400
+    },
+    {
+      "window": 512,
+      "perplexity": 23.049,
+      "n": 400
+    },
+    {
+      "window": 1024,
+      "perplexity": 22.859,
+      "n": 400
+    },
+    {
+      "window": 2048,
+      "perplexity": 22.876,
+      "n": 400
+    }
+  ]
+}

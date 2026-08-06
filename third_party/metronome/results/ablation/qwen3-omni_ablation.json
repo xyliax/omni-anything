@@ -1,0 +1,11 @@
+{
+  "M-core (sched only)": 158,
+  "\u2212 admission (mem-only)": 128,
+  "FIFO (\u2212 EDF)": 158,
+  "LRF order (anti-EDF)": 158,
+  "full KV (\u2212 budget)": 71,
+  "+ degradation ladder": 158,
+  "worst-case admit": 158,
+  "+ silence (talk .5)": 158,
+  "\u2212 silence (talk .5)": 158
+}

@@ -1,0 +1,13 @@
+=== mrope isolation (probe) ===
+  V1_full_proper: OK txt='The audio clip is a 2-second'
+(EngineCore pid=2584029) ERROR 06-24 13:33:05 [dump_input.py:79] Dumping scheduler output for model execution: SchedulerOutput(scheduled_new_reqs=[NewRequestData(req_id=v-V2_minimal_head_ph-8e8fc0b6,prompt_token_ids_len=42,prefill_token_ids_len=None,mm_features=[MultiModalFeatureSpec(data={'audio_feature_lengths': MultiModalFieldElem(data=tensor(200), field=MultiModalBatchedField(keep_on_cpu=False)), 'feature_attention_mask': MultiModalFieldElem(data=tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+(EngineCore pid=2584029) ERROR 06-24 13:33:05 [dump_input.py:79]        dtype=torch.bfloat16), field=MultiModalFlatField(keep_on_cpu=False, slices=[[slice(None, None, None), slice(0, 200, None)]], dim=1))}, modality='audio', identifier='1e7f71a121a059769f54d80d11b328c6f97d1def060a3bdd1ac1f2652f70914e', mm_position=PlaceholderRange(offset=15, length=26, is_embed=None), mm_hash='1e7f71a121a059769f54d80d11b328c6f97d1def060a3bdd1ac1f2652f70914e')],sampling_params=SamplingParams(n=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.0, top_p=1.0, top_k=0, min_p=0.0, seed=None, stop=[], stop_token_ids=[], bad_words=[], thinking_token_budget=None, include_stop_str_in_output=False, ignore_eos=True, max_tokens=8, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, structured_outputs=None, extra_args=None),block_ids=([1, 2, 5],),num_computed_tokens=32,lora_request=None,prompt_embeds_shape=None)], scheduled_cached_reqs=CachedRequestData(req_ids=[],resumed_req_ids=set(),new_token_ids_lens=[],all_token_ids_lens={},new_block_ids=[],num_computed_tokens=[],num_output_tokens=[]), num_scheduled_tokens={v-V2_minimal_head_ph-8e8fc0b6: 10}, total_num_scheduled_tokens=10, scheduled_spec_decode_tokens={}, scheduled_encoder_inputs={}, num_common_prefix_blocks=[3], finished_req_ids=[], free_encoder_mm_hashes=[], preempted_req_ids=[], has_structured_output_requests=false, pending_structured_output_tokens=false, num_invalid_spec_tokens=null, kv_connector_metadata=null, ec_connector_metadata=null, new_block_ids_to_zero=null)
+  V2_minimal_head_ph: CRASH EngineDeadError: EngineCore encountered an issue. See stack trace (above) for the root cause.
+  V3_append_proper: CRASH EngineDeadError: EngineCore encountered an issue. See stack trace (above) for the root cause.
+=== fix verified (append + trailing) ===
+  V4_append_with_trailing: OK  per-frame ms: 205 4 4 4 5
+  decoded: '\n白噪音'
+  FIX_VERIFIED
+=== vLLM patch validated (no workaround) ===
+  C1_audio_at_end (no trailing): OK txt=''
+  C2_bare_append:                OK txt='Hello! How' dt=[19, 4, 5]

@@ -1,0 +1,11 @@
+{
+  "benchmark": "Full-Duplex-Bench v1",
+  "task": "smooth_turn_taking",
+  "model": "moshi",
+  "served": "kyutai/moshiko-pytorch-bf16 (native full-duplex streaming)",
+  "n_examples": 119,
+  "n_responded": 119,
+  "avg_take_turn_TOR": 1.0,
+  "avg_latency_s": 0.0,
+  "note": "TOR=1.0: Moshi takes the turn at every boundary (desired). Latency noisy/negative since a full-duplex model overlaps the input. Transcribed with whisper base.en (CPU)."
+}

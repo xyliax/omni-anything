@@ -1,0 +1,265 @@
+{
+  "benchmark": "tau-interact-mm",
+  "agent_model": "minicpm-o",
+  "served_hf": "openbmb/MiniCPM-o-4_5",
+  "usersim_model": "Qwen/Qwen3-1.7B",
+  "n_tasks": 8,
+  "success_rate": 1.0,
+  "mean_turn_latency_s": 3.32,
+  "deadline_met_rate": 0.992,
+  "via": "realtime-api",
+  "tasks": [
+    {
+      "id": "stopsign-identify",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: Can you help me understand what this traffic sign means?",
+        "Assistant: <think>\nGot it, let's look at the image. There's a red octagonal sign with the word \"STOP\" in white letters. That's a standard stop sign. So the traffic sign is a stop sign, which means drivers must come to a complete stop before proceeding.\n</think>\n\nThe image shows a red",
+        "User: Okay, I see it's a stop sign. I need to stop and wait until it's safe to go again.",
+        "Assistant: <think>\nGot it, let's look at the image. The user is asking about the traffic sign. In the image, there's a red octagonal sign with \"STOP\" written on it. So the traffic sign is a stop sign, which means drivers must stop. I need to confirm that's what's visible"
+      ],
+      "rt": [
+        {
+          "latency_s": 9.08,
+          "ticks": 16,
+          "missed": 1
+        },
+        {
+          "latency_s": 3.21,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "stopsign-color-shape",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: What color is the sign in the picture? What shape is it?",
+        "Assistant: <think>\nGot it, let's look at the image. The question is about the stop sign's color and shape. First, find the stop sign. In the foreground, there's a red octagonal sign. So the color is red, and the shape is a stop sign, which is octagonal (8-sided",
+        "User: The sign is red and it's an octagon.",
+        "Assistant: Okay, the user is asking about the color and shape of the sign in the picture. I need to look at the image provided. I see a red stop sign in the foreground. It's an octagon, which is the standard shape for stop signs. So the answer should mention it's red and octagonal."
+      ],
+      "rt": [
+        {
+          "latency_s": 3.02,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 3.21,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "stopsign-action",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: What should I do when I reach this sign?",
+        "Assistant: <think>\nGot it, let's look at the image. There's a red octagonal stop sign in the foreground. The question is what to do when reaching that sign. Stop signs require stopping, so the action is to stop the vehicle.\n</think>\n\nWhen you reach this sign, you should stop your vehicle.",
+        "User: I need to stop my vehicle.",
+        "Assistant: Okay, the user asked what they should do when reaching the sign. The image shows a red octagonal stop sign. So the instruction is clear: stop. I need to make sure I'm only using what's in the image. The sign is a standard stop sign, so the answer is to stop."
+      ],
+      "rt": [
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 3.21,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "stopsign-scene",
+      "image": "stop_sign",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 3,
+      "dialogue": [
+        "User: Can you describe the scene in this photo for me?",
+        "Assistant: <think>\nGot it, let me look at the image. The user is asking about the sign. In the foreground, there's a red octagonal stop sign. It's a standard stop sign, red with \"STOP\" in white letters. I need to make sure I describe only what's visible. So the sign",
+        "User: There's a red octagonal stop sign in the foreground, with 'STOP' in white letters. The sign is upright and facing the viewer. The background is a bright blue sky with some clouds.",
+        "Assistant: Okay, the image shows a red octagonal stop sign in the foreground. The sign has \"STOP\" written in white letters. It's positioned upright and facing the viewer.",
+        "User: The background is a bright blue sky with some clouds.",
+        "Assistant: <think>\nGot it, let's look at the image again. The user's question is about the background. Wait, the original description said the background is a bright blue sky with some clouds, but I need to check the actual image.\n\nWait, looking at the image: the background has a traditional Chinese archway ("
+      ],
+      "rt": [
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 2.01,
+          "ticks": 10,
+          "missed": 0
+        },
+        {
+          "latency_s": 3.21,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "blossom-identify",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: I saw a photo of flowering trees. What kind of blossoms are these and when do they bloom?",
+        "Assistant: <think>\nGot it, let's look at the image. The question is about the blossoms in the picture. The image shows pink flowers on trees. So I need to identify what kind they are based on visual cues. Cherry blossoms are common in such scenes, especially with the tower in the background (maybe Tokyo",
+        "User: I think they are cherry blossoms. They bloom in spring.",
+        "Assistant: <think>\nGot it, let's tackle this. The user is asking about the blossoms in the image and their blooming time. First, I need to look at the image details. The photo shows pink flowers on trees, and the context mentions flowering trees. The assistant's previous response said they think they're cherry"
+      ],
+      "rt": [
+        {
+          "latency_s": 3.3,
+          "ticks": 16,
+          "missed": 1
+        },
+        {
+          "latency_s": 3.21,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "blossom-color",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: Can you describe the dominant color of the blossoms in the image?",
+        "Assistant: <think>\nGot it, let's look at the image. The question is about the dominant color of the blossoms. The image shows cherry blossoms, right? Let me check the colors. The flowers are pink, with various shades, but the main color is pink. So the dominant color should be pink.\n</think>",
+        "User: The dominant color of the blossoms is pink.",
+        "Assistant: <think>\nGot it, let me think. The user asked about the dominant color of the blossoms. Looking at the image, the flowers are cherry blossoms. Their color is pink. I need to confirm if that's the main one. Yes, the blossoms are mostly pink, so the answer should be pink"
+      ],
+      "rt": [
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "blossom-season",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: What season do these trees bloom in?",
+        "Assistant: <think>\nGot it, let's look at the image. The trees have pink blossoms, which are cherry blossoms. Cherry blossoms typically bloom in spring. So the season would be spring. I need to make sure I'm only describing what's in the image. The flowers are blooming, so the season",
+        "User: These trees are blooming in spring, based on the pink blossoms.",
+        "Assistant: Okay, the image shows trees with pink blossoms. These are likely cherry blossoms, which are known to bloom in spring. So the season for these trees blooming is spring."
+      ],
+      "rt": [
+        {
+          "latency_s": 3.01,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 2.01,
+          "ticks": 10,
+          "missed": 0
+        }
+      ]
+    },
+    {
+      "id": "blossom-describe",
+      "image": "cherry_blossom",
+      "success": true,
+      "communicate": [
+        true
+      ],
+      "nl_assertions": [
+        true,
+        true
+      ],
+      "turns": 2,
+      "dialogue": [
+        "User: Can you describe what is in the picture?",
+        "Assistant: <think>\nGot it, let me analyze the image. The picture shows cherry blossoms in the foreground with a tall tower in the background. The blossoms are pink, and the sky is blue. The tower is white with a lattice structure, probably a communication or observation tower. The branches of the cherry trees are dark",
+        "User: The picture shows cherry blossoms in the foreground with a tall tower in the background. The blossoms are pink, and the sky is blue. The tower is white with a lattice structure, probably a communication or observation tower. The branches of the cherry trees are dark.",
+        "Assistant: Okay, the image has cherry blossoms in the foreground, which are pink. There's a tall white tower with a lattice structure in the background. The sky is blue, and the tree branches are dark. The tower looks like it could be for observation or communication."
+      ],
+      "rt": [
+        {
+          "latency_s": 3.02,
+          "ticks": 16,
+          "missed": 0
+        },
+        {
+          "latency_s": 2.82,
+          "ticks": 14,
+          "missed": 0
+        }
+      ]
+    }
+  ]
+}

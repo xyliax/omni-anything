@@ -33,7 +33,7 @@ C6 是对 Metronome windowed-KV 的正面差异化（有损 vs 无损）；C5 �
 
 传送带需要逐步操纵 block table + 独立 CUDA copy stream 上的按拍预取 + 算完即释放暂存块。
 在 vLLM 内部做这件事要对抗 scheduler/CUDA graph/hybrid KV manager 三层（Metronome 仅为
-sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `metronome/metronome/engine.py`
+sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `third_party/metronome/metronome/engine.py`
 （FlashAttention paged-KV 多租户 decode 循环，~600 行，产出了他们 paper 的 headline 数字）为
 底子，写我们自己的 conveyor worker，实现同一 gRPC proto 挂在同一 gateway 后面。模型小（1.7B），
 自研循环完全可控。
@@ -70,7 +70,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 | `experiments/sustained_fd.py`（相位错开、分片、cadence 校验、drift 分桶） | 原样复用 + 加注入/作废事件发生器 |
 | `bench/metrics.py`（MSCS、miss-run、Jain） | 原样复用 |
 | `experiments/run_fresh_sweep.sh` / `run_variance_rand.sh` 模式 | 方法论移植（fresh-per-point、乱序重复批） |
-| `metronome/engine.py`（paged-KV decode 循环） | **fork 为 conveyor worker 的底子**（放本仓库，不改 clone） |
+| `third_party/metronome/metronome/engine.py`（paged-KV decode 循环） | **fork 为 conveyor worker 的底子**（放本仓库，不改 third_party clone） |
 | `bench/gpu_probe.py` `wait_for_window` + 本仓库 `harness/wait_quiet.sh` | 共租 GPU 防污染守卫 |
 | `worker/stream_server.py` | 参照实现（vanilla baseline 直接用它 + 文本分支 ~20 行） |
 | FIX 1/4（通用 vLLM bug） | 仅 vanilla baseline 需要；先查上游是否已修 |
@@ -235,7 +235,7 @@ sliding window 就打了 FIX 5/6 两个内核 patch）。**主路线**：以 `me
 
 **判定：GO（κ=1.067 ≪ 门槛 1.15）**。传送带物理前提在 3090 上成立；η=0.7 假设偏保守（实测计算期链路可用率 ~0.94+）。传送带时刻表建模建议：干扰按每步加性 ~2.5ms 计，而非乘性折损。
 
-**下一步**：M2——conveyor worker v1（fork `metronome/metronome/engine.py` 底子，决策 D1），先 conveyor-OFF 对齐 vLLM 步时，再上固定时刻表搬运。
+**下一步**：M2——conveyor worker v1（fork `third_party/metronome/metronome/engine.py` 底子，决策 D1），先 conveyor-OFF 对齐 vLLM 步时，再上固定时刻表搬运。
 
 ### 2026-08-04：E1 vanilla 显存墙（job bdc51189，GPU1）——300s 初扫 + 600s 补拍
 

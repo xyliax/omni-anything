@@ -1,0 +1,77 @@
+{
+ "uri": "ws://127.0.0.1:8904",
+ "mode": "audio",
+ "budget_ms": 2000.0,
+ "img_px": 448,
+ "q_audio_s": 3.0,
+ "slo": 0.05,
+ "ttfa_slo_ms": 4000.0,
+ "max_concurrency": 512,
+ "rows": [
+  {
+   "N": 64,
+   "mode": "audio",
+   "ttfa_p50": 3813.507556915283,
+   "ttfa_p90": 27431.804537773132,
+   "ttfa_p99": 33834.748384952545,
+   "miss_rate": 0.0779537149817296,
+   "ticks": 821,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 128,
+   "feasible": false
+  },
+  {
+   "N": 128,
+   "mode": "audio",
+   "ttfa_p50": 1392.683744430542,
+   "ttfa_p90": 2188.4257793426514,
+   "ttfa_p99": 2368.067240715027,
+   "miss_rate": 0.0,
+   "ticks": 636,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 256,
+   "feasible": true
+  },
+  {
+   "N": 256,
+   "mode": "audio",
+   "ttfa_p50": 1508.0753564834595,
+   "ttfa_p90": 2311.9763374328613,
+   "ttfa_p99": 2492.965292930603,
+   "miss_rate": 0.0,
+   "ticks": 1273,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 512,
+   "feasible": true
+  },
+  {
+   "N": 384,
+   "mode": "audio",
+   "ttfa_p50": 1756.3930749893188,
+   "ttfa_p90": 2554.545521736145,
+   "ttfa_p99": 5969.41330909729,
+   "miss_rate": 0.0,
+   "ticks": 2045,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 768,
+   "feasible": true
+  },
+  {
+   "N": 512,
+   "mode": "audio",
+   "ttfa_p50": 2145.735502243042,
+   "ttfa_p90": 4747.418665885925,
+   "ttfa_p99": 5936.825752258301,
+   "miss_rate": 0.0,
+   "ticks": 3168,
+   "err": 0,
+   "empty": 0,
+   "n_resp": 1024,
+   "feasible": true
+  }
+ ]
+}

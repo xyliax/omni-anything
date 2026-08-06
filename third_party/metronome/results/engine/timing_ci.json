@@ -1,0 +1,53 @@
+{
+  "minicpm-o": {
+    "N": 48,
+    "reps": 8,
+    "budget_ms": 1000.0,
+    "p99_windowed_ms": 315.42,
+    "windowed_95ci": [
+      256.15,
+      374.69
+    ],
+    "p99_fullkv_ms": 835.94,
+    "fullkv_95ci": [
+      815.71,
+      856.17
+    ],
+    "windowed_meets_budget": true,
+    "fullkv_meets_budget": true
+  },
+  "moshi": {
+    "N": 48,
+    "reps": 8,
+    "budget_ms": 80.0,
+    "p99_windowed_ms": 25.25,
+    "windowed_95ci": [
+      25.23,
+      25.26
+    ],
+    "p99_fullkv_ms": 89.41,
+    "fullkv_95ci": [
+      70.9,
+      107.92
+    ],
+    "windowed_meets_budget": true,
+    "fullkv_meets_budget": false
+  },
+  "qwen3-omni": {
+    "N": 48,
+    "reps": 8,
+    "budget_ms": 200.0,
+    "p99_windowed_ms": 74.74,
+    "windowed_95ci": [
+      58.49,
+      90.99
+    ],
+    "p99_fullkv_ms": 147.84,
+    "fullkv_95ci": [
+      147.06,
+      148.62
+    ],
+    "windowed_meets_budget": true,
+    "fullkv_meets_budget": true
+  }
+}

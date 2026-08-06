@@ -1,0 +1,53 @@
+{
+  "moshi": {
+    "capacity": 136,
+    "frame_budget_us": 80000.0,
+    "predict_capacity": {
+      "mean_us": 2003.87,
+      "p99_us": 2096.78
+    },
+    "try_admit": {
+      "mean_us": 35.02,
+      "p99_us": 39.74
+    },
+    "feasible_at_cap": {
+      "mean_us": 34.2,
+      "p99_us": 38.66
+    },
+    "admit_pct_of_budget": 0.0438
+  },
+  "minicpm-o": {
+    "capacity": 71,
+    "frame_budget_us": 1000000.0,
+    "predict_capacity": {
+      "mean_us": 1930.83,
+      "p99_us": 2040.36
+    },
+    "try_admit": {
+      "mean_us": 19.93,
+      "p99_us": 23.94
+    },
+    "feasible_at_cap": {
+      "mean_us": 19.48,
+      "p99_us": 23.6
+    },
+    "admit_pct_of_budget": 0.002
+  },
+  "qwen3-omni": {
+    "capacity": 158,
+    "frame_budget_us": 200000.0,
+    "predict_capacity": {
+      "mean_us": 2201.33,
+      "p99_us": 3408.76
+    },
+    "try_admit": {
+      "mean_us": 40.15,
+      "p99_us": 45.43
+    },
+    "feasible_at_cap": {
+      "mean_us": 38.8,
+      "p99_us": 43.73
+    },
+    "admit_pct_of_budget": 0.0201
+  }
+}

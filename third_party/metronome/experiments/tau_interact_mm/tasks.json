@@ -1,0 +1,95 @@
+[
+  {
+    "id": "stopsign-identify",
+    "image": "stop_sign",
+    "persona": "a new driver who is unsure about road signs",
+    "goal": "You are looking at a traffic sign with the assistant. Find out what the sign is and what you are supposed to do when you see it.",
+    "communicate_info": ["stop"],
+    "nl_assertions": [
+      "The assistant identifies the sign in the image as a stop sign.",
+      "The assistant tells the user to stop (come to a stop) at the sign."
+    ],
+    "max_turns": 4
+  },
+  {
+    "id": "stopsign-color-shape",
+    "image": "stop_sign",
+    "persona": "a curious child asking about colors and shapes",
+    "goal": "You want to know the color of the sign in the picture and what shape it is.",
+    "communicate_info": ["red"],
+    "nl_assertions": [
+      "The assistant says the sign is red.",
+      "The assistant mentions the sign is an octagon or has eight sides."
+    ],
+    "max_turns": 4
+  },
+  {
+    "id": "stopsign-action",
+    "image": "stop_sign",
+    "persona": "a driver approaching the sign right now",
+    "goal": "You are driving toward this sign. Ask the assistant what you must do.",
+    "communicate_info": ["stop"],
+    "nl_assertions": [
+      "The assistant tells the driver to come to a complete stop."
+    ],
+    "max_turns": 3
+  },
+  {
+    "id": "stopsign-scene",
+    "image": "stop_sign",
+    "persona": "someone describing a photo to a friend",
+    "goal": "Ask the assistant to describe the scene in the photo.",
+    "communicate_info": ["stop"],
+    "nl_assertions": [
+      "The assistant mentions a street or road scene.",
+      "The assistant mentions the stop sign in the scene."
+    ],
+    "max_turns": 3
+  },
+  {
+    "id": "blossom-identify",
+    "image": "cherry_blossom",
+    "persona": "a tourist planning a trip",
+    "goal": "You see a photo of flowering trees. Find out what kind of blossoms these are and what season they bloom in.",
+    "communicate_info": ["cherry"],
+    "nl_assertions": [
+      "The assistant identifies the flowers as cherry blossoms.",
+      "The assistant mentions they bloom in spring."
+    ],
+    "max_turns": 4
+  },
+  {
+    "id": "blossom-color",
+    "image": "cherry_blossom",
+    "persona": "someone choosing paint colors",
+    "goal": "You want to know the dominant color of the blossoms in the image.",
+    "communicate_info": ["pink"],
+    "nl_assertions": [
+      "The assistant says the blossoms are pink (or pink and white)."
+    ],
+    "max_turns": 3
+  },
+  {
+    "id": "blossom-season",
+    "image": "cherry_blossom",
+    "persona": "a gardener",
+    "goal": "Ask the assistant what season these trees are blooming in.",
+    "communicate_info": ["spring"],
+    "nl_assertions": [
+      "The assistant identifies spring as the blooming season."
+    ],
+    "max_turns": 3
+  },
+  {
+    "id": "blossom-describe",
+    "image": "cherry_blossom",
+    "persona": "a person describing a scene",
+    "goal": "Ask the assistant to describe what is in the picture.",
+    "communicate_info": ["blossom"],
+    "nl_assertions": [
+      "The assistant mentions flowers or blossoms.",
+      "The assistant mentions trees."
+    ],
+    "max_turns": 3
+  }
+]

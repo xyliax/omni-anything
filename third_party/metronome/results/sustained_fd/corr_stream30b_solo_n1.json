@@ -1,0 +1,14 @@
+{
+ "n_sessions": 1,
+ "duration": 40.0,
+ "sess_correct": 1,
+ "sess_ever": 1,
+ "sess_with_ticks": 1,
+ "errs": 0,
+ "sample_texts": [
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nParis is not only the political and administrative center of France but"
+ ],
+ "sample_assembled": [
+  "The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nLet me know if you'd like to learn more about it The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nLet me know if you'd like to learn more about the The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nLet me know if you'd like to learn more about the The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nLet me know if you'd like to learn more about it The capital of France is Paris. \ud83c\uddeb\ud83c\uddf7\u2728\n\nLet me know if yo"
+ ]
+}

@@ -1,0 +1,15 @@
+{
+  "experiment": "cancellation/barge-in correctness under load",
+  "n_concurrent": 20,
+  "n_cancelled": 10,
+  "n_normal": 10,
+  "storm": 30,
+  "checks": {
+    "cancelled_report_cancelled": true,
+    "others_completed": true,
+    "no_leaked_sessions": true,
+    "server_alive_after_storm": true,
+    "no_leaked_sessions_after_storm": true
+  },
+  "all_pass": true
+}

@@ -1,0 +1,24 @@
+{
+ "n_sessions": 8,
+ "duration": 60.0,
+ "sess_correct": 3,
+ "sess_ever": 7,
+ "sess_with_ticks": 8,
+ "errs": 0,
+ "sample_texts": [
+  "### 1. **Identify the Core Question**\nThe user is asking for the capital of France. This is a straightforward",
+  "### Task: Answer the question \"Which river is the longest in South America?\"\n\n### Step-by-Step Solution:\n\n1.",
+  "### 1. **Identify the Core Question**  \nThe user is asking for the highest mountain peak in North America.",
+  "### 1. **Identify the Core Question**  \nThe user is asking for the capital of France. This is a",
+  "### Task: Answer the question \"Which river is the longest in South America?\"\n\n### Step-by-Step Solution:\n\n1.",
+  "### 1. **Identify the Question Type**  \nThe query is a **factual question** asking for a specific",
+  "### 1. **Identify the Core Question**\nThe user is asking for the capital of France. This is a straightforward",
+  "### Task: Answer the question \"Which river is the longest in South America?\"\n\n### Step-by-Step Solution:\n\n1."
+ ],
+ "sample_assembled": [
+  "### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understand",
+  "### 1. **Identify the River in Question**  \nThe Amazon River is the longest river in South America.\n\n### ### 1. **Identify the Question Type**  \nThe user is asking for factual information: \"Which river is the ### 1. **Identify the Question Type**  \nThe user is asking for factual information: \"Which river is the ### 1. **Identifying the River's Length and Course**\nThe Amazon River is the longest ri",
+  "### 1. **Highest Mountain Peak in North America**  \nThe highest mountain peak in North America is **Denali** ### 1. **Identify the Highest Mountain Peak in North America**  \nThe highest mountain peak in North America is ** ### 1. **Identify the Question Type**  \nThe user is asking for a **factual piece of information** ### 1. **Identify the Question Type**  \nThe user is asking for a **factual piec",
+  "### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understanding the Question**\nThe user is asking for the capital of France. This is a straightforward factual question ### 1. **Understand"
+ ]
+}

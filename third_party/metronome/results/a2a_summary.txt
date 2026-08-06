@@ -1,0 +1,15 @@
+
+================= APPLE-TO-APPLE: windowed (previous) vs streaming (resident-context) =================
+same clients (distinct phase-staggered) + same gateway + same model + same N; only worker path differs
+
+   N |                WINDOWED (fd_step 8s)                 |              STREAMING (fd_step_stream)             
+--------------------------------------------------------------------------------------------------------------------
+   1 | p50=  147 p90=  147 p99=  156ms miss= 0.0% deliv=100%   RT | p50=  143 p90=  146 p99=  149ms miss= 0.0% deliv=100%   RT
+   4 | p50=  254 p90=  273 p99=  280ms miss= 0.0% deliv=100%   RT | p50=  231 p90=  253 p99=  258ms miss= 0.0% deliv= 97%   RT
+   8 | p50=  310 p90=  338 p99=  375ms miss= 0.0% deliv=100%   RT | p50=  290 p90=  319 p99=  337ms miss= 0.0% deliv=100%   RT
+  16 | p50=  383 p90=  425 p99=  439ms miss= 0.0% deliv=100%   RT | p50=  397 p90=  433 p99=  441ms miss= 0.0% deliv=100%   RT
+  32 | p50=  539 p90=  571 p99=  578ms miss= 0.0% deliv= 99%   RT | p50=  495 p90=  599 p99=  649ms miss= 0.0% deliv=100%   RT
+  64 | p50=  687 p90=  836 p99=  868ms miss= 0.0% deliv= 98%   RT | p50=  678 p90=  861 p99=  931ms miss= 0.0% deliv= 98%   RT
+
+Legend: deliv = frame-delivery cadence completeness (>=90% + miss<2% => real-time RT).
+Capacity = largest N that stays RT. p99 is the production SLO; a 2s frame is a deadline, not good UX.

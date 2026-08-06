@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/19PINE-AI/metronome.git
+	branch = main
+	commit = 2783a90a1b04228ee3a49be2b1c1ba21c13e54ab
+	parent = da33cf82714c66bb2dacabdf0106f78f36555ec5
+	method = merge
+	cmdver = 0.4.9

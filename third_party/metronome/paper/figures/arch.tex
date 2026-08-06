@@ -1,0 +1,96 @@
+% Metronome architecture (intro): the "beat" (one tick per frame budget) drives per-tick BATCH serving.
+% Shows (a) admission gate feeding the batch, (b) the prefill->decode phases inside a tick, (c) windowed KV.
+\begin{figure}[t]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  >={Stealth[length=2.2mm]},
+  cli/.style={rectangle, rounded corners=3pt, draw=arxivink!55, line width=0.8pt, fill=arxivink!4,
+              align=center, inner sep=5pt, text width=18mm, minimum height=15mm},
+  gate/.style={rectangle, rounded corners=3pt, draw=arxivaccent, line width=1.1pt, fill=arxivaccent!12,
+               align=center, inner sep=5pt, text width=22mm, minimum height=15mm},
+  phase/.style={rectangle, rounded corners=2pt, draw=arxivink!55, line width=0.8pt, fill=white,
+                align=center, inner sep=4pt, text width=23mm, minimum height=13mm},
+  flow/.style={->, line width=1.1pt, draw=arxivink},
+  fb/.style={->, line width=0.9pt, draw=arxivaccent!85, dashed},
+  lbl/.style={font=\scriptsize\itshape, text=arxivink},
+]
+
+% ---- main pipeline: clients -> admission gate -> per-tick batch (prefill -> decode) ----
+\node[cli] (cli) {\textbf{$N$ clients}\\[1pt]\scriptsize streaming\\[-2pt]\scriptsize 20\,ms audio};
+\node[gate, right=11mm of cli] (gate) {\textbf{\textcolor{arxivaccent}{Admission gate}}\\[-1pt]\scriptsize AIMD: admit\\[-2pt]\scriptsize $\le N^\star$, shed rest};
+
+\node[phase, right=20mm of gate] (pre) {\textbf{Prefill}\\[-1pt]\scriptsize new audio\\[-2pt]\scriptsize chunk};
+\node[phase, right=9mm of pre] (dec) {\textbf{Decode}\\[-1pt]\scriptsize $\tau$ tokens};
+\draw[flow] (pre) -- node[lbl,above,yshift=-0.3mm]{then} (dec);
+
+% box the two phases into the GPU worker (one tick)
+\begin{pgfonlayer}{background}
+\node[rectangle, rounded corners=4pt, draw=arxivink!60, line width=1.0pt, fill=arxivink!3,
+      fit=(pre)(dec), inner xsep=6pt, inner ysep=12pt] (wk) {};
+\end{pgfonlayer}
+\node[anchor=south, font=\scriptsize\bfseries, text=arxivink] at (wk.north) {GPU worker: one tick = one batch of all due sessions};
+\node[anchor=north, font=\scriptsize, text=arxivaccent] at (wk.south) {bounded KV: each session keeps its last $W$ tokens + a few sink tokens};
+
+% ---- forward arrows ----
+\draw[flow] (cli) -- node[lbl,above]{audio} (gate);
+\draw[flow] (gate) -- node[lbl,above]{admitted}node[lbl,below]{batch} (wk.west);
+
+% ---- shed (rejected): short arrow straight down from the gate ----
+\draw[flow,draw=arxivaccent!75] (gate.south) -- ++(0,-6mm) node[lbl,below,text=arxivaccent]{shed};
+
+% ---- the "beat": a metronome drives one tick per budget ----
+\begin{scope}[shift={($(wk.north)+(0,12mm)$)}]
+  \draw[arxivink,line width=0.8pt] (-0.30,0)--(0.30,0)--(0.16,0.95)--(-0.16,0.95)--cycle; % body
+  \draw[arxivink,line width=0.8pt] (0,0.08)--(0.20,0.88);                                 % pendulum
+  \fill[arxivaccent] (0.20,0.88) circle (0.045);                                          % weight
+\end{scope}
+\node[lbl,anchor=west] at ($(wk.north)+(3.5mm,12mm)$) {beat: one tick per frame budget $B$ (e.g.\ 2\,s)};
+\draw[fb,draw=arxivink!70,dashed] ($(wk.north)+(0,11.5mm)$) -- (wk.north);
+
+% ---- outputs back to clients (top arc) ----
+\draw[flow] (wk.north west) .. controls ($(wk.north west)+(0,16mm)$) and ($(cli.north)+(0,16mm)$)
+   .. node[lbl,above,pos=0.5]{stream tokens back} (cli.north);
+
+% ---- latency feedback to the gate (deep bottom arc, label toward the worker side) ----
+\draw[fb] (wk.south east) .. controls ($(wk.south east)+(0,-13mm)$) and ($(gate.south)+(0,-13mm)$)
+   .. node[lbl,below,pos=0.45]{per-frame latency feedback} (gate.south);
+
+% ---- anatomy of one tick: the per-frame work must fit inside the beat ----
+\begin{scope}[shift={($(cli.south west)+(2mm,-34mm)$)}]
+  \def\TW{104mm}\def\PW{20mm}\def\DW{16mm}
+  \draw[->,line width=0.8pt,draw=arxivink!85] (0,0) -- (\TW+7mm,0)
+      node[anchor=west,font=\scriptsize,text=arxivink]{time};
+  \foreach \x/\l in {0/{tick $k$}, \TW/{tick $k{+}1$}}{
+    \draw[line width=1.0pt,draw=arxivink] (\x,-1.4mm)--(\x,5.2mm);
+    \node[font=\scriptsize,text=arxivink,anchor=north] at (\x,-1.8mm) {\l};}
+  \fill[arxivink!16] (0,0.6mm) rectangle (\PW,4.6mm);
+  \draw[arxivink!60,line width=0.6pt] (0,0.6mm) rectangle (\PW,4.6mm);
+  \fill[arxivaccent!16] (\PW,0.6mm) rectangle (\PW+\DW,4.6mm);
+  \draw[arxivaccent!70,line width=0.6pt] (\PW,0.6mm) rectangle (\PW+\DW,4.6mm);
+  \node[font=\scriptsize,text=arxivink,anchor=south] at (0.5*\PW,5.0mm) {prefill};
+  \node[font=\scriptsize,text=arxivink,anchor=south] at (\PW+0.5*\DW,5.0mm) {decode};
+  \node[font=\scriptsize\itshape,text=arxivink!65,anchor=center] at ({0.5*(\PW+\DW+\TW)},2.6mm)
+      {slack (headroom)};
+  \draw[decorate,decoration={brace,amplitude=3pt},arxivink]
+      (0,9.5mm) -- (\PW+\DW,9.5mm)
+      node[midway,above=3.5pt,font=\scriptsize,text=arxivink]{$T_k(N)\le B$: on beat};
+  \draw[decorate,decoration={brace,mirror,amplitude=3pt},arxivink!60]
+      (0,-6.5mm) -- (\TW,-6.5mm)
+      node[midway,below=3.5pt,font=\scriptsize,text=arxivink]{one beat = frame budget $B$};
+\end{scope}
+
+\end{tikzpicture}}
+\caption{\textbf{Metronome keeps the beat.} A metronome \emph{tick} fires once per frame budget $B$. On
+each tick the system serves one \emph{batch} of all due sessions --- prefill each session's new audio
+chunk, then decode a few tokens (continuous batching) --- and must finish within $B$; the timeline at the
+bottom shows one tick's anatomy, with the slack as schedulability headroom. Two interdependent mechanisms
+keep the beat steady: (a)~an \emph{admission gate} (AIMD, in the gateway) admits up to the schedulable
+concurrency $N^\star$ and sheds the surplus, driven by the per-frame latency it measures; (b)~an
+\emph{in-engine windowed KV} (in the worker) retains only each session's last $W$ tokens plus a few
+pinned attention-sink tokens, which bounds per-frame work, keeps free-running generation healthy
+(\S\ref{sec:quality}), and, by turning the latency cliff into a slope, makes that feedback signal
+trustworthy.}
+\label{fig:arch}
+\end{figure}

@@ -1,0 +1,45 @@
+{
+  "model": "qwen3-omni",
+  "self_windowing": true,
+  "rows": [
+    {
+      "budget": 512,
+      "frac": 0.062,
+      "timing_onset": 128,
+      "mem_cap": 1706,
+      "capacity": 128
+    },
+    {
+      "budget": 1024,
+      "frac": 0.125,
+      "timing_onset": 128,
+      "mem_cap": 853,
+      "capacity": 128
+    },
+    {
+      "budget": 2048,
+      "frac": 0.25,
+      "timing_onset": 96,
+      "mem_cap": 426,
+      "capacity": 96
+    },
+    {
+      "budget": 4096,
+      "frac": 0.5,
+      "timing_onset": 64,
+      "mem_cap": 213,
+      "capacity": 64
+    },
+    {
+      "budget": 8192,
+      "frac": 1.0,
+      "timing_onset": 32,
+      "mem_cap": 106,
+      "capacity": 32
+    }
+  ],
+  "full_capacity": 32,
+  "small_capacity": 128,
+  "kv_budget_gain": 4.0,
+  "classification": "complementary"
+}

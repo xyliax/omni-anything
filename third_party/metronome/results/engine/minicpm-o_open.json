@@ -1,0 +1,18 @@
+{
+  "model": "minicpm-o",
+  "capacity": 96,
+  "admission": {
+    "mode": "admission",
+    "offered": 2.0,
+    "miss_rate": 0.0,
+    "blocking": 0.42091616248919617,
+    "mean_active": 96.0
+  },
+  "greedy": {
+    "mode": "greedy",
+    "offered": 2.0,
+    "miss_rate": 0.0,
+    "blocking": 0.38186573670444635,
+    "mean_active": 104.0
+  }
+}
