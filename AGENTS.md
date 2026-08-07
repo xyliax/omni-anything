@@ -35,7 +35,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 | --- | --- | --- |
 | `docs/PROBLEM.md` | 结论 | 问题定义、负载三要素、实测事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
 | `docs/FINDINGS.md` | 结论 | E 系列一句话发现 + 证据指针；**看结论从这里开始** |
-| `docs/DESIGN-KV-CONVEYOR.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
+| `docs/DESIGN.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
 | `docs/EXPERIMENTS.md` | 协议（冻结） | 主张→实验矩阵、平台决策与 Metronome 复用地图、负载协议、方法论、验收判据 |
 | `docs/EXPERIMENT-LOG.md` | 过程记录（append-only） | 真机 run 记录；新 run 只 append 这里 |
 | `docs/METRONOME.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用订正 |

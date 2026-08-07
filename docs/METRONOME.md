@@ -13,7 +13,7 @@
 | 竞争对照 | `INENGINE_SWA=<tokens>` | in-engine windowed KV：引擎内滑窗释放 block，有损截断 |
 | 正交可叠加 | `ONLINE_ADMIT=1` → `--online-admit --admit-target 0.7` | AIMD 准入：从每帧延迟反馈发现 `N*`（可调度并发数 / schedulable concurrency），与 KV 策略正交 |
 
-竞争对照那一行是本仓库方案的正面对立面：in-engine windowed KV 用有损截断换有界显存；KV conveyor（scheduled tail-KV offloading：按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放）走无损路线，等效 KV 容量 = resident M + staging P。
+竞争对照那一行是本仓库方案的正面对立面：in-engine windowed KV 用有损截断换有界显存；KV conveyor（scheduled tail-KV offloading）走无损路线，用暂存换等效容量。
 paper §2 把 swap 分析性排除、断言 resident 是唯一预算兼容选择，其两个假设（全量轮换 baseline、tick 内无空隙）经 FINDINGS E3 证伪，conveyor 的对照位置正在这里。
 这套脚手架不覆盖本仓库负载的两条路径：注入（`proto/inference.proto` 有 `SessionInput.text`，gateway 从不填、streaming worker 也不读）与负载下的 cancellation（gRPC `Step` 认 `s.cancel`，但只有 CPU 侧模拟测试）。两者都要在此之上自加。
 

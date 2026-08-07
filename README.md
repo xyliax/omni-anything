@@ -23,7 +23,7 @@ omni-anything/
 ├── docs/          事实层：结论、问题、方案、实验协议
 │   ├── PROBLEM.md              问题定义：负载三要素、瓶颈出现顺序、领域空白
 │   ├── FINDINGS.md             E 系列发现清单，条目编号 A1..G 是全仓库的证据引用锚点
-│   ├── DESIGN-KV-CONVEYOR.md   KV conveyor 的公式、编排、相关工作对比与边界
+│   ├── DESIGN.md               KV conveyor 的公式、编排、相关工作对比与边界
 │   ├── EXPERIMENTS.md          主张到实验的矩阵、平台决策、负载冻结协议
 │   ├── EXPERIMENT-LOG.md       逐次运行的执行记录
 │   └── METRONOME.md            Metronome baseline：pin、用法、数字订正

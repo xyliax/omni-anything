@@ -6,8 +6,7 @@
 KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request 之间也没有空隙把历史换出。
 于是计算远未饱和时 KV pool 就已饱和崩溃（本仓 E1 在 RTX 3090 上实测此顺序，FINDINGS A3；Metronome 真机同构，paper 原话 "memory kills sessions whose compute the GPU could easily carry"）——容量是稀缺资源，而每一 tick 内的 H2D 带宽和计算时间大量闲置。
 
-方向性回答：**用闲置的数据搬运带宽换更大的并发容量**，即按 tick 时间表调度的 **KV conveyor**。
-KV conveyor = 把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM 经 DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading；谱系：FlexGen / InfiniGen / vLLM offloading connector / LMCache），等效 KV 容量 = resident M + staging P。
+方向性回答：**用闲置的数据搬运带宽换更大的并发容量**，即按 tick 时间表调度的 **KV conveyor**（scheduled tail-KV offloading）。
 收益是纯硬件比值：3090 + 7B 预测 N=15–16（2×，封顶在 compute 而非链路，FINDINGS D4）；H100 + PCIe 5 / 480 ms tick 上净增约 20%（公式推演的线性外推）。
 方案的真机判据是 E2 的稳态容量与 E3 的相位三臂。
 
@@ -96,7 +95,7 @@ Metronome（arXiv:2607.02640）是截至 2026-08 唯一的全双工 GPU serving 
 | 3 | 方案种子 | 刻意错开相位的实验设置升级为相位指派；sliding window 的 state-bounded 世界是有损对照 |
 | 4 | 竞争方案 | 它对「KV 装不下」用 W=1024 sliding window（有损，与注入驻留冲突）；conveyor 目标是无损保全上下文 |
 | 5 | 互补可叠加 | 它管 capacity 上限之外（AIMD admission）与有损 cap；conveyor 在瓶颈约束内扩张 capacity |
-| 6 | 实验脚手架 | 开源栈（vLLM 0.23 resumable request + 共享 tick gateway）是本仓真机 baseline 的来源；pin 与用法纪律在 `docs/METRONOME.md` |
+| 6 | 实验脚手架 | 开源栈（vLLM 0.23 resumable request + 共享 tick gateway）是本仓真机 baseline 的来源 |
 
 它 §2 以「resident 是唯一预算兼容的选择」分析性排除 swap，两个假设可证伪：全量轮换不是真实设计点（真实设计点是 partial residency 加链路扩容），以及「无空隙可藏」——每会话子 tick 占用比例 1/N 就是空隙，E0 实测 decode step 时间膨胀系数 κ = 1.067，H2D 几乎不拖慢计算（FINDINGS E3）。
 

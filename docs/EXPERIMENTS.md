@@ -2,7 +2,7 @@
 
 目标：按可投 MLSys / OSDI / EuroSys 的标准验证尾部 KV conveyor 方案。
 
-KV conveyor = 按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading；谱系：FlexGen / InfiniGen / vLLM offloading connector / LMCache）；等效 KV 容量 = resident M + staging P。
+被试方案 KV conveyor（scheduled tail-KV offloading），等效 KV 容量 = resident M + staging P。
 
 本文持有实验的设计与协议层：主张、平台决策、冻结负载、E0–E6 协议与门槛、方法论规范、效度威胁、执行顺序。
 结论层是 `docs/FINDINGS.md`，本文以其条目码作证据锚点。

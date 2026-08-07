@@ -4,7 +4,6 @@
 新 run 只 append 本文；提炼出的结论改 `docs/FINDINGS.md`（条目码 A1..G 是全仓引用锚点），本文条目不随结论回改。
 条目按时间序，后文条目可更正前文，更正就地留指针。
 历史条目迁入本文时统一过术语与代号写法；数字、判定与时间戳未动。
-KV conveyor = 按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading）；等效 KV 容量 = resident M + staging P。
 κ = decode step 时间膨胀系数 (slowdown factor, κ = t_with/t_without)。
 ## 2026-08-04：M0 完成（环境 + 冒烟 + E0），E1 由并行会话执行中
 
