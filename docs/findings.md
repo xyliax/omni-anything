@@ -1,6 +1,6 @@
 # FINDINGS：E 系列真机实验发现清单
 
-*每条 = 一句话发现 + 关键数字 + 证据指针。全部可复现：日志在 `results/paper/baseline/`，图在 `results/figures/`，工具在 `harness/`。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。机制推演与跑次修订过程写在 `docs/EXPERIMENT-LOG.md`，本文只收结论。*
+*每条 = 一句话发现 + 关键数字 + 证据指针。全部可复现：日志在 `results/paper/baseline/`，图在 `results/figures/`，工具在 `harness/`。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。机制推演与跑次修订过程写在 `docs/experiment-log.md`，本文只收结论。*
 
 ---
 

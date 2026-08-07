@@ -5,7 +5,7 @@
 被试方案 KV conveyor（scheduled tail-KV offloading），等效 KV 容量 = resident M + staging P。
 
 本文持有实验的设计与协议层：主张、平台决策、冻结负载、E0–E6 协议与门槛、方法论规范、效度威胁、执行顺序。
-结论层是 `docs/FINDINGS.md`，本文以其条目码作证据锚点。
+结论层是 `docs/findings.md`，本文以其条目码作证据锚点。
 引用记法：`FINDINGS D4` 指该文条目；本文另有主张编号 C1–C7、实验编号 E0–E6、平台决策编号（决策 D1–D3）。四个编号空间互不相通，决策编号引用时带「决策」前缀。
 
 数据纪律：进论文的数字全部来自 E 系列新测；更早的问题发现期试跑只支撑动机叙事，不作为论文实验数据。
@@ -73,7 +73,7 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 | `worker/stream_server.py` | 参照实现（vanilla baseline 直接用它 + 文本分支约 20 行） |
 | FIX 1 / FIX 4（通用 vLLM bug） | 仅 vanilla baseline 需要 |
 
-第三方 pin 与引用纪律的 owner 是 `docs/METRONOME.md`。
+第三方 pin 与引用纪律的 owner 是 `docs/metronome.md`。
 我们的 worker、gateway 补丁、实验脚本全部放本仓库 `harness/`，gateway 改动以补丁文件管理。
 
 ## 三、负载协议（冻结）
@@ -187,4 +187,4 @@ T 轴四点均有真实系统锚定：80ms = Moshi / PersonaPlex（音频原生 
 4. M3：TDM + τ_lead 扫描（E3）→ 注入 / cancellation（E4）→ 召回探针（E5）。
 5. M4：E6 公式地形 + 锚点核对；变异批次补测；工件打包。
 
-里程碑推进时，结论条目进 `docs/FINDINGS.md`，设计变更就地改本文，两边共用同一套实验编号。
+里程碑推进时，结论条目进 `docs/findings.md`，设计变更就地改本文，两边共用同一套实验编号。

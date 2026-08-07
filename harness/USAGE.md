@@ -1,7 +1,7 @@
 # USAGE：工具链使用手册
 
 *文件索引见 `README.md`（每个文件是什么）；本文回答「依次敲什么」。
-发现清单见 `../docs/FINDINGS.md`；实验设计见 `../docs/EXPERIMENTS.md`；执行记录见 `../docs/EXPERIMENT-LOG.md`。*
+发现清单见 `../docs/findings.md`；实验设计见 `../docs/experiments.md`；执行记录见 `../docs/experiment-log.md`。*
 
 ## 0. 前置
 

@@ -20,7 +20,7 @@
 
 | 路径 | 上游 | 何时打开 |
 | --- | --- | --- |
-| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/METRONOME.md` |
+| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/metronome.md` |
 | `DuplexOmni/` | https://github.com/MuyeHuang/DuplexOmni | 前台双工 + 后台异步写回；480ms 拍 / 注入通道 |
 | `moshi/` | https://github.com/kyutai-labs/moshi | 锁步全双工模型与官方服务端 |
 | `personaplex/` | https://github.com/NVIDIA/personaplex | 可控角色/音色双工；规格与 server 形态 |

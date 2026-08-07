@@ -9,7 +9,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 当前候选方案是 **KV conveyor**：按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading），等效 KV 容量 = resident M + staging P；用闲置 H2D 带宽换更高的 N*（可调度并发数 schedulable concurrency，判据 miss rate ≤ 1%）。
 
 - **E1 实测栈**：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090，tick = 2s
-- **论文主配置（设计目标）**：文本代理双工与 tick 结构写在 `docs/EXPERIMENTS.md`；勿与 E1 栈混读
+- **论文主配置（设计目标）**：文本代理双工与 tick 结构写在 `docs/experiments.md`；勿与 E1 栈混读
 
 ## 事实层与 `.context/`
 
@@ -33,16 +33,16 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 
 | 文档 | 状态 | 完整持有 |
 | --- | --- | --- |
-| `docs/PROBLEM.md` | 结论 | 问题定义、负载三要素、实测事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
-| `docs/FINDINGS.md` | 结论 | E 系列一句话发现 + 证据指针；**看结论从这里开始** |
-| `docs/DESIGN.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
-| `docs/EXPERIMENTS.md` | 协议（冻结） | 主张→实验矩阵、平台决策与 Metronome 复用地图、负载协议、方法论、验收判据 |
-| `docs/EXPERIMENT-LOG.md` | 过程记录（append-only） | 真机 run 记录；新 run 只 append 这里 |
-| `docs/METRONOME.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用订正 |
+| `docs/problem.md` | 结论 | 问题定义、负载三要素、实测事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
+| `docs/findings.md` | 结论 | E 系列一句话发现 + 证据指针；**看结论从这里开始** |
+| `docs/design.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
+| `docs/experiments.md` | 协议（冻结） | 主张→实验矩阵、平台决策与 Metronome 复用地图、负载协议、方法论、验收判据 |
+| `docs/experiment-log.md` | 过程记录（append-only） | 真机 run 记录；新 run 只 append 这里 |
+| `docs/metronome.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用订正 |
 
-E4 冻结先验（40% cancellation、LogNormal 注入）写在 `docs/EXPERIMENTS.md` 负载协议节。
+E4 冻结先验（40% cancellation、LogNormal 注入）写在 `docs/experiments.md` 负载协议节。
 
-**FINDINGS ↔ 实验记录**：新 run 只 append `docs/EXPERIMENT-LOG.md`；提炼结论只改 `docs/FINDINGS.md`。
+**FINDINGS ↔ 实验记录**：新 run 只 append `docs/experiment-log.md`；提炼结论只改 `docs/findings.md`。
 
 ## 目录边界
 
@@ -62,9 +62,9 @@ PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 ha
 
 ## 行为约束
 
-- **不要**根据 `.context/` 或第三方 pin 反推进展、主线或数字；数字以 `docs/FINDINGS.md`、`results/`、`docs/EXPERIMENT-LOG.md` 为准。
+- **不要**根据 `.context/` 或第三方 pin 反推进展、主线或数字；数字以 `docs/findings.md`、`results/`、`docs/experiment-log.md` 为准。
 - 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结先验）；不同出处的数字不混引、不互相校准。
 - 术语跨文一致：全双工（不写「真双工」）、注入（不写「回注 / 写回」）、N* 可调度并发数（不写 MSCS / 可行密度）、饱和（不写「触及瓶颈」）。
-- 编号空间撞名：`docs/FINDINGS.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
-- 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/METRONOME.md` 订正节。
+- 编号空间撞名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
+- 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 订正节。
 - `README.md` 面向初次读者的自含介绍；契约与文档地图以本文件为准。

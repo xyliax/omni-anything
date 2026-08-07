@@ -1,7 +1,7 @@
 # E 系列执行记录
 
 本文 = E 系列真机运行的 append-only 过程记录：每条 = 日期 + run + 观测 + 产物路径。
-新 run 只 append 本文；提炼出的结论改 `docs/FINDINGS.md`（条目码 A1..G 是全仓引用锚点），本文条目不随结论回改。
+新 run 只 append 本文；提炼出的结论改 `docs/findings.md`（条目码 A1..G 是全仓引用锚点），本文条目不随结论回改。
 条目按时间序，后文条目可更正前文，更正就地留指针。
 历史条目迁入本文时统一过术语与代号写法；数字、判定与时间戳未动。
 κ = decode step 时间膨胀系数 (slowdown factor, κ = t_with/t_without)。

@@ -90,7 +90,7 @@ Metronome（arXiv:2607.02640）是截至 2026-08 唯一的全双工 GPU serving 
 
 | # | 关系 | 内容 |
 |---|---|---|
-| 1 | 交叉验证 | 真机（Qwen3-Omni-30B FP8 / 96 G / tick 2 s）独立测得同一瓶颈出现顺序：vanilla 下 memory cliff 先到（计算远未饱和），KV 受限后 deadline 瓶颈 N\*≈209 小于显存外推约 500，与本仓「显存先于算力」同构（数值巧合不构成校准）；引用其数字前先过 `docs/METRONOME.md` 的订正纪律 |
+| 1 | 交叉验证 | 真机（Qwen3-Omni-30B FP8 / 96 G / tick 2 s）独立测得同一瓶颈出现顺序：vanilla 下 memory cliff 先到（计算远未饱和），KV 受限后 deadline 瓶颈 N\*≈209 小于显存外推约 500，与本仓「显存先于算力」同构（数值巧合不构成校准）；引用其数字前先过 `docs/metronome.md` 的订正纪律 |
 | 2 | 对照负载 | 它测的是最温顺的双工负载：每帧存活量恒定、无注入、无作废——要素 ② 的两半它全空 |
 | 3 | 方案种子 | 刻意错开相位的实验设置升级为相位指派；sliding window 的 state-bounded 世界是有损对照 |
 | 4 | 竞争方案 | 它对「KV 装不下」用 W=1024 sliding window（有损，与注入驻留冲突）；conveyor 目标是无损保全上下文 |
