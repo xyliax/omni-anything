@@ -1,4 +1,4 @@
-"""E0: DMA-decode interference microbenchmark (PAPER-EXPERIMENTS.md E0, go/no-go).
+"""E0: DMA-decode interference microbenchmark (docs/EXPERIMENTS.md E0, go/no-go).
 
 The conveyor moves tail KV over PCIe H2D *while* decode steps run. The one
 parameter no existing calibration can predict: does a sustained pinned-H2D
@@ -19,7 +19,7 @@ Outputs
   bw_eff(r) = bytes moved / window during concurrent decode
   -> calibration/data/E0_dma_interference.{csv,json}
 
-Go/no-go (PAPER-EXPERIMENTS E0): conveyor needs ~0.5-0.7 of link; if kappa
+Go/no-go (docs/EXPERIMENTS.md E0): conveyor needs ~0.5-0.7 of link; if kappa
 at that rate > 1.15, recompute net gain with measured kappa before building.
 """
 import argparse

@@ -1,235 +1,18 @@
-# PAPER-EXPERIMENTS：KV conveyor 正式实验设计（2026-08-04 草案 v1）
+# E 系列执行记录
 
-目标：按可投 MLSys / OSDI / EuroSys 的标准，验证 `IDEA-KV-CONVEYOR.md` 中的方案。
-本文档是实验的**设计与协议**；跑完之后的结论回填到文末执行记录。
-
-**数据纪律：本轮所有进论文的数字全部新测。** 既有 T1–T4 / S1–S3 降级为问题发现阶段的
-早期试跑证据（继续支撑 `PROBLEM.md` 的动机叙事，但不作为论文实验数据）。实验编号用 E0–E6，
-与旧 S 系列隔离。
-**[2026-08-06 说明：模拟器及早期试跑证据已随仓库清理整体删除（git 可溯）；E6 改为可用公式
-直接画地形的路线，见 E6 节。E4 先验（40% cancellation、LogNormal injection）已写进 §三负载定义，
-不再依赖原始试跑数据。]**
-
----
-
-## 一、要证明的主张（主张 → 实验）
-
-| # | 主张 | 实验 |
-|---|---|---|
-| C1 | 双工 serving 在真机上 capacity-bound：KV cache 池涨满即卡死，此时 GPU 时间大量空闲；后台 injection 使瓶颈更早到来 | E1 |
-| C2 | 一 tick 内 H2D 可与 decode 计算并行，干扰系数小到可用（机制物理可行） | E0 |
-| C3 | **主结果**：KV conveyor 把等效 KV 容量扩到 M+P，收益约 P/M 且内容无损（超时时刻延后 (M+P)/M 倍；最大可承载会话数 MSCS 提升 P/M） | E2 |
-| C4 | 收益依赖编排：按时间表错开各路占用（TDMA）能把链路利用率 η 从随机相位的低值拉回来（phase staggering 的收益可单独测量） | E3 |
-| C5 | commit / cancel 语义 + injection 走链路第二优先级：已 cancel 但仍常驻的 KV 从源头消除，injection 不打爆一 tick 的 deadline | E4 |
-| C6 | 无损性：分钟尺度外的内容召回，KV conveyor = 无界正确性，sliding window（windowed KV）会失败 | E5 |
-| C7 | 收益比 P/M = η·B_link·T/M_bytes 是纯硬件比值：跨 tick 长 T、链路带宽 B_link、模型的收益地形与公式吻合 | E6 |
-
-C6 是相对 Metronome windowed KV 的正面差异（有损 vs 无损）；C5 是全场空白（Metronome 无 injection、无 cancellation）。
-
----
-
-## 二、平台决策与 Metronome 代码复用地图
-
-### 决策 D1：KV conveyor 宿主 = 自研 paged-KV worker，不先改 vLLM 内核
-
-KV conveyor 需要逐步操纵 block table，并在独立 CUDA copy stream 上按 tick 预取、算完即释放 staging block。
-在 vLLM 内部做这件事要对抗 scheduler / CUDA graph / 混合 KV manager 三层（Metronome 仅为 sliding window
-就打了 FIX 5/6 两个内核补丁）。**主路线**：以 `third_party/metronome/metronome/engine.py`
-（FlashAttention paged-KV 多租户 decode 循环，约 600 行，产出了他们论文的主结果数字）为底子，
-写我们自己的 conveyor worker，实现同一 gRPC 协议，挂在同一 gateway 后面。模型小（1.7B），
-自研循环完全可控。
-
-**公平性设计**（预答审稿人「自研引擎 vs vLLM 不可比」）：
-- **主对比在同一 worker 内部**：conveyor on vs off（全常驻）——唯一差异是 KV 住哪，
-  与 Metronome「相对未改动配置测差值，而非和不具代表性的 baseline 比」同一方法论。
-- vanilla vLLM realtime 路径（`WINDOW=0`）作为**生态参照 baseline**（证明我们 worker 的
-  绝对性能不虚）；windowed KV（应用层回收，`WINDOW=15` 路径的语义移植）作为
-  **有损竞争方案**对照。
-- 延伸（非必需）：vLLM KV-connector 集成作为落地故事，放「讨论」节。
-
-### 决策 D2：模型与负载形态 = 文本代理双工负载（Qwen3-1.7B），tick 结构显式合成
-
-24GB 上 30B 不可行；Omni-7B 由 encoder 成为瓶颈（结论会被 encoder 污染，Metronome 自己的数据
-证明这点）。用 Qwen3-1.7B，每 tick 8 token 增量 prefill + 2–4 次 decode
-（`PROBLEM.md` 负载定义），tick 长 T=480ms 为主配置。效度威胁（「不是真音频」）的答复：
-(1) KV 增长 / 搬运物理只依赖 token 率与字节数，不依赖模态；(2) E6 用公式外推 Metronome
-的 2s tick / 30B 定义做交叉核对；(3) 诚实列入 limitations。
-
-### 决策 D3：两个池配置都测（3090 的池大小 M 是自由参数）
-
-| 配置 | M（KV 池） | 预测 P/M（η=0.7，12.33GB/s，T=480ms） | 用途 |
-|---|---|---|---|
-| full-pool | ~18GB（24G − 权重 3.4G − 开销） | **~+23%**（恰与 H100+PCIe5 同量级） | 主结果，最诚实 |
-| capped-pool | ~5GB（压低 `gpu_memory_utilization`） | **~+83%** | 高信噪比机制验证 + 模拟 capacity-scarce 区间 |
-
-### 复用地图
-
-| Metronome 资产 | 用法 |
-|---|---|
-| `gateway-go/`（tick 循环、AIMD admission、WebSocket 协议） | **原样复用** + 加一个 `conversation.item.create`→`SessionInput.text` 事件分支（injection 用，约 30 行 Go） |
-| `proto/inference.proto` | 原样（`text` 字段已存在） |
-| `experiments/sustained_fd.py`（相位错开、分片、节奏校验、漂移分桶） | 原样复用 + 加 injection / cancellation 事件发生器 |
-| `bench/metrics.py`（最大可承载会话数 MSCS、连续失败段 miss-run、Jain fairness） | 原样复用 |
-| `experiments/run_fresh_sweep.sh` / `run_variance_rand.sh` 模式 | 方法论移植（每点新起进程、乱序重复批） |
-| `third_party/metronome/metronome/engine.py`（paged-KV decode 循环） | **fork 为 conveyor worker 的底子**（放本仓库，不改第三方 pin） |
-| `bench/gpu_probe.py` 的 `wait_for_window` + 本仓库 `harness/wait_quiet.sh` | 共享 GPU 空闲检测（防污染） |
-| `worker/stream_server.py` | 参照实现（vanilla baseline 直接用它 + 文本分支约 20 行） |
-| FIX 1/4（通用 vLLM bug） | 仅 vanilla baseline 需要；先查上游是否已修 |
-
-改动纪律：第三方 pin 保持只读；我们的 worker、gateway 补丁、实验脚本全部放本仓库
-`harness/`，gateway 改动以补丁文件管理。
-
----
-
-## 三、负载定义（论文协议，一次定死）
-
-- **一 tick**：T=480ms；每 tick 8 token 增量 prefill + 3 次 decode（2–4 抖动）；miss =
-  该 tick 输出未在 T 内就绪。会话时长主配置 **600s**（约 16k token @ 26.7 tok/s——
-  分钟级瓶颈必须给它时间长出来，Metronome 的教训：90s 看不到真实失败）。
-- **injection 过程**：每会话泊松到达（均值每 30s 一次），长度 LogNormal（中位 512，
-  约 10% 尾部 4–8k token）；每次 injection 以 40% 概率在到达后 Uniform(0.5s, 5s) 被 cancel
-  （S2 先验）。
-- **系统形态**：closed-system 固定会话数 N（E1–E5）；open-system 爬坡 + admission
-  （E4 附加臂，可选）。
-- **相位**：客户端侧 `FD_PHASE_STAGGER=1` 恒开；服务端相位指派是 E3 的实验变量。
-
-### 关键测量学决策：主结果用双指标
-
-3090 full-pool 下，可承载会话数 N₀≈M/L 只有个位数到十几，MSCS 的 ±1 量化误差达 10–30%，
-单靠 MSCS 测不出 +23%。所以：
-
-1. **超时时刻延展比**（连续、高信噪比）：固定 N，测 KV 池占用轨迹与首次 miss rate >1% 的时刻
-   t_wall；预测 conveyor / baseline 的 t_wall 比 = (M+P)/M。对无界增长负载，这是最干净的连续量。
-2. **MSCS@miss rate≤1%**（可部署定义）：固定会话时长 600s + 会话 churn（稳态化），
-   N 细扫，报告 miss rate–N 全曲线而非单点。
-
----
-
-## 四、实验矩阵
-
-### E0 微基准：DMA 与 decode 的干扰系数（继续 / 停手的门槛）
-
-- **问题**：copy engine 上的 pinned H2D 是否偷 decode 的 memory bandwidth / SM？
-  这是现有标定推不出的唯一参数（`IDEA-KV-CONVEYOR.md` §五.3）。
-- **方法**（工具为独立的 `calibration/bench_dma_interference.py`）：在 T1 网格子集
-  （batch size B × context length ctx）上跑 decode step，同时后台 CUDA stream 以速率
-  r ∈ {0, 25%, 50%, 75%, 100% 链路} 持续 H2D；测 decode step 时膨胀系数 κ(r)
-  与实效 H2D 带宽。反向也测（decode 是否压 DMA）。顺带重测 pinned 带宽曲线
-  （不复用 7 月的 json）。
-- **判据**：所需搬运速率下 κ ≤ 1.15 → 继续；κ 偏大 → 用实测 κ 重算净收益，
-  净收益（full-pool）< +15% 则回到设计台重估（如 device-to-device 分段拷贝、错峰粒度加细）。
-
-### E1 真机 capacity bottleneck（动机，全新数据）
-
-- vanilla vLLM realtime 路径（0.23，文本分支）+ 我们 worker 的 conveyor off，两条 baseline；
-  3090，N ∈ {4,6,8,12,16}（full-pool），每点新起进程，600s。
-- 记录：分桶 p50/p99、KV 池占用（移植 Metronome 的统计日志模式）、SM util、
-  t_wall。**附加臂**：开 injection 负载 → 瓶颈提前多少（S3/S2 现象的真机首次量化）。
-- 预期图：池占用单调爬升至 1.0 → 系统卡死，同时 SM util 低——C1 的真机版本。
-
-### E2 主结果：KV conveyor 容量收益（C3）
-
-- 同一 worker，conveyor on vs off；两个池配置 × 双指标（t_wall 比、MSCS 曲线）；
-  prefetch lead τ_lead 取保守值（50ms），resident window X 按公式最优 X\* 配置。
-- 对照组：vanilla vLLM realtime 路径（生态参照）、windowed KV 回收（有损竞争，容量应与
-  conveyor 相近——差异化在 E5）。
-- 判据：t_wall 比落在预测 (M+P)/M 的 ±15% 内（full-pool 1.23×，capped-pool 1.83×）；
-  主结果点 5 次乱序重复，报中位数 + IQR。
-
-### E3 编排消融：phase staggering 的收益（C4）
-
-- 三臂（`IDEA-KV-CONVEYOR.md` §五.2）：全常驻 / conveyor + 随机相位 / conveyor + TDMA 指派相位。
-- 测量：实达链路利用率 η（链路利用且不 miss 的上确界）、链路队列 p99、miss rate、净容量。
-- 附加扫描：τ_lead ∈ {10..120ms} → staging 峰值 vs miss 的权衡曲线
-  （IDEA 3.3 关键张力定量化）；TDMA 应允许更小 τ_lead。
-- 预期：随机相位被迫 η 下降或 miss rate 上升，TDMA 恢复到 η≈0.7–0.9——这张图是编排贡献的核心证据。
-
-### E4 injection + commit / cancel 语义（C5，全场空白地带）
-
-- injection 路径：gateway 新事件 → `SessionInput.text` → worker。
-- 臂：(a) baseline：injection 按 vLLM 现状整段进引擎 step（M5 语义）；(b) injection 走 conveyor 第二优先级
-  + uncommitted 停在 host DRAM、cancel 即丢。
-- 测量：injection 期间 tick miss（按 injection 相位分桶——S3「伤害 1:1 由相位决定」的真机验证）、
-  已 cancel 但仍常驻的 KV 字节轨迹（S2 的 24.2% 峰值 vs ~0）、stale stitch 事件数、injection 完成 latency
-  （弹性代价要诚实报告）。
-- 可选臂：open-system 爬坡 + AIMD admission 叠加（证明与 Metronome 的 admission 等外围机制可复合）。
-
-### E5 无损性：长视野召回（C6，对 windowed KV 的决定性对照）
-
-- 移植 `fd_longhorizon_probe.py` 模式到文本负载：会话早期注入含关键事实的工具结果
-  （或前 30s 对话内容），在 3–8 分钟后探针提问。
-- 臂：无界（正确但会触及瓶颈）/ sliding window W=30s（窗外必错）/ conveyor（正确且不触及瓶颈）。
-- 预期表：正确率 conveyor ≈ 无界 ≫ sliding window（窗外≈0）；同时 conveyor 的池占用有界——
-  「无损 + 有界」同框。
-
-### E6 泛化与外推（C7）——方法改版（2026-08-06）：公式地形 + 实测锚点（模拟器路线废止）
-
-- 原计划以模拟器外推；仓库清理后改为**解析公式直接绘制地形 + 多锚点验证**。所需公式已全部建立
-  且各有实测锚点（见执行记录诸补注）：P/M = η·B_link·T/M_bytes（E0 锚定 η 与 B）、
-  池满时 step time 0.9V/BW 不变量（显存容量 / 带宽 V/BW 五代恒定 24–36ms）、busy(ctx) 斜率、
-  batch size 临界点 B\*（compute-bound 翻转点）、TDMA desync 守恒律、
-  收益 = min((M+P)/M, 算力倍数)。
-- 扫描轴不变：T ∈ {80ms..2s} × B_link ∈ {PCIe3/4/5, C2C 900GB/s} × 模型档位 → 等高线由公式绘制；
-  **T 轴四点均有真实系统锚定**（2026-08-06 查证）：80ms=Moshi / PersonaPlex（音频原生 12.5Hz）、
-  480ms=DuplexOmni（文本–文本切片，D2 主结果定义）、~1s=MiniCPM-o、2s=Qwen-Omni
-  （音频 encoder 2s 块 + TMRoPE 每 2s 时间交织——本 E1 tick 长的模型原生依据，arXiv:2503.20215）。
-  适用域声明：80ms 音频原生端无会话 churn 窗口（不值得做区的架构学原因）；conveyor 是文本–文本切片家族
-  （480ms–2s）的设计——恰为可做 injection / tool call 的那一支。本卡上 480ms 与 2s 实际收益几乎同为 ~2×
-  （算力封顶），T 的差别在算力倍数更高的卡上显形。
-  锚点：3090+PCIe4（本仓库全套实测）、Metronome Blackwell+30B-A3B 发表数字（step time 4.8–14ms、
-  饱和时刻 t_sat 模型）、H200 / GB300 规格注记点。预期形状：「两端翘」
-  （memory-bound 消费端 + 片间互联旗舰端高、PCIe 胖显存中段低）。
-- 相比模拟器路线：消除「模拟器保真度」整层效度威胁，换来审稿人可直接复算的公式组。
-- **呈现形态（方法论榜样：FasterMoE / PPoPP'22 的 DDL-Roofline 范式）**：定制
-  **Deadline-Capacity Roofline**——横轴每会话 context length，纵轴可承载 N，
-  三条屋顶（算力 / HBM 容量 / conveyor 抬升后容量），E1 实测轨迹为运动点；论文 Figure-1 候选。
-  M2 调度决策（平均 batch size G / B̄、τ_lead）从模型推导，对应其 shadowing 决策公式的地位。
-
----
-
-## 五、方法论规范（全实验强制）
-
-1. **每点新起进程（fresh-per-point）**：每个数据点新起 worker 进程（Metronome 与本仓库
-   `run_all.sh` 双重教训）。
-2. **共享 GPU 空闲检测**：每次测量前 `harness/wait_quiet.sh` + `gpu_probe.wait_for_window`；记录期间
-   `nvidia-smi` 采样存档，事后剔除受污染窗口。
-3. **重复与乱序**：主结果点 ≥5 次、条件乱序（`run_variance_rand.sh` 模式）；报告
-   中位数 + IQR，不报单次。
-4. **双重 miss 判据**：worker 自报 step time + 客户端节奏完整度（交付率 deliv_pct ≥ 0.9）
-   交叉验证。
-5. **工件纪律**：每个数字可追溯到 `results/paper/` 下的原始 JSON + 生成脚本 + git 版本
-   + 环境记录（可追溯性风格沿袭已删除的试跑期 `EVIDENCE.md`，git 可溯）。
-
-## 六、效度威胁与预答复
-
-| 威胁 | 预答复 |
-|---|---|
-| 文本代理非真音频 | KV 物理与模态无关；E6 交叉核对 Metronome 真音频定义；limitations 明示 |
-| 自研 worker vs vLLM 不公平 | 主对比同 worker 内 on / off；vLLM 作外参照；绝对 step time 与 vLLM 对齐并报告 |
-| 1.7B 太小 | P/M 公式与模型无关（每 token 字节数 b 被约掉）；E6 给 7B/30B 定义外推；诚实边界声明沿袭试跑期方法（`EVIDENCE.md` 已删，git 可溯） |
-| 3090 非数据中心卡 | full-pool P/M ≈ H100+PCIe5 同量级是特性不是缺陷；若可临时租 H100/PCIe5 加一个主结果复测点（可选，非阻塞） |
-| 共享 GPU 噪声 | 方法论规范 §五.2 / .3；关键结论附重复分布 |
-
-## 七、执行顺序与风险门
-
-1. **M0**：E0 微基准（**先行，是继续 / 停手的门槛**）+ gateway 构建 + 占位 worker 打通
-   客户端→gateway→gRPC 管线（零 GPU）。
-2. **M1**：vanilla vLLM realtime 路径文本分支跑通 → E1。
-3. **M2**：conveyor worker v1（固定时刻表，无 TDMA）→ E2。
-4. **M3**：TDMA + τ_lead 扫描（E3）→ injection / cancellation（E4）→ 召回探针（E5）。
-5. **M4**：E6 公式地形 + 锚点核对（模拟器路线已废止）；变异批次补测；工件打包。
-
-每个里程碑结束回填本文档的「执行记录」节，偏差与设计变更记录在案。
-
----
-
-## 执行记录
-
-### 2026-08-04：M0 完成（环境 + 冒烟 + E0），E1 由并行会话执行中
+本文 = E 系列真机运行的 append-only 过程记录：每条 = 日期 + run + 观测 + 产物路径。
+新 run 只 append 本文；提炼出的结论改 `docs/FINDINGS.md`（条目码 A1..G 是全仓引用锚点），本文条目不随结论回改。
+条目按时间序，后文条目可更正前文，更正就地留指针。
+历史条目迁入本文时统一过术语与代号写法；数字、判定与时间戳未动。
+KV conveyor = 按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading）；等效 KV 容量 = resident M + staging P。
+κ = decode step 时间膨胀系数 (slowdown factor, κ = t_with/t_without)。
+## 2026-08-04：M0 完成（环境 + 冒烟 + E0），E1 由并行会话执行中
 
 **环境与冒烟（任务 #1–#4）**：vLLM 0.23.0 虚拟环境（`~/vllm023-venv`）+ Go 1.22.5（`~/goroot`）
 + gateway 编译 + Qwen2.5-Omni-7B 权重。上游状态核查：FIX 1 已进 0.23.0 上游，FIX 4 只影响
-Qwen3-Omni（本实验不适用）——**vanilla baseline 零补丁**。新踩的坑（复现者需知）：
+Qwen3-Omni（本实验不适用）——**vanilla baseline 零补丁**
+（本条不成立：见下条 2026-08-04 E1 vanilla 条目的环境核查更正——上游 0.23.0 无 FIX 1，
+需手工打入 `mm_encoder_attention.py:720`）。新踩的坑（复现者需知）：
 flashinfer 0.6.12 在 SM86 也 JIT 编译采样内核，且 CUDA 13 wheel 缺 `lib64` / `libcudart.so`
 布局 → 两个符号链接修复（`ln -s lib lib64; ln -s libcudart.so.13 lib/libcudart.so`）。
 冒烟通过：GPU3 / N=1 / 30s / 2s tick，15/15 帧节奏 100%，miss 0%，零漂移
@@ -256,9 +39,9 @@ flashinfer 0.6.12 在 SM86 也 JIT 编译采样内核，且 CUDA 13 wheel 缺 `l
 **下一步**：M2——conveyor worker v1（fork `third_party/metronome/metronome/engine.py` 底子，
 决策 D1），先 conveyor off 对齐 vLLM step time，再上固定时刻表搬运。
 
-### 2026-08-04：E1 vanilla 配置 capacity bottleneck（job bdc51189，GPU1）——300s 初扫 + 600s 补拍
+## 2026-08-04：E1 vanilla 配置 capacity bottleneck（job bdc51189，GPU1）——300s 初扫 + 600s 补拍
 
-**⚠️ 更正上一节的「FIX 1 已进 0.23.0 上游 / vanilla baseline 零补丁」**：不成立。上游 0.23.0 **没有**
+**更正上一节的「FIX 1 已进 0.23.0 上游 / vanilla baseline 零补丁」**：不成立。上游 0.23.0 **没有**
 FIX 1；是本会话 06:16 手工打入虚拟环境（`mm_encoder_attention.py:720`，注释标记
 `METRONOME FIX 1`）。本机所有成功的 omni 运行（含 GPU3 冒烟，06:49）都在补丁之后。
 「Qwen2.5-Omni / SM86 不需要 FIX 1」未经检验——复现者装新虚拟环境时仍需打 FIX 1
@@ -274,7 +57,7 @@ max_model_len MML=16384 / GPU_MEM=0.9 / 每点新起进程 / llama-questions 真
 |---|---|---|---|---|
 | 2 | p99 ≈ 0–1ms 平稳 | 低 | 无 | 平稳 |
 | 4 | p99 ≈ 1ms 平稳 | 中 | 无 | 平稳 |
-| 6 | p99 ≈ 1ms 平稳 | **0.855 仍在爬升** | waiting 队列开始出现 2 人 | **接近容量上限**（外推约 350–400s 触及瓶颈） |
+| 6 | p99 ≈ 1ms 平稳 | **0.855 仍在爬升** | waiting 队列开始出现 2 人 | **接近饱和**（外推约 350–400s 池饱和） |
 | 8 | 290s 前约 1ms；**290–300s 跳变 1602ms** | **0.903** | **running 为空、waiting 7 人（run=0 / wait=7）** | **拍到崩溃起点** |
 
 关键证据（C1 的真机版本）：N=8 崩溃窗口内 `nvidia-smi` SM util 大部分采样为 **0%**
@@ -308,11 +91,17 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 - 顺带：本配置（2s tick × 5.1GB 小池）对 conveyor 是极端适用工作点——P/M = η·12.3GB/s·2s/5.1GB，
   η=0.3 都翻倍；E2 在同配置下的预测增益非常可观，但主结果仍以 480ms tick 文本负载为主定义
   （D2/D3）。
+  （该推算沿用初测 M=5.1GB；M 后订正为 74.3k token = 3.97GiB（FINDINGS D2），现行预测见 FINDINGS D4）
 
 **E1 状态：初版完成**（4+2 个点、t_wall 两点、SM util 证据、两个 harness 陷阱记录在案）。
-剩余：injection 臂（等 gateway text 事件）、600s@MML=32768 复测 N=4/6、≥5 次乱序重复。
+剩余清单及其完成态：
 
-### 2026-08-04：E1 每请求粒度插桩重跑（N=8/600s/MML=32768，GPU3）——死锁机制的直接证据
+- injection 臂（等 gateway text 事件）：未跑。
+- 600s@MML=32768 复测 N=4/6：已跑变体——`results/paper/baseline/e1perreq_n{4,6}_d300_*`
+  （300s / GPU3 / 每请求粒度插桩），非清单所列的 600s@MML=32768 配置。
+- ≥5 次乱序重复：2/5——`e1schtr_n8_d600` 为第 2 次（见 2026-08-06 capacity cascade 重复条目）。
+
+## 2026-08-04：E1 每请求粒度插桩重跑（N=8/600s/MML=32768，GPU3）——死锁机制的直接证据
 
 **动机**：聚合 kv.log 无法回答「每个请求何时工作 / 占多少显存 / 引擎花多久」，且 236s preemption 事件
 此前只是记账反推。**插桩**：`harness/stream_server_perreq.py`（metronome worker 的加日志副本，
@@ -321,11 +110,11 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 `harness/run_e1_perreq.sh`（端口 50054/8907 避让并行会话）。产物
 `results/paper/baseline/e1perreq_n8_d600_*`。
 
-**结果（与 16384 那次触及瓶颈的时刻一致，机制证据补齐）**：
+**结果（与 16384 那次饱和的时刻一致，机制证据补齐）**：
 
 - **preemption 直接证据：`pre` 恒 0 → 全程恰好 1 次**（271.2–287.2s 窗口内），伴随 kv 0.951→0.884，
   此后 0.884 / run=0 / wait=8 冻结到 600s。上次「236s KV 整块消失 = preemption」的反推证实
-  （该次在 230s，本次 271s——触及瓶颈窗口内的具体倒下顺序有随机性，t_wall 时刻稳定）。
+  （该次在 230s，本次 271s——饱和窗口内的具体倒下顺序有随机性，t_wall 时刻稳定）。
 - **每会话存活区间**：8 路全部在实验前 2s 内开工（相位错开 0–1.9s）；会话 4–8 于 **255.6s**
   同时 starve，会话 1–3 多活一个配额到 **271.6s**。starve 后音频仍被前端持续接收
   （F 事件到约 595s，输入被缓冲）但零产出——连接仍在、会话已停滞。
@@ -335,7 +124,7 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
   8×2.2MB/s 吃 4.2–4.7GB 池 ≈ 250s——t_wall 公式再吻合。
 - **引擎节奏（每请求「处理时长」的正确定义）**：batch 引擎无独占时间；实测
   **F−P 排队 latency p50≈1015ms 全程稳定**——每 tick 的量恰在下一 tick 到达后约 1s 消化完，
-  pipeline 满载但不落后（触及瓶颈前 SM util 79–100% 佐证）；等效摊分 ≈2s/8=250ms GPU 时间/会话/tick。
+  pipeline 满载但不落后（饱和前 SM util 79–100% 佐证）；等效摊分 ≈2s/8=250ms GPU 时间/会话/tick。
   首 token 时间（TTFA）p50 1608ms（首 tick 含预热）。
 - **测量学注记**：AsyncLLM 前端输出合批（374 个 T 事件覆盖 28.8k token），T 时间戳不可用于
   tick 内细粒度区间；F 事件是可靠的引擎侧时序信号。更细的每 step 耗时要到 M2 自有 worker 里拿
@@ -379,9 +168,10 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
   ② **真实的内容时效服务目标（本 tick 音频本 tick 处理完）从约 60s 起对所有会话持续违约且违约量线性增长**——
   按此定义 N=8 在本硬件上根本不可行（ingest 容量 ≈ 2000/265 ≈ 7.5 路），节奏指标对此完全失明；
   ③ 对 E3：vanilla 配置已在付轮转的全部代价（突发期间其余 7 路 KV 白白占用显存）却没拿到任何好处
-  （无控制、无法配合搬运窗口）——TDMA 是把它变成 tick 级、确定性、可与 conveyor prefetch 对齐的版本。
+  （无控制、无法配合搬运窗口）——TDM 相位指派 (phase-offset assignment，按时间表错开各路占用)
+  是把它变成 tick 级、确定性、可与 conveyor prefetch 对齐的版本。
 
-### 2026-08-04：并行 ingest 补丁实验（e1paringest，N=8/600s/GPU3）——ingest 瓶颈证毕即除，capacity bottleneck 改换形态
+## 2026-08-04：并行 ingest 补丁实验（e1paringest，N=8/600s/GPU3）——ingest 瓶颈证实后即修复，capacity bottleneck 改换形态
 
 **补丁**：`harness/stream_server_paringest.py`——用 monkeypatch 改写
 `AsyncLLM._add_streaming_input_request`，唯一改动是每分片的 `process_inputs` 进
@@ -389,7 +179,9 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 虚拟环境与克隆零改动。驱动 `harness/run_e1_paringest.sh`。
 
 **修复验证（一行补丁的因果证明）**：积压全程恒 1（含崩溃期，零轮转）；F−P 从 1015ms → **3ms**
-（p95 9ms）；时间线图（`results/figures/e1paringest_n8_d600_service_timeline.png`）显示
+（p95 9ms）；时间线图（`harness/plots/plot_e1_service_timeline.py e1paringest_n8_d600` 出图，
+该 tag 输出 `results/figures/e1paringest_n8_d600_service_timeline.png`，未留存；
+库内 `E1_service_timeline.png` 是 vanilla 串行 ingest `e1perreq_n8_d600` 的版本）显示
 8 路每 tick 同步推进、紧贴推送线。健康期引擎出现真空闲（running 队列呼吸式 7↔0，SM 相位均值 35.6%）——
 GPU 余量直接可见。代价：首 token 时间 18ms→751ms（t=0 八路首 prefill 同时压 GPU，无害）。
 
@@ -414,13 +206,13 @@ windowed KV / conveyor 的必要性不变，但论文的机制分析叙事要按
 **外推**（两点线性 + 未计 batch 摊薄，仅数量级）：8 路齐长时 8×busy(ctx) 在 ctx≈11–12k
 越过 2s tick 预算才 compute-bound；实际 capacity bottleneck 在 ctx≈8.6k（217s）先动手，当时计算余量约 3×。
 compute-bound 判据以「一 tick 的活 > tick 长」为准，SM util 只是代理。三类瓶颈状态：ingest（实测生效，已修）、
-capacity（实测生效，conveyor 的靶）、attention / compute（仅测得斜率与外推越界点，未触及）。
+capacity（实测生效，conveyor 的靶）、attention / compute（仅测得斜率与外推越界点，未成为瓶颈）。
 
 **方法论教训（时间线工具）**：kv / smi / 每请求三时钟的偏移必须逐次运行用预热锚点重算
 （本次 −25.7s vs 上次 −15.6s）——初判「会话 7 在 preemption 之前就已 starve」即目测偏移伪象，对齐后
 216.988s vs 216.8s 严丝合缝。
 
-### 2026-08-05：tick 内执行剖面实测（e1periter，N=8/90s，逐引擎 step 日志）——两处猜测被数据纠正
+## 2026-08-05：tick 内执行剖面实测（e1periter，N=8/90s，逐引擎 step 日志）——两处猜测被数据纠正
 
 **方法**：`_StatLog` 加 `PERITER_LOG`（每引擎 step 记录 t/run/gen/ptok，不限流），90s 短点
 （`harness/run_e1_periter.sh`），43 个稳态 tick。
@@ -440,7 +232,7 @@ capacity（实测生效，conveyor 的靶）、attention / compute（仅测得�
 vLLM 统计定义备忘。忙碌窗 811ms 中 batch-8 decode ≈ 735ms：decode 吞吐 8×(1000/21)=381 tok/s；
 每 step 21ms ≈ 权重读取下界 15ms + 开销，GPU 侧健康。
 
-### 2026-08-05：scheduler 级逐步追踪（e1schtr，N=8/60s）——tick 内每请求执行泳道，全部猜测清零
+## 2026-08-05：scheduler 级逐步追踪（e1schtr，N=8/60s）——tick 内每请求执行泳道，全部猜测清零
 
 **方法**：`harness/sched_trace/sitecustomize.py` 经 PYTHONPATH 注入 EngineCore 子进程
 （前端 monkeypatch 到不了 scheduler 所在进程；仅 SCHED_TRACE 设置时激活），包裹
@@ -459,7 +251,7 @@ token 时会话 1/2 尚未进场——「等 8 个编码完才 decode」不存�
 **并行 ingest 服务时间线图的块宽（250ms 回退占位）由本图取代**——旧图左边缘（ingest 时刻）仍有效，
 宽度无效。
 
-### 补注：每 tick decode 步数由谁决定（E1 系列通用）
+## 补注：每 tick decode 步数由谁决定（E1 系列通用）
 
 决定链：harness 的 `--tpt 25` → worker 给每个分片的 SamplingParams 设 `max_tokens=25n+8` →
 **vLLM 对 resumable request 的 max_tokens 语义是每段独立**（`scheduler.py:1058` 段边界
@@ -470,7 +262,7 @@ token 时会话 1/2 尚未进场——「等 8 个编码完才 decode」不存�
 ① tpt=25 的来源是语音级 token 率（12.5 tok/s），+8 是余量；② 生产 33/tick vs 客户端取 25/tick
 的差额在 worker 文本缓冲累积（无害但存在，harness 语义备忘）。
 
-### 补注：TDMA desync 的守恒律与粒度上界（E3/M2 设计参数，2026-08-05）
+## 补注：TDM 相位打散 (desync) 的守恒律与粒度上界（E3/M2 设计参数，2026-08-05）
 
 同步程度是连续旋钮，服从守恒：平均 batch size B̄ × 每 tick 步数 = N × 配额（264 tok），
 步数 ≤ T/t_step ≈ 95 ⟹ **B̄ ≥ N×配额×t_step/T ≈ 2.8**。
@@ -481,12 +273,12 @@ token 时会话 1/2 尚未进场——「等 8 个编码完才 decode」不存�
 （30B-A3B step time 4.8-14ms → 10+）→ 进 E6 地形。
 **连续旋转优于离散组**：相位差 T/N=250ms 均匀铺开 → 每 250ms 一路进 / 一路出 →
 链路双向各约 2.1GB/s 恒定（vs 12.3GB/s 容量，6× 余量；离散 G 组则为 G 倍峰值的脉冲）。
-E3 三臂坐标：全常驻=B̄8 端点、随机相位=旋钮失控、TDMA=主动选 B̄≈3 均匀旋转。
+E3 三臂坐标：全常驻=B̄8 端点、随机相位=旋钮失控、TDM 相位指派=主动选 B̄≈3 均匀旋转。
 M2 时刻表参数：相位间隔、τ_lead、B̄ 目标 + 守恒律可行性检查。同步 tick 下 conveyor 无收益的根因：
 忙碌窗内 batch decode 每 step 读全部会话 KV → 峰值常驻不降，时间排他性是容量扩展的必要条件
 （D1 自研 worker 的调度动机）。
 
-### 2026-08-06：capacity cascade 重复 2/5（e1schtr_n8_d600，全程 scheduler 追踪）——确定性时钟、被 preempt 会话任意
+## 2026-08-06：capacity cascade 重复 2/5（e1schtr_n8_d600，全程 scheduler 追踪）——确定性时钟、被 preempt 会话任意
 
 **复现强度**：六次 preemption 时刻两次运行逐点吻合 ±0.4s
 （run1: 217.0/247.1/288.4/346.1/432.8/577.1 vs run2: 216.8/247.2/288.4/346.1/432.9/577.2），
@@ -500,31 +292,34 @@ step time 随 context 增长直接测得：23.7ms（早期）→26.2ms（末期 
 三窗（健康满员时段 / preemption #1 瞬间会话 3 泳道停止 / 终局两路仍在运行、step 变宽），
 21ms step 分辨率的完整失效过程记录。
 
-### 2026-08-06：种子功能验证通过（冒烟 #2，SEED=6k/N=8/180s）+ capacity bottleneck 第三形态
+## 2026-08-06：种子功能验证通过（冒烟 #2，SEED=6k/N=8/180s）+ capacity bottleneck 第三形态
 
-**种子校准后全部达标**：8 路种子 5867–5989 tok（目标 6k，±2%），3.4–12.3s 完成灌注
-（约 1.2s/路），池起步约 0.68，**约 125s 触及容量上限**（vs 自然生长 217s，含灌注开销净省约 40%；
-种子越大压缩越多）。重复实验与 context 扫描自此走快车道。
+**种子校准后全部达标**（产物 `results/paper/baseline/e1paringest_n8_d180_*`）：8 路种子 5867–5989 tok
+（目标 6k，±2%），3.4–12.3s 完成 seed prefill 预热（约 1.2s/路），池起步约 0.68，**约 125s 池饱和**
+（vs 自然生长 217s，含 seed prefill 开销净省约 40%；种子越大压缩越多）。重复实验与 context 扫描自此走快车道。
 
 **第三种失效形态（同步耗尽导致的 admission 死锁）**：终态 `kv=1.000 run=0 wait=0 pre=0`——
 池精确打满于 tick 边界（种子使 8 路 context 完全同步），无人在跑故无 preemption 触发，
 8 路全部滞留 skipped_waiting（统计日志的 wait= 只计 waiting 队列，不含 skipped——测量学备忘），
-每 tick 被促升→admission 失败→退回，零 eviction 的全员冻结。至此 capacity bottleneck 三形态齐全：
+每 tick 被 promotion（提升回 waiting 队列）→admission 失败→退回，零 eviction 的全员冻结。
+至此 capacity bottleneck 三形态齐全：
 ① 两种瓶颈叠在一起导致全体卡死（串行 ingest × capacity，run=0/wait=8）；
-② 淘汰 cascade（并行 ingest + context 异步耗尽，pre=6，2 路仍在运行）；
+② capacity cascade（并行 ingest + context 异步耗尽，pre=6，2 路仍在运行）；
 ③ 同步耗尽导致的 admission 死锁（并行 ingest + context 同步，pre=0，全员冻结）——
 形态由「池耗尽时刻落在 tick 内还是 tick 间」与「ingest 是否积压」二维决定，全部终结于多数 / 全部会话 starve
 + GPU 闲置。论文的机制分析节按此三分。**静态图规范追加**：时间轴图必须画真实 tick 边界
 （P 事件锚定），坐标整数刻度会被误读为节拍（E1_cascade_lanes 已补虚线；跨时钟锚定法：
 min(prefill_start−preceding_tick)=+3ms，查看器与图共用）。
 
-### 补注：触及容量上限时空闲的硬件不变量与适用边界（E6 建模，2026-08-06）
+## 补注：capacity-bound 时空闲的硬件不变量与适用边界（E6 建模，2026-08-06）
 
+capacity-bound = KV 池容量先于算力饱和（区别于 bandwidth-bound 义的 memory-bound）。
 **池满时 step time 不变量**：池满时每 decode step 读 (W+M)/BW ≈ 0.9×显存/BW——模型大小只改变权重 / KV 分账，
 不改总字节。验证：3090 预测 25.4ms vs 六次 preemption 实测 24.8–27.2ms。结合 V/BW 五代恒定
 （24–36ms）与配额随 tick 长缩放（r×T）：
 **busy_wall/T ≈ r×0.9×(V/BW) + 开场占比 ≈ 38–55%（r=语音级）——对模型、tick 长、显卡代际三重不变**。
-「capacity-bound 时算力恒有约一半空闲」（C1 最强形式）。适用边界：① B > B* ≈ 字节/参数×TFLOPS/(2×BW)
+「capacity-bound 时算力恒有约一半空闲」（C1 最强形式）。适用边界：
+① B > B*（摊平拐点 amortization knee）≈ 字节/参数×TFLOPS/(2×BW)
 （3090+bf16 约 40–80，H100+bf16 约 200，B200+FP8 约 280）后 MLP 变为 compute-bound
 （缓降非跳变，attention 项恒为 memory-bandwidth-bound）；
 ② MoE 反向偏离（等效权重小 → 空闲更多，Metronome 30B-A3B 即此）；
@@ -532,7 +327,7 @@ min(prefill_start−preceding_tick)=+3ms，查看器与图共用）。
 忙碌是总驻留字节的函数而非会话数的函数
 （六次 preemption 时刻忙碌均约 1050–1090ms、总驻留均 3.97GiB——N×ctx=74.3k tok 双曲线守恒）。
 
-### 更正：本系列所有运行均处于 async scheduling 模式（2026-08-06）
+## 更正：本系列所有运行均处于 async scheduling 模式（2026-08-06）
 
 vLLM 0.23 对 `async_scheduling=None` 的解析是**默认启用**（`config/vllm.py:958`，
 仅 pooling / 部分 speculative decoding / 不支持的 executor 例外——我们与 Metronome 均不命中；

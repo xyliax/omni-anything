@@ -1,6 +1,6 @@
-# FINDINGS：E 系列真机实验发现清单（2026-08-04 ~ 08-06）
+# FINDINGS：E 系列真机实验发现清单
 
-*每条 = 一句话发现 + 关键数字 + 证据指针。全部可复现：日志在 `results/paper/baseline/`，图在 `results/figures/`，工具在 `harness/`（用法见 `harness/README.md`），机制细节与修订记录在 `PAPER-EXPERIMENTS.md`。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。*
+*每条 = 一句话发现 + 关键数字 + 证据指针。全部可复现：日志在 `results/paper/baseline/`，图在 `results/figures/`，工具在 `harness/`。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。机制推演与跑次修订过程写在 `docs/EXPERIMENT-LOG.md`，本文只收结论。*
 
 ---
 
@@ -33,7 +33,7 @@ vLLM realtime 的 multimodal input processing 是单线程的（`async_llm.py` �
 ## B. 监控指标看不出已经坏了
 
 **B1 · silent failure：指标仍显示 real-time，内容已过时**
-worker 等待帽 1.6s < 2s deadline → 崩溃状态下每 tick 仍准时返回空帧，miss 恒 0%、frame delivery 100%。这是 Metronome 所说 "silent collapse" 的 per-session 粒度版本。
+worker 等待帽 1.6s < 2s deadline → 崩溃状态下每 tick 仍准时返回空帧，miss 恒 0%、frame delivery 100%。这是 Metronome「崩溃是静默的」（其原文：the collapse is silent）的 per-session 粒度版本。
 
 **B2 · frame latency ≠ content latency**
 input backlog 期间，client latency 恒为 1ms（burst 预存了 8 个 tick 的 token buffer），而 semantic response lag 最多约 16s——cadence 指标结构性测不出 content staleness。duplex serving 需要独立的 content freshness SLO。
@@ -64,7 +64,7 @@ vLLM 0.23 对 `None` 默认启用 async scheduling，相关日志被 WARNING 吞
 **D2 · busy 是总 resident 字节的函数，而非 session 数的函数**
 六次 preemption 时刻，N×ctx 恒等于 74.3k token（双曲线守恒：8×9.3k = 3×24.8k），busy 均约 1050–1090ms。附注：M 的最精标定 74.3k token = 3.97GiB。
 
-**D3 · TDMA（Time-Division Multiple Access）去同步守恒律**
+**D3 · 相位打散（desync）守恒律**
 平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8——去同步 = 用 compute headroom 购买 KV resident 缩减（代价是 weight 每 step 重读），上界 T·BW/(配额×W) ≈ 3.4（3090+7B）。**连续旋转优于离散槽**：相位差 T/N 铺开 → 链路双向各约 2.1GB/s 恒定（对比 12.3GB/s 容量）。同步 tick 下 conveyor 无收益（busy 窗内每 step 读全员 KV，峰值 resident 不降）——时间排他性是 capacity 扩展的必要条件。
 
 **D4 · 3090 稳态容量预测（E2 预告）**
@@ -75,17 +75,17 @@ vLLM 0.23 对 `None` 默认启用 async scheduling，相关日志被 WARNING 吞
 
 ## E. 与生态对照
 
-**E1 · Metronome paper 归因正确，repo 笔记已被取代**
+**E1 · Metronome paper 归因正确，repo 笔记的 attention drift 作废**
 paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳态竞速模型）；其 repo 工作笔记里的 "attention drift" 是废弃旧说。我们的增量 = scheduler 代码级死锁机制分析 + per-request 粒度 + 消费卡复现 + 三形态分层。
 
 **E2 · 他们的 30B 每 step decode 4.8–14ms**
 （fused FP8 MoE probe）→ 其 capacity-bound 时的 compute headroom 比我们更大（MoE 偏离 D1 不变量的方向）。
 
 **E3 · 「resident 是唯一预算兼容选择」（其 §2 对 swap 的分析性排除）有两个可证伪假设**
-① 全量轮换是不具代表性的 baseline（真实设计点是 partial residency + 链路扩容；我们的操作点即便全量轮换也只需 4.2GB/s）；② 「无空隙可藏」（子 tick 占空比 1/N 就是空隙；E0 实测 transfer amplification factor κ=1.067，H2D 几乎不拖慢计算）。chip-to-chip（C2C）900GB/s 加速使此论断过期。
+① 全量轮换是不具代表性的 baseline（真实设计点是 partial residency + 链路扩容；我们的操作点即便全量轮换也只需 4.2GB/s）；② 「无空隙可藏」（每会话子 tick 占用比例 1/N 就是空隙；E0 实测 decode step 时间膨胀系数 κ=1.067（slowdown factor），H2D 几乎不拖慢计算）。chip-to-chip（C2C）900GB/s 加速使此论断过期。
 
-**E4 · DuplexOmni 的 480ms 切片 = 我们 D2 的 tick 长**
-（负载保真背书）；其「延迟推理」通道（[THINK] → 异步云端推理 → 结果织回后续切片）= E4 注入负载的量产形态。而其论文零 serving 数字（无并发 / 每卡 session）——模型论文止步于 N=1、real-time factor RTF < 1，serving 层是空白。
+**E4 · DuplexOmni 的 480ms 切片 = 论文主配置的 tick 长**
+（负载保真背书）；其「延迟推理」通道（[THINK] → 异步云端推理 → 结果注入后续切片）= 实验 E4 注入负载的量产形态。而其论文零 serving 数字（无并发 / 每卡 session）——模型论文止步于 N=1、real-time factor RTF < 1，serving 层是空白。
 
 ## F. 测量学教训（本系列自己踩出来的）
 
@@ -109,4 +109,4 @@ paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳�
 
 ## G. 工具资产（复用入口）
 
-暖启动种子（`--seed-tokens`，触及 capacity 上限的时间 217→125s，context 成为受控变量）；scheduler 逐步 trace（sitecustomize 注入 EngineCore）；每 request P/F/T 事件；Perfetto 导出（`harness/viz/export_perfetto.py`，泳道 + counter 一条命令）；共享 GPU 空闲检测脚本 `harness/wait_quiet.sh`。
+暖启动种子（`--seed-tokens`，KV 池饱和时间 217→125s，context 成为受控变量）；scheduler 逐步 trace（sitecustomize 注入 EngineCore）；每 request P/F/T 事件；Perfetto 导出（`harness/viz/export_perfetto.py`，泳道 + counter 一条命令）；共享 GPU 空闲检测脚本 `harness/wait_quiet.sh`。
