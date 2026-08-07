@@ -1,0 +1,10 @@
+# Human-maintained direct dependencies for Linux x86_64 / Python 3.12 / CUDA 13.
+# Regenerate requirements.lock with pip's structured resolver when these change.
+vllm[audio]==0.23.0
+transformers==4.57.6
+grpcio==1.71.0
+datasets==5.0.1
+soundfile==0.14.0
+librosa==0.11.0
+websockets==15.0.1
+matplotlib==3.10.7

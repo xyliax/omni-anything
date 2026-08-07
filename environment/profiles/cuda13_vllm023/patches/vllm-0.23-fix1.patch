@@ -1,0 +1,14 @@
+--- a/vllm/model_executor/layers/attention/mm_encoder_attention.py
++++ b/vllm/model_executor/layers/attention/mm_encoder_attention.py
+@@ -717,6 +717,11 @@
+         sequence_lengths: torch.Tensor
+         | None = None,  # Only used for FlashInfer CuDNN backend
+     ) -> torch.Tensor:
++        # METRONOME FIX 1: omni encoders can build cu_seqlens on CPU during
++        # memory profiling, while varlen attention requires the query device.
++        if cu_seqlens is not None and cu_seqlens.device != query.device:
++            cu_seqlens = cu_seqlens.to(query.device, non_blocking=True)
++
+         if self.is_flash_attn_backend:
+             return self._forward_fa(query, key, value, cu_seqlens, max_seqlen)
+         elif self.attn_backend == AttentionBackendEnum.TRITON_ATTN:

@@ -358,8 +358,10 @@ pyrightconfig.json
 # omni-anything — project-specific (after templates so exceptions win)
 # =============================================================================
 
-# Agent / task-system runtime (machine-local; never commit)
-.harness/runtime/
+# Reproducible local runtime built by environment/setup.sh
+/.venv-vllm023/
+/.build/
+/.tools/
 
 # Secrets / local env
 .env
@@ -368,9 +370,9 @@ pyrightconfig.json
 
 # Run transcripts: ignore by default (Python template also has *.log)
 *.log
-# Exception: results/paper logs are E-series evidence
-!results/paper/**/
-!results/paper/**/*.log
+# Exception: retained run logs are E-series evidence
+!results/**/
+!results/**/*.log
 
 # .context: keep digests/notes; large binaries stay local
 .context/**/*.pdf
@@ -394,4 +396,3 @@ pyrightconfig.json
 # Profiling / Nsight dumps
 *.nsys-rep
 *.qdrep
-

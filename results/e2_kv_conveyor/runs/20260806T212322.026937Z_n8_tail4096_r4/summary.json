@@ -1,0 +1,140 @@
+{
+  "arms": [
+    {
+      "arm": "resident_sync",
+      "capacity_wall_ms": 236000,
+      "compute_batches": {
+        "8": 300
+      },
+      "compute_busy_fraction": 0.4738880395889282,
+      "compute_end_overrun_ms": 0.0,
+      "compute_latency_p50_ms": 947.7760791778564,
+      "compute_latency_p99_ms": 947.7760791778564,
+      "content_release_delays": 0,
+      "conveyor": false,
+      "lead_ms": 20,
+      "link_busy_fraction": 0.0,
+      "mechanism_valid": true,
+      "output_deadline_miss_rate": 0.0,
+      "output_deadline_misses": 0,
+      "phase_plan": {
+        "nominal_compute_demand_ms": 947.7760791778564,
+        "nominal_compute_utilization": 0.4738880395889282,
+        "nominal_groups": [
+          {
+            "busy_ms": 947.7760791778564,
+            "phase_ms": 0.0,
+            "sessions": 8
+          }
+        ],
+        "nominal_last_finish_ms": 947.7760791778564,
+        "nominal_schedulable": true,
+        "nominal_slot_aligned": true
+      },
+      "phase_policy": "synchronized",
+      "seed": 4,
+      "sessions": 8,
+      "staging_peak_sessions": 0.0,
+      "staging_peak_tokens": 0,
+      "ticks": 300,
+      "transfer_deadline_miss_rate": 0.0,
+      "transfer_deadline_misses": 0,
+      "transfer_jobs": 0,
+      "transfer_queue_p99_ms": null,
+      "transfer_service_p50_ms": null,
+      "transfer_service_p99_ms": null,
+      "validated_capacity_wall_ms": 236000
+    },
+    {
+      "arm": "conveyor_tdma",
+      "capacity_wall_ms": 248000,
+      "compute_batches": {
+        "1": 300,
+        "7": 300
+      },
+      "compute_busy_fraction": 0.8612237572669983,
+      "compute_end_overrun_ms": 0.0,
+      "compute_latency_p50_ms": 1059.8360300064087,
+      "compute_latency_p99_ms": 1059.8360300064087,
+      "content_release_delays": 0,
+      "conveyor": true,
+      "lead_ms": 20,
+      "link_busy_fraction": 0.07645834747314453,
+      "mechanism_valid": true,
+      "output_deadline_miss_rate": 0.0,
+      "output_deadline_misses": 0,
+      "phase_plan": {
+        "nominal_compute_demand_ms": 1722.4475145339966,
+        "nominal_compute_utilization": 0.8612237572669983,
+        "nominal_groups": [
+          {
+            "busy_ms": 1059.8360300064087,
+            "phase_ms": 0.0,
+            "sessions": 7
+          },
+          {
+            "busy_ms": 662.6114845275879,
+            "phase_ms": 1089.8360300064087,
+            "sessions": 1
+          }
+        ],
+        "nominal_last_finish_ms": 1752.4475145339966,
+        "nominal_schedulable": true,
+        "nominal_slot_aligned": true
+      },
+      "phase_policy": "tdma",
+      "seed": 4,
+      "sessions": 8,
+      "staging_peak_sessions": 7.0,
+      "staging_peak_tokens": 28672,
+      "ticks": 300,
+      "transfer_deadline_miss_rate": 0.0,
+      "transfer_deadline_misses": 0,
+      "transfer_jobs": 2400,
+      "transfer_queue_p99_ms": 114.70515251159668,
+      "transfer_service_p50_ms": 19.113344192504883,
+      "transfer_service_p99_ms": 19.12940788269043,
+      "validated_capacity_wall_ms": 248000
+    }
+  ],
+  "capacity_extension_tdma_vs_resident": 1.0508474576271187,
+  "experiment": "e2_kv_conveyor",
+  "link_median_gbps": 12.288850220784825,
+  "policy_aggregates": {
+    "random": null,
+    "tdma": {
+      "arms": 1,
+      "capacity_wall_ms": {
+        "count": 1,
+        "median": 248000.0,
+        "p25": 248000.0,
+        "p75": 248000.0
+      },
+      "output_deadline_miss_rate": {
+        "count": 1,
+        "median": 0.0,
+        "p25": 0.0,
+        "p75": 0.0
+      },
+      "staging_peak_sessions": {
+        "count": 1,
+        "median": 7.0,
+        "p25": 7.0,
+        "p75": 7.0
+      },
+      "transfer_deadline_miss_rate": {
+        "count": 1,
+        "median": 0.0,
+        "p25": 0.0,
+        "p75": 0.0
+      },
+      "transfer_queue_p99_ms": {
+        "count": 1,
+        "median": 114.70515251159668,
+        "p25": 114.70515251159668,
+        "p75": 114.70515251159668
+      }
+    }
+  },
+  "run_id": "20260806T212322.026937Z_n8_tail4096_r4"
+}

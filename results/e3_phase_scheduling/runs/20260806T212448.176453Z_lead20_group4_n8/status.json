@@ -1,0 +1,19 @@
+{
+  "artifacts": {
+    "link_calibration.json": {
+      "bytes": 2002,
+      "sha256": "1edac34797d2e38fe0c81b9c744cef93b42d75b623ff641961e486bcb17c7429"
+    },
+    "manifest.json": {
+      "bytes": 22658,
+      "sha256": "93261f4e6314701668ef959dafe703f9cd23c53aa91593fbc7c42e8ce242515b"
+    },
+    "summary.json": {
+      "bytes": 17544,
+      "sha256": "7dc2234a750e7f23fef1eb2dbcfba8fb7e5b909f8ff511455e2a654d1c84e18a"
+    }
+  },
+  "error": null,
+  "finished_at": "2026-08-06T21:24:55.494890+00:00",
+  "state": "success"
+}

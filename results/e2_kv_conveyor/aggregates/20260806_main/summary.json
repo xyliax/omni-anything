@@ -1,0 +1,35 @@
+{
+  "all_mechanism_valid": true,
+  "capacity_extension": {
+    "count": 5,
+    "max": 1.0508474576271187,
+    "median": 1.0508474576271187,
+    "min": 1.0508474576271187
+  },
+  "claim_boundary": "Uses real E1 vLLM compute timings and fresh pinned H2D timings; does not claim end-to-end active-block migration inside vLLM.",
+  "evidence_level": "trace-driven CUDA mechanism prototype",
+  "experiment": "e2_kv_conveyor",
+  "link_median_gbps": {
+    "count": 5,
+    "max": 12.29832227216871,
+    "median": 12.293810243307131,
+    "min": 12.288850220784825
+  },
+  "output_deadline_misses": 0,
+  "schema_version": 1,
+  "source_compute_trace_sha256": "6de3ab676b3d6486941e13d25aaa7049aa83c8410f3aabf59405e4bb8e176e62",
+  "source_runs": [
+    "20260806T212249.568464Z_n8_tail4096_r0",
+    "20260806T212257.643071Z_n8_tail4096_r1",
+    "20260806T212305.671337Z_n8_tail4096_r2",
+    "20260806T212313.739528Z_n8_tail4096_r3",
+    "20260806T212322.026937Z_n8_tail4096_r4"
+  ],
+  "staging_peak_sessions": {
+    "count": 5,
+    "max": 7.0,
+    "median": 7.0,
+    "min": 7.0
+  },
+  "transfer_deadline_misses": 0
+}

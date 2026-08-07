@@ -1,0 +1,29 @@
+{
+  "artifacts": {
+    "phase_tradeoffs.pdf": {
+      "bytes": 16693,
+      "sha256": "89f13ea20258f3ce1a85a83195b4fb8884485c154f5eb56c817dfc69589c4bc3"
+    },
+    "phase_tradeoffs.png": {
+      "bytes": 81748,
+      "sha256": "a4a1d67c15b65511eec2b8cb87024082aa70b42e1090fdd013b1ff673fc04dd1"
+    },
+    "summary.json": {
+      "bytes": 6149,
+      "sha256": "73de767776bf792bdc148f44b26890820fddfef2757aad3c9a25b1356e13cde6"
+    }
+  },
+  "schema_version": 1,
+  "source_runs": [
+    "20260806T212404.271928Z_lead10_group7_n8",
+    "20260806T212411.839238Z_lead25_group7_n8",
+    "20260806T212417.272807Z_lead50_group7_n8",
+    "20260806T212422.975569Z_lead80_group7_n8",
+    "20260806T212428.454110Z_lead120_group7_n8",
+    "20260806T212448.176453Z_lead20_group4_n8",
+    "20260806T212455.737292Z_lead20_group5_n8",
+    "20260806T212501.227773Z_lead20_group6_n8",
+    "20260806T212506.743319Z_lead20_group7_n8",
+    "20260806T212512.276692Z_lead20_group8_n8"
+  ]
+}

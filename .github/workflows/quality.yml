@@ -1,0 +1,20 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cpu-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile project Python
+        run: python -m compileall -q environment experiments observability tests
+      - name: Check shell syntax
+        run: find environment experiments observability -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: Run unit tests
+        run: python -m unittest discover -v

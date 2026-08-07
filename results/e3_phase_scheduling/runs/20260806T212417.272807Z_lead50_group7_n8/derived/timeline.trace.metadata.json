@@ -1,0 +1,69 @@
+{
+  "artifact": "timeline.trace.json.gz",
+  "bytes": 622747,
+  "claim_boundary": "Uses real E1 vLLM compute timings and fresh pinned H2D timings; does not claim end-to-end active-block migration inside vLLM.",
+  "clock_alignment": null,
+  "compute_slices": 3915,
+  "engine_slices": 53894,
+  "events": 95852,
+  "experiment": "e3_phase_scheduling",
+  "generic_events": 0,
+  "global_time_shift_s": 18.12,
+  "measurement_segments": 0,
+  "referenced_runs": {
+    "20260806T210551.398631Z_e1_paringest_trace_n8_p2000_mml32768_seed0_3139eab_formal-rerun": {
+      "artifacts": {
+        "gpu.csv": {
+          "bytes": 13850,
+          "sha256": "23f6a3d69afba6e3c89881f6a6f58617a15684e963b1b2c5fafe722c04514c53"
+        },
+        "kv.log": {
+          "bytes": 20704,
+          "sha256": "6da902aaf5f4786ffdf846f1a3790bedabaf1f243e75eb314417d45c80082935"
+        },
+        "manifest.json": {
+          "bytes": 17910,
+          "sha256": "98ff0eac8694ce2d61136011d144913864c836efb4a6e6fe7b5ee5c50b557eb9"
+        },
+        "per_request.log": {
+          "bytes": 1436603,
+          "sha256": "d6deecb0e8f81a2577e50df68c0cb5980db33595883448404696a5c44dccf7b5"
+        },
+        "scheduler.log": {
+          "bytes": 1047253,
+          "sha256": "6de3ab676b3d6486941e13d25aaa7049aa83c8410f3aabf59405e4bb8e176e62"
+        },
+        "status.json": {
+          "bytes": 1844,
+          "sha256": "4fd02a0ac1e91673aaceef81c7ef76d20f7b517aecab14d960be1b94d71e454c"
+        }
+      },
+      "experiment": "e1_capacity_bottleneck",
+      "path": "results/e1_capacity_bottleneck/runs/20260806T210551.398631Z_e1_paringest_trace_n8_p2000_mml32768_seed0_3139eab_formal-rerun",
+      "source_scheduler_sha256": "6de3ab676b3d6486941e13d25aaa7049aa83c8410f3aabf59405e4bb8e176e62"
+    }
+  },
+  "run_id": "20260806T212417.272807Z_lead50_group7_n8",
+  "schema_version": 2,
+  "sha256": "87d1a66b2252af56f02a89fc2ef1cc503002fe05f48475e4b59a71212dd3069e",
+  "source_artifacts": {
+    "link_calibration.json": {
+      "bytes": 2001,
+      "sha256": "f88cb128a4598384a8a182a18aaef4c82ce57c0be87a84821d9729078d90acf5"
+    },
+    "manifest.json": {
+      "bytes": 21568,
+      "sha256": "c8c0baf1f86e45bdad46da00eb0b2ebfae2629b53c26d7eaa1e74d042b50e296"
+    },
+    "status.json": {
+      "bytes": 527,
+      "sha256": "a33fd2625f62f92cd8e9c7140112fea48520fe98491d27b31ef7aee3532843ce"
+    },
+    "summary.json": {
+      "bytes": 17538,
+      "sha256": "cd4b967da0031290b5b077d630ccbfc2952a5e7be3637b208e749b5a9925bdab"
+    }
+  },
+  "transfer_slices": 14400,
+  "visualization_kind": "deterministic_mechanism_replay"
+}
