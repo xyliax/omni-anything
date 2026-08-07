@@ -9,7 +9,7 @@
 
 ## 未决
 
-- 与现有 vLLM / omni 引擎路径的真实重复扫描成本。已知参照：`.context/papers/` 内 POD-Attention（prefill–decode 全重叠）与 Sarathi-Serve（chunked prefill）；E1 实测 tick 内 prefill 完成即入 decode 批、无跨会话屏障（FINDINGS C1）
+- 与现有 vLLM / omni 引擎路径的真实重复扫描成本。已知参照：`context/papers/` 内 POD-Attention（prefill–decode 全重叠）与 Sarathi-Serve（chunked prefill）；E1 实测 tick 内 prefill 完成即入 decode 批、无跨会话屏障（FINDINGS C1）
 - 与 KV conveyor staging 生命周期如何共存
 - 最小可测实验是什么
 

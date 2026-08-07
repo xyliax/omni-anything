@@ -11,23 +11,23 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 - **E1 实测栈**：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090，tick = 2s
 - **论文主配置（设计目标）**：文本代理双工与 tick 结构写在 `docs/experiments.md`；与 E1 栈是两套配置，数字各归各套
 
-## 事实层与 `.context/`
+## 事实层与 `context/`
 
 **`docs/` 是事实与决策层**（本项目结论、问题、方案、实验、纪律）。  
 **根目录只留本文件与 `README.md`（入口）。**  
-**`.context/` 是思考原料与工作语境（讨论、设想、外部整理、表达草稿），不构成项目事实。**
+**`context/` 是思考原料与工作语境（讨论、设想、外部整理、表达草稿），不构成项目事实。**
 
-归属测试：删掉该文件，项目正确性或可理解性是否受损？受损 → `docs/`；只是「重新收集要花时间」→ `.context/`。
+归属测试：删掉该文件，项目正确性或可理解性是否受损？受损 → `docs/`；只是「重新收集要花时间」→ `context/`。
 
-| 维度 | `docs/`（事实层） | `.context/` |
+| 维度 | `docs/`（事实层） | `context/` |
 | --- | --- | --- |
 | 内容 | 本项目结论、问题、方案、实验、纪律 | 讨论与设想（ideas）、外部整理（references / papers）、表达草稿（slides） |
 | 过时 | 过时是 bug | 允许滞后，快照打日期即可 |
 | 内聚 | 一篇文档完整持有自己的主题；**兄弟文档之间少交叉引用** | 结论只住 `docs/`，此处只收原料 |
 
-**交叉引用纪律**：本文件是唯一文档地图。`docs/` 各文自洽可读，跨主题由读者经本表跳转。允许的外指：`results/`、`calibration/`、`harness/`、`third_party/`、外部 URL、以及 `.context/` 作证据原料（结论仍写在 `docs/`）。
+**交叉引用纪律**：本文件是唯一文档地图。`docs/` 各文自洽可读，跨主题由读者经本表跳转。允许的外指：`results/`、`calibration/`、`harness/`、`third_party/`、外部 URL、以及 `context/` 作证据原料（结论仍写在 `docs/`）。
 
-提升通道（单向）：`.context/ideas/` 被采纳 → 写入 `docs/`；digest 中项目依赖的结论上移，原文留 `.context/papers/`。
+提升通道（单向）：`context/ideas/` 被采纳 → 写入 `docs/`；digest 中项目依赖的结论上移，原文留 `context/papers/`。
 
 ## 权威文档（`docs/`）
 
@@ -53,10 +53,10 @@ E4 冻结先验（40% cancellation、LogNormal 注入）写在 `docs/experiments
 | `calibration/` | E0 DMA 微基准 | 任务要求时改 |
 | `results/` | 运行证据 | 只增不删 |
 | `third_party/` | git-subrepo pin；见 `third_party/AGENTS.md` | **只读** |
-| `.context/references/` | 外部公开信息原文或整理 | 按题打开 |
-| `.context/papers/` | 跨主题 digest 池 | 按题打开 |
-| `.context/ideas/` | 未进事实层的设想 | 按题打开 |
-| `.context/slides/` | 表达草稿 | 可滞后；仅幻灯片任务时打开 |
+| `context/references/` | 外部公开信息原文或整理 | 按题打开 |
+| `context/papers/` | 跨主题 digest 池 | 按题打开 |
+| `context/ideas/` | 未进事实层的设想 | 按题打开 |
+| `context/slides/` | 表达草稿 | 可滞后；仅幻灯片任务时打开 |
 
 PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 harness 直接依赖的 baseline。
 

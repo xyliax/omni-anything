@@ -155,7 +155,7 @@
 
 `state virtualization · scheduled tail-KV migration · transactional writeback`
 
-### 研究点 2｜执行控制（非现行主线；设想稿在 `.context/ideas/`）
+### 研究点 2｜执行控制（非现行主线；设想稿在 `context/ideas/`）
 
 ## 面向周期交互的静态执行计划特化
 
@@ -167,7 +167,7 @@
 
 `process compilation · AOT execution · finite signatures`
 
-### 研究点 3｜数据移动（非现行主线；设想稿在 `.context/ideas/`）
+### 研究点 3｜数据移动（非现行主线；设想稿在 `context/ideas/`）
 
 ## 面向同请求共享上下文的 prefill–decode 融合
 

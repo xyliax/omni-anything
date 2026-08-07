@@ -82,7 +82,7 @@ KV 方案与注入方案必须联合设计，这是把「链路调度」与「�
 - **产品层证词**：Seeduplex 自述克服了「高并发下的延迟尖刺与稳定性问题」，解法不公开；GPT-Live 单会话 ≥1 小时（社区实测），手段不公开。
 - **能力矩阵**：五列（tick deadline / batching / KV cache / 注入安放 / 作废语义）里，「注入的 deadline-aware 安放」与「输入侧作废回收」两列现有系统均未覆盖——恰好是要素 ② 的两半。
 
-逐产品规格、moshi-server 源码级核实、逐模型会话时长换算的原始整理在 `.context/references/full-duplex-model-product-serving-landscape-2026-08.md`。
+逐产品规格、moshi-server 源码级核实、逐模型会话时长换算的原始整理在 `context/references/full-duplex-model-product-serving-landscape-2026-08.md`。
 
 ## 与 Metronome 的关系
 
