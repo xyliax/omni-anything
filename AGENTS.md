@@ -49,7 +49,7 @@ E4 冻结先验（40% cancellation、LogNormal 注入）写在 `docs/experiments
 | 路径 | 角色 | 读写 |
 | --- | --- | --- |
 | `docs/` | 事实与决策 | 任务要求时改 |
-| `harness/` | E 系列真机实验组件 | 任务要求时改 |
+| `harness/` | E 系列真机实验组件；运行手册见 `harness/AGENTS.md` | 任务要求时改 |
 | `calibration/` | E0 DMA 微基准 | 任务要求时改 |
 | `results/` | 运行证据 | 证据只增不删，不改写结论 |
 | `third_party/` | git-subrepo pin；见 `third_party/AGENTS.md` | **只读** |
@@ -67,4 +67,4 @@ PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 ha
 - 术语跨文一致：全双工（不写「真双工」）、注入（不写「回注 / 写回」）、N* 可调度并发数（不写 MSCS / 可行密度）、饱和（不写「触及瓶颈」）。
 - 编号空间撞名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
 - 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 订正节。
-- `README.md` 面向初次读者的自含介绍；契约与文档地图以本文件为准。
+- `README.md` 只做对外定位（GitHub 落地页）；契约、地图与索引一律在 AGENTS.md 体系（根 + `harness/` + `third_party/`），不另设 README 型索引。
