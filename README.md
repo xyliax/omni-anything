@@ -20,14 +20,8 @@ E 系列真机实验跑在 vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB)，tick 
 ```text
 omni-anything/
 ├── AGENTS.md      agent 工作契约与文档地图
-├── docs/          事实层：结论、问题、方案、实验协议
-│   ├── problem.md              问题定义：负载三要素、瓶颈出现顺序、领域空白
-│   ├── findings.md             E 系列发现清单，条目编号 A1..G 是全仓库的证据引用锚点
-│   ├── design.md               KV conveyor 的公式、编排、相关工作对比与边界
-│   ├── experiments.md          主张到实验的矩阵、平台决策、负载冻结协议
-│   ├── experiment-log.md       逐次运行的执行记录
-│   └── metronome.md            Metronome baseline：pin、用法、数字订正
-├── harness/       E 系列真机实验组件：driver 脚本、引擎内观测注入、可视化（入口 USAGE.md）
+├── docs/          事实层：问题、发现、方案、实验协议与逐次记录（文档地图见 AGENTS.md）
+├── harness/       E 系列真机实验组件：driver 脚本、引擎内观测注入、可视化
 ├── calibration/   E0 DMA 微基准：H2D 搬运与 decode 并发时的 step 时间膨胀 κ 与有效带宽
 ├── results/       运行证据：paper/ 原始日志、figures/ 论文图、viz/ Perfetto trace
 ├── third_party/   git-subrepo pin（vllm-omni、metronome、moshi、DuplexOmni、personaplex），只读
@@ -36,5 +30,5 @@ omni-anything/
 
 ## 复现
 
-`harness/USAGE.md` 是操作入口：起一次实验敲哪条命令、跑完 30 秒内怎么判读终态、以及哪些读数会骗人。
+`harness/README.md` 是操作入口：起一次实验敲哪条命令、跑完 30 秒内怎么判读终态、以及哪些读数会骗人。
 最容易被骗的一条：客户端 miss = 0% 在会话已经崩溃时照样成立（silent failure，cadence 指标全绿而内容早已过时，`docs/findings.md` B1），健康判据要看 `kv.log` 的 starvation 信号。
