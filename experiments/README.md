@@ -19,7 +19,7 @@ All implemented experiments use the repository-wide parsing and Perfetto interfa
 adds one tested raw-artifact adapter there; it does not create an experiment-local trace stack.
 
 The authoritative claim-to-experiment mapping is
-[`../docs/PAPER-EXPERIMENTS.md`](../docs/PAPER-EXPERIMENTS.md). Do not create empty E4-E6 code
+[`../docs/EXPERIMENTS.md`](../docs/EXPERIMENTS.md). Do not create empty E4-E6 code
 directories before implementations exist; the table is the roadmap and the filesystem represents
 actual code.
 

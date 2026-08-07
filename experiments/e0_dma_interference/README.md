@@ -25,4 +25,4 @@ results/e0_dma_interference/runs/<UTC-run-id>/
 
 The committed initial result is indexed in
 [`../../results/README.md`](../../results/README.md). The exact method and acceptance threshold are
-defined in [`../../docs/PAPER-EXPERIMENTS.md`](../../docs/PAPER-EXPERIMENTS.md).
+defined in [`../../docs/EXPERIMENTS.md`](../../docs/EXPERIMENTS.md).

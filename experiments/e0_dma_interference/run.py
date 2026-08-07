@@ -1,4 +1,4 @@
-"""E0: DMA-decode interference microbenchmark (docs/PAPER-EXPERIMENTS.md E0).
+"""E0: DMA-decode interference microbenchmark (docs/EXPERIMENTS.md E0).
 
 The conveyor moves tail KV over PCIe H2D *while* decode steps run. The one
 parameter no existing calibration can predict: does a sustained pinned-H2D

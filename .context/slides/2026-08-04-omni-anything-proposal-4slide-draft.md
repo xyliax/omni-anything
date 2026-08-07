@@ -1,11 +1,12 @@
 # Omni-Anything 立项幻灯片草稿
 
+表达层草稿，不是事实来源；数字与现行主线以 `docs/` 事实层为准。本稿是较宽的立项叙事（三研究点），可滞后。
+
 更新日期：2026-08-04  
 范围：4 页 · 标题 / 项目目标 / 研究问题 / 三个研究点  
 读者：了解 Agent 基本概念，但不熟悉全双工模型与 LLM serving 的立项评审
 
-生成稿：`2026-08-04-omni-anything-proposal-draft.pptx`  
-最新文本提取：`.llm/2026-08-04-omni-anything-proposal-draft/slides.md`
+生成的 pptx 与文本提取不入库（根 `.gitignore`）；本文即该 deck 的唯一仓库内可读来源。
 
 ---
 
@@ -110,7 +111,7 @@
 
 双工会话没有轮次间隙，KV cache 随输入持续增长，每个 tick 都要访问。系统往往不是先把 GPU 算满，而是先触及 capacity-bound。
 
-> 真实软件栈（vLLM + 模型 + 显卡）实验中，KV 池满后出现 starvation，而 85% 的 GPU 采样仍为 0% SM util。
+> 真实软件栈实验中，KV 池满后出现 starvation，而多数 GPU 采样仍为 0% SM util（E1 一例约 85% 采样为 0%；勿单独以本稿为证）。
 
 #### ② 微小周期工作 vs. 通用动态引擎
 
@@ -142,7 +143,7 @@
 
 # 从「能双工」到「能持续、稳定、高效地双工」
 
-### 研究点 1｜状态容量
+### 研究点 1｜状态容量（现行主线候选 ≈ KV conveyor）
 
 ## 持续双工会话的 KV 状态虚拟化与请求编排
 
@@ -154,7 +155,7 @@
 
 `state virtualization · scheduled tail-KV migration · transactional writeback`
 
-### 研究点 2｜执行控制
+### 研究点 2｜执行控制（非现行主线；设想稿在 `.context/ideas/`）
 
 ## 面向周期交互的静态执行计划特化
 
@@ -166,7 +167,7 @@
 
 `process compilation · AOT execution · finite signatures`
 
-### 研究点 3｜数据移动
+### 研究点 3｜数据移动（非现行主线；设想稿在 `.context/ideas/`）
 
 ## 面向同请求共享上下文的 prefill–decode 融合
 

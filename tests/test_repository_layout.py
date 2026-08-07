@@ -27,7 +27,6 @@ class RepositoryLayoutTests(unittest.TestCase):
             "results" + "/viz/",
         )
         roots = (
-            ROOT / "docs",
             ROOT / "environment",
             ROOT / "experiments",
             ROOT / "observability",

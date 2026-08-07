@@ -7,7 +7,7 @@
 | 动作 | 允许 | 落点 |
 | --- | --- | --- |
 | 阅读对照 | 是 | 本目录下各 pin |
-| 改实验/插桩/方案代码 | 是 | 仓库 `harness/`、根文档、自有 fork/patch |
+| 改实验/插桩/方案代码 | 是 | 仓库 `harness/`、`docs/` 文档、自有 fork/patch |
 | 直接改 `third_party/*` 当实验代码 | **否** | — |
 | 下载模型权重、大数据集进本目录 | **否** | — |
 | 手改各 pin 内 `.gitrepo` | **否**（git-subrepo 维护） | — |
@@ -20,9 +20,9 @@
 
 | 路径 | 上游 | 何时打开 |
 | --- | --- | --- |
-| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；纪律见 `../METRONOME-NOTE.md` |
+| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/METRONOME.md` |
 | `DuplexOmni/` | https://github.com/MuyeHuang/DuplexOmni | 前台双工 + 后台异步写回；480ms 拍 / 注入通道 |
-| `moshi/` | https://github.com/kyutai-labs/moshi | 锁步真双工模型与官方服务端 |
+| `moshi/` | https://github.com/kyutai-labs/moshi | 锁步全双工模型与官方服务端 |
 | `personaplex/` | https://github.com/NVIDIA/personaplex | 可控角色/音色双工；规格与 server 形态 |
 | `vllm-omni/` | https://github.com/vllm-project/vllm-omni | 上游 omni serving 栈对照 |
 
@@ -42,5 +42,5 @@ git subrepo status third_party/<name>
 
 ## 与事实源的关系
 
-- 现行结论与实验数字：仓库根 `AGENTS.md` / `FINDINGS.md` / `PROBLEM.md` / `results/`，不从本目录反推。
-- 文档与 digest：`.context/`，不是代码 pin。
+- 现行结论与实验数字：根 `AGENTS.md` 地图、`docs/` 事实层与 `results/`，不从本目录反推。
+- `.context/` 是思考原料（digest / 调研），不是事实层，也不是代码 pin。
