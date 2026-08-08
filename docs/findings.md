@@ -44,16 +44,16 @@ context 触达 max_model_len（MML）后，session 假稳定（0–1ms「健康�
 **B4 · 1601ms 等待上限特征读数无法区分成因**
 compute-bound 和 memory-bound 透过同一个等待帽都读作 1601ms——定性必须配合 KV 轨迹 + SM util（streaming multiprocessor 利用率）：SM 高位 = compute-bound，归零 = memory-bound。
 
-## C. tick 内执行剖面（引擎每 2 秒在干什么）
+## H. tick 内执行剖面（引擎每 2 秒在干什么）
 
-**C1 · 稳态剖面**（43 个 tick 一致）
+**H1 · 稳态剖面**（43 个 tick 一致）
 8 路在 84ms 内全部进 batch（p95 164ms，无任何跨 session 屏障——先完成 prefill 的立即 decode）→ **89% 的 step 是纯 batch=8 的 decode，21.0ms/step** → 收尾 2–3 step 配额领完退场 → busy 811ms/2000ms。encoder **152/152 与该 session prefill 同步共排**，从无独立 encoder step。
 证据：`E1_exec_lanes.png`；e1periter/e1schtr 逐步日志。
 
-**C2 · 每 tick 33 token 的真实出处**
+**H2 · 每 tick 33 token 的真实出处**
 vLLM 对 resumable request 的 max_tokens 语义是**每段独立**的（段边界清零输出计数，`scheduler.py:1058`），worker 的累计式公式 `25n+8` 实际退化为恒定 33/段（仍在 running 的 session 9900 token = 33×300 段，精确）。tick 结构完全由 audio 到达节奏从外部塑形，引擎对「tick」零感知。
 
-**C3 · 本系列全部运行处于 async scheduling 模式**
+**H3 · 本系列全部运行处于 async scheduling 模式**
 vLLM 0.23 对 `None` 默认启用 async scheduling，相关日志被 WARNING 吞掉。step interval = pipeline tick = 纯 GPU step time（两家项目口径一致）；tick 开场首 step 在 pipeline drain 后含 CPU 串行成分，「encoder+prefill 耗时 48–86ms」应读作上界。
 
 ## D. 硬件上可用公式直接算的关系（可跨代际外推的部分）
@@ -73,18 +73,18 @@ vLLM 0.23 对 `None` 默认启用 async scheduling，相关日志被 WARNING 吞
 **D5 · 显存预算构成**
 21.6GiB 预算 = thinker weight 16.64GiB（含 **vision tower 1.26GiB 未参与推理的占用**，折合 +30% 池容量）+ activation 约 0.5GiB + KV pool 约 4.0GiB。
 
-## E. 与生态对照
+## K. 与生态对照
 
-**E1 · Metronome paper 归因正确，repo 笔记的 attention drift 作废**
+**K1 · Metronome paper 归因正确，repo 笔记的 attention drift 作废**
 paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳态竞速模型）；其 repo 工作笔记里的 "attention drift" 是废弃旧说。我们的增量 = scheduler 代码级死锁机制分析 + per-request 粒度 + 消费卡复现 + 三形态分层。
 
-**E2 · 他们的 30B 每 step decode 4.8–14ms**
+**K2 · 他们的 30B 每 step decode 4.8–14ms**
 （fused FP8 MoE probe）→ 其 capacity-bound 时的 compute headroom 比我们更大（MoE 偏离 D1 不变量的方向）。
 
-**E3 · 「resident 是唯一预算兼容选择」（其 §2 对 swap 的分析性排除）有两个可证伪假设**
+**K3 · 「resident 是唯一预算兼容选择」（其 §2 对 swap 的分析性排除）有两个可证伪假设**
 ① 全量轮换是不具代表性的 baseline（真实设计点是 partial residency + 链路扩容；我们的操作点即便全量轮换也只需 4.2GB/s）；② 「无空隙可藏」（每会话子 tick 占用比例 1/N 就是空隙；E0 实测 decode step 减速系数 κ=1.067（slowdown factor），H2D 几乎不拖慢计算）。chip-to-chip（C2C）900GB/s 加速使此论断过期。
 
-**E4 · DuplexOmni 的 480ms 切片 = 论文主配置的 tick 长**
+**K4 · DuplexOmni 的 480ms 切片 = 论文主配置的 tick 长**
 （负载保真背书）；其「延迟推理」通道（[THINK] → 异步云端推理 → 结果注入后续切片）= 实验 E4 注入负载的量产形态。而其论文零 serving 数字（无并发 / 每卡 session）——模型论文止步于 N=1、real-time factor RTF < 1，serving 层是空白。
 
 ## F. 测量方法教训（本系列自己踩出来的）
@@ -99,14 +99,10 @@ paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳�
 块宽占位值事件（service duration 无数据时禁止画宽度）；时间轴图必须画真实 tick 边界（坐标整数刻度会被读成节拍）。
 
 **F4 · 残差归因前先验前提**
-同步模式假设未验证 → 「2–4ms bubble」过度归因（残差小于带宽假设误差带）；async 默认开启这一前提本身就是发现（C3）。
+同步模式假设未验证 → 「2–4ms bubble」过度归因（残差小于带宽假设误差带）；async 默认开启这一前提本身就是发现（H3）。
 
 **F5 · 默认值语义要查解析代码**
 `bool|None=None` 实为「自动开」。
 
 **F6 · 前提性 bug 的放大效应**
 种子单位失准（1.6 token/词）意外发现「oversized seed 启动 = 零秒复现 admission deadlock」——现为最快的死锁复现路径。
-
-## G. 工具资产（复用入口）
-
-暖启动种子（`--seed-tokens`，KV 池饱和时间 217→125s，context 成为受控变量）；scheduler 逐步 trace（sitecustomize 注入 EngineCore）；每 request P/F/T 事件；Perfetto 导出（`harness/viz/export_perfetto.py`，泳道 + counter 一条命令）；共享 GPU 空闲检测脚本 `harness/wait_quiet.sh`。

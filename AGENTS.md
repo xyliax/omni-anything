@@ -33,7 +33,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 
 | 文档 | 状态 | 完整持有 |
 | --- | --- | --- |
-| `docs/problem.md` | 结论 | 问题定义、负载三要素、实测事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
+| `docs/problem.md` | 结论 | 问题定义、负载三要素、四个事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
 | `docs/findings.md` | 结论 | E 系列一句话发现 + 证据指针；**看结论从这里开始** |
 | `docs/design.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
 | `docs/experiments.md` | 协议（冻结） | 主张→实验矩阵、平台决策与 Metronome 复用地图、负载协议、方法论、验收判据 |
@@ -66,6 +66,6 @@ PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 ha
 - 进展、主线与数字以 `docs/findings.md`、`results/`、`docs/experiment-log.md` 为准。
 - 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结负载参数）；引用与校准各在同一出处内进行。
 - 标准术语全仓一致，完整定义与英文对照见 `docs/glossary.md`；各文首次使用留短注即可，不重复完整定义。
-- 编号空间撞名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
+- 编号空间撞名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS K3」「FINDINGS D4」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
 - 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 引用纪律节。
 - `README.md` 只做对外定位（GitHub 落地页）；契约、地图与索引在 AGENTS.md 体系（根、`harness/`、`third_party/`）。

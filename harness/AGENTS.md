@@ -98,6 +98,7 @@ python3 harness/viz/export_perfetto.py <TAG>     # → results/viz/<TAG>.trace.j
 - `viz/bundle.py`：数据层——解析五件套日志并做跨时钟对齐，产出 bundle；数据层唯一真源，新格式先进 bundle，再进各前端。
 - `viz/export_perfetto.py`：由 bundle 导出 `results/viz/<tag>.trace.json.gz`（已 gitignore，可重新生成）。
 - `plots/`：论文静态图生成脚本（每张已提交的图对应一个脚本——工件纪律，勿删）。
+- `wait_quiet.sh`：共享 GPU 空闲检测，测量前与 `third_party/metronome/bench/gpu_probe.py` 的 `wait_for_window` 连用。
 
 ## 扩展工具链
 

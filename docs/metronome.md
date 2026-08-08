@@ -14,7 +14,7 @@
 | 正交可叠加 | `ONLINE_ADMIT=1` → `--online-admit --admit-target 0.7` | AIMD 准入：从每帧延迟反馈发现 `N*`（可调度并发数 / schedulable concurrency），与 KV 策略正交 |
 
 竞争对照那一行是本仓库方案的正面对立面：in-engine windowed KV 用有损截断换有界显存；KV conveyor（scheduled tail-KV offloading）走无损路线，用暂存换等效容量。
-paper §2 把 swap 分析性排除、断言 resident 是唯一预算兼容选择，其两个假设（全量轮换 baseline、tick 内无空隙）经 FINDINGS E3 证伪，conveyor 的对照位置正在这里。
+paper §2 把 swap 分析性排除、断言 resident 是唯一预算兼容选择，其两个假设（全量轮换 baseline、tick 内无空隙）经 FINDINGS K3 证伪，conveyor 的对照位置正在这里。
 这套脚手架不覆盖本仓库负载的两条路径：注入（`proto/inference.proto` 有 `SessionInput.text`，gateway 从不填、streaming worker 也不读）与负载下的 cancellation（gRPC `Step` 认 `s.cancel`，但只有 CPU 侧模拟测试）。两者都要在此之上自加。
 
 ## 两条必须继承的方法论
@@ -25,7 +25,7 @@ fresh-per-point（`experiments/run_fresh_sweep.sh`，每个数据点重新加载
 ## 引用纪律
 
 归因以 paper 为准：`paper/body.tex` 明写 "The failure is a memory cliff, not a compute drift"，机制是亚稳态竞速：池占用线性上升 ρ(t) = ρ0 + N·r·t，当饱和时刻 t_sat 与会话时长同量级时，填充速率 r 的常规波动就把不同运行推到崩溃边界的两侧。
-repo 工作笔记 `RESULTS_METRONOME_OVER_VLLM.md` 里的 "attention drift" 是废弃旧说；上游自己的订正把短爆发「N=128 崩溃」这类数字归为扫点污染（FINDINGS E1）。
+repo 工作笔记 `RESULTS_METRONOME_OVER_VLLM.md` 里的 "attention drift" 是废弃旧说；上游自己的订正把短爆发「N=128 崩溃」这类数字归为扫点污染（FINDINGS K1）。
 未复核的墙钟秒数不引用。1601ms 等待帽（worker `--wait-budget-s` = 0.8×tick）读数无法区分成因：compute-bound 与 memory-bound 透过同一个等待帽读作同一个数（FINDINGS B4），不能单独用来定性。
 
 可引用的结论形状（本仓库跨验证只取这一类）：

@@ -15,10 +15,10 @@
 | # | 主张 | 实验 | 已有锚点（证据或预测） |
 |---|---|---|---|
 | C1 | 全双工 serving 在真机上 capacity-bound（受 KV 池容量约束，区别于 bandwidth-bound 义的 memory-bound）：KV cache 池涨满即饱和，此时 GPU 时间大量空闲；后台注入使饱和更早到来 | E1 | FINDINGS A3 / A5 / D1 |
-| C2 | 一 tick 内 H2D 可与 decode 计算并行，κ（decode step 减速系数 slowdown factor，κ = t_with/t_without）小到可用：机制物理可行 | E0 | FINDINGS E3 |
-| C3 | 主结果：KV conveyor 把等效 KV 容量扩到 M+P，收益约 P/M 且内容无损（饱和时刻延后 (M+P)/M 倍；N* 提升 P/M） | E2 | FINDINGS D4（公式预测，E2 待实测） |
+| C2 | 一 tick 内 H2D 可与 decode 计算并行，κ（decode step 减速系数 slowdown factor，κ = t_with/t_without）小到可用：机制物理可行 | E0 | FINDINGS K3 |
+| C3 | 主结果：KV conveyor 把等效 KV 容量扩到 M+P，收益约 P/M 且内容无损（饱和时刻延后 (M+P)/M 倍；N* 提升 P/M） | E2 | FINDINGS D4（公式预测，由 E2 检验） |
 | C4 | 收益依赖编排：相位指派 (phase-offset assignment，TDM 式错开) 按时间表错开各路占用，能把链路利用率 η 从随机相位的低值拉回来，指派收益可单独测量 | E3 | FINDINGS D3 |
-| C5 | commit / cancel 语义 + 注入走链路第二优先级：stale resident KV（已作废仍常驻的 KV）从源头消除，注入不打爆一 tick 的 deadline | E4 | FINDINGS E4（负载保真背书，非机制证据） |
+| C5 | commit / cancel 语义 + 注入走链路第二优先级：stale resident KV（已作废仍常驻的 KV）从源头消除，注入不打爆一 tick 的 deadline | E4 | FINDINGS K4（负载保真背书，非机制证据） |
 | C6 | 无损性：分钟尺度外的内容召回，KV conveyor 正确且不饱和，windowed KV（sliding window）窗外必错 | E5 | E5 首次产出 |
 | C7 | 收益比 **P/M = η·B_link·T/M_bytes** 是纯硬件比值：跨 tick 长 T、链路带宽 B_link、模型档位的收益地形与公式吻合 | E6 | FINDINGS D1 / D3 / D4 |
 
@@ -29,8 +29,7 @@ C5 的两列能力（注入 + cancellation 语义）现有系统均未覆盖：M
 
 ### 决策 D1：KV conveyor 宿主 = 自研 paged-KV worker，不先改 vLLM 内核
 
-KV conveyor 需要逐步操纵 block table，并在独立 CUDA copy stream 上按 tick 预取、算完即释放 staging block。
-在 vLLM 内部做这件事要同时对抗 scheduler、CUDA graph、混合 KV manager 三层（Metronome 仅为 sliding window 就打了 FIX 5/6 两个内核补丁）。
+在 vLLM 内部做 conveyor（逐步操纵 block table + 独立 copy stream）要同时对抗 scheduler、CUDA graph、混合 KV manager 三层（Metronome 仅为 sliding window 就打了 FIX 5/6 两个内核补丁）。
 主路线：以 `third_party/metronome/metronome/engine.py`（FlashAttention paged-KV 多租户 decode 循环，产出了他们论文的主结果数字）为底子，写我们自己的 conveyor worker，实现同一 gRPC 协议，挂在同一 gateway 后面。
 模型小（1.7B），自研循环完全可控。
 
@@ -44,7 +43,7 @@ KV conveyor 需要逐步操纵 block table，并在独立 CUDA copy stream 上�
 ### 决策 D2：模型与负载形态 = 文本代理双工负载（Qwen3-1.7B），tick 结构显式合成
 
 24GB 上 30B 不可行；Omni-7B 由 encoder 成为瓶颈，结论会被 encoder 污染（Metronome 自己的数据证明这点）。
-用 Qwen3-1.7B，每 tick 8 token 增量 prefill + 2–4 次 decode，tick 长 T=480ms 为主配置。
+用 Qwen3-1.7B，tick 长 T=480ms 为主配置；每 tick 负载细节以 §三负载协议为准。
 
 效度威胁「不是真音频」的答复：KV 增长与搬运物理只依赖 token 率与字节数，不依赖模态；E6 用公式外推 Metronome 的 2s tick / 30B 定义做交叉核对；诚实列入 limitations。
 
@@ -151,7 +150,7 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 T 轴四点均有真实系统锚定：80ms = Moshi / PersonaPlex（音频原生 12.5Hz）；480ms = DuplexOmni（文本–文本切片，决策 D2 主结果定义）；~1s = MiniCPM-o；2s = Qwen-Omni（音频 encoder 2s 块 + TMRoPE 每 2s 时间交织，arXiv:2503.20215）。
 
 适用域声明：80ms 音频原生端没有会话 churn 窗口，这是不值得做该区的架构学原因；conveyor 是文本–文本切片家族（480ms–2s）的设计，恰为可做注入 / tool call 的那一支。
-本卡上 T=480ms 与 T=2s 的实际收益被 compute 封顶压到接近，T 的差别要在算力倍数更高的卡上才显形；两个 T 的收益口径由 E2 的 (M, P, 算力倍数) 三元组统一。
+本卡上 T=480ms 与 T=2s 的实际收益被 compute 封顶压到接近，T 的差别要在算力倍数更高的卡上才显形；口径对账按 E2 的对账检验。
 
 硬件锚点：本机 PCIe 实测 12.30 GB/s（Gen3 档，`calibration/data/pcie_h2d_bench.json` 的标定曲线同档记 12.33 GB/s）；Metronome Blackwell + 30B-A3B 的发表数字（step time 4.8–14ms、饱和时刻 t_sat 模型）；H200 / GB300 规格注记点。
 

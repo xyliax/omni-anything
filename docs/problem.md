@@ -3,11 +3,11 @@
 ## 一句话
 
 全双工语音 serving 是 **capacity-bound**：容量先于算力耗尽，与 bandwidth-bound 意义上的 memory-bound 是两回事。
-KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request 之间也没有空隙把历史换出。
+KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request 之间也没有轮次间隙把历史换出。
 于是计算远未饱和时 KV pool 就已饱和崩溃（本仓 E1 在 RTX 3090 上实测此顺序，FINDINGS A3；Metronome 真机同构，paper 原话 "memory kills sessions whose compute the GPU could easily carry"）——容量是稀缺资源，而每一 tick 内的 H2D 带宽和计算时间大量闲置。
 
 方向性回答：**用闲置的数据搬运带宽换更大的并发容量**，即按 tick 时间表调度的 **KV conveyor**（scheduled tail-KV offloading）。
-收益是纯硬件比值：3090 + 7B 预测 N=15–16（2×，封顶在 compute 而非链路，FINDINGS D4）；H100 + PCIe 5 / 480 ms tick 上净增约 20%（公式推演的线性外推）。
+收益是纯硬件比值：3090 + 7B 预测约 2×（封顶在 compute 而非链路，FINDINGS D4）；H100 + PCIe 5 / 480 ms tick 上净增约 20%（公式推演的线性外推）。
 方案的真机判据是 E2 的稳态容量与 E3 的相位三臂。
 
 ## 负载的三要素
@@ -20,22 +20,20 @@ KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request
 
 要素 ① 每 tick 取 8 token（Qwen3-Omni 的 `position_id_per_seconds: 13` 折算为约 6 token/片，本工作取谱系中位 12.5–25 tok/s 的偏高值）；要素 ② 的长度分布与 40% cancellation 概率同为冻结负载参数，E4 按此实测注入与作废。
 前台模型谱系按 tick 结构分三类：Moshi 系 80 ms 锁步帧（输入并入自回归步，无独立 prefill）；SyncLLM 系 160–240 ms 时间分块；Qwen-Omni / Freeze-Omni 系 thinker 架构 480 ms 切片（音频编码器分块输入 = 增量 prefill，主干出文本，轻量语音头合成）。
-本工作对标第三类：论文主配置 tick = 480 ms（与 DuplexOmni §3.1.2 的固定时间片逐字一致，FINDINGS E4），E1 真机栈 tick = 2 s。
+本工作对标第三类：论文主配置 tick = 480 ms（与 DuplexOmni §3.1.2 的固定时间片逐字一致，FINDINGS K4），E1 真机栈 tick = 2 s。
 三要素同时出现在产品层：GPT-Live（OpenAI，2026-07）把 invoke a tool 做成 tick 内决策、复杂问题委托后台 frontier 模型再把结果送回对话；Seeduplex（字节，2026-04，豆包全量）同为 ①+②+③。两家服务侧均闭源。
 
-## 四个实测事实
+## 四个事实
 
-**事实 1 · 显存先于算力成为瓶颈。** E1 真机（vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090，tick 2 s，N=8）下 KV pool 饱和有三种失效形态：`full_sequence_must_fit` 的 re-admission 条件加 FCFS `break` 造成 head-of-line blocking 全员死锁、preemption cascade、同步填充下的 admission deadlock（FINDINGS A3）。
-被抢占的 session 永不复活：re-admission 要求整段序列装得下，而 starve 后前端仍持续追加 context（9.4k→24.9k token），空闲从未超过约 12%，复活次数为零（FINDINGS A5）。
+**事实 1 · 显存先于算力成为瓶颈（E1 真机已证）。** KV pool 饱和有三种失效形态：head-of-line blocking 全员死锁、preemption cascade、同步填充下的 admission deadlock（FINDINGS A3）；被抢占的 session 因 re-admission 条件永不复活（FINDINGS A5）。
 capacity-bound 时算力恒有约一半空闲：busy/T ≈ 38–55%，对模型、tick 长、显卡代际三重不变（FINDINGS D1）。
 Metronome 真机交叉验证同一顺序：vanilla 触达 memory cliff 时计算远未饱和。
-历史量化形态（早期模拟器标定，方向已由 E1 独立确证）：KV 侧的可调度并发数 N*（schedulable concurrency，判据 miss rate ≤ 1%）= 12，远小于 deadline 侧的 N* = 192 / 208（随机相位 / 相位对齐）；每会话子 tick 占用比例 4–9%。
-E1 另暴露一类 host-dependent 的 ingest 饱和（multimodal input processing 单线程，能撑住的路数 N_ingest = tick / t_chunk，本机 7.5 路，FINDINGS A1），一个语句移入线程池即修复（frame-to-process 排队 1015 ms → 3 ms，FINDINGS A2）——那是工程债，不是本问题的结构瓶颈。
+历史量化形态（早期模拟器标定，方向已由 E1 独立确证）：KV 侧 N*（schedulable concurrency）= 12，远小于 deadline 侧的 192 / 208（随机相位 / 相位对齐）。
+E1 另暴露 host-dependent 的 ingest 饱和（能撑住的路数 N_ingest = tick / t_chunk，本机 7.5 路，FINDINGS A1/A2）——工程债，一个补丁修复，不是本问题的结构瓶颈。
 
 **事实 2 · 相位从没被当成可调度资源。** 早期模拟器标定：随机相位比相位对齐多花 **4.96 倍** GPU 时间，其中到达碰巧凑 batch 产生的额外开销占全卡忙时 **64.7%**。
 batch size 由会话到达的巧合决定，调度器没有话语权（引擎 work-conserving：有活就干、从不等待）。
-真机侧的相位打散 (phase desynchronization) 守恒律已定：平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8，上界 T·BW/(配额×W) ≈ 3.4（3090 + 7B）；相位差 T/N 的连续旋转优于离散槽；同步 tick 下 conveyor 无收益，时间排他性是 capacity 扩展的必要条件（FINDINGS D3）。
-E3 的三臂（全常驻 / conveyor + 随机相位 / conveyor + 指派相位）给出这条事实的真机数。
+真机侧的相位打散 (phase desynchronization) 守恒律与「连续旋转优于离散槽」已定（FINDINGS D3）；E3 的三臂（全常驻 / conveyor + 随机相位 / conveyor + 指派相位）给出这条事实的真机数。
 
 **事实 3 · 不分片 prefill 与 tick deadline 正面冲突，伤害由相位 1:1 决定。** 早期模拟器标定：最坏相位下 **L\* = 6144** token 即 deadline 超限，同样的注入落在 tick 初、**L = 8192** token 都安全；冲击宽度正好一 tick，下一 tick 回基线。
 机制：不分片 prefill (one-shot / unchunked prefill) 是不可 preemption 的原子步，落在 tick 尾整段溢出；注入只要走引擎 step，就与 tick 内计算抢同一资源。
@@ -54,11 +52,10 @@ E4 按注入相位分桶实测这条 1:1 关系。
 
 compute-bound 拐点 B\*（roofline ridge point：batch 大到摊平权重搬运，越过后 MLP 转 compute-bound）在 3090 + 7B 上约 40–80（FINDINGS D1）。
 哪类瓶颈先到是硬件与负载参数的函数：3090 上 capacity 先饱和（E1 确证），80GB 卡上注入瓶颈先到（早期公式推演）。
-但在所有现实配置下 capacity 瓶颈都远早于卡的计算能力耗尽，D1 的 busy/T ≈ 38–55% 不变量是这条结论的硬件无关形式——这是全部机会所在。
+但在所有现实配置下 capacity 瓶颈都远早于卡的计算能力耗尽，D1 的 busy/T 不变量是这条结论的硬件无关形式——这是全部机会所在。
 瓶颈以内由调度负责，超出瓶颈只能靠 admission control：那不是本问题的失败，是它的边界。
 
-silent failure 让上述三条都测不出来：cadence 指标全绿而内容已过时。
-崩溃状态下 worker 等待帽 1.6 s < 2 s deadline，每 tick 仍准时返回空帧，miss 恒 0%、frame delivery 100%（FINDINGS B1）；client latency 恒 1 ms 而 semantic response lag 最多约 16 s（FINDINGS B2）。
+silent failure 让上述三条都测不出来：崩溃状态下 cadence 指标全绿（miss 恒 0%、frame delivery 100%）而内容已过时（FINDINGS B1/B2）。
 duplex serving 因此需要独立的 content freshness SLO（按 SRE 意义给内容陈旧度阈值），容量决策不能只看利用率。
 
 ## 为什么难：结构性信息缺失与跨层耦合
@@ -90,20 +87,20 @@ Metronome（arXiv:2607.02640）是截至 2026-08 唯一的全双工 GPU serving 
 
 | # | 关系 | 内容 |
 |---|---|---|
-| 1 | 交叉验证 | 真机（Qwen3-Omni-30B FP8 / 96 G / tick 2 s）独立测得同一瓶颈出现顺序：vanilla 下 memory cliff 先到（计算远未饱和），KV 受限后 deadline 瓶颈 N\*≈209 小于显存外推约 500，与本仓「显存先于算力」同构（数值巧合不构成校准）；引用其数字前先过 `docs/metronome.md` 的订正纪律 |
+| 1 | 交叉验证 | 真机（Qwen3-Omni-30B FP8 / 96GB / tick 2 s）独立测得同一瓶颈出现顺序：vanilla 下 memory cliff 先到（计算远未饱和），KV 受限后 deadline 才成为主导（数值见上文三类瓶颈节；数值巧合不构成校准）；引用其数字前先过 `docs/metronome.md` 的引用纪律 |
 | 2 | 对照负载 | 它测的是最温顺的双工负载：每帧存活量恒定、无注入、无作废——要素 ② 的两半它全空 |
 | 3 | 方案种子 | 刻意错开相位的实验设置升级为相位指派；sliding window 的 state-bounded 世界是有损对照 |
 | 4 | 竞争方案 | 它对「KV 装不下」用 W=1024 sliding window（有损，与注入驻留冲突）；conveyor 目标是无损保全上下文 |
 | 5 | 互补可叠加 | 它管 capacity 上限之外（AIMD admission）与有损 cap；conveyor 在瓶颈约束内扩张 capacity |
 | 6 | 实验脚手架 | 开源栈（vLLM 0.23 resumable request + 共享 tick gateway）是本仓真机 baseline 的来源 |
 
-它 §2 以「resident 是唯一预算兼容的选择」分析性排除 swap，两个假设可证伪：全量轮换不是真实设计点（真实设计点是 partial residency 加链路扩容），以及「无空隙可藏」——每会话子 tick 占用比例 1/N 就是空隙，E0 实测 decode step 减速系数 κ (slowdown factor) = 1.067，H2D 几乎不拖慢计算（FINDINGS E3）。
+它 §2 以「resident 是唯一预算兼容的选择」分析性排除 swap，其两个假设——全量轮换 baseline 与「无空隙可藏」——已被证伪：真实设计点是 partial residency 加链路扩容，每会话子 tick 占用比例 1/N 就是空隙，E0 实测 κ = 1.067、H2D 几乎不拖慢计算（FINDINGS K3）。
 
 ## 方案方向（摘要）
 
-每路尾部 KV 的母本住在 host DRAM，按时间表每一 tick 经 DMA 搬入 HBM 暂存、算完即释放，攒满阈值才 commit 为 resident（借用 two-phase commit 的形状）。
+每路尾部 KV 的母本 (authoritative host copy) 住在 host DRAM，按时间表每一 tick 经 DMA 搬入 HBM 暂存、算完即释放；尾部攒满阈值转正 resident，注入结果以 uncommitted 态停 DRAM，确认说出才 commit、打断即 cancel。
 等效容量 = resident M + staging P，收益比是纯硬件比值。
-可行的前提是周期已知、相位可指派、内容按帧冻结（搬运作业的 release time = 内容冻结点，deadline = 计算槽 − τ_lead）。
+可行的前提是周期已知、相位可指派、内容按帧冻结。
 与四个事实一一对应：事实 1 是收益来源；事实 2 → 相位指派把「刻意错开相位」从实验设置升级为调度资源；事实 3 → 注入走同一链路的第二优先级、不进引擎 step；事实 4 → commit / cancel 从源头消灭 stale resident KV。
 与 Metronome 的 AIMD 准入和有损 cap 正交可叠加。公式、增益表、编排细节与诚实边界属于方案记录，不在本文展开。
 

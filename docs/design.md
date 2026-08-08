@@ -2,7 +2,7 @@
 
 ## 动机
 
-全双工 serving 在真机上是 capacity-bound（因 KV 池装不下而失败，区别于 bandwidth-bound 意义上的 memory-bound）：池打满即多数会话 starve，而同一时刻 GPU 约有一半时间空闲（FINDINGS C1、D1）。
+全双工 serving 在真机上是 capacity-bound（因 KV 池装不下而失败，区别于 bandwidth-bound 意义上的 memory-bound）：池打满即多数会话 starve，而同一时刻 GPU 约有一半时间空闲（FINDINGS H1、D1）。
 tick 内的 H2D 链路同样大量闲置，本设计的全部内容就是用这两份闲置资源赎回 HBM 容量。
 KV conveyor：按 tick 时间表把每路会话的尾部 KV 母本 (authoritative host copy) 从 host DRAM 经 DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading，谱系为 FlexGen / InfiniGen / vLLM offloading connector / LMCache），等效 KV 容量 = resident M + staging P。
 
@@ -13,7 +13,7 @@ KV conveyor：按 tick 时间表把每路会话的尾部 KV 母本 (authoritativ
 尾部不 resident，每 tick decode 前重新 prefill 尾部、用完即弃，攒满阈值 C 才转 resident。
 否证是重算次数的算术：每个 token 在 commit 前被重算约 C/(2a) 次（a≈10 token/tick，C=2048 时约 100 次），代价按 tick 重复支付。
 合并两类瓶颈 N = min(N_comp(C), N_mem(C))，对任意 C 都不优于 baseline：C 小省不下显存，C 大算力先塌。
-本质是拿每 tick 重复消耗的引擎步时间去换一次性的字节存量，而引擎步是 tick 内最稀缺的资源：稳态纯 decode 实测 21.0ms/step（batch=8，FINDINGS C1），一个 2s tick 只放得下几十步。
+本质是拿每 tick 重复消耗的引擎步时间去换一次性的字节存量，而引擎步是 tick 内最稀缺的资源：稳态纯 decode 实测 21.0ms/step（batch=8，FINDINGS H1），一个 2s tick 只放得下几十步。
 
 ### v2（现行）：阈值转正 + 按时间表的 H2D
 
@@ -73,8 +73,8 @@ KV conveyor：按 tick 时间表把每路会话的尾部 KV 母本 (authoritativ
 
 η 不是硬件给的，是调度挣的：随机相位下需求聚簇造成链路瞬时尖峰，要么 H2D 迟到，要么被迫压低 η（收益缩水）。设计目标是把 H2D 需求摊平成近恒定速率。
 
-- 相位指派 (phase-offset assignment)：准入时把新会话插进最空的相位位置，同时摊平计算 batch 到达与 DMA 到达两条需求曲线。连续旋转优于离散槽：相位差取 T/N 均匀铺开，每 T/N 一路进、一路出，链路双向各约 2.1GB/s 恒定（对比本机 12.30GB/s 容量）；离散分 G 组则是 G 倍峰值的脉冲（FINDINGS D3）。
-- 非重叠忙碌窗 (time-multiplexed residency) 是容量扩展的必要条件：同步 tick 下 conveyor 无收益，因为忙碌窗内每个 step 都读全员 KV，峰值 resident 不降（D3）。相位打散 (phase desynchronization) 用算力余量换常驻容量，代价是权重每 step 重读，守恒律 B̄ ≥ N×配额×t_step/T ≈ 2.8，上界 T·BW/(配额×W) ≈ 3.4（3090 + 7B）。
+- 相位指派 (phase-offset assignment)：准入时把新会话插进最空的相位位置，同时摊平计算 batch 到达与 DMA 到达两条需求曲线。连续旋转优于离散槽：相位差取 T/N 均匀铺开，每 T/N 一路进、一路出，链路负载近恒定且余量数倍；离散分 G 组则是 G 倍峰值的脉冲（数字见 FINDINGS D3）。
+- 非重叠忙碌窗 (time-multiplexed residency) 是容量扩展的必要条件：同步 tick 下 conveyor 无收益，因为忙碌窗内每个 step 都读全员 KV，峰值 resident 不降（D3）。相位打散 (phase desynchronization) 用算力余量换常驻容量，代价是权重每 step 重读；守恒律与上界见 FINDINGS D3。
 - 按时间表的 H2D：每路每 tick 一个搬运作业，release time = 内容冻结点（上 tick 计算完，帧边界后尾部不再变），deadline = 本 tick 计算槽 − τ_lead。τ_lead 取 40–60ms 覆盖链路排队 p99，对 6.4ms 的服务时间是约 10× 余量。链路侧用 EDF (Earliest Deadline First) + 令牌桶；周期、相位、大小三者先验已知，因此是周期任务集，可调度性可静态验证（Liu-Layland 式判据直接写得出）。
 - 关键张力：显存收益随预取时刻推迟而增大，提前整 tick 等于零收益，零提前等于零容错。相位指派把排队近似确定化，允许把 τ_lead 压到收益折损 ≤15% 的位置。
 - 链路三级混合关键性：尾部 H2D（硬 tick，inelastic）> 注入 KV 搬运（弹性注入，delay-tolerant）> 静默停泊（后台）。η 留出的 30% 就是后两类与抖动的预算。链路调度与计算侧的注入安放 (injection placement) 同构，一套 deadline-aware 语义在两种资源上各证一次。
@@ -105,7 +105,7 @@ conveyor 要逐步操纵 block table，并在独立 CUDA copy stream 上按 tick
 
 可证伪面是四条：搬运与计算可并行、相位摊平确有收益、扩容对内容无损、cancel 之后不留 stale resident KV。
 
-- 并行性已实测：E0 二十格网格上 κ（decode step 减速系数 slowdown factor，κ = t_with/t_without）最大 1.067，大格 1.01–1.03，干扰按每 step 加性约 2.5ms 建模而非乘性折损（FINDINGS E3）。DMA 与 decode 重叠这一物理前提在本机成立。
+- 并行性已实测：E0 二十格网格上 κ（decode step 减速系数 slowdown factor，κ = t_with/t_without）最大 1.067，大格 1.01–1.03，干扰按每 step 加性约 2.5ms 建模而非乘性折损（FINDINGS K3）。DMA 与 decode 重叠这一物理前提在本机成立。
 - η=0.7 是保守的工程假设，实测计算期链路可用率约 0.94；真实值由搬运时间表的调度质量决定，E3 三臂（全常驻 / 随机相位 / 指派相位）测的就是它。
 - 待测一，E2 收益带：固定 N 测 t_wall 比是否落在 (M+P)/M 的 ±15% 内，并给出 N* 全曲线而非单点。
 - 待测二，注入臂：对照不分片 prefill (one-shot/unchunked prefill，对照 chunked prefill / Sarathi-Serve) 直接进引擎步与走链路第二优先级两种安放，测已作废但仍常驻的 KV 字节轨迹、陈旧拼接 (stale context splice) 次数、注入完成延迟。
