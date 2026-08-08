@@ -2,7 +2,7 @@
 
 ## 一句话
 
-双工语音 serving 是 **capacity-bound**：容量先于算力耗尽，与 bandwidth-bound 意义上的 memory-bound 是两回事。
+全双工语音 serving 是 **capacity-bound**：容量先于算力耗尽，与 bandwidth-bound 意义上的 memory-bound 是两回事。
 KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request 之间也没有空隙把历史换出。
 于是计算远未饱和时 KV pool 就已饱和崩溃（本仓 E1 在 RTX 3090 上实测此顺序，FINDINGS A3；Metronome 真机同构，paper 原话 "memory kills sessions whose compute the GPU could easily carry"）——容量是稀缺资源，而每一 tick 内的 H2D 带宽和计算时间大量闲置。
 
@@ -18,7 +18,7 @@ KV cache 每 tick 都必须参与 attention，常驻显存只增不减，request
 | ② 弹性注入 | 后台 agent 的 tool 结果，数百到数千 token，约 10% 落在 4–8k 长尾；40% 概率被用户打断而作废。delay-tolerant，对照 inelastic 的硬 tick 前台 | 纯双工锁步（moshi-server / Metronome 已解决） |
 | ③ 单卡多路 | concurrent session 数 N 是目标函数（受成本约束），不是外部给定 | 单会话工程问题 |
 
-要素 ① 每 tick 取 8 token（Qwen3-Omni 的 `position_id_per_seconds: 13` 折算为约 6 token/片，本工作取谱系中位 12.5–25 tok/s 的偏高值）；要素 ② 的长度分布与 40% cancellation 概率同为冻结先验，E4 按此实测注入与作废。
+要素 ① 每 tick 取 8 token（Qwen3-Omni 的 `position_id_per_seconds: 13` 折算为约 6 token/片，本工作取谱系中位 12.5–25 tok/s 的偏高值）；要素 ② 的长度分布与 40% cancellation 概率同为冻结负载参数，E4 按此实测注入与作废。
 前台模型谱系按 tick 结构分三类：Moshi 系 80 ms 锁步帧（输入并入自回归步，无独立 prefill）；SyncLLM 系 160–240 ms 时间分块；Qwen-Omni / Freeze-Omni 系 thinker 架构 480 ms 切片（音频编码器分块输入 = 增量 prefill，主干出文本，轻量语音头合成）。
 本工作对标第三类：论文主配置 tick = 480 ms（与 DuplexOmni §3.1.2 的固定时间片逐字一致，FINDINGS E4），E1 真机栈 tick = 2 s。
 三要素同时出现在产品层：GPT-Live（OpenAI，2026-07）把 invoke a tool 做成 tick 内决策、复杂问题委托后台 frontier 模型再把结果送回对话；Seeduplex（字节，2026-04，豆包全量）同为 ①+②+③。两家服务侧均闭源。
@@ -34,7 +34,7 @@ E1 另暴露一类 host-dependent 的 ingest 饱和（multimodal input processin
 
 **事实 2 · 相位从没被当成可调度资源。** 早期模拟器标定：随机相位比相位对齐多花 **4.96 倍** GPU 时间，其中到达碰巧凑 batch 产生的额外开销占全卡忙时 **64.7%**。
 batch size 由会话到达的巧合决定，调度器没有话语权（引擎 work-conserving：有活就干、从不等待）。
-真机侧的相位打散 (desync) 守恒律已定：平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8，上界 T·BW/(配额×W) ≈ 3.4（3090 + 7B）；相位差 T/N 的连续旋转优于离散槽；同步 tick 下 conveyor 无收益，时间排他性是 capacity 扩展的必要条件（FINDINGS D3）。
+真机侧的相位打散 (phase desynchronization) 守恒律已定：平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8，上界 T·BW/(配额×W) ≈ 3.4（3090 + 7B）；相位差 T/N 的连续旋转优于离散槽；同步 tick 下 conveyor 无收益，时间排他性是 capacity 扩展的必要条件（FINDINGS D3）。
 E3 的三臂（全常驻 / conveyor + 随机相位 / conveyor + 指派相位）给出这条事实的真机数。
 
 **事实 3 · 不分片 prefill 与 tick deadline 正面冲突，伤害由相位 1:1 决定。** 早期模拟器标定：最坏相位下 **L\* = 6144** token 即 deadline 超限，同样的注入落在 tick 初、**L = 8192** token 都安全；冲击宽度正好一 tick，下一 tick 回基线。
@@ -42,7 +42,7 @@ E3 的三臂（全常驻 / conveyor + 随机相位 / conveyor + 指派相位）�
 chunked prefill（Sarathi-Serve）让每块重付一次「掉出 CUDA graph capture」的固定开销（早期标定），且仍在消耗引擎步——出路是让注入的 KV 生成不走前台引擎步。
 E4 按注入相位分桶实测这条 1:1 关系。
 
-**事实 4 · 打断后的 stale resident KV。** 早期模拟器标定（40% 打断为冻结先验）：峰值 **24.2%** 的 resident KV 是已作废内容，平均驻留 **35.6 s**，每分钟 **2.2 次**陈旧拼接 (stale context splice)——用户已否决的答案照样被拼进上下文说出，是正确性事故而不只是浪费。
+**事实 4 · 打断后的 stale resident KV。** 早期模拟器标定（40% 打断为冻结负载参数）：峰值 **24.2%** 的 resident KV 是已作废内容，平均驻留 **35.6 s**，每分钟 **2.2 次**陈旧拼接 (stale context splice)——用户已否决的答案照样被拼进上下文说出，是正确性事故而不只是浪费。
 机制：cancellation 信号只存在于应用层（打断事件），引擎 API 没有它的入口；PagedAttention 支持按块 reclaim，但没有任何机制知道哪些块该释放。
 已作废仍常驻的 KV 每步 decode 仍按原价付带宽。E4 实测这条比例，并验证 commit / cancel 能否从源头消灭它。
 
@@ -52,8 +52,8 @@ E4 按注入相位分桶实测这条 1:1 关系。
 - **Deadline 瓶颈**：state 被 windowed 或换出后才成为主导约束（Metronome 加 **W=1024** sliding window 后 **N\*≈209**，小于显存外推的**约 500**；早期模拟器标定给 N* = 192 / 208）。
 - **注入瓶颈**：效率地板上，一 tick 内计算加注入的总需求 = 1 时 **N≈57**（早期模拟器线性外推：baseline N=48 已两头坏，48→57 是调度器可争取的空间，超过 57 进入 admission control 领域）。
 
-摊平拐点 B\*（amortization knee：batch 大到能摊平权重搬运，越过后 MLP 转 compute-bound）在 3090 + 7B 上约 40–80（FINDINGS D1）。
-哪类瓶颈先到是硬件与负载参数的函数：3090 上 capacity 先饱和（E1 确证），80 G 卡上注入瓶颈先到（早期公式推演）。
+compute-bound 拐点 B\*（roofline ridge point：batch 大到摊平权重搬运，越过后 MLP 转 compute-bound）在 3090 + 7B 上约 40–80（FINDINGS D1）。
+哪类瓶颈先到是硬件与负载参数的函数：3090 上 capacity 先饱和（E1 确证），80GB 卡上注入瓶颈先到（早期公式推演）。
 但在所有现实配置下 capacity 瓶颈都远早于卡的计算能力耗尽，D1 的 busy/T ≈ 38–55% 不变量是这条结论的硬件无关形式——这是全部机会所在。
 瓶颈以内由调度负责，超出瓶颈只能靠 admission control：那不是本问题的失败，是它的边界。
 
@@ -97,7 +97,7 @@ Metronome（arXiv:2607.02640）是截至 2026-08 唯一的全双工 GPU serving 
 | 5 | 互补可叠加 | 它管 capacity 上限之外（AIMD admission）与有损 cap；conveyor 在瓶颈约束内扩张 capacity |
 | 6 | 实验脚手架 | 开源栈（vLLM 0.23 resumable request + 共享 tick gateway）是本仓真机 baseline 的来源 |
 
-它 §2 以「resident 是唯一预算兼容的选择」分析性排除 swap，两个假设可证伪：全量轮换不是真实设计点（真实设计点是 partial residency 加链路扩容），以及「无空隙可藏」——每会话子 tick 占用比例 1/N 就是空隙，E0 实测 decode step 时间膨胀系数 κ = 1.067，H2D 几乎不拖慢计算（FINDINGS E3）。
+它 §2 以「resident 是唯一预算兼容的选择」分析性排除 swap，两个假设可证伪：全量轮换不是真实设计点（真实设计点是 partial residency 加链路扩容），以及「无空隙可藏」——每会话子 tick 占用比例 1/N 就是空隙，E0 实测 decode step 减速系数 κ (slowdown factor) = 1.067，H2D 几乎不拖慢计算（FINDINGS E3）。
 
 ## 方案方向（摘要）
 

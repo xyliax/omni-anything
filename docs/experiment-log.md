@@ -4,7 +4,7 @@
 新 run 只 append 本文；提炼出的结论改 `docs/findings.md`（条目码 A1..G 是全仓引用锚点），本文条目不随结论回改。
 条目按时间序，后文条目可更正前文，更正就地留指针。
 历史条目迁入本文时统一过术语与代号写法；数字、判定与时间戳未动。
-κ = decode step 时间膨胀系数 (slowdown factor, κ = t_with/t_without)。
+κ = decode step 减速系数 (slowdown factor, κ = t_with/t_without)。
 ## 2026-08-04：M0 完成（环境 + 冒烟 + E0），E1 由并行会话执行中
 
 **环境与冒烟（任务 #1–#4）**：vLLM 0.23.0 虚拟环境（`~/vllm023-venv`）+ Go 1.22.5（`~/goroot`）
@@ -98,7 +98,7 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 - injection 臂（等 gateway text 事件）：未跑。
 - 600s@MML=32768 复测 N=4/6：已跑变体——`results/paper/baseline/e1perreq_n{4,6}_d300_*`
   （300s / GPU3 / 每请求粒度插桩），非清单所列的 600s@MML=32768 配置。
-- ≥5 次乱序重复：2/5——`e1schtr_n8_d600` 为第 2 次（见 2026-08-06 capacity cascade 重复条目）。
+- ≥5 次乱序重复：2/5——`e1schtr_n8_d600` 为第 2 次（见 2026-08-06 preemption cascade 重复条目）。
 
 ## 2026-08-04：E1 每请求粒度插桩重跑（N=8/600s/MML=32768，GPU3）——死锁机制的直接证据
 
@@ -124,7 +124,7 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 - **引擎节奏（每请求「处理时长」的正确定义）**：batch 引擎无独占时间；实测
   **F−P 排队 latency p50≈1015ms 全程稳定**——每 tick 的量恰在下一 tick 到达后约 1s 消化完，
   pipeline 满载但不落后（饱和前 SM util 79–100% 佐证）；等效摊分 ≈2s/8=250ms GPU 时间/会话/tick。
-  首 token 时间（TTFA）p50 1608ms（首 tick 含预热）。
+  首 token 时间（TTFT）p50 1608ms（首 tick 含预热）。
 - **测量学注记**：AsyncLLM 前端输出合批（374 个 T 事件覆盖 28.8k token），T 时间戳不可用于
   tick 内细粒度区间；F 事件是可靠的引擎侧时序信号。更细的每 step 耗时要到 M2 自有 worker 里拿
   （decode 循环自持，天然可测）。
@@ -167,7 +167,7 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
   ② **真实的内容时效服务目标（本 tick 音频本 tick 处理完）从约 60s 起对所有会话持续违约且违约量线性增长**——
   按此定义 N=8 在本硬件上根本不可行（ingest 容量 ≈ 2000/265 ≈ 7.5 路），节奏指标对此完全失明；
   ③ 对 E3：vanilla 配置已在付轮转的全部代价（突发期间其余 7 路 KV 白白占用显存）却没拿到任何好处
-  （无控制、无法配合搬运窗口）——TDM 相位指派 (phase-offset assignment，按时间表错开各路占用)
+  （无控制、无法配合搬运窗口）——相位指派 (phase-offset assignment，按时间表错开各路占用)
   是把它变成 tick 级、确定性、可与 conveyor prefetch 对齐的版本。
 
 ## 2026-08-04：并行 ingest 补丁实验（e1paringest，N=8/600s/GPU3）——ingest 瓶颈证实后即修复，capacity bottleneck 改换形态
@@ -184,7 +184,7 @@ latency 钉在 1600ms = worker `wait_budget`（0.8×tick）轮询顶，属于 ha
 8 路每 tick 同步推进、紧贴推送线。健康期引擎出现真空闲（running 队列呼吸式 7↔0，SM 相位均值 35.6%）——
 GPU 余量直接可见。代价：首 token 时间 18ms→751ms（t=0 八路首 prefill 同时压 GPU，无害）。
 
-**新故障形态：capacity cascade（`results/figures/E1_cascade_anatomy.png`，脚本
+**新故障形态：preemption cascade（`results/figures/E1_cascade_anatomy.png`，脚本
 `harness/plots/plot_e1_cascade.py`）**：池打满 kv=1.000 → preempt 一个会话 → 仍在运行的会话以
 N_alive×78tok/2s 回填 → 再满再 preempt。6 次 preemption（216.8/247.1/288.4/346.1/432.8/577.1s，
 间隔 30→41→58→87→144s 精确按 1/N_alive 拉长），终态 2 路仍在运行（context 25.8k≈1.4GB each）。
@@ -261,23 +261,23 @@ token 时会话 1/2 尚未进场——「等 8 个编码完才 decode」不存�
 ① tpt=25 的来源是语音级 token 率（12.5 tok/s），+8 是余量；② 生产 33/tick vs 客户端取 25/tick
 的差额在 worker 文本缓冲累积（无害但存在，harness 语义备忘）。
 
-## 补注：TDM 相位打散 (desync) 的守恒律与粒度上界（E3/M2 设计参数，2026-08-05）
+## 补注：相位打散 (phase desynchronization) 的守恒律与粒度上界（E3/M2 设计参数，2026-08-05）
 
 同步程度是连续旋钮，服从守恒：平均 batch size B̄ × 每 tick 步数 = N × 配额（264 tok），
 步数 ≤ T/t_step ≈ 95 ⟹ **B̄ ≥ N×配额×t_step/T ≈ 2.8**。
 两端点：完全同步（E1 实测：B̄=8、35 step、忙碌 35%、峰值常驻=全部会话、链路无用）↔
-最大 desync（B̄≈3、95 step 铺满 tick、忙碌→100%、任意时刻仅约 3 路 KV 常驻、链路全程可用）。
-**desync = 用算力余量购买常驻缩减**（权重每 step 重读是代价），
+最大打散（B̄≈3、95 step 铺满 tick、忙碌→100%、任意时刻仅约 3 路 KV 常驻、链路全程可用）。
+**打散 = 用算力余量购买常驻缩减**（权重每 step 重读是代价），
 上界 = T·BW/(配额×权重字节) ≈ 3.4（3090+7B）；MoE / HBM 卡上界大幅放宽
 （30B-A3B step time 4.8-14ms → 10+）→ 进 E6 地形。
 **连续旋转优于离散组**：相位差 T/N=250ms 均匀铺开 → 每 250ms 一路进 / 一路出 →
 链路双向各约 2.1GB/s 恒定（vs 12.3GB/s 容量，6× 余量；离散 G 组则为 G 倍峰值的脉冲）。
-E3 三臂坐标：全常驻=B̄8 端点、随机相位=旋钮失控、TDM 相位指派=主动选 B̄≈3 均匀旋转。
+E3 三臂坐标：全常驻=B̄8 端点、随机相位=旋钮失控、相位指派=主动选 B̄≈3 均匀旋转。
 M2 时刻表参数：相位间隔、τ_lead、B̄ 目标 + 守恒律可行性检查。同步 tick 下 conveyor 无收益的根因：
-忙碌窗内 batch decode 每 step 读全部会话 KV → 峰值常驻不降，时间排他性是容量扩展的必要条件
+忙碌窗内 batch decode 每 step 读全部会话 KV → 峰值常驻不降，非重叠忙碌窗是容量扩展的必要条件
 （D1 自研 worker 的调度动机）。
 
-## 2026-08-06：capacity cascade 重复 2/5（e1schtr_n8_d600，全程 scheduler 追踪）——确定性时钟、被 preempt 会话任意
+## 2026-08-06：preemption cascade 重复 2/5（e1schtr_n8_d600，全程 scheduler 追踪）——确定性时钟、被 preempt 会话任意
 
 **复现强度**：六次 preemption 时刻两次运行逐点吻合 ±0.4s
 （run1: 217.0/247.1/288.4/346.1/432.8/577.1 vs run2: 216.8/247.2/288.4/346.1/432.9/577.2），
@@ -303,7 +303,7 @@ step time 随 context 增长直接测得：23.7ms（早期）→26.2ms（末期 
 每 tick 被 promotion（提升回 waiting 队列）→admission 失败→退回，零 eviction 的全员冻结。
 至此 capacity bottleneck 三形态齐全：
 ① 两种瓶颈叠在一起导致全体卡死（串行 ingest × capacity，run=0/wait=8）；
-② capacity cascade（并行 ingest + context 异步耗尽，pre=6，2 路仍在运行）；
+② preemption cascade（并行 ingest + context 异步耗尽，pre=6，2 路仍在运行）；
 ③ 同步耗尽导致的 admission 死锁（并行 ingest + context 同步，pre=0，全员冻结）——
 形态由「池耗尽时刻落在 tick 内还是 tick 间」与「ingest 是否积压」二维决定，全部终结于多数 / 全部会话 starve
 + GPU 闲置。论文的机制分析节按此三分。**静态图规范追加**：时间轴图必须画真实 tick 边界
@@ -318,7 +318,7 @@ capacity-bound = KV 池容量先于算力饱和（区别于 bandwidth-bound 义�
 （24–36ms）与配额随 tick 长缩放（r×T）：
 **busy_wall/T ≈ r×0.9×(V/BW) + 开场占比 ≈ 38–55%（r=语音级）——对模型、tick 长、显卡代际三重不变**。
 「capacity-bound 时算力恒有约一半空闲」（C1 最强形式）。适用边界：
-① B > B*（摊平拐点 amortization knee）≈ 字节/参数×TFLOPS/(2×BW)
+① B > B*（compute-bound 拐点）≈ 字节/参数×TFLOPS/(2×BW)
 （3090+bf16 约 40–80，H100+bf16 约 200，B200+FP8 约 280）后 MLP 变为 compute-bound
 （缓降非跳变，attention 项恒为 memory-bandwidth-bound）；
 ② MoE 反向偏离（等效权重小 → 空闲更多，Metronome 30B-A3B 即此）；

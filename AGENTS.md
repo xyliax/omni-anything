@@ -4,9 +4,9 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 
 ## 项目一句话
 
-在单张 GPU 上同时跑两类负载：双工语音前台 (duplex speech foreground) 的硬 tick（固定周期 T 的硬 deadline 帧，inelastic），与后台 agent 结果注入 (injection，delay-tolerant 弹性)。
+在单张 GPU 上同时跑两类负载：全双工语音前台 (full-duplex speech foreground) 的硬 tick（固定周期 T 的硬 deadline 帧，inelastic），与后台 agent 结果注入 (injection，delay-tolerant 弹性)。
 
-当前候选方案是 **KV conveyor**：按 tick 时间表把每路会话的尾部 KV 母本 (canonical copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading），等效 KV 容量 = resident M + staging P；用闲置 H2D 带宽换更高的 N*（可调度并发数 schedulable concurrency，判据 miss rate ≤ 1%）。
+当前候选方案是 **KV conveyor**：按 tick 时间表把每路会话的尾部 KV 母本 (authoritative host copy) 从 host DRAM DMA 预取入 HBM 暂存、算完即释放（scheduled tail-KV offloading），等效 KV 容量 = resident M + staging P；用闲置 H2D 带宽换更高的 N*（可调度并发数 schedulable concurrency，判据 deadline miss rate ≤ 1%）。
 
 - **E1 实测栈**：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090，tick = 2s
 - **论文主配置（设计目标）**：文本代理双工与 tick 结构写在 `docs/experiments.md`；与 E1 栈是两套配置，数字各归各套
@@ -38,9 +38,10 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 | `docs/design.md` | 方案候选 | 方案演化、公式与收益、编排、宿主决策、相关工作、边界与未决检验 |
 | `docs/experiments.md` | 协议（冻结） | 主张→实验矩阵、平台决策与 Metronome 复用地图、负载协议、方法论、验收判据 |
 | `docs/experiment-log.md` | 过程记录（append-only） | 真机 run 记录；新 run 只 append 这里 |
-| `docs/metronome.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用订正 |
+| `docs/metronome.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用纪律 |
+| `docs/glossary.md` | 定义 | 全仓统一术语的完整定义与英文对照；各文首用只留短注 |
 
-E4 冻结先验（40% cancellation、LogNormal 注入）写在 `docs/experiments.md` 负载协议节。
+E4 冻结负载参数（40% cancellation、LogNormal 注入）写在 `docs/experiments.md` 负载协议节。
 
 **FINDINGS ↔ 实验记录**：新 run 只 append `docs/experiment-log.md`；提炼结论只改 `docs/findings.md`。
 
@@ -63,8 +64,8 @@ PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 ha
 ## 行为约束
 
 - 进展、主线与数字以 `docs/findings.md`、`results/`、`docs/experiment-log.md` 为准。
-- 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结先验）；引用与校准各在同一出处内进行。
-- 标准术语全仓一致：全双工 (full-duplex)、注入 (injection)、N* 可调度并发数 (schedulable concurrency)、饱和 (saturation)。
+- 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结负载参数）；引用与校准各在同一出处内进行。
+- 标准术语全仓一致，完整定义与英文对照见 `docs/glossary.md`；各文首次使用留短注即可，不重复完整定义。
 - 编号空间撞名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；实验代号（E0–E6）与论文主张（C1–C7）裸写。
-- 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 订正节。
+- 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 引用纪律节。
 - `README.md` 只做对外定位（GitHub 落地页）；契约、地图与索引在 AGENTS.md 体系（根、`harness/`、`third_party/`）。

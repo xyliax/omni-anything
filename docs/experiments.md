@@ -12,14 +12,14 @@
 
 ## 一、主张与实验矩阵
 
-| # | 主张 | 实验 | 已有证据锚点 |
+| # | 主张 | 实验 | 已有锚点（证据或预测） |
 |---|---|---|---|
-| C1 | 双工 serving 在真机上 capacity-bound（受 KV 池容量约束，区别于 bandwidth-bound 义的 memory-bound）：KV cache 池涨满即饱和，此时 GPU 时间大量空闲；后台注入使饱和更早到来 | E1 | FINDINGS A3 / A5 / D1 |
-| C2 | 一 tick 内 H2D 可与 decode 计算并行，κ（decode step 时间膨胀系数，κ = t_with/t_without）小到可用：机制物理可行 | E0 | FINDINGS E3 |
-| C3 | 主结果：KV conveyor 把等效 KV 容量扩到 M+P，收益约 P/M 且内容无损（饱和时刻延后 (M+P)/M 倍；N* 提升 P/M） | E2 | FINDINGS D4 |
-| C4 | 收益依赖编排：按时间表错开各路占用（TDM，time-division multiplexing 相位指派）能把链路利用率 η 从随机相位的低值拉回来，phase-offset assignment 的收益可单独测量 | E3 | FINDINGS D3 |
-| C5 | commit / cancel 语义 + 注入走链路第二优先级：stale resident KV（已作废仍常驻的 KV）从源头消除，注入不打爆一 tick 的 deadline | E4 | FINDINGS E4 |
-| C6 | 无损性：分钟尺度外的内容召回，KV conveyor = 无界正确性，windowed KV（sliding window）会失败 | E5 | E5 首次产出 |
+| C1 | 全双工 serving 在真机上 capacity-bound（受 KV 池容量约束，区别于 bandwidth-bound 义的 memory-bound）：KV cache 池涨满即饱和，此时 GPU 时间大量空闲；后台注入使饱和更早到来 | E1 | FINDINGS A3 / A5 / D1 |
+| C2 | 一 tick 内 H2D 可与 decode 计算并行，κ（decode step 减速系数 slowdown factor，κ = t_with/t_without）小到可用：机制物理可行 | E0 | FINDINGS E3 |
+| C3 | 主结果：KV conveyor 把等效 KV 容量扩到 M+P，收益约 P/M 且内容无损（饱和时刻延后 (M+P)/M 倍；N* 提升 P/M） | E2 | FINDINGS D4（公式预测，E2 待实测） |
+| C4 | 收益依赖编排：相位指派 (phase-offset assignment，TDM 式错开) 按时间表错开各路占用，能把链路利用率 η 从随机相位的低值拉回来，指派收益可单独测量 | E3 | FINDINGS D3 |
+| C5 | commit / cancel 语义 + 注入走链路第二优先级：stale resident KV（已作废仍常驻的 KV）从源头消除，注入不打爆一 tick 的 deadline | E4 | FINDINGS E4（负载保真背书，非机制证据） |
+| C6 | 无损性：分钟尺度外的内容召回，KV conveyor 正确且不饱和，windowed KV（sliding window）窗外必错 | E5 | E5 首次产出 |
 | C7 | 收益比 **P/M = η·B_link·T/M_bytes** 是纯硬件比值：跨 tick 长 T、链路带宽 B_link、模型档位的收益地形与公式吻合 | E6 | FINDINGS D1 / D3 / D4 |
 
 C6 是相对 Metronome windowed KV 的正面差异（有损 vs 无损）。
@@ -37,7 +37,7 @@ KV conveyor 需要逐步操纵 block table，并在独立 CUDA copy stream 上�
 公平性按三层设计，预答「自研引擎 vs vLLM 不可比」：
 
 - 主对比在同一 worker 内部：conveyor on vs off（全常驻），唯一差异是 KV 住哪，与 Metronome「相对未改动配置测差值，而非和不具代表性的 baseline 比」同一方法论。
-- vanilla vLLM-realtime 路径（`WINDOW=0`）作参照 baseline (sanity baseline)，证明我们 worker 的绝对性能不虚。
+- vanilla vLLM-realtime 路径（`WINDOW=0`）作参照 baseline，证明我们 worker 的绝对性能不虚。
 - windowed KV（应用层回收，`WINDOW=15` 路径的语义移植）作有损竞争方案对照。
 - 延伸（非必需）：vLLM KV-connector 集成作为落地故事，放讨论节。
 
@@ -52,8 +52,8 @@ KV conveyor 需要逐步操纵 block table，并在独立 CUDA copy stream 上�
 
 | 配置 | M（KV 池） | 预测 P/M（η=0.7，12.33GB/s，T=480ms） | 用途 |
 |---|---|---|---|
-| full-pool | ~18GB（24G − 权重 3.4G − 开销） | **~+23%**（恰与 H100+PCIe5 同量级） | 主结果，最诚实 |
-| capped-pool | ~5GB（压低 `gpu_memory_utilization`） | **~+83%** | 高信噪比机制验证 + 模拟 capacity-scarce 区间 |
+| full-pool | 约 18GiB（24GiB − 权重 3.4GiB − 开销） | **~+23%**（恰与 H100+PCIe5 同量级） | 主结果，最诚实 |
+| capped-pool | 约 5GiB（压低 `gpu_memory_utilization`） | **~+83%** | 高信噪比机制验证 + 模拟 capacity-scarce 区间 |
 
 该表是纯链路公式推演（P = η·B_link·T），未含 compute 封顶。
 FINDINGS D4 是同一张卡的真机预测（Qwen2.5-Omni-7B / T=2s / M≈4.0GiB，最精标定 74.3k token = 3.97GiB）：N=15–16、约 2×、封顶在 compute 而非链路，PCIe 利用率仅约 26%。
@@ -80,7 +80,7 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 
 - 一 tick：T=480ms 的硬 tick（固定周期 T 的硬 deadline 帧，Metronome 的 frame budget B）；每 tick 8 token 增量 prefill + 3 次 decode（2–4 抖动）；miss = 该 tick 输出未在 T 内就绪。
 - 会话时长主配置 600s：约 11 token/tick ≈ 22.9 tok/s，600s ≈ 13.7k token。分钟级瓶颈必须给它时间长出来，Metronome 的教训是 90s 看不到真实失败。
-- 注入过程（弹性注入，delay-tolerant，对照 inelastic 的硬 tick 前台）：每会话泊松到达（均值每 30s 一次），长度 LogNormal（中位 512，约 10% 尾部 4–8k token）；每次注入以 40% 概率在到达后 Uniform(0.5s, 5s) 被 cancel。这四个数是冻结先验（设计决定）。
+- 注入过程（弹性注入，delay-tolerant，对照 inelastic 的硬 tick 前台）：每会话泊松到达（均值每 30s 一次），长度 LogNormal（中位 512，约 10% 尾部 4–8k token）；每次注入以 40% 概率在到达后 Uniform(0.5s, 5s) 被 cancel。这四个数是冻结的负载参数（设计决定，预注册）。
 - 系统形态：closed-system 固定会话数 N（E1–E5）；open-system 爬坡 + admission（E4 附加臂，可选）。
 - 相位：客户端侧 `FD_PHASE_STAGGER=1` 恒开；服务端相位指派是 E3 的实验变量。
 
@@ -89,7 +89,7 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 3090 full-pool 下，可承载会话数 N₀ ≈ M/L 只有个位数到十几，N* 的 ±1 量化误差达 10–30%，单靠 N* 测不出 +23%。所以主结果同时报两个量：
 
 1. 饱和时刻延展比（连续、高信噪比）：固定 N，测 KV 池占用轨迹与首次 miss rate > 1% 的时刻 t_wall；预测 conveyor / baseline 的 t_wall 比 = (M+P)/M。对无界增长负载，这是最干净的连续量。
-2. N*（可调度并发数，schedulable concurrency，判据 miss rate ≤ 1%）：固定会话时长 600s + 会话 churn 稳态化，N 细扫，报告 miss rate–N 全曲线而非单点。
+2. N*（可调度并发数，schedulable concurrency，判据 deadline miss rate ≤ 1%）：固定会话时长 600s + 会话 churn 稳态化，N 细扫，报告 miss rate–N 全曲线而非单点。
 
 ## 四、实验矩阵
 
@@ -116,10 +116,10 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 
 ### E3 编排消融：相位指派的收益（C4）
 
-- 三臂：全常驻 / conveyor + 随机相位 / conveyor + TDM 指派相位。
+- 三臂：全常驻 / conveyor + 随机相位 / conveyor + 指派相位。
 - 测量：实达链路利用率 η（链路利用且不 miss 的上确界）、链路队列 p99、miss rate、净容量。
-- 附加扫描：τ_lead ∈ {10..120ms} → staging 峰值 vs miss 的权衡曲线；TDM 应允许更小的 τ_lead。
-- 预期：随机相位被迫 η 下降或 miss rate 上升，TDM 恢复到 η ≈ 0.7–0.9。这张图是编排贡献的核心证据。
+- 附加扫描：τ_lead ∈ {10..120ms} → staging 峰值 vs miss 的权衡曲线；相位指派应允许更小的 τ_lead。
+- 预期：随机相位被迫 η 下降或 miss rate 上升，相位指派恢复到 η ≈ 0.7–0.9。这张图是编排贡献的核心证据。
 
 ### E4 注入 + commit / cancel 语义（C5）
 
@@ -142,8 +142,8 @@ E2 的验收带取两者的 min()（见 E2 判据）。
 1. P/M = η·B_link·T/M_bytes（E0 锚定 η 与 B_link）。
 2. 池满时 step time = 0.9×显存/带宽的不变量，V/BW 跨五代恒为 24–36ms（FINDINGS D1）。
 3. busy(ctx) 斜率：busy 是总 resident 字节的函数而非会话数的函数（FINDINGS D2）。
-4. 摊平拐点 B*（amortization knee / compute-bound crossover）≈ 字节每参数 × TFLOPS/(2BW)，3090 约 40–80（FINDINGS D1）。
-5. TDM 相位打散守恒律：用算力余量换常驻容量，上界 T·BW/(配额×W)（FINDINGS D3）。
+4. compute-bound 拐点 B*（roofline ridge point）≈ 字节每参数 × TFLOPS/(2BW)，3090 约 40–80（FINDINGS D1）。
+5. 相位打散守恒律：用算力余量换常驻容量，上界 T·BW/(配额×W)（FINDINGS D3）。
 6. 收益 = min((M+P)/M, 算力倍数)（FINDINGS D4）。
 
 扫描轴：T ∈ {80ms..2s} × B_link ∈ {PCIe3 / PCIe4 / PCIe5, C2C 900GB/s} × 模型档位 → 等高线由公式绘制。
@@ -155,7 +155,7 @@ T 轴四点均有真实系统锚定：80ms = Moshi / PersonaPlex（音频原生 
 
 硬件锚点：本机 PCIe 实测 12.30 GB/s（Gen3 档，`calibration/data/pcie_h2d_bench.json` 的标定曲线同档记 12.33 GB/s）；Metronome Blackwell + 30B-A3B 的发表数字（step time 4.8–14ms、饱和时刻 t_sat 模型）；H200 / GB300 规格注记点。
 
-预期形状是 U 形（bathtub）收益地形：memory-bound 消费端与片间互联旗舰端高，PCIe + 胖显存中段低。
+预期形状是 U 形收益地形：memory-bound 消费端与片间互联旗舰端高，PCIe + 胖显存中段低。
 公式组可被审稿人直接复算。
 
 呈现形态（方法论榜样：FasterMoE / PPoPP'22 的 DDL-Roofline 范式）：定制 Deadline-Capacity Roofline，横轴每会话 context length，纵轴可承载 N*，三条屋顶（算力 / HBM 容量 / conveyor 抬升后容量），E1 实测轨迹为运动点；论文 Figure-1 候选。
@@ -183,8 +183,8 @@ T 轴四点均有真实系统锚定：80ms = Moshi / PersonaPlex（音频原生 
 
 1. M0：E0 微基准（先行，是继续 / 停手的门槛）+ gateway 构建 + 占位 worker 打通客户端→gateway→gRPC 管线（零 GPU）。
 2. M1：vanilla vLLM-realtime 路径文本分支跑通 → E1。
-3. M2：conveyor worker v1（固定时刻表，无 TDM）→ E2。
-4. M3：TDM + τ_lead 扫描（E3）→ 注入 / cancellation（E4）→ 召回探针（E5）。
+3. M2：conveyor worker v1（固定时刻表，无相位指派）→ E2。
+4. M3：相位指派 + τ_lead 扫描（E3）→ 注入 / cancellation（E4）→ 召回探针（E5）。
 5. M4：E6 公式地形 + 锚点核对；变异批次补测；工件打包。
 
 里程碑推进时，结论条目进 `docs/findings.md`，设计变更就地改本文，两边共用同一套实验编号。

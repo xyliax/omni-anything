@@ -4,7 +4,7 @@
 
 ---
 
-## A. 系统病理（默认 vLLM-realtime 如何失效）
+## A. 失效模式（默认 vLLM-realtime 如何失效）
 
 **A1 · multimodal input processing 跟不上（此前无人报告的第三类瓶颈）**
 vLLM realtime 的 multimodal input processing 是单线程的（`async_llm.py` 的 `handle_inputs` 在 event loop 线程上同步执行 `process_inputs`）。本机约 265ms/chunk；N=8 时 load factor ρ（每 tick 到达工作量 ÷ 每 tick 处理能力）= 1.06，backlog 无界增长（从 1 涨到 8 个 chunk），服务退化为约 15s 一轮的自发 round-robin，content staleness 线性上涨。**ingest 饱和的并发度是 host-dependent 的**：能撑住的最大路数 N_ingest = tick / t_chunk（我们是 7.5 路；Metronome 主机 ≥ 128 路——其 wall-clock time t_wall 随 N 缩短，证明它没有成为 input processing 瓶颈）。
@@ -22,7 +22,7 @@ vLLM realtime 的 multimodal input processing 是单线程的（`async_llm.py` �
 两次独立运行中，六次 preemption 时刻吻合 **±0.4s**（600s 全程），被抢占 session 名单完全不同（取决于 `running.pop()` 的瞬时排列）；被抢占那一刻，被抢占 session 与仍在 running 的 session 的 context 差仅 **2–3 token（0.03%）**。「何时 preempt 由池算术决定，preempt 谁纯属任意。」
 证据：e1paringest vs e1schtr 两组 600s 运行的 kv.log 对照。
 
-**A5 · 被抢占的 session 永不复活（irreversible starvation）**
+**A5 · 被抢占的 session 永不复活（permanent starvation）**
 被抢占 session 复活所需的 re-admission 条件 = 整段序列必须装得下（`full_sequence_must_fit` 默认开启），且 starve 后前端仍持续追加 context（9.4k→24.9k token）；空闲从未超过约 12% → 全部 running 中复活次数为零。
 证据：per-request T/F 事件时间线；`scheduler.py:995` prepend + `kv_cache_manager.py:354`。
 
@@ -35,13 +35,13 @@ vLLM realtime 的 multimodal input processing 是单线程的（`async_llm.py` �
 **B1 · silent failure：指标仍显示 real-time，内容已过时**
 worker 等待帽 1.6s < 2s deadline → 崩溃状态下每 tick 仍准时返回空帧，miss 恒 0%、frame delivery 100%。这是 Metronome「崩溃是静默的」（其原文：the collapse is silent）的 per-session 粒度版本。
 
-**B2 · frame latency ≠ content latency**
+**B2 · frame latency 测不出 content staleness**
 input backlog 期间，client latency 恒为 1ms（burst 预存了 8 个 tick 的 token buffer），而 semantic response lag 最多约 16s——cadence 指标结构性测不出 content staleness。duplex serving 需要独立的 content freshness SLO。
 
 **B3 · 触达 max_model_len 后停滞的 session**
 context 触达 max_model_len（MML）后，session 假稳定（0–1ms「健康」）。
 
-**B4 · 1601ms 等待上限特征读数是简并的**
+**B4 · 1601ms 等待上限特征读数无法区分成因**
 compute-bound 和 memory-bound 透过同一个等待帽都读作 1601ms——定性必须配合 KV 轨迹 + SM util（streaming multiprocessor 利用率）：SM 高位 = compute-bound，归零 = memory-bound。
 
 ## C. tick 内执行剖面（引擎每 2 秒在干什么）
@@ -64,14 +64,14 @@ vLLM 0.23 对 `None` 默认启用 async scheduling，相关日志被 WARNING 吞
 **D2 · busy 是总 resident 字节的函数，而非 session 数的函数**
 六次 preemption 时刻，N×ctx 恒等于 74.3k token（双曲线守恒：8×9.3k = 3×24.8k），busy 均约 1050–1090ms。附注：M 的最精标定 74.3k token = 3.97GiB。
 
-**D3 · 相位打散（desync）守恒律**
-平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8——去同步 = 用 compute headroom 购买 KV resident 缩减（代价是 weight 每 step 重读），上界 T·BW/(配额×W) ≈ 3.4（3090+7B）。**连续旋转优于离散槽**：相位差 T/N 铺开 → 链路双向各约 2.1GB/s 恒定（对比 12.3GB/s 容量）。同步 tick 下 conveyor 无收益（busy 窗内每 step 读全员 KV，峰值 resident 不降）——时间排他性是 capacity 扩展的必要条件。
+**D3 · 相位打散（phase desynchronization）守恒律**
+平均 batch 大小 B̄ ≥ N×配额×t_step/T ≈ 2.8——打散 = 用 compute headroom 购买 KV resident 缩减（代价是 weight 每 step 重读），上界 T·BW/(配额×W) ≈ 3.4（3090+7B）。**连续旋转优于离散槽**：相位差 T/N 铺开 → 链路双向各约 2.1GB/s 恒定（对比 12.3GB/s 容量）。同步 tick 下 conveyor 无收益（busy 窗内每 step 读全员 KV，峰值 resident 不降）——非重叠忙碌窗 (time-multiplexed residency) 是 capacity 扩展的必要条件。
 
 **D4 · 3090 稳态容量预测（E2 预告）**
 接入 tail KV conveyor 后 N=15–16（**2×**），封顶在 compute 而非链路（PCIe 利用率仅约 26%；理论 (M+P)/M = 4.9× 要 N≈39，需 4.7s compute 预算，本卡给不出）。收益可用公式直接算：min((M+P)/M, 算力倍数)。
 
 **D5 · 显存预算构成**
-21.6GiB 预算 = thinker weight 16.64（含 **vision tower 1.26GiB 未参与推理的占用**，折合 +30% 池容量）+ activation 约 0.5 + KV pool 约 4.0GiB。
+21.6GiB 预算 = thinker weight 16.64GiB（含 **vision tower 1.26GiB 未参与推理的占用**，折合 +30% 池容量）+ activation 约 0.5GiB + KV pool 约 4.0GiB。
 
 ## E. 与生态对照
 
@@ -82,12 +82,12 @@ paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳�
 （fused FP8 MoE probe）→ 其 capacity-bound 时的 compute headroom 比我们更大（MoE 偏离 D1 不变量的方向）。
 
 **E3 · 「resident 是唯一预算兼容选择」（其 §2 对 swap 的分析性排除）有两个可证伪假设**
-① 全量轮换是不具代表性的 baseline（真实设计点是 partial residency + 链路扩容；我们的操作点即便全量轮换也只需 4.2GB/s）；② 「无空隙可藏」（每会话子 tick 占用比例 1/N 就是空隙；E0 实测 decode step 时间膨胀系数 κ=1.067（slowdown factor），H2D 几乎不拖慢计算）。chip-to-chip（C2C）900GB/s 加速使此论断过期。
+① 全量轮换是不具代表性的 baseline（真实设计点是 partial residency + 链路扩容；我们的操作点即便全量轮换也只需 4.2GB/s）；② 「无空隙可藏」（每会话子 tick 占用比例 1/N 就是空隙；E0 实测 decode step 减速系数 κ=1.067（slowdown factor），H2D 几乎不拖慢计算）。chip-to-chip（C2C）900GB/s 加速使此论断过期。
 
 **E4 · DuplexOmni 的 480ms 切片 = 论文主配置的 tick 长**
 （负载保真背书）；其「延迟推理」通道（[THINK] → 异步云端推理 → 结果注入后续切片）= 实验 E4 注入负载的量产形态。而其论文零 serving 数字（无并发 / 每卡 session）——模型论文止步于 N=1、real-time factor RTF < 1，serving 层是空白。
 
-## F. 测量学教训（本系列自己踩出来的）
+## F. 测量方法教训（本系列自己踩出来的）
 
 **F1 · 限流采样不可用于快尺度结构推断**
 1Hz statlog 把 89% batch=8 混叠成「典型 3–5」；同类修复：Perfetto 导出的 concurrency counter 改由逐步 trace 派生。

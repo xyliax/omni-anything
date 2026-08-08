@@ -26,7 +26,7 @@ fresh-per-point（`experiments/run_fresh_sweep.sh`，每个数据点重新加载
 
 归因以 paper 为准：`paper/body.tex` 明写 "The failure is a memory cliff, not a compute drift"，机制是亚稳态竞速：池占用线性上升 ρ(t) = ρ0 + N·r·t，当饱和时刻 t_sat 与会话时长同量级时，填充速率 r 的常规波动就把不同运行推到崩溃边界的两侧。
 repo 工作笔记 `RESULTS_METRONOME_OVER_VLLM.md` 里的 "attention drift" 是废弃旧说；上游自己的订正把短爆发「N=128 崩溃」这类数字归为扫点污染（FINDINGS E1）。
-未复核的墙钟秒数不引用。1601ms 等待帽（worker `--wait-budget-s` = 0.8×tick）读数是简并的：compute-bound 与 memory-bound 透过同一个等待帽读作同一个数（FINDINGS B4），不能单独用来定性。
+未复核的墙钟秒数不引用。1601ms 等待帽（worker `--wait-budget-s` = 0.8×tick）读数无法区分成因：compute-bound 与 memory-bound 透过同一个等待帽读作同一个数（FINDINGS B4），不能单独用来定性。
 
 可引用的结论形状（本仓库跨验证只取这一类）：
 
