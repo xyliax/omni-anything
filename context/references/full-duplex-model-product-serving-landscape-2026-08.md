@@ -215,7 +215,7 @@ Moshi 7B 多路并发没有任何官方数字（论文全文、README、FAQ 均�
 [Metronome][metronome]（**2026-07-02**，论文 v1）是 serving 系统：周期性将所有到期 session 的小 prefill + 短 decode 组成一批，用有界 KV + attention sinks 避免长期 memory cliff，再用 AIMD 准入求可调度并发数 N\*。
 所有实验均为**单张 NVIDIA RTX PRO 6000 Blackwell**、真实音频以 20ms 网络 chunk 输入、各路 session 起始相位按时间表错开；容量不是 prefix-cache 复用出来的。
 
-口径注（本文一次性说明）：下表的 90 s 新会话数字属短爆发口径，上游仓库自认早期短爆发的墙钟数字受扫点污染，引用具体墙钟秒数前按 `docs/METRONOME.md` 的订正纪律核对。
+口径注（本文一次性说明）：下表的 90 s 新会话数字属短爆发口径，上游仓库自认早期短爆发的墙钟数字受扫点污染，引用具体墙钟秒数前按 `docs/metronome.md` 的订正纪律核对。
 可稳定引用的是「无界 KV 出现 memory cliff 且 GPU 时间占用偏低」与「KV 有界后 deadline 先于显存到达」这一层结论。
 
 | 被 serve 的模型 | 实验 frame budget | 90 s 新会话单 GPU 容量 | 长会话证据 |

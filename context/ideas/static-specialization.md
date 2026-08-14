@@ -9,7 +9,7 @@
 ## 未决
 
 - 特化对象是 micro-prefill、完整前台一 tick、混合 batch signature，还是其他执行单元
-- 哪些形状在目标负载中足够稳定且高频（论文负载已冻结为文本代理双工协议，见 `docs/EXPERIMENTS.md`；TML 交互模型负载为参考形态）
+- 哪些形状在目标负载中足够稳定且高频（论文负载已冻结为文本代理双工协议，见 `docs/experiments.md`；TML 交互模型负载为参考形态）
 - 现有引擎（CUDA graph capture、piecewise compilation、shape bucketing、编译路径）已覆盖到哪里
 - 预期收益、适用硬件、实现复杂度和验证实验
 
