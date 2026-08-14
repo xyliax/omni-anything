@@ -1,0 +1,271 @@
+"""Conveyor run assembly: what is launched and what counts as an issue.
+
+Same shape as the baseline runner (commands, environments, and issue scanners
+live here; the chronological workflow is ``lab/workflow.py``). The differences
+are the mechanisms: the staggered gateway takes ``--slots`` and writes a
+per-firing tick log, the take-from-stock worker has no wait budget, and park
+runs inject the engine patch plus scan park.log for silent failures.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Sequence
+
+from lab.artifacts import RunStore, make_run_id, scan_worker_fatal
+from lab.probes import resolve_model_snapshot
+from lab.workflow import Launch, RunPlan, execute
+from tracekit.collect import apply_scheduler_trace, gpu_monitor_command
+
+from .config import ConveyorConfig, model, platform, workload
+
+
+# The client self-terminates after --duration; the slack covers connection
+# ramp and shutdown. Beyond this the watchdog kills the run and records an
+# issue instead of hanging an unattended sweep forever.
+CLIENT_WATCHDOG_SLACK_S = 120
+
+
+def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
+    snapshot = resolve_model_snapshot(model.ID, model.REVISION)
+    cmd = [
+        str(config.worker_python),
+        "-u",
+        str(config.worker_path),
+        "--model",
+        str(snapshot),
+        "--port",
+        str(platform.WORKER_PORT),
+        "--gpu-mem",
+        str(config.gpu_memory_utilization),
+        "--max-model-len",
+        str(config.max_model_len),
+        "--max-num-seqs",
+        str(config.max_num_seqs),
+        "--tpt",
+        str(workload.TOKENS_PER_TICK),
+        "--max-audio-chunks",
+        str(workload.MAX_AUDIO_CHUNKS),
+        "--seed-tokens",
+        str(config.seed_tokens),
+        "--pre-seed-sessions",
+        str(config.sessions if config.seed_tokens else 0),
+        "--host-offload-gib",
+        str(config.host_offload_gib),
+    ]
+    if config.kv_pool_gib is not None:   # optional exact-byte cap; default full pool
+        cmd += ["--kv-pool-gib", str(config.kv_pool_gib)]
+    if config.sync_scheduling and not config.park_enabled:
+        cmd += ["--sync-scheduling"]   # control arm pinning; park implies it
+    if config.park_enabled and config.park_keep_blocks is None:
+        # fixed-tail mode: worker-side timer + RPC. Quota mode is engine-side
+        # auto-park-on-stop and needs no worker knobs (see worker_environment).
+        cmd += [
+            "--park-tail-blocks", str(config.park_tail_blocks),
+            "--park-delay-s", str(config.park_delay_s),
+        ]
+    cmd += ["--ready-file", str(ready_file)]
+    return cmd
+
+
+def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env.update({
+        "CUDA_VISIBLE_DEVICES": str(config.gpu),
+        "HF_HUB_OFFLINE": "1",
+        "VLLM_NO_USAGE_STATS": "1",
+        "METRONOME_ROOT": str(config.metronome_root),
+        "METRONOME_STATLOG": str(run_dir / "kv.log"),
+        "INGEST_WORKERS": str(config.ingest_workers),
+        "OMNI_STATLOG_PERIOD_S": str(config.kv_log_period_s),
+        # any sitecustomize (trace collector or engine_patch) imports vllm
+        # before the worker's own setdefault runs; pin the log level here.
+        "VLLM_LOGGING_LEVEL": os.environ.get("VLLM_LOGGING_LEVEL", "WARNING"),
+    })
+    if config.trace:
+        env["PERREQ_LOG"] = str(run_dir / "per_request.log")
+        env["PERITER_LOG"] = str(run_dir / "per_iteration.log")
+        apply_scheduler_trace(
+            env, run_dir / "scheduler.log", run_dir / "scheduler_errors.log"
+        )
+    if config.park_enabled:
+        # The park primitive lives in the spawned EngineCore process; inject it
+        # by prepending the engine_patch dir AHEAD of tracekit's collector dir
+        # (only the first sitecustomize on sys.path is imported — engine_patch's
+        # chain-loads the trace collector when tracing is also on).
+        env["OMNI_PARK_PATCH"] = "1"
+        env["OMNI_PARK_LOG"] = str(run_dir / "park.log")
+        if config.park_keep_blocks is not None:
+            # quota mode: the engine parks each session the instant its slice
+            # stops (zero delay, no RPC) — everything beyond K blocks evicted.
+            env["OMNI_PARK_KEEP"] = str(config.park_keep_blocks)
+            if config.seed_tokens:
+                # warm start is state construction: hold auto-park until the
+                # barrier's finalize parks everyone in one burst.
+                env["OMNI_PARK_HOLD"] = "1"
+        patch_dir = config.root / "experiments" / "conveyor" / "worker" / "engine_patch"
+        env["PYTHONPATH"] = os.pathsep.join(
+            filter(None, [str(patch_dir), env.get("PYTHONPATH", "")])
+        )
+    return env
+
+
+def gateway_command(config: ConveyorConfig) -> list[str]:
+    return [
+        str(config.gateway_path),
+        "--port",
+        str(platform.GATEWAY_PORT),
+        "--worker",
+        f"127.0.0.1:{platform.WORKER_PORT}",
+        "--period-ms",
+        str(workload.PERIOD_MS),
+        "--slots",
+        str(config.slots),
+        "--tpt",
+        str(workload.TOKENS_PER_TICK),
+    ]
+
+
+def gateway_environment(run_dir: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env["GW_TICKLOG"] = str(run_dir / "gateway_ticks.log")
+    return env
+
+
+def client_command(config: ConveyorConfig, run_id: str) -> list[str]:
+    return [
+        str(config.worker_python),
+        "-u",
+        "experiments/sustained_fd.py",
+        "--uri",
+        f"ws://127.0.0.1:{platform.GATEWAY_PORT}",
+        "--shards",
+        str(config.client_shards),
+        "--m",
+        str(config.sessions // config.client_shards),
+        "--duration",
+        str(config.duration_s),
+        "--chunk-ms",
+        str(workload.CHUNK_MS),
+        "--budget-ms",
+        str(workload.PERIOD_MS),
+        "--tag",
+        run_id,
+    ]
+
+
+def collect_issues(store: RunStore) -> list[str]:
+    """Conveyor-specific validation on top of the generic artifact checks."""
+    issues: list[str] = []
+    scheduler_errors = store.file("scheduler_errors.log")
+    if scheduler_errors.is_file() and scheduler_errors.stat().st_size:
+        issues.append("scheduler trace reported serialization errors")
+    issues.extend(scan_worker_fatal(store.file("worker.log")))
+    worker_log = store.file("worker.log")
+    if worker_log.is_file():
+        # a dead session keeps the run cadence-green (silent failure, FINDINGS B1):
+        # the engine-side death log is the only place it shows.
+        dead = worker_log.read_text(encoding="utf-8", errors="replace").count(" ended: ")
+        if dead:
+            issues.append(f"{dead} session(s) died mid-run (see worker.log 'ended:' lines)")
+    gateway_log = store.file("gateway.log")
+    if gateway_log.is_file():
+        # a slow-but-alive engine is equally cadence-green under take-from-stock:
+        # short deliveries only show as the gateway's [starve] lines.
+        starved = gateway_log.read_text(encoding="utf-8", errors="replace").count("[starve]")
+        if starved:
+            issues.append(
+                f"{starved} slot firing(s) short-delivered tokens "
+                "(engine behind; see gateway.log '[starve]' lines)"
+            )
+    client_json = store.file("client.json")
+    if client_json.is_file():
+        client_errors = int(json.loads(client_json.read_text(encoding="utf-8")).get("err", 0))
+        if client_errors:
+            issues.append(f"client reported {client_errors} session error(s)")
+    park_log = store.file("park.log")
+    if park_log.is_file():
+        # park enabled but never effective would masquerade as evidence (same
+        # shape as the dead-session and [starve] scans above).
+        # count park lines only: S/L/R lines flow whenever the mirror moves,
+        # so raw line count would pass a run where park itself never fired.
+        parks = 0
+        with park_log.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                fields = line.split()
+                if len(fields) > 1 and fields[1].startswith("req="):
+                    parks += 1
+        if not parks:
+            issues.append("park enabled but park.log recorded zero parks")
+        elif worker_log.is_file():
+            # refusals (incl. unknown request) are normal per-cycle outcomes;
+            # only RPC transport failures are never expected.
+            park_errors = worker_log.read_text(
+                encoding="utf-8", errors="replace"
+            ).count("RPC failed")
+            if park_errors:
+                issues.append(f"{park_errors} park RPC failure(s) (see worker.log)")
+    return issues
+
+
+def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
+    run_dir = config.output_root / run_id
+    ready_file = run_dir / ".worker-ready"
+    client_env = os.environ.copy()
+    client_env["FD_PHASE_STAGGER"] = "1"
+    return RunPlan(
+        experiment=config.experiment_name,
+        run_id=run_id,
+        root=config.root,
+        worker_python=config.worker_python,
+        gpu=config.gpu,
+        output_root=config.output_root,
+        config=config.manifest_config(),
+        worker=Launch(
+            "worker",
+            tuple(worker_command(config, ready_file)),
+            "worker.log",
+            cwd=config.root,
+            env=worker_environment(config, run_dir),
+        ),
+        ready_file=ready_file,
+        startup_timeout_s=config.startup_timeout_s,
+        services=(
+            Launch(
+                "gateway",
+                tuple(gateway_command(config)),
+                "gateway.log",
+                cwd=config.metronome_root,
+                env=gateway_environment(run_dir),
+            ),
+            Launch(
+                "gpu_monitor",
+                tuple(gpu_monitor_command(config.gpu, platform.GPU_SAMPLE_PERIOD_S)),
+                "gpu.csv",
+                cwd=config.root,
+            ),
+        ),
+        client=Launch(
+            "client",
+            tuple(client_command(config, run_id)),
+            "client.txt",
+            cwd=config.metronome_root,
+            env=client_env,
+        ),
+        client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
+        client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",
+        required_artifacts=config.required_artifact_names(),
+        collect_issues=collect_issues,
+    )
+
+
+def run(argv: Sequence[str], **knobs: Any) -> tuple[int, Path]:
+    """Execute one run and always leave a terminal ``status.json`` behind.
+
+    ``knobs`` are the per-run ``ConveyorConfig`` fields; ``None`` values mean
+    "use the default" and are dropped before construction.
+    """
+    config = ConveyorConfig(**{k: v for k, v in knobs.items() if v is not None})
+    return execute(plan(config, make_run_id(config.label)), argv)

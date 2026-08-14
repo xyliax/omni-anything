@@ -7,12 +7,12 @@
 | 动作 | 允许 | 落点 |
 | --- | --- | --- |
 | 阅读对照 | 是 | 本目录下各 pin |
-| 改实验/插桩/方案代码 | 是 | 仓库 `harness/`、`docs/` 文档、自有 fork/patch |
+| 改实验/插桩/方案代码 | 是 | 仓库 `experiments/`、`tracekit/`、`docs/` 文档、自有 fork/patch |
 | 直接改 `third_party/*` 当实验代码 | **否** | — |
 | 下载模型权重、大数据集进本目录 | **否** | — |
 | 手改各 pin 内 `.gitrepo` | **否**（git-subrepo 维护） | — |
 
-实验路径上真正被 harness 引用的只有 `metronome/`。其余 pin 默认**按题打开**，不批量读入 session。
+实验路径上真正被本仓库代码引用的只有 `metronome/`（gateway/proto/client 复用与 worker 分道来源，纪律在 `docs/metronome.md`）。其余 pin 默认**按题打开**，不批量读入 session。
 
 ## 当前 pins
 
@@ -20,7 +20,7 @@
 
 | 路径 | 上游 | 何时打开 |
 | --- | --- | --- |
-| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/METRONOME.md` |
+| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/metronome.md` |
 | `DuplexOmni/` | https://github.com/MuyeHuang/DuplexOmni | 前台双工 + 后台异步写回；480ms 拍 / 注入通道 |
 | `moshi/` | https://github.com/kyutai-labs/moshi | 锁步全双工模型与官方服务端 |
 | `personaplex/` | https://github.com/NVIDIA/personaplex | 可控角色/音色双工；规格与 server 形态 |
@@ -37,10 +37,10 @@ git subrepo status third_party/<name>
 ```
 
 - 新增 pin：同步更新本文件 pins 表。
-- 升级 pin：`subrepo pull` 后确认 `.gitrepo` commit，并检查 `harness/` 是否仍指向预期路径（尤其 `metronome/`）。
+- 升级 pin：`subrepo pull` 后确认 `.gitrepo` commit，并检查 `experiments/` 各 runner/worker 是否仍指向预期路径（尤其 `metronome/` 的 proto 与 client）。
 - 不要把弱相关/历史线仓库默认 subrepo 进本目录（视频 RL、agent 训练平台、带大体积 demo 媒体的 clone 等）。
 
 ## 与事实源的关系
 
 - 现行结论与实验数字：根 `AGENTS.md` 地图、`docs/` 事实层与 `results/`，不从本目录反推。
-- `.context/` 是思考原料（digest / 调研），不是事实层，也不是代码 pin。
+- `context/` 是思考原料（digest / 调研），不是事实层，也不是代码 pin。

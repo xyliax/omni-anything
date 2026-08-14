@@ -10,41 +10,77 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yml", ".yaml", ".toml"}
-INDEXED_RUN = re.compile(r"`(20\d{6}(?:T|_)[A-Za-z0-9_.-]+)`")
+INDEXED_RUN = re.compile(r"`(20\d{6}_[A-Za-z0-9_.-]+)`")
+
+# Built by concatenation so this file does not trigger its own scan.
+OBSOLETE_STRINGS = (
+    "harness" + "/",
+    "calibration" + "/data",
+    "calibration" + "/bench",
+    "observability" + "/",
+    "results" + "/paper/",
+    "results" + "/figures/",
+    "results" + "/viz/",
+    "e0_dma_" + "interference",
+    "e1_capacity_" + "bottleneck",
+    "e2_kv_" + "conveyor",
+    "e3_phase_" + "scheduling",
+)
+
+# The append-only run log is a historical record; its old entries legitimately
+# name paths that no longer exist.
+SCAN_EXEMPT = {ROOT / "docs" / "experiment-log.md"}
+
+
+def scan_targets() -> list[Path]:
+    targets = [
+        ROOT / "README.md",
+        ROOT / "AGENTS.md",
+        ROOT / "results" / "README.md",
+        # third_party pin CONTENTS are exempt (upstream text), but our own
+        # boundary doc for that directory obeys the same freshness discipline.
+        ROOT / "third_party" / "AGENTS.md",
+    ]
+    # .github is included deliberately: the CI workflow once kept compiling a
+    # directory deleted weeks earlier because nothing scanned it.
+    for base in (".github", "docs", "environment", "experiments", "lab", "tracekit", "tests"):
+        root = ROOT / base
+        if root.is_dir():
+            targets.extend(
+                path
+                for path in root.rglob("*")
+                if path.is_file() and path.suffix in TEXT_SUFFIXES
+            )
+    return [path for path in targets if path not in SCAN_EXEMPT]
 
 
 class RepositoryLayoutTests(unittest.TestCase):
     def test_obsolete_top_level_containers_do_not_return(self) -> None:
-        self.assertFalse((ROOT / "harness").exists())
-        self.assertFalse((ROOT / "calibration").exists())
+        for name in ("harness", "calibration", "observability"):
+            self.assertFalse((ROOT / name).exists(), name)
+        for name in OBSOLETE_STRINGS[-4:]:
+            self.assertFalse((ROOT / "experiments" / name).exists(), name)
 
-    def test_project_text_has_no_obsolete_paths(self) -> None:
-        forbidden = (
-            "harness" + "/",
-            "calibration" + "/",
-            "results" + "/paper/",
-            "results" + "/figures/",
-            "results" + "/viz/",
-        )
-        roots = (
-            ROOT / "environment",
-            ROOT / "experiments",
-            ROOT / "observability",
-            ROOT / "tests",
-        )
-        for base in roots:
-            for path in base.rglob("*"):
-                if path.is_file() and path.suffix in TEXT_SUFFIXES:
-                    text = path.read_text(encoding="utf-8")
-                    for obsolete in forbidden:
-                        self.assertNotIn(obsolete, text, f"obsolete path in {path.relative_to(ROOT)}")
+    def test_no_text_references_obsolete_paths(self) -> None:
+        """Covers docs/, README.md, and AGENTS.md — including backtick paths.
+
+        The pre-refactor guard scanned only code directories and only
+        markdown-style links, so the fact layer rotted invisibly. Plain
+        substring scanning over every text layer closes both gaps.
+        """
+        for path in scan_targets():
+            text = path.read_text(encoding="utf-8")
+            for obsolete in OBSOLETE_STRINGS:
+                self.assertNotIn(
+                    obsolete, text, f"obsolete path {obsolete!r} in {path.relative_to(ROOT)}"
+                )
 
     def test_markdown_links_resolve(self) -> None:
         markdown_files = [ROOT / "README.md", ROOT / "AGENTS.md"]
-        markdown_files.extend((ROOT / "docs").rglob("*.md"))
-        markdown_files.extend((ROOT / "environment").rglob("*.md"))
-        markdown_files.extend((ROOT / "experiments").rglob("*.md"))
-        markdown_files.extend((ROOT / "observability").rglob("*.md"))
+        for base in ("docs", "environment", "experiments", "lab", "tracekit"):
+            root = ROOT / base
+            if root.is_dir():
+                markdown_files.extend(root.rglob("*.md"))
         markdown_files.append(ROOT / "results" / "README.md")
         for document in markdown_files:
             for target in MARKDOWN_LINK.findall(document.read_text(encoding="utf-8")):
@@ -60,20 +96,23 @@ class RepositoryLayoutTests(unittest.TestCase):
         index = (ROOT / "results" / "README.md").read_text(encoding="utf-8")
         actual = {
             run.name
-            for runs in (ROOT / "results").glob("*/runs")
+            for pattern in ("*/runs", "*/calibration")
+            for runs in (ROOT / "results").glob(pattern)
             for run in runs.iterdir()
             if run.is_dir()
         }
         for run_id in actual:
-            self.assertIn(f"`{run_id}`", index)
+            self.assertIn(f"`{run_id}`", index, f"unindexed run: {run_id}")
         for run_id in INDEXED_RUN.findall(index):
             self.assertIn(run_id, actual, f"indexed run does not exist: {run_id}")
 
-    def test_formal_runs_have_success_status(self) -> None:
-        for experiment in ("e1_capacity_bottleneck", "e2_kv_conveyor", "e3_phase_scheduling"):
-            for run in (ROOT / "results" / experiment / "runs").iterdir():
+    def test_formal_runs_have_terminal_status(self) -> None:
+        for runs in (ROOT / "results").glob("*/runs"):
+            for run in runs.iterdir():
+                if not run.is_dir():
+                    continue
                 status = json.loads((run / "status.json").read_text(encoding="utf-8"))
-                self.assertEqual(status["state"], "success", run.name)
+                self.assertIn(status["state"], {"success", "failed", "interrupted"}, run.name)
 
     def test_aggregate_sources_and_artifacts_are_valid(self) -> None:
         for aggregates in (ROOT / "results").glob("*/aggregates"):

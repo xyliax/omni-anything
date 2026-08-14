@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "client.json": {
+      "bytes": 21855,
+      "sha256": "4f4eefa4c09622f1677c8dc34ae85ea773647f21b78d04519669850b76bae356"
+    },
+    "client.txt": {
+      "bytes": 1081,
+      "sha256": "7f74c852aa76ec9b2afe5c364ada6fa688b1a39e6893c7a836d381b3173b6a84"
+    },
+    "gateway.log": {
+      "bytes": 424,
+      "sha256": "da0b20edc0dcd939e7ed119b05cb39f1e40d476da935b747cfe0015e22d59948"
+    },
+    "gateway_ticks.log": {
+      "bytes": 47236,
+      "sha256": "d463fea35ef634cdc9d141fc605ab589dee56d23b612b75a4fb7095573ebfbde"
+    },
+    "gpu.csv": {
+      "bytes": 75649,
+      "sha256": "53c85394ad2261966233038b432346c085c10a519195449ca530697ce5d9971e"
+    },
+    "kv.log": {
+      "bytes": 23800,
+      "sha256": "aefe84ddca5c7c244a5953eba432405c1584134b582bd784e792d2b11ded0cfd"
+    },
+    "manifest.json": {
+      "bytes": 98367,
+      "sha256": "6c9825c693f20c04b927c90aff494298200265b1c5fd9b9bda80011c62584731"
+    },
+    "park.log": {
+      "bytes": 159458,
+      "sha256": "8dac5e6818f2c2413b5c8bb8ffc669d5b9d5778032fefc775be12ef4fe88ff65"
+    },
+    "per_iteration.log": {
+      "bytes": 143725,
+      "sha256": "4f89ec7eef2e26330d82e82798e37689f7d73e243bc6a41fd16653bd254529ca"
+    },
+    "per_request.log": {
+      "bytes": 334715,
+      "sha256": "b8a69e1f4d91a766823b6afe57caab84b1272c1b7ec2f5fc63671b81bbc1d944"
+    },
+    "scheduler.log": {
+      "bytes": 274688,
+      "sha256": "49563082fc00aa407c03242979d516d48ddb433c8d09939075a0ddaee6b3c3b8"
+    },
+    "worker.log": {
+      "bytes": 20678,
+      "sha256": "4ae5b2b21187c27f107a259846fb41b6075a6eaac47f9de18ad97de14488a9d3"
+    }
+  },
+  "exit_code": 0,
+  "finished_at": "2026-08-12T20:05:22.320Z",
+  "phase": "complete",
+  "schema_version": 2,
+  "state": "success",
+  "updated_at": "2026-08-12T20:05:22.320Z",
+  "validation": {
+    "empty": [],
+    "issues": [],
+    "missing": [],
+    "required": [
+      "client.json",
+      "client.txt",
+      "gateway.log",
+      "gateway_ticks.log",
+      "gpu.csv",
+      "kv.log",
+      "park.log",
+      "per_iteration.log",
+      "per_request.log",
+      "scheduler.log",
+      "worker.log"
+    ],
+    "valid": true
+  }
+}

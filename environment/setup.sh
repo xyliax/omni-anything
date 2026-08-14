@@ -120,18 +120,17 @@ fi
 if (( ! SKIP_GATEWAY )); then
   mkdir -p "$ROOT/.build"
   (cd "$ROOT/third_party/metronome/gateway-go" && "$GO_BIN" build -o "$ROOT/.build/metronome-gateway" .)
+  (cd "$ROOT/experiments/conveyor/gateway" && "$GO_BIN" build -o "$ROOT/.build/conveyor-gateway" .)
 fi
 
 if (( DOWNLOAD_MODELS )); then
-  for lock in "$ROOT"/experiments/e*/model.lock; do
-    read -r MODEL REVISION < "$lock"
-    "$VENV/bin/python" - "$MODEL" "$REVISION" <<'PY'
-import sys
+  (cd "$ROOT" && "$VENV/bin/python" - <<'PY'
+from experiments.baseline.config import model
 from huggingface_hub import snapshot_download
-path = snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2])
+path = snapshot_download(repo_id=model.ID, revision=model.REVISION)
 print(f"model snapshot: {path}")
 PY
-  done
+  )
 fi
 
 "$VENV/bin/python" -m pip freeze > "$VENV/omni-anything-resolved.txt"
@@ -145,7 +144,7 @@ Worker Python: $VENV/bin/python
 Resolved lock: $VENV/omni-anything-resolved.txt
 
 Plan a run:
-  VLLM_PYTHON="$VENV/bin/python" bash experiments/e1_capacity_bottleneck/run.sh --mode paringest --trace --n 8 --duration 600 --plan
+  python -m experiments.baseline --trace
 EOF
 if (( ! DOWNLOAD_MODELS )); then
   echo "Download pinned experiment models before GPU runs: bash environment/setup.sh --download-models"

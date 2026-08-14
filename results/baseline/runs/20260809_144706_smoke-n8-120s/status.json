@@ -1,0 +1,67 @@
+{
+  "artifacts": {
+    "client.json": {
+      "bytes": 21330,
+      "sha256": "ccf1037673578ef44a3687677ad33157bd692dea13f36f07fe6259488031f726"
+    },
+    "client.txt": {
+      "bytes": 1088,
+      "sha256": "52ee2aeb0f95a6b87ba3432f73983e27b793a20bf1d13ea7f2863abeb1294852"
+    },
+    "gateway.log": {
+      "bytes": 248,
+      "sha256": "4159da9eedb989775596e8e6bbd90c34ca1c3e7deb496fbccddcd4872b4571ba"
+    },
+    "gpu.csv": {
+      "bytes": 80449,
+      "sha256": "11baeb29a0e7d4e3916b4c220d0f4c7e2a647c08e9db40d6defffad1d4f69e51"
+    },
+    "kv.log": {
+      "bytes": 2564,
+      "sha256": "b0c2580228bde20a3137ed36e1dfde6a4120b993552dfea4e163f605be5f605f"
+    },
+    "manifest.json": {
+      "bytes": 91651,
+      "sha256": "7adf3dfaa946839d6ff7c82462d1bfc86a6a579250f6bfe49213d08640c6c4dd"
+    },
+    "per_iteration.log": {
+      "bytes": 72336,
+      "sha256": "b5ee9ab6c2757f6081f21d413a00d42f48a4aadc0400d313af416963c4d102a1"
+    },
+    "per_request.log": {
+      "bytes": 391662,
+      "sha256": "c440f731a0530897affef4e6eefa0ceeb55df7058b5091efd450ba05eef9fba0"
+    },
+    "scheduler.log": {
+      "bytes": 297135,
+      "sha256": "601db8164053a036d6f0e5d5c00431466c0420e5acb5e1d4a32e98613ed7c2db"
+    },
+    "worker.log": {
+      "bytes": 14852,
+      "sha256": "c2b53f15cbfad5f08497dce2bdba31fa88fa63c2ca050c19ae2217006a2685dc"
+    }
+  },
+  "exit_code": 0,
+  "finished_at": "2026-08-09T14:50:13.987Z",
+  "phase": "complete",
+  "schema_version": 2,
+  "state": "success",
+  "updated_at": "2026-08-09T14:50:13.987Z",
+  "validation": {
+    "empty": [],
+    "issues": [],
+    "missing": [],
+    "required": [
+      "client.json",
+      "client.txt",
+      "gateway.log",
+      "gpu.csv",
+      "kv.log",
+      "per_iteration.log",
+      "per_request.log",
+      "scheduler.log",
+      "worker.log"
+    ],
+    "valid": true
+  }
+}

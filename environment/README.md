@@ -8,7 +8,7 @@ named profiles so later experiments can use a different stack without weakening 
 
 | Profile | Purpose | Used by | Status |
 | --- | --- | --- | --- |
-| `cuda13_vllm023` | CUDA 13 Python stack, vLLM 0.23, PyTorch/CUDA analysis dependencies, and Metronome gateway | E0-E3 | Implemented and locked |
+| `cuda13_vllm023` | CUDA 13 Python stack, vLLM 0.23, PyTorch/CUDA analysis dependencies, and Metronome gateway | baseline & conveyor（全部真机 run） | Implemented and locked |
 
 The filesystem represents implemented environments only, so there is currently one directory under
 `profiles/`.
@@ -30,7 +30,8 @@ edits `third_party/`:
 
 ```text
 .venv-vllm023/              Python environment and resolved pip freeze
-.build/metronome-gateway    built Go gateway
+.build/metronome-gateway    built Go gateway (baseline arm, verbatim from the pin)
+.build/conveyor-gateway     built Go gateway (conveyor arm, staggered fork)
 .tools/                     optional repository-local Go toolchain
 ```
 
@@ -46,18 +47,39 @@ profiles/cuda13_vllm023/
     └── vllm-0.23-fix1.patch
 ```
 
-E2/E3 reuse this profile because they intentionally keep E1's Qwen2.5-Omni software/model baseline
-and add a pinned CUDA transfer calibration; they are not a separate runtime family. A future
-end-to-end conveyor worker may add another profile only if it actually requires incompatible
+This is the single runtime family for the baseline stack (Qwen2.5-Omni on vLLM 0.23). A future
+worker may add another profile only if it actually requires incompatible
 dependencies.
 
 The patch is applied only inside the selected virtual environment. Blackwell-only Metronome fixes
 are intentionally outside the RTX 3090 profile. Models are experimental inputs, so their locks live
-with their owners at `experiments/<experiment>/model.lock`; `--download-models` discovers those locks.
+with their owners as the `REVISION` constant in `experiments/<experiment>/config/model.py`
+(the runner resolves it via `lab.probes.resolve_model_snapshot` at launch, which fails fast
+when the pinned snapshot is not cached); `--download-models` imports those constants and
+fetches the pinned snapshots.
 
 ## Adding a profile
 
 Add a profile only when its consumer is implemented. A profile must provide a complete hashed lock,
 versioned patches, setup dispatch, verification checks, and CPU-only tests. Each consuming experiment
-must provide its own immutable model revision in `model.lock`. Do not silently change
+must pin its own immutable model revision in `config/model.py`. Do not silently change
 `cuda13_vllm023` to satisfy a future worker; that would make existing evidence harder to reproduce.
+
+## Upgrading vLLM (re-audit checklist)
+
+The stack monkeypatches and forks private engine internals. Before bumping the vLLM version,
+re-audit every item against the new source:
+
+1. `experiments/*/worker/stream_server.py` — the paringest copy of
+   `AsyncLLM._add_streaming_input_request` (second-order fork of a private API).
+2. `experiments/conveyor/worker/engine_patch/sitecustomize.py` — every wrapped symbol:
+   `EngineCore` utility dispatch, `Scheduler._handle_stopped_request` /
+   `_update_request_as_session` / `_update_waiting_for_remote_kv`,
+   `SimpleCPUOffloadConnector.update_state_after_alloc`,
+   `SimpleCPUOffloadScheduler._prepare_eager_store_specs`, and the `num_computed_tokens == 0`
+   waiting-path assumption the resume rides on.
+3. The two upstream bugs the patch works around (eager-store cursor drift on streaming
+   re-entry; `session.max_tokens` frozen at construction) — check whether upstream fixed them,
+   then delete the corresponding wrappers.
+4. `tracekit/collectors/vllm_scheduler_trace/sitecustomize.py` — the `Scheduler.schedule` wrap.
+5. `environment/profiles/cuda13_vllm023/` FIX patches — reconcile against the new wheels.

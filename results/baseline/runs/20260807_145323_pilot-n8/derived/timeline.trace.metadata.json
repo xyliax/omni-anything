@@ -1,0 +1,50 @@
+{
+  "artifact": "timeline.trace.json.gz",
+  "bytes": 129194,
+  "claim_boundary": null,
+  "clock_alignment": {
+    "anchor_spread_p95_ms": 217.0,
+    "anchors": 370,
+    "method": "min_prefill_after_tick",
+    "shift_s": -0.42
+  },
+  "engine_slices": 32211,
+  "events": 37768,
+  "experiment": "baseline",
+  "generic_events": 0,
+  "global_time_shift_s": 18.82,
+  "measurement_segments": 0,
+  "referenced_runs": {},
+  "run_id": "20260807_145323_pilot-n8",
+  "schema_version": 3,
+  "sha256": "3eec234477107dec0713878bf0005ba1fd6d65ef7a3732f726c6c136033681a2",
+  "source_artifacts": {
+    "gpu.csv": {
+      "bytes": 8537,
+      "sha256": "481595da33675f077acc3705a17d4b0f14fca63e4803f5fe7ef2b3b46c040788"
+    },
+    "kv.log": {
+      "bytes": 10877,
+      "sha256": "b97e8d864cb6d391cd554dc39c4de6dc5bdffd67da09bace532cb2cfb606ad96"
+    },
+    "manifest.json": {
+      "bytes": 23181,
+      "sha256": "e3ee4a8b3f77c05d270a82b1afc884f83fab62f55371fdb0168a8b7cb824bb6d"
+    },
+    "per_request.log": {
+      "bytes": 828475,
+      "sha256": "661fb8b93e2f60035705c1f7cb5ebdccef8ae5cd099e6cca22970021de90c65d"
+    },
+    "scheduler.log": {
+      "bytes": 597501,
+      "sha256": "19afbda3617127727e8f777d8e38cd3a8fecc99f6281ac28fc2ec6fbf3600acd"
+    },
+    "status.json": {
+      "bytes": 1841,
+      "sha256": "a70da17d1db7e5d89f70681d32d87635beccdf24b2e7171194b6894ea390e3e8"
+    }
+  },
+  "visualization_kinds": [
+    "engine_timeline"
+  ]
+}
