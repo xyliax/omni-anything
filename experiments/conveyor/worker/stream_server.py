@@ -37,11 +37,12 @@ Behavioral changes vs that origin:
      park.log; worker-side RPC failures log here.
 No experiment may add another copy of this worker.
 
-Instrumentation (this file is the producer; the line grammars live with the
-consumers in tracekit/parse.py): PERREQ_LOG gets P/F/T/SEED plus the five
-ingest stations IQ/IS/IE/IR/IA, all on one shared perf clock with a single
-"C <perf> <epoch>" pairing line; METRONOME_STATLOG (kv.log) additionally
-carries pre=<cumulative preemption count> per line.
+Instrumentation (the writers live in tracekit/collectors/worker_obs.py — the
+one producer shared with baseline; line grammars live with the consumers in
+tracekit/parse.py): PERREQ_LOG gets P/F/T/SEED plus the five ingest stations
+IQ/IS/IE/IR/IA, all on one shared perf clock with a single "C <perf> <epoch>"
+pairing line; METRONOME_STATLOG (kv.log) additionally carries
+pre=<cumulative preemption count> per line.
 
 PARINGEST: AsyncLLM._add_streaming_input_request is monkeypatched so each
 chunk's process_inputs runs in a ThreadPoolExecutor instead of synchronously
@@ -55,10 +56,9 @@ import argparse, asyncio, logging, os, sys, threading, time
 from concurrent import futures
 from pathlib import Path
 
-_MET = os.environ.get(
-    "METRONOME_ROOT",
-    str(Path(__file__).resolve().parents[3] / "third_party" / "metronome"),
-)
+_ROOT = Path(__file__).resolve().parents[3]
+_MET = os.environ.get("METRONOME_ROOT", str(_ROOT / "third_party" / "metronome"))
+sys.path.insert(0, str(_ROOT))   # for tracekit.collectors.worker_obs (shared observation)
 sys.path.insert(0, _MET)
 sys.path.insert(0, os.path.join(_MET, "worker"))
 os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
@@ -67,6 +67,8 @@ import grpc
 import numpy as np
 import inference_pb2 as pb
 import inference_pb2_grpc as pb_grpc
+
+from tracekit.collectors.worker_obs import perreq_logger, stat_logger_classes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [stream-worker] %(message)s")
 log = logging.getLogger("stream-worker")
@@ -77,16 +79,9 @@ log = logging.getLogger("stream-worker")
 # pins the three declarations together.
 WARMUP_SID = 10**9
 
-_PT0 = time.perf_counter()
-_PERREQ = open(os.environ["PERREQ_LOG"], "a", buffering=1) if os.environ.get("PERREQ_LOG") else None
-
-def _pev(kind, *vals):
-    if _PERREQ:
-        _PERREQ.write(f"{kind} {time.perf_counter() - _PT0:.3f} " + " ".join(map(str, vals)) + "\n")
-
-# Clock fix: one line pairing this log's perf clock with the epoch clock that
-# scheduler.log uses, so trace alignment is exact instead of heuristic.
-_pev("C", f"{time.time():.6f}")
+# Shared observation producer (tracekit): per-request events on one perf clock,
+# with the clock-pairing C line written at open.
+_pev = perreq_logger()
 
 
 _INGEST_POOL = None
@@ -208,7 +203,8 @@ class StreamingEngine:
 
     def __init__(self, model, gpu_mem, max_model_len, max_num_seqs, tpt,
                  max_audio_chunks, seed_tokens=0, kv_pool_gib=None, host_offload_gib=24.0,
-                 park_tail_blocks=0, park_delay_s=1.2, sync_scheduling=False):
+                 park_tail_blocks=0, park_delay_s=1.2, sync_scheduling=False,
+                 prefetch="off"):
         from vllm import SamplingParams
         from vllm.config import KVTransferConfig
         from vllm.engine.arg_utils import AsyncEngineArgs
@@ -221,6 +217,12 @@ class StreamingEngine:
         self.park_delay_s = park_delay_s          # push -> park delay; slice must be done by then
         self.park_refused_why: dict = {}          # reason -> count, shown in the periodic step log
         self.park_error = 0                       # RPC transport failure (never expected)
+        # push-triggered prefetch (engine-side omni_prefetch, utility RPC at
+        # each chunk push so the reload copy overlaps FE). Refusals are
+        # normal per-cycle outcomes (resident / pool-pressure / in-flight).
+        self.prefetch = prefetch == "push"
+        self.prefetch_refused_why: dict = {}
+        self.prefetch_error = 0
         self.sessions: dict[int, Session] = {}
         self.loop = asyncio.new_event_loop()
         self.thr = threading.Thread(target=self._loop_forever, daemon=True)
@@ -274,46 +276,10 @@ class StreamingEngine:
 
     async def _make_engine(self, args):
         from vllm.v1.engine.async_llm import AsyncLLM
-        sl = os.environ.get("METRONOME_STATLOG")
-        if sl:   # diagnostic: per-iteration scheduler stats (kv usage, running/waiting, evictions)
-            from vllm.v1.metrics.loggers import StatLoggerBase
-            import time as _time
-
-            class _StatLog(StatLoggerBase):
-                def __init__(self, vllm_config, engine_index=0):
-                    self._f = open(sl, "a"); self._t0 = _time.time(); self._last = 0.0
-                    self._pre = 0     # cumulative preemptions (must accumulate across throttled calls)
-                    # kv.log sampling period; the runner sets this from config
-                    # (0.2s = 10 samples/tick, matching the GPU sampler's
-                    # rationale) — 1 Hz was too coarse for park sawtooth reading.
-                    self._period = float(os.environ.get("OMNI_STATLOG_PERIOD_S", "1.0"))
-                    pi = os.environ.get("PERITER_LOG")
-                    self._it = open(pi, "a", buffering=1) if pi else None
-                def record(self, scheduler_stats, iteration_stats, mm_cache_stats=None, engine_idx=0):
-                    if iteration_stats is not None:
-                        self._pre += getattr(iteration_stats, "num_preempted_reqs", 0)
-                    if scheduler_stats is None:
-                        return
-                    now = _time.time()
-                    if self._it is not None and iteration_stats is not None:
-                        # per-iteration: engine-step composition (no throttle)
-                        self._it.write(f"{now - self._t0:.3f} run={scheduler_stats.num_running_reqs} "
-                                       f"wait={scheduler_stats.num_waiting_reqs} "
-                                       f"gen={iteration_stats.num_generation_tokens} "
-                                       f"ptok={getattr(iteration_stats, 'num_prompt_tokens', 0)}\n")
-                    if now - self._last < self._period:   # throttled sampling
-                        return
-                    self._last = now
-                    ev = len(getattr(scheduler_stats, "kv_cache_eviction_events", []) or [])
-                    self._f.write(f"{now - self._t0:.1f} kv={scheduler_stats.kv_cache_usage:.3f} "
-                                  f"run={scheduler_stats.num_running_reqs} "
-                                  f"wait={scheduler_stats.num_waiting_reqs} evict={ev} "
-                                  f"pre={self._pre}\n")
-                    self._f.flush()
-                def log(self): pass
-                def log_engine_initialized(self): pass
-
-            return AsyncLLM.from_engine_args(args, stat_loggers=[_StatLog])
+        # shared stat logger (tracekit worker_obs): kv.log + per_iteration.log
+        loggers = stat_logger_classes()
+        if loggers:
+            return AsyncLLM.from_engine_args(args, stat_loggers=loggers)
         return AsyncLLM.from_engine_args(args)
 
     # ---- per-session resident resumable request (unbounded append-to-resident-KV) ----
@@ -400,6 +366,11 @@ class StreamingEngine:
             st = self._ensure(sid)
             asyncio.run_coroutine_threadsafe(st.queue.put((arr, sr)), self.loop)
             _pev("P", sid)
+            if self.prefetch and sid < WARMUP_SID:
+                # push-triggered: issue the materialization NOW so the
+                # CPU->GPU copy overlaps this chunk's feature extraction
+                # (~70ms copy inside the ~270ms FE window, FINDINGS H5).
+                asyncio.run_coroutine_threadsafe(self._prefetch_after_push(sid), self.loop)
             if self.park_tail_blocks and sid < WARMUP_SID:   # warmup sentinel never parks
                 asyncio.run_coroutine_threadsafe(self._park_after(sid), self.loop)
             # One snapshot per field: the loop thread REBINDS st.tokens/st.text
@@ -415,6 +386,23 @@ class StreamingEngine:
                 st.consumed += len(new)
                 st.consumed_text += len(delta)
         return out, (time.perf_counter() - t0) * 1000.0
+
+    async def _prefetch_after_push(self, sid: int):
+        """Fire-and-forget reload command (engine-side omni_reload.reload_kv).
+        Refusals are NORMAL per-cycle outcomes counted for the step log —
+        resident (nothing parked yet), deferred (pool tight; the engine's
+        pacing issues it at the next park), in-flight (copy still running).
+        Only RPC transport errors are never expected."""
+        try:
+            result = await self.engine.engine_core.call_utility_async(
+                "reload_kv", f"s{sid}e1")
+        except Exception as e:  # noqa
+            self.prefetch_error += 1
+            log.warning("prefetch s%d RPC failed: %s: %s", sid, type(e).__name__, str(e)[:120])
+            return
+        if not result.get("reloaded"):
+            reason = result.get("reason", "?")
+            self.prefetch_refused_why[reason] = self.prefetch_refused_why.get(reason, 0) + 1
 
     async def _park_after(self, sid: int):
         """FIXED-TAIL MODE ONLY (quota mode auto-parks engine-side via
@@ -504,9 +492,11 @@ class Servicer(pb_grpc.InferenceServicer):
                            for s in self.eng.sessions.values()), default=0)
                 log.info("step %d: %d sessions, %.0fms, resident_frames=%d (~%ds ctx), "
                          "tot_tokens=%d, inv_backlog=%d, park_refused_why=%r, park_error=%d, "
+                         "prefetch_refused_why=%r, prefetch_error=%d, "
                          "sample=%r", self.steps, len(all_sids), lat, mx, mx * 2,
                          self.eng.total_tokens(), inv, self.eng.park_refused_why,
-                         self.eng.park_error, self.eng.sample_text())
+                         self.eng.park_error, self.eng.prefetch_refused_why,
+                         self.eng.prefetch_error, self.eng.sample_text())
             return resp
 
     def Health(self, request, context):
@@ -547,6 +537,10 @@ def main():
     ap.add_argument("--sync-scheduling", action="store_true",
                     help="pin synchronous scheduling without park (control-arm knob; "
                          "park runs force it regardless)")
+    ap.add_argument("--prefetch", choices=("off", "push"), default="off",
+                    help="KV prefetch: push = at each chunk push, materialize the session's "
+                         "parked tail back into the GPU prefix cache so the copy overlaps FE "
+                         "(requires park + the engine_patch with OMNI_PREFETCH set)")
     ap.add_argument("--park-delay-s", type=float, default=None,
                     help="delay from a session's chunk push to its park call; must land "
                          "after the slice finishes and before the next push (required "
@@ -570,7 +564,8 @@ def main():
                           kv_pool_gib=args.kv_pool_gib, host_offload_gib=args.host_offload_gib,
                           park_tail_blocks=args.park_tail_blocks,
                           park_delay_s=args.park_delay_s,
-                          sync_scheduling=args.sync_scheduling)
+                          sync_scheduling=args.sync_scheduling,
+                          prefetch=args.prefetch)
     # warm: one short session so JIT/CUDA-graph cost is paid before advertising ready.
     # Step no longer waits for tokens, so poll the sentinel session until it produced one.
     try:

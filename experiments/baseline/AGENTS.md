@@ -1,13 +1,13 @@
 # baseline
 
-真机 baseline：现有 vLLM-realtime 栈如何 serve 双工负载。每次运行起一个全新 worker，证据落入 `results/baseline/runs/<run-id>/` 的不可变目录。
+真机 baseline：现有 vLLM-realtime 栈如何 serve 双工负载。每次运行起一个全新 worker，证据先落入 `results/baseline/runs/<run-id>/` 的不可变目录；版本库只保留最新且有效的一份，文档引用稳定入口 `results/baseline/runs/`。
 
 ## 不变量
 
 - **`mode` 是行为，`trace` 是观测**：观测开关绝不表示为另一个实现模式。
 - `runner.py` 只声明本实验的差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `lab/workflow` 执行；config / artifacts 不导入编排。
 - `worker_python` 不做 `resolve()`：Python 靠被调用的 venv 路径找 `pyvenv.cfg`。
-- 失败 run 永远保留；exit 0 不能救有 issue 的 run；操作者中断（SIGINT/SIGTERM）落成 `interrupted` 终态。
+- runner 会完整保留本次运行现场；exit 0 不能救有 issue 的 run；操作者中断（SIGINT/SIGTERM）落成 `interrupted` 终态。版本库的长期保留规则见 `results/README.md`。
 
 ## 模式
 

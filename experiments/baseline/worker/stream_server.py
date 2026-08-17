@@ -19,18 +19,28 @@ tracked. Behavioral changes vs that origin:
   1. mm_processor_cache_gb 8 -> 0 (avoid cross-thread mutation of the LRU under parallel ingest)
   2. AsyncLLM._add_streaming_input_request is monkeypatched with a hand-copied vLLM 0.23 internal
      (second-order fork of a private API; any vLLM upgrade must re-audit it)
-  3. warm-start prefill via --seed-tokens is added (the seed prompt predicate checks it)
+  3. warm-start prefill via --seed-tokens is added (the seed prompt predicate checks it),
+     with the same warm-start barrier as the conveyor worker (--pre-seed-sessions: ALL
+     seed prefills complete before ready — state construction precedes the tick cadence).
+     Seed runs REQUIRE the engine_fix sitecustomize (worker/engine_fix/, injected by the
+     runner when seed_tokens > 0): upstream freezes session.max_tokens at the first
+     input's params — the seed's max_tokens=1 would cap every segment at 1 token.
   4. upstream features this repo never runs were removed: windowed/sliding KV, turn-eos eval
      mode, non-Qwen2.5-Omni prompt templates
 No experiment may add another copy of this worker.
 
-PERREQ instrumentation: PERREQ_LOG=<path> appends
-per-request event lines on one shared clock (seconds since process start):
+Instrumentation (the writers live in tracekit/collectors/worker_obs.py — the
+one producer shared with conveyor; line grammars live with the consumers in
+tracekit/parse.py): PERREQ_LOG appends per-request event lines on one shared
+perf clock (seconds since process start), with a single "C <perf> <epoch>"
+clock-pairing line at open:
   P <t> <sid>                          gateway tick pushed this session's 2s audio to its queue
   F <t> <sid> <frame>                  engine pulled that chunk into the request's input stream
   T <t> <sid> <ntok> <nprompt> <frame> request's output grew to ntok (nprompt = engine-side
                                        prompt token count if exposed, else 0)
-METRONOME_STATLOG additionally gains pre=<cumulative preemption count> per line.
+plus the five ingest stations IQ/IS/IE/IR/IA (dispatch, FE start, FE done,
+loop handoff, admitted). METRONOME_STATLOG additionally gains
+pre=<cumulative preemption count> per line.
 
 PARINGEST variant: additionally monkeypatches AsyncLLM._add_streaming_input_request so each
 chunk's input_processor.process_inputs runs in a ThreadPoolExecutor instead of synchronously on
@@ -44,10 +54,9 @@ import argparse, asyncio, logging, os, sys, threading, time
 from concurrent import futures
 from pathlib import Path
 
-_MET = os.environ.get(
-    "METRONOME_ROOT",
-    str(Path(__file__).resolve().parents[3] / "third_party" / "metronome"),
-)
+_ROOT = Path(__file__).resolve().parents[3]
+_MET = os.environ.get("METRONOME_ROOT", str(_ROOT / "third_party" / "metronome"))
+sys.path.insert(0, str(_ROOT))   # for tracekit.collectors.worker_obs (shared observation)
 sys.path.insert(0, _MET)
 sys.path.insert(0, os.path.join(_MET, "worker"))
 os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
@@ -57,6 +66,8 @@ import numpy as np
 import inference_pb2 as pb
 import inference_pb2_grpc as pb_grpc
 
+from tracekit.collectors.worker_obs import perreq_logger, stat_logger_classes
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [stream-worker] %(message)s")
 log = logging.getLogger("stream-worker")
 
@@ -65,12 +76,9 @@ log = logging.getLogger("stream-worker")
 # the declarations together.
 WARMUP_SID = 10**9
 
-_PT0 = time.perf_counter()
-_PERREQ = open(os.environ["PERREQ_LOG"], "a", buffering=1) if os.environ.get("PERREQ_LOG") else None
-
-def _pev(kind, *vals):
-    if _PERREQ:
-        _PERREQ.write(f"{kind} {time.perf_counter() - _PT0:.3f} " + " ".join(map(str, vals)) + "\n")
+# Shared observation producer (tracekit): per-request events on one perf clock,
+# with the clock-pairing C line written at open.
+_pev = perreq_logger()
 
 
 _INGEST_POOL = None
@@ -110,6 +118,11 @@ def _patch_parallel_ingest(workers=8):
 
         async def handle_inputs():
             loop = asyncio.get_running_loop()
+            # ingest-pipeline stations (sid extracted from "s<sid>e1" request ids so the
+            # lines stay parse-compatible with P/F/T):
+            #   IQ dispatch to executor · IS FE starts (thread) · IE FE done (thread)
+            #   IR back on the loop · IA admitted to the engine
+            sid = request_id[1:request_id.index("e")] if request_id.startswith("s") else request_id
             cancelled = False
             try:
                 async for input_chunk in input_stream:
@@ -118,16 +131,27 @@ def _patch_parallel_ingest(workers=8):
                         self._validate_streaming_input_sampling_params(sp)
                     else:
                         sp = sampling_params
-                    req = await loop.run_in_executor(_INGEST_POOL, functools.partial(
+                    _pev("IQ", sid)
+                    fn = functools.partial(
                         self.input_processor.process_inputs,
                         request_id=internal_req_id, prompt=input_chunk.prompt,
-                        params=sp, resumable=True, **inputs))
+                        params=sp, resumable=True, **inputs)
+
+                    def _timed(fn=fn):
+                        _pev("IS", sid)
+                        result = fn()
+                        _pev("IE", sid)
+                        return result
+
+                    req = await loop.run_in_executor(_INGEST_POOL, _timed)
+                    _pev("IR", sid)
                     req.external_req_id = request_id
                     if req.prompt_embeds is not None:
                         raise ValueError("prompt_embeds not supported for streaming inputs")
                     prompt_text, _, _ = extract_prompt_components(
                         self.model_config, input_chunk.prompt)
                     await self._add_request(req, prompt_text, None, 0, queue)
+                    _pev("IA", sid)
             except (asyncio.CancelledError, GeneratorExit):
                 cancelled = True
             except Exception as error:
@@ -204,42 +228,10 @@ class StreamingEngine:
 
     async def _make_engine(self, args):
         from vllm.v1.engine.async_llm import AsyncLLM
-        sl = os.environ.get("METRONOME_STATLOG")
-        if sl:   # diagnostic: per-iteration scheduler stats (kv usage, running/waiting, evictions)
-            from vllm.v1.metrics.loggers import StatLoggerBase
-            import time as _time
-
-            class _StatLog(StatLoggerBase):
-                def __init__(self, vllm_config, engine_index=0):
-                    self._f = open(sl, "a"); self._t0 = _time.time(); self._last = 0.0
-                    self._pre = 0     # cumulative preemptions (must accumulate across throttled calls)
-                    pi = os.environ.get("PERITER_LOG")
-                    self._it = open(pi, "a", buffering=1) if pi else None
-                def record(self, scheduler_stats, iteration_stats, mm_cache_stats=None, engine_idx=0):
-                    if iteration_stats is not None:
-                        self._pre += getattr(iteration_stats, "num_preempted_reqs", 0)
-                    if scheduler_stats is None:
-                        return
-                    now = _time.time()
-                    if self._it is not None and iteration_stats is not None:
-                        # per-iteration: engine-step composition (no throttle)
-                        self._it.write(f"{now - self._t0:.3f} run={scheduler_stats.num_running_reqs} "
-                                       f"wait={scheduler_stats.num_waiting_reqs} "
-                                       f"gen={iteration_stats.num_generation_tokens} "
-                                       f"ptok={getattr(iteration_stats, 'num_prompt_tokens', 0)}\n")
-                    if now - self._last < 1.0:   # throttle to ~1 Hz
-                        return
-                    self._last = now
-                    ev = len(getattr(scheduler_stats, "kv_cache_eviction_events", []) or [])
-                    self._f.write(f"{now - self._t0:.1f} kv={scheduler_stats.kv_cache_usage:.3f} "
-                                  f"run={scheduler_stats.num_running_reqs} "
-                                  f"wait={scheduler_stats.num_waiting_reqs} evict={ev} "
-                                  f"pre={self._pre}\n")
-                    self._f.flush()
-                def log(self): pass
-                def log_engine_initialized(self): pass
-
-            return AsyncLLM.from_engine_args(args, stat_loggers=[_StatLog])
+        # shared stat logger (tracekit worker_obs): kv.log + per_iteration.log
+        loggers = stat_logger_classes()
+        if loggers:
+            return AsyncLLM.from_engine_args(args, stat_loggers=loggers)
         return AsyncLLM.from_engine_args(args)
 
     # ---- per-session resident resumable request (unbounded append-to-resident-KV) ----
@@ -274,7 +266,15 @@ class StreamingEngine:
                 _pev("F", sid, st.frame)
                 prompt = (HEAD + APH + INSTR + ASST) \
                     if (n[0] == 1 and not self.seed_tokens) else (APH + TRAIL)
-                sp = self.SamplingParams(temperature=0.0, max_tokens=self.tpt * n[0] + 8,
+                # max_tokens is PER-SEGMENT (each chunk's update folds prior
+                # output into the prompt and clears the output count). The
+                # engine's stop check reads a value frozen at the FIRST input
+                # (upstream bug), so every formal run effectively capped each
+                # segment at tpt+8 regardless of what was sent; declare that
+                # cap explicitly so behavior is IDENTICAL whether the frozen
+                # regime or the seed-run refresh fix (engine_fix, injected
+                # only when --seed-tokens > 0) is in effect.
+                sp = self.SamplingParams(temperature=0.0, max_tokens=self.tpt + 8,
                                          ignore_eos=True)
                 yield StreamingInput(
                     prompt={"prompt": prompt, "multi_modal_data": {"audio": (arr, sr)}},
@@ -296,6 +296,12 @@ class StreamingEngine:
     def _ensure(self, sid: int) -> Session:
         st = self.sessions.get(sid)
         if st is None:
+            if getattr(self, "pre_seeded_n", 0) and sid < WARMUP_SID:
+                # a session beyond the pre-seed set (reconnect / sid drift):
+                # it seeds lazily at this first push — functional but outside
+                # the warm-start barrier's semantics, so make it visible.
+                log.warning("session s%d created after the warm-start barrier "
+                            "(pre-seeded 1..%d); seeding lazily", sid, self.pre_seeded_n)
             st = Session(self.loop)
             self.sessions[sid] = st
             st.task = asyncio.run_coroutine_threadsafe(self._run_session(sid, st), self.loop)
@@ -415,6 +421,10 @@ def main():
                     help="warm-start: prefill about this many unique filler text tokens per "
                          "session at start (0 = off) — compresses time-to-wall, makes ctx a "
                          "controlled variable")
+    ap.add_argument("--pre-seed-sessions", type=int, default=0,
+                    help="warm-start barrier: pre-create this many sessions (sids 1..N) and "
+                         "finish ALL their seed prefills before advertising ready — ticks "
+                         "then start against fully-seeded sessions (requires --seed-tokens)")
     ap.add_argument("--ready-file", default=None)
     args = ap.parse_args()
 
@@ -429,6 +439,40 @@ def main():
         log.info("engine warm")
     except Exception:
         log.exception("warmup failed (continuing)")
+
+    # WARM-START BARRIER (same semantics as the conveyor worker, minus the
+    # park finalize — baseline runs no mechanism): warm start is a one-shot
+    # STATE CONSTRUCTION ("each session already has context"), so the engine
+    # only starts taking tick input once that context exists — seeds and
+    # ticks must not race (lazy seeding would mix seed LARGE prefills into
+    # the first ticks' cadence). Structural: gateway and client only start
+    # after the ready file, so the first tick physically cannot precede the
+    # last seed. RELIES ON DETERMINISTIC SIDS: the gateway assigns 1..N in
+    # admission order and the client opens exactly N sessions; a session
+    # beyond N falls back to lazy seeding at its first push, with a log line.
+    if args.seed_tokens and args.pre_seed_sessions:
+        n = args.pre_seed_sessions
+        log.info("warm-start barrier: seeding %d sessions x %d tokens ...", n, args.seed_tokens)
+        t0 = time.monotonic()
+        for sid in range(1, n + 1):
+            eng._ensure(sid)   # gen() yields the seed input immediately, no audio needed
+        while True:
+            done = sum(1 for sid in range(1, n + 1) if eng.sessions[sid].tokens)
+            if done == n:
+                break
+            if time.monotonic() - t0 > 300:
+                log.error("warm-start barrier timed out (%d/%d seeded)", done, n)
+                break
+            time.sleep(0.5)
+        # the seed's output token is CONTEXT, not response: skip it in
+        # delivery, or every session's first tick returns a junk token.
+        for sid in range(1, n + 1):
+            st = eng.sessions[sid]
+            st.consumed = len(st.tokens)
+            st.consumed_text = len(st.text)
+        log.info("warm-start barrier done: %d sessions seeded in %.1fs",
+                 n, time.monotonic() - t0)
+        eng.pre_seeded_n = n
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8),
                          options=[("grpc.max_receive_message_length", 256 * 1024 * 1024),

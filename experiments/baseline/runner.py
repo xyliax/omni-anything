@@ -53,6 +53,9 @@ def worker_command(config: BaselineConfig, ready_file: Path) -> list[str]:
     ]
     if config.mode_spec.parallel_ingest:
         command.extend(["--seed-tokens", str(config.seed_tokens)])
+        # warm-start barrier: all seed prefills complete before ready (state
+        # construction precedes the tick cadence, same semantics as conveyor)
+        command.extend(["--pre-seed-sessions", str(config.sessions if config.seed_tokens else 0)])
     return command
 
 
@@ -65,13 +68,31 @@ def worker_environment(config: BaselineConfig, run_dir: Path) -> dict[str, str]:
         "METRONOME_ROOT": str(config.metronome_root),
         "METRONOME_STATLOG": str(run_dir / "kv.log"),
         "INGEST_WORKERS": str(config.ingest_workers),
+        # honored by the instrumented worker (shared stat logger); the vanilla
+        # pin worker keeps its own hardcoded 1 Hz and simply ignores this.
+        "OMNI_STATLOG_PERIOD_S": str(config.kv_log_period_s),
     })
     if config.per_request_logs:
         env["PERREQ_LOG"] = str(run_dir / "per_request.log")
         env["PERITER_LOG"] = str(run_dir / "per_iteration.log")
     if config.trace:
         apply_scheduler_trace(
-            env, run_dir / "scheduler.log", run_dir / "scheduler_errors.log"
+            env,
+            run_dir / "scheduler.log",
+            run_dir / "scheduler_errors.log",
+            run_dir / "residency.log",
+        )
+    if config.seed_tokens:
+        # Seed runs need the frozen-max_tokens fix in the EngineCore process
+        # (worker/engine_fix/sitecustomize.py) — without it the seed's
+        # max_tokens=1 caps every segment at 1 token while cadence stays
+        # green. Prepend AHEAD of the trace collector dir: only the first
+        # sitecustomize on sys.path is imported, and engine_fix chain-loads
+        # the collector when tracing is also on.
+        env["OMNI_SESSION_MAXTOKENS_FIX"] = "1"
+        fix_dir = config.root / "experiments" / "baseline" / "worker" / "engine_fix"
+        env["PYTHONPATH"] = os.pathsep.join(
+            filter(None, [str(fix_dir), env.get("PYTHONPATH", "")])
         )
     return env
 

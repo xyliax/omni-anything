@@ -20,6 +20,7 @@ from .parse import (
     parse_kv,
     parse_park,
     parse_per_request,
+    parse_residency,
     parse_scheduler,
     percentile,
 )
@@ -41,6 +42,7 @@ class RunFiles:
     per_request: Path
     kv: Path
     scheduler: Path
+    residency: Path
     gpu: Path
     gateway_ticks: Path
     park: Path
@@ -57,6 +59,7 @@ def _run_files(directory: Path) -> RunFiles:
         per_request=directory / "per_request.log",
         kv=directory / "kv.log",
         scheduler=directory / "scheduler.log",
+        residency=directory / "residency.log",
         gpu=directory / "gpu.csv",
         gateway_ticks=directory / "gateway_ticks.log",
         park=directory / "park.log",
@@ -226,6 +229,14 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
     if steps:
         bundle["steps"] = steps
         add_periodic_ticks(bundle)
+    residency = parse_residency(files.residency)
+    if residency:
+        # residency.log is epoch-clock (same EngineCore collector as
+        # scheduler.log): exact alignment, same base rule as gpu/gateway.
+        base = steps_origin if steps_origin is not None else residency[0][0]
+        bundle["residency"] = [
+            [round(timestamp - base, 3), entries] for timestamp, entries in residency
+        ]
     gpu = parse_gpu(files.gpu)
     if gpu:
         # nvidia-smi stamps share the scheduler's epoch clock: exact alignment.
@@ -275,7 +286,7 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
             if bundle["kv"][index][4] > bundle["kv"][index - 1][4]
         ]
     endpoints = [
-        rows[-1][0] for key in ("kv", "steps", "smi") if (rows := bundle.get(key))
+        rows[-1][0] for key in ("kv", "steps", "smi", "residency") if (rows := bundle.get(key))
     ]
     bundle["t_end"] = round(max(endpoints, default=0) + 5, 1)
     return bundle

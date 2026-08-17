@@ -247,21 +247,29 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
             },
         )
     for reload_event in bundle.get("reloads") or []:
+        # demand reloads sit on the resume critical path; prefetch loads are
+        # anonymous materializations that should land INSIDE the FE window —
+        # name them apart so the overlap (or its failure) reads on sight.
+        kind = "KV prefetch" if reload_event.get("trigger") == "prefetch" else "KV reload"
         if reload_event["end"] is not None:
             builder.slice(
                 1,
                 reload_event["session"],
                 reload_event["time"],
                 reload_event["end"] - reload_event["time"],
-                f"KV reload ({reload_event['cpu_tok']} tok)",
-                {"cpu_tok": reload_event["cpu_tok"], "gpu_tok": reload_event["gpu_tok"]},
+                f"{kind} ({reload_event['cpu_tok']} tok)",
+                {
+                    "cpu_tok": reload_event["cpu_tok"],
+                    "gpu_tok": reload_event["gpu_tok"],
+                    "trigger": reload_event.get("trigger", "demand"),
+                },
             )
         else:
             builder.instant(
                 1,
                 reload_event["session"],
                 reload_event["time"],
-                "KV reload started (never completed)",
+                f"{kind} started (never completed)",
                 {"cpu_tok": reload_event["cpu_tok"]},
             )
     for offload in bundle.get("offloads") or []:
@@ -272,10 +280,19 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
             f"KV mirror ({offload['blocks']} blocks)",
             {"blocks": offload["blocks"]},
         )
-    if bundle.get("parks"):
-        # per-session residency sawtooth, three points per cycle: the grip just
-        # before release (upper envelope = context growth), the pinned floor
-        # just after (held - evicted), and the restoration at reload admission
+    if bundle.get("residency"):
+        # per-session residency counters from the uniform sampler
+        # (residency.log, both arms): baseline shows the context-growth
+        # staircase, conveyor the park sawtooth — same track, same source.
+        builder.process(4, "kv residency (blocks, sampled)")
+        for time_s, entries in bundle["residency"]:
+            for session, blocks in entries:
+                builder.counter(4, time_s, f"session {session}", {"blocks": blocks})
+    elif bundle.get("parks"):
+        # LEGACY fallback (runs predating residency.log): sawtooth sampled at
+        # park instants, three points per cycle: the grip just before release
+        # (upper envelope = context growth), the pinned floor just after
+        # (held - evicted), and the restoration at reload admission
         # (approximated by the preceding park's held).
         builder.process(4, "kv residency (blocks, sampled at parks)")
         events: list[tuple[float, int, int]] = []

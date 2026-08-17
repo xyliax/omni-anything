@@ -1,2 +1,0 @@
-2026/08/09 14:47:50 worker ready: model=/home/yuxing/.cache/huggingface/hub/models--Qwen--Qwen2.5-Omni-7B/snapshots/ae9e1690543ffd5c0221dc27f79834d0294cba00
-2026/08/09 14:47:50 [go-gateway] WS on :8907  tick=2000ms tpt=25 -> worker 127.0.0.1:50054

@@ -28,6 +28,9 @@ CONVEYOR_WORKER = ROOT / "experiments" / "conveyor" / "worker" / "stream_server.
 ENGINE_PATCH = (
     ROOT / "experiments" / "conveyor" / "worker" / "engine_patch" / "sitecustomize.py"
 )
+ENGINE_FIX = (
+    ROOT / "experiments" / "baseline" / "worker" / "engine_fix" / "sitecustomize.py"
+)
 
 PARK_LINES_HEALTHY = (
     "1755080000.000001 S req=s1e1-abcdefgh blocks=3\n"
@@ -94,6 +97,34 @@ class ConveyorIssueScanTests(IssueScanTestCase):
             ["park enabled but park.log recorded zero parks"],
         )
 
+    def test_prefetch_enabled_without_prefetch_loads_is_an_issue(self) -> None:
+        # Same shape as the zero-park scan: prefetch is declared in the
+        # manifest, so a park.log holding only demand loads means the
+        # mechanism never fired.
+        self.write("park.log", PARK_LINES_HEALTHY)
+        self.write(
+            "manifest.json",
+            '{"config": {"engine": {"prefetch": "push"}}}\n',
+        )
+        self.assertEqual(
+            conveyor_issues(self.store),
+            ["prefetch enabled but park.log recorded zero prefetch loads"],
+        )
+
+    def test_prefetch_loads_satisfy_the_scan(self) -> None:
+        self.write(
+            "park.log",
+            PARK_LINES_HEALTHY
+            + "1755080000.400001 L req=s1e1-abcdefgh cpu_tok=960 gpu_tok=2048"
+            " trigger=prefetch\n"
+            "1755080000.500001 R req=s1e1-abcdefgh trigger=prefetch\n",
+        )
+        self.write(
+            "manifest.json",
+            '{"config": {"engine": {"prefetch": "push"}}}\n',
+        )
+        self.assertEqual(conveyor_issues(self.store), [])
+
 
 class BaselineIssueScanTests(IssueScanTestCase):
     def test_healthy_run_yields_no_issues(self) -> None:
@@ -125,6 +156,66 @@ class CrossLanguageLogContractTests(unittest.TestCase):
         self.assertIn('RPC failed', text)      # park transport-failure scan
 
 
+class SharedObservationProducerTests(unittest.TestCase):
+    """One observation mechanism for both arms: the workers must import the
+    shared tracekit producer, never carry a private copy (the two copies this
+    replaced had already drifted — clock line, sampling period, stations)."""
+
+    def test_both_workers_use_the_shared_producer(self) -> None:
+        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
+            text = worker.read_text(encoding="utf-8")
+            self.assertIn(
+                "from tracekit.collectors.worker_obs import perreq_logger, stat_logger_classes",
+                text,
+                f"{worker} must import the shared observation producer",
+            )
+            self.assertNotIn(
+                "StatLoggerBase", text,
+                f"{worker} must not define a private stat logger",
+            )
+            self.assertNotIn(
+                "def _pev", text,
+                f"{worker} must not carry a private per-request event writer",
+            )
+
+    def test_both_workers_emit_the_ingest_stations(self) -> None:
+        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
+            text = worker.read_text(encoding="utf-8")
+            for station in ("IQ", "IS", "IE", "IR", "IA"):
+                self.assertIn(
+                    f'_pev("{station}"', text,
+                    f"{worker} lost ingest station {station}",
+                )
+
+
+class SeedRunFixTests(unittest.TestCase):
+    """Seed runs die at 1 token/segment without the frozen-max_tokens fix
+    (the miss=94.8% shape); the runner must inject it exactly then."""
+
+    def test_seeded_worker_environment_injects_the_fix_first(self) -> None:
+        from experiments.baseline.config import BaselineConfig
+        from experiments.baseline.runner import worker_environment
+
+        run_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        seeded = worker_environment(
+            BaselineConfig(trace=True, seed_tokens=4096), run_dir
+        )
+        self.assertEqual(seeded.get("OMNI_SESSION_MAXTOKENS_FIX"), "1")
+        first = seeded["PYTHONPATH"].split(os.pathsep)[0]
+        self.assertTrue(first.endswith("engine_fix"), first)
+        unseeded = worker_environment(BaselineConfig(trace=True), run_dir)
+        self.assertNotIn("OMNI_SESSION_MAXTOKENS_FIX", unseeded)
+
+    def test_fix_module_patches_nothing_when_gates_are_closed(self) -> None:
+        with mock.patch.dict(os.environ):
+            os.environ.pop("OMNI_SESSION_MAXTOKENS_FIX", None)
+            os.environ.pop("OMNI_SCHEDULER_TRACE", None)
+            os.environ.pop("OMNI_RESIDENCY_LOG", None)
+            spec = importlib.util.spec_from_file_location("engine_fix_under_test", ENGINE_FIX)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)   # would raise on any patching (no vllm here)
+
+
 class WarmupSentinelTests(unittest.TestCase):
     """One sentinel, three declarations across process boundaries."""
 
@@ -137,9 +228,11 @@ class WarmupSentinelTests(unittest.TestCase):
                 f"warmup sentinel constant missing or changed in {worker.name}",
             )
         with mock.patch.dict(os.environ):
-            # both gates must stay closed: importing must patch nothing.
+            # all gates must stay closed: importing must patch nothing.
             os.environ.pop("OMNI_PARK_PATCH", None)
+            os.environ.pop("OMNI_PREFETCH", None)
             os.environ.pop("OMNI_SCHEDULER_TRACE", None)
+            os.environ.pop("OMNI_RESIDENCY_LOG", None)
             spec = importlib.util.spec_from_file_location("park_patch_under_test", ENGINE_PATCH)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)

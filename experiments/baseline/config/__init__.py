@@ -50,6 +50,9 @@ class BaselineConfig:
     wait_budget_s = 1.6
     ingest_workers = 8
     startup_timeout_s = 360
+    kv_log_period_s = 0.2   # kv.log sampling; 10 samples/tick (same rationale
+                            # as platform.GPU_SAMPLE_PERIOD_S) — identical to
+                            # conveyor's, the two arms must observe on one grid
 
     mode: str = "paringest"
     trace: bool = False
@@ -113,7 +116,7 @@ class BaselineConfig:
         """The artifact set the runner refuses to finalize without."""
         names = ["client.json", "client.txt", "gateway.log", "gpu.csv", "kv.log", "worker.log"]
         if self.trace:
-            names.append("scheduler.log")
+            names.extend(("scheduler.log", "residency.log"))
         if self.per_request_logs:
             names.extend(("per_request.log", "per_iteration.log"))
         return tuple(sorted(names))
@@ -130,6 +133,8 @@ class BaselineConfig:
                 "gpu_memory_utilization": self.gpu_memory_utilization,
                 "wait_budget_s": self.wait_budget_s,
                 "seed_tokens": self.seed_tokens,
+                # seed runs inject the frozen-max_tokens engine fix (runner)
+                "session_max_tokens_fix": bool(self.seed_tokens),
                 "ingest_workers": self.ingest_workers,
                 "startup_timeout_s": self.startup_timeout_s,
             },
@@ -140,7 +145,9 @@ class BaselineConfig:
             "observations": {
                 "trace": self.trace,
                 "scheduler": self.trace,
+                "residency": self.trace,
                 "per_request": self.per_request_logs,
                 "per_iteration": self.per_request_logs,
+                "kv_log_period_s": self.kv_log_period_s,
             },
         }

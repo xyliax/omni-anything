@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from tracekit.bundle import build_bundle
-from tracekit.parse import parse_gpu, parse_kv
+from tracekit.parse import parse_gpu, parse_kv, parse_park, parse_residency
 from tracekit.perfetto import MissingTimelineDataError, export
 
 from .synthetic import make_run_dir, make_scheduler_run, read_trace, write_json
@@ -34,6 +34,42 @@ class ParserTests(unittest.TestCase):
             rows = parse_gpu(path)
         self.assertEqual([row[1] for row in rows], [50, 70])
         self.assertAlmostEqual(rows[1][0] - rows[0][0], 0.2)
+
+    def test_residency_rows_exclude_the_warmup_sentinel(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "residency.log"
+            path.write_text(
+                "1755080000.000000 s1e1-abcd:120 s1000000000e1-warm:5\n"
+                "1755080000.200000 s1e1-abcd:32 s2e1-efgh:64\n",
+                encoding="utf-8",
+            )
+            rows = parse_residency(path)
+        self.assertEqual(
+            rows,
+            [
+                [1755080000.0, [[1, 120]]],
+                [1755080000.2, [[1, 32], [2, 64]]],
+            ],
+        )
+
+    def test_park_loads_pair_per_request_and_trigger(self) -> None:
+        # A prefetch L and a demand L for the same session may interleave;
+        # each R must close its own trigger's window, and trigger-less lines
+        # (pre-prefetch logs) read as demand.
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "park.log"
+            path.write_text(
+                "100.0 L req=s1e1-x cpu_tok=960 gpu_tok=2048 trigger=prefetch\n"
+                "100.1 L req=s1e1-x cpu_tok=320 gpu_tok=2048\n"
+                "100.2 R req=s1e1-x trigger=prefetch\n"
+                "100.3 R req=s1e1-x\n",
+                encoding="utf-8",
+            )
+            reloads = parse_park(path)["reloads"]
+        self.assertEqual(
+            [(r["trigger"], r["end"]) for r in reloads],
+            [("prefetch", 100.2), ("demand", 100.3)],
+        )
 
 
 class ExportTests(unittest.TestCase):

@@ -12,6 +12,6 @@
 - **trace 归 `tracekit/`**：实验只产出原始日志；解析、对齐、Perfetto 导出全在 trace 套件。临时画图是一次性行为，产物不入库。
 - **配置是实验私有的**：每个实验目录自带 `config/`（纯 Python 常量文件），每个默认值只声明一次——worker 的引擎几何参数因此全部必填，不设第二套 argparse 默认值。CLI 只暴露逐 run 会变的旋钮。
 - **运行工作流归 `lab/workflow.py`**：runner 只声明本实验的差异（命令、环境、issue 扫描，组装 `RunPlan`）；就绪等待、client 看门狗、interrupted 语义、收尾判决全仓只有一份。
-- **run 目录归 `lab/artifacts.py`**：全仓库唯一实现；失败 run 一律保留；成功判据是 validation 通过，exit 0 本身不算数。
+- **run 目录归 `lab/artifacts.py`**：全仓库唯一实现；运行时完整落盘，成功判据是 validation 通过，exit 0 本身不算数。版本库每个实验只保留最新且有效的一个 run，清理是人的动作。
 - **判 run 成败的日志字符串是契约**：产出方（含 Go gateway）与扫描方由 `tests/test_run_validation.py` 钉在一起，改措辞必须让测试红。
 - **文件系统只代表已存在的代码**：未实现的实验臂写在 `docs/experiments.md` 的路线图里。

@@ -17,11 +17,11 @@ class BaselineConfigTests(unittest.TestCase):
         self.assertEqual(set(BaselineConfig(mode="vanilla").required_artifact_names()), base)
         self.assertEqual(
             set(BaselineConfig(mode="vanilla", trace=True).required_artifact_names()),
-            base | {"scheduler.log"},
+            base | {"scheduler.log", "residency.log"},
         )
         self.assertEqual(
             set(BaselineConfig(mode="paringest", trace=True).required_artifact_names()),
-            base | {"scheduler.log", "per_request.log", "per_iteration.log"},
+            base | {"scheduler.log", "residency.log", "per_request.log", "per_iteration.log"},
         )
 
     def test_manifest_config_sections(self) -> None:

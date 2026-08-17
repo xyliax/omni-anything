@@ -16,6 +16,8 @@ These preserve hard-won format knowledge:
 - gateway_ticks.log and park.log are epoch-clock (no pairing needed);
   park.log carries four line kinds (park / S mirror / L reload-admit /
   R reload-done), see parse_park
+- residency.log is epoch-clock too (written by the same EngineCore collector
+  as scheduler.log): one row per sample, ``<epoch> <request_id>:<blocks> ...``
 """
 
 from __future__ import annotations
@@ -172,22 +174,25 @@ def parse_park(path: Path) -> dict[str, list[dict[str, Any]]]:
 
     - park:   ``<epoch> req=<id> held=N evicted=N cpu_covered=N usage_before=F
       usage_after=F`` — one per successful park.
-    - load:   ``<epoch> L req=<id> cpu_tok=N gpu_tok=N`` — a CPU-supplied
-      reload was admitted (request entered WAITING_FOR_REMOTE_KVS).
-    - loaded: ``<epoch> R req=<id>`` — that reload completed.
+    - load:   ``<epoch> L req=<id> cpu_tok=N gpu_tok=N [trigger=demand|prefetch]``
+      — a CPU-supplied load was issued: demand = resume reload (request enters
+      WAITING_FOR_REMOTE_KVS), prefetch = anonymous materialization at
+      chunk-push time. Missing ``trigger`` (pre-prefetch logs) reads as
+      demand.
+    - loaded: ``<epoch> R req=<id> [trigger=...]`` — that load completed.
     - store:  ``<epoch> S req=<id> blocks=N`` — the eager mirror's frontier
       advanced N blocks for this session (offload activity; upper bound on
       copies, dedup-skips included).
 
     Returns ``{"parks": [...], "reloads": [...], "offloads": [...]}``; reloads
-    are L/R pairs matched per request in order (an unmatched L keeps
-    ``end=None``). The session id is parsed out of the request id
-    (``s<sid>e1-...``).
+    carry a ``trigger`` field and are L/R pairs matched per (request, trigger)
+    in order (an unmatched L keeps ``end=None``). The session id is parsed
+    out of the request id (``s<sid>e1-...``).
     """
     parks: list[dict[str, Any]] = []
     reloads: list[dict[str, Any]] = []
     offloads: list[dict[str, Any]] = []
-    open_loads: dict[str, list[dict[str, Any]]] = {}
+    open_loads: dict[tuple[str, str], list[dict[str, Any]]] = {}
     if not path.is_file():
         return {"parks": [], "reloads": [], "offloads": []}
     with path.open(encoding="utf-8", errors="replace") as handle:
@@ -228,22 +233,58 @@ def parse_park(path: Path) -> dict[str, list[dict[str, Any]]]:
                         }
                     )
                 elif kind == "L":
+                    trigger = fields.get("trigger", "demand")
                     event = {
                         "time": timestamp,
                         "session": session,
                         "cpu_tok": int(fields["cpu_tok"]),
                         "gpu_tok": int(fields["gpu_tok"]),
+                        "trigger": trigger,
                         "end": None,
                     }
                     reloads.append(event)
-                    open_loads.setdefault(fields["req"], []).append(event)
+                    open_loads.setdefault((fields["req"], trigger), []).append(event)
                 else:  # R
-                    pending = open_loads.get(fields["req"])
+                    trigger = fields.get("trigger", "demand")
+                    pending = open_loads.get((fields["req"], trigger))
                     if pending:
                         pending.pop(0)["end"] = timestamp
             except (KeyError, ValueError, IndexError) as exc:
                 raise ValueError(f"invalid park row {path}:{line_number}") from exc
     return {"parks": parks, "reloads": reloads, "offloads": offloads}
+
+
+def parse_residency(path: Path) -> list[list[Any]]:
+    """Per-session KV residency samples from the EngineCore collector.
+
+    Line: ``<epoch_s> <request_id>:<blocks> ...`` — one row per sample
+    (throttled at the source by ``OMNI_STATLOG_PERIOD_S``), one field per
+    live request. ``blocks`` is the request's grip or, when parked, its
+    still-GPU-cached prefix chain. Returns ``[[epoch_s, [[sid, blocks],
+    ...]], ...]`` with the warmup sentinel excluded — epoch clock, so
+    alignment against scheduler.log is exact.
+    """
+    rows: list[list[Any]] = []
+    if not path.is_file():
+        return rows
+    with path.open(encoding="utf-8", errors="replace") as handle:
+        for line_number, line in enumerate(handle, 1):
+            parts = line.split()
+            if not parts:
+                continue
+            try:
+                timestamp = float(parts[0])
+                entries: list[list[int]] = []
+                for item in parts[1:]:
+                    request_id, blocks = item.rsplit(":", 1)
+                    match = SESSION_PATTERN.match(request_id)
+                    if match and int(match.group(1)) != WARMUP_SESSION:
+                        entries.append([int(match.group(1)), int(blocks)])
+            except (ValueError, IndexError) as exc:
+                raise ValueError(f"invalid residency row {path}:{line_number}") from exc
+            if entries:
+                rows.append([timestamp, entries])
+    return rows
 
 
 def last_token_growth(rows: list[tuple[float, int]]) -> float:

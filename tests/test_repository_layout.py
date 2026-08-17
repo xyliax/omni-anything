@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yml", ".yaml", ".toml"}
-INDEXED_RUN = re.compile(r"`(20\d{6}_[A-Za-z0-9_.-]+)`")
+RUN_ID = re.compile(r"20\d{6}_\d{6}_[A-Za-z0-9_.-]+")
 
 # Built by concatenation so this file does not trigger its own scan.
 OBSOLETE_STRINGS = (
@@ -26,11 +26,6 @@ OBSOLETE_STRINGS = (
     "e2_kv_" + "conveyor",
     "e3_phase_" + "scheduling",
 )
-
-# The append-only run log is a historical record; its old entries legitimately
-# name paths that no longer exist.
-SCAN_EXEMPT = {ROOT / "docs" / "experiment-log.md"}
-
 
 def scan_targets() -> list[Path]:
     targets = [
@@ -51,7 +46,7 @@ def scan_targets() -> list[Path]:
                 for path in root.rglob("*")
                 if path.is_file() and path.suffix in TEXT_SUFFIXES
             )
-    return [path for path in targets if path not in SCAN_EXEMPT]
+    return targets
 
 
 class RepositoryLayoutTests(unittest.TestCase):
@@ -92,19 +87,24 @@ class RepositoryLayoutTests(unittest.TestCase):
                     f"broken link in {document.relative_to(ROOT)}: {target}",
                 )
 
-    def test_every_retained_run_is_indexed(self) -> None:
-        index = (ROOT / "results" / "README.md").read_text(encoding="utf-8")
-        actual = {
-            run.name
-            for pattern in ("*/runs", "*/calibration")
-            for runs in (ROOT / "results").glob(pattern)
-            for run in runs.iterdir()
-            if run.is_dir()
-        }
-        for run_id in actual:
-            self.assertIn(f"`{run_id}`", index, f"unindexed run: {run_id}")
-        for run_id in INDEXED_RUN.findall(index):
-            self.assertIn(run_id, actual, f"indexed run does not exist: {run_id}")
+    def test_each_experiment_retains_exactly_one_run(self) -> None:
+        for runs in (ROOT / "results").glob("*/runs"):
+            retained = [run for run in runs.iterdir() if run.is_dir()]
+            self.assertEqual(
+                len(retained),
+                1,
+                f"{runs.relative_to(ROOT)} must contain exactly one current run",
+            )
+
+    def test_documents_do_not_pin_run_ids(self) -> None:
+        for path in scan_targets():
+            if path.suffix != ".md":
+                continue
+            match = RUN_ID.search(path.read_text(encoding="utf-8"))
+            self.assertIsNone(
+                match,
+                f"specific run ID in {path.relative_to(ROOT)}: {match.group(0) if match else ''}",
+            )
 
     def test_formal_runs_have_terminal_status(self) -> None:
         for runs in (ROOT / "results").glob("*/runs"):

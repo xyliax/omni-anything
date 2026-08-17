@@ -59,6 +59,8 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
         cmd += ["--kv-pool-gib", str(config.kv_pool_gib)]
     if config.sync_scheduling and not config.park_enabled:
         cmd += ["--sync-scheduling"]   # control arm pinning; park implies it
+    if config.prefetch != "off":
+        cmd += ["--prefetch", config.prefetch]   # push trigger lives in the worker
     if config.park_enabled and config.park_keep_blocks is None:
         # fixed-tail mode: worker-side timer + RPC. Quota mode is engine-side
         # auto-park-on-stop and needs no worker knobs (see worker_environment).
@@ -88,7 +90,10 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         env["PERREQ_LOG"] = str(run_dir / "per_request.log")
         env["PERITER_LOG"] = str(run_dir / "per_iteration.log")
         apply_scheduler_trace(
-            env, run_dir / "scheduler.log", run_dir / "scheduler_errors.log"
+            env,
+            run_dir / "scheduler.log",
+            run_dir / "scheduler_errors.log",
+            run_dir / "residency.log",
         )
     if config.park_enabled:
         # The park primitive lives in the spawned EngineCore process; inject it
@@ -97,6 +102,12 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         # chain-loads the trace collector when tracing is also on).
         env["OMNI_PARK_PATCH"] = "1"
         env["OMNI_PARK_LOG"] = str(run_dir / "park.log")
+        if config.prefetch != "off":
+            # engine-side gate for omni_prefetch (the worker's --prefetch only
+            # arms the push trigger); prefetch requires park (validated), so
+            # the PYTHONPATH prepend below always covers it.
+            env["OMNI_PREFETCH"] = "1"
+            env["OMNI_PREFETCH_MIN_FREE"] = str(config.prefetch_min_free)
         if config.park_keep_blocks is not None:
             # quota mode: the engine parks each session the instant its slice
             # stops (zero delay, no RPC) — everything beyond K blocks evicted.
@@ -207,6 +218,23 @@ def collect_issues(store: RunStore) -> list[str]:
             ).count("RPC failed")
             if park_errors:
                 issues.append(f"{park_errors} park RPC failure(s) (see worker.log)")
+    manifest = store.file("manifest.json")
+    if manifest.is_file() and park_log.is_file():
+        # same shape as the zero-park scan: a requested prefetch that never
+        # materialized anything would masquerade as evidence. Only L lines
+        # count — R-only would mean completions without issues (impossible),
+        # and demand L lines flow regardless of the mechanism.
+        engine = json.loads(manifest.read_text(encoding="utf-8")).get(
+            "config", {}).get("engine", {})
+        if engine.get("prefetch", "off") != "off":
+            prefetched = 0
+            with park_log.open(encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    parts = line.split()
+                    if len(parts) > 1 and parts[1] == "L" and "trigger=prefetch" in line:
+                        prefetched += 1
+            if not prefetched:
+                issues.append("prefetch enabled but park.log recorded zero prefetch loads")
     return issues
 
 

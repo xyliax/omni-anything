@@ -34,6 +34,11 @@ def parser() -> argparse.ArgumentParser:
         help="park primitive, quota mode: destroy everything beyond this resident floor "
              "(overrides --park-tail-blocks)",
     )
+    ap.add_argument(
+        "--prefetch", choices=("off", "push"),
+        help="KV prefetch: push = materialize the parked tail at chunk-push time so the "
+             "reload copy overlaps FE (requires park; default: off)",
+    )
     ap.add_argument("--gpu", type=int, help="GPU index to run on (default: the usual card)")
     return ap
 

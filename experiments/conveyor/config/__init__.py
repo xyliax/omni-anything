@@ -34,8 +34,9 @@ class ConveyorConfig:
     ingest_workers = 8
     startup_timeout_s = 360
     kv_log_period_s = 0.2   # kv.log sampling; 10 samples/tick (same rationale
-                            # as platform.GPU_SAMPLE_PERIOD_S), coarse 1 Hz hid
-                            # the park sawtooth between events
+                            # as platform.GPU_SAMPLE_PERIOD_S) — identical to
+                            # baseline's, the two arms must observe on one grid
+                            # (coarse 1 Hz hid the park sawtooth between events)
 
     # conveyor mechanism: phase slots per tick period. The gateway walks a slot
     # wheel (one firing every PERIOD_MS/slots) and round-robins sessions onto it
@@ -75,6 +76,18 @@ class ConveyorConfig:
     # would race park's block frees); a no-park CONTROL arm must be able to
     # pin the same mode, or park-vs-nopark comparisons change two variables.
     sync_scheduling: bool = False
+
+    # conveyor mechanism: KV PREFETCH (materialization). "push" = at each
+    # chunk push the worker asks the engine (omni_prefetch utility) to move
+    # the session's parked-but-mirrored blocks back into the GPU prefix
+    # cache, so the ~70ms reload copy overlaps the ~270ms FE window instead
+    # of serializing after it (FINDINGS H5). Correctness never depends on
+    # it: refused / late / LRU-evicted prefetches degrade to the demand
+    # reload. prefetch_min_free is the engine-side pool budget gate (refuse
+    # when free space would drop below this fraction). Requires park —
+    # without park nothing is ever missing from the GPU cache.
+    prefetch: str = "off"
+    prefetch_min_free: float = 0.10
 
     @property
     def park_enabled(self) -> bool:
@@ -133,6 +146,13 @@ class ConveyorConfig:
             raise ValueError("park_keep_blocks must be >= 1 (block 0 is never evicted)")
         if not 0 < self.park_delay_s < workload.PERIOD_MS / 1000:
             raise ValueError("park_delay_s must land inside one tick period")
+        if self.prefetch not in ("off", "push"):
+            raise ValueError(f"unknown prefetch mode: {self.prefetch} (known: off, push)")
+        if self.prefetch != "off" and not self.park_enabled:
+            raise ValueError("prefetch requires park (without park nothing is ever "
+                             "missing from the GPU cache; see config comment)")
+        if not 0 <= self.prefetch_min_free < 1:
+            raise ValueError("prefetch_min_free must be a fraction in [0, 1)")
         if self.seed_tokens and not self.park_enabled:
             # the stop check reads session.max_tokens frozen at construction;
             # only the engine_patch (park runs) refreshes it per chunk. A
@@ -151,7 +171,9 @@ class ConveyorConfig:
         if self.park_enabled:
             names.append("park.log")
         if self.trace:
-            names.extend(("scheduler.log", "per_request.log", "per_iteration.log"))
+            names.extend(
+                ("scheduler.log", "residency.log", "per_request.log", "per_iteration.log")
+            )
         return tuple(sorted(names))
 
     def manifest_config(self) -> dict[str, Any]:
@@ -173,6 +195,8 @@ class ConveyorConfig:
                 "park_keep_blocks": self.park_keep_blocks,
                 "park_delay_s": self.park_delay_s,
                 "sync_scheduling": self.sync_scheduling,
+                "prefetch": self.prefetch,
+                "prefetch_min_free": self.prefetch_min_free,
             },
             "client": {"client_shards": self.client_shards},
             "model": model.manifest(),
@@ -181,7 +205,9 @@ class ConveyorConfig:
             "observations": {
                 "trace": self.trace,
                 "scheduler": self.trace,
+                "residency": self.trace,
                 "per_request": self.trace,
                 "per_iteration": self.trace,
+                "kv_log_period_s": self.kv_log_period_s,
             },
         }
