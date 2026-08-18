@@ -22,23 +22,23 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 
 横向设施：`lab/`（运行工作流 / run 目录 / 进程 / 探针——runner 只声明差异，时间线全仓一份）、`tracekit/`（trace 与可视化能力集中于此：采集、解析、对齐、Perfetto；临时画图属一次性行为，产物不入库）。配置是实验私有的：每个实验目录自带 `config/`（纯 Python 常量），不设全局配置层。
 
-## 事实层与 `context/`
+## 事实层与 `.context/`
 
 **`docs/` 是事实与决策层**（本项目结论、问题、方案、实验、纪律）。  
 **根目录只留本文件与 `README.md`（入口）。**  
-**`context/` 是思考原料与工作语境（讨论、设想、外部整理、表达草稿），不构成项目事实。**
+**`.context/` 是思考原料与工作语境（讨论、设想、外部整理、表达草稿），不构成项目事实。**
 
-归属测试：删除该文件，项目正确性或可理解性是否受损？受损 → `docs/`；只是「重新收集要花时间」→ `context/`。
+归属测试：删除该文件，项目正确性或可理解性是否受损？受损 → `docs/`；只是「重新收集要花时间」→ `.context/`。
 
-| 维度 | `docs/`（事实层） | `context/` |
+| 维度 | `docs/`（事实层） | `.context/` |
 | --- | --- | --- |
 | 内容 | 本项目结论、问题、方案、实验、纪律 | 讨论与设想（ideas）、外部整理（references / papers）、表达草稿（slides） |
 | 过时 | 过时是 bug | 允许滞后，快照打日期即可 |
 | 内聚 | 一篇文档完整持有自己的主题；**兄弟文档之间少交叉引用** | 结论只住 `docs/`，此处只收原料 |
 
-**交叉引用纪律**：本文件是唯一文档地图。`docs/` 各文自洽可读，跨主题由读者经本表跳转。允许的外指：`results/`、`experiments/`、`lab/`、`tracekit/`、`third_party/`、外部 URL、以及 `context/` 作证据原料（结论仍写在 `docs/`）。
+**交叉引用纪律**：本文件是唯一文档地图。`docs/` 各文自洽可读，跨主题由读者经本表跳转。允许的外指：`results/`、`experiments/`、`lab/`、`tracekit/`、`third_party/`、外部 URL、以及 `.context/` 作证据原料（结论仍写在 `docs/`）。
 
-提升通道（单向）：`context/ideas/` 被采纳 → 写入 `docs/`；digest 中项目依赖的结论上移，原文留 `context/papers/`。
+提升通道（单向）：`.context/ideas/` 被采纳 → 写入 `docs/`；digest 中项目依赖的结论上移，原文留 `.context/papers/`。
 
 ## 权威文档（`docs/`）
 
@@ -66,10 +66,10 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 | `results/` | 运行证据；runner 不自动删除，但版本库中每个实验只保留最新且有效的一个 run，规则见 `results/README.md` | 证据不改写结论 |
 | `environment/` | 锁定运行时 profile 与校验 | 任务要求时改 |
 | `third_party/` | git-subrepo pin；见 `third_party/AGENTS.md` | **只读** |
-| `context/references/` | 外部公开信息原文或整理 | 按题打开 |
-| `context/papers/` | 跨主题 digest 池 | 按题打开 |
-| `context/ideas/` | 未进事实层的设想 | 按题打开 |
-| `context/slides/` | 表达草稿 | 可滞后；仅幻灯片任务时打开 |
+| `.context/references/` | 外部公开信息原文或整理 | 按题打开 |
+| `.context/papers/` | 跨主题 digest 池 | 按题打开 |
+| `.context/ideas/` | 未进事实层的设想 | 按题打开 |
+| `.context/slides/` | 表达草稿 | 可滞后；仅幻灯片任务时打开 |
 
 PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓库的 worker（`experiments/baseline/worker/stream_server.py`，与 pin 内同名）复制自该 pin 后永久分道，不追上游更新。
 

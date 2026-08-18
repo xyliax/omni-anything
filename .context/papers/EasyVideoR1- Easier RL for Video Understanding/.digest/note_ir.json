@@ -8,7 +8,7 @@
   "resources": {
     "paper": "https://arxiv.org/abs/2604.16893",
     "code": "https://github.com/cyuQ1n/EasyVideoR1",
-    "local_repo": "context/repos/EasyVideoR1",
+    "local_repo": ".context/repos/EasyVideoR1",
     "local_commit": "7ab338b"
   },
   "workflow": {

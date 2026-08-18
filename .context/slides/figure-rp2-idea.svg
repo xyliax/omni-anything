@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="1230" viewBox="0 0 940 1230">
+  <style>
+    .cjk { font-family: "Hiragino Sans GB", "PingFang SC", sans-serif; fill: #4A4438; }
+    .mono { font-family: "Menlo", "Hiragino Sans GB", "PingFang SC", monospace; fill: #4A4438; }
+    .gray { fill: #8A8272; }
+    .b { font-weight: 700; }
+  </style>
+  <defs>
+    <marker id="rp2-ah" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="8.5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2F9E63"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="1230" fill="#F6F2E8"/>
+  <rect x="18" y="18" width="904" height="1194" rx="26" fill="#FDFBF5" stroke="#E5DCC8" stroke-width="2"/>
+
+  <!-- ===== 上：通用负载 ===== -->
+  <text x="78" y="112" class="cjk b" font-size="34">通用负载：形状不可枚举</text>
+
+  <g fill="#D8CEB8" stroke="#A89878" stroke-width="2">
+    <rect x="78" y="158" width="316" height="64" rx="10"/>
+    <rect x="410" y="158" width="96" height="64" rx="10"/>
+    <rect x="522" y="158" width="212" height="64" rx="10"/>
+  </g>
+  <text x="762" y="200" class="cjk gray" font-size="26">输入长度任意</text>
+
+  <g fill="#D8CEB8" stroke="#A89878" stroke-width="2">
+    <rect x="78" y="252" width="82" height="64" rx="10"/>
+    <rect x="176" y="252" width="262" height="64" rx="10"/>
+    <rect x="454" y="252" width="140" height="64" rx="10"/>
+    <rect x="610" y="252" width="52" height="64" rx="10"/>
+  </g>
+  <text x="694" y="294" class="cjk gray" font-size="26">批次组成组合爆炸</text>
+
+  <text x="78" y="404" class="cjk b" font-size="27" fill="#D9641E">静态计划锁不住形状——</text>
+  <text x="78" y="446" class="cjk b" font-size="27" fill="#D9641E">通用引擎因此只把「无新输入的步」静态化</text>
+
+  <line x1="78" y1="512" x2="862" y2="512" stroke="#E5DCC8" stroke-width="2" stroke-dasharray="7,9"/>
+
+  <!-- ===== 下：双工负载 ===== -->
+  <text x="78" y="586" class="cjk b" font-size="34">双工负载：形状是物理常数</text>
+
+  <g fill="#F2CBB8" stroke="#D9A183" stroke-width="2">
+    <rect x="78" y="632" width="150" height="64" rx="10"/>
+    <rect x="248" y="632" width="150" height="64" rx="10"/>
+    <rect x="418" y="632" width="150" height="64" rx="10"/>
+    <rect x="588" y="632" width="150" height="64" rx="10"/>
+  </g>
+  <text x="78" y="740" class="cjk gray" font-size="26">每周期输入恒定 = 帧率 × 周期时长</text>
+
+  <rect x="78" y="778" width="700" height="56" rx="28" fill="#EFE9DA"/>
+  <text x="428" y="815" class="cjk" font-size="25" text-anchor="middle">错开相位后，批次组成同样可枚举——签名只有有限几种</text>
+
+  <line x1="428" y1="852" x2="428" y2="906" stroke="#2F9E63" stroke-width="4" marker-end="url(#rp2-ah)" stroke-linecap="round"/>
+
+  <rect x="130" y="918" width="600" height="122" rx="16" fill="#2F9E63" fill-opacity="0.10" stroke="#2F9E63" stroke-width="3"/>
+  <text x="430" y="972" class="cjk b" font-size="30" text-anchor="middle" fill="#2F9E63">对整个执行步做静态计划、逐周期重放</text>
+  <text x="430" y="1014" class="cjk" font-size="24" text-anchor="middle" fill="#2F9E63">——比通用引擎激进得多的特化，双工负载独有的机会</text>
+
+  <line x1="72" y1="1084" x2="868" y2="1084" stroke="#E5DCC8" stroke-width="2" stroke-dasharray="7,9"/>
+  <text x="470" y="1140" class="cjk" font-size="26" text-anchor="middle">引擎按「有无新输入」分类执行路径；</text>
+  <text x="470" y="1180" class="cjk" font-size="26" text-anchor="middle">我们按「形状是否稳定」分类——双工负载全部落在稳定侧</text>
+</svg>

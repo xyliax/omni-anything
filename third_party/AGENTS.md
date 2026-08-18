@@ -43,4 +43,4 @@ git subrepo status third_party/<name>
 ## 与事实源的关系
 
 - 现行结论与实验数字：根 `AGENTS.md` 地图、`docs/` 事实层与 `results/`，不从本目录反推。
-- `context/` 是思考原料（digest / 调研），不是事实层，也不是代码 pin。
+- `.context/` 是思考原料（digest / 调研），不是事实层，也不是代码 pin。

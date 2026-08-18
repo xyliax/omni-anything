@@ -26,6 +26,8 @@ OBSOLETE_STRINGS = (
     "e2_kv_" + "conveyor",
     "e3_phase_" + "scheduling",
 )
+OBSOLETE_CONTEXT_PATH = re.compile(r"(?<![.\w/])" + "context" + r"/")
+
 
 def scan_targets() -> list[Path]:
     targets = [
@@ -51,7 +53,7 @@ def scan_targets() -> list[Path]:
 
 class RepositoryLayoutTests(unittest.TestCase):
     def test_obsolete_top_level_containers_do_not_return(self) -> None:
-        for name in ("harness", "calibration", "observability"):
+        for name in ("harness", "calibration", "observability", "context"):
             self.assertFalse((ROOT / name).exists(), name)
         for name in OBSOLETE_STRINGS[-4:]:
             self.assertFalse((ROOT / "experiments" / name).exists(), name)
@@ -69,6 +71,13 @@ class RepositoryLayoutTests(unittest.TestCase):
                 self.assertNotIn(
                     obsolete, text, f"obsolete path {obsolete!r} in {path.relative_to(ROOT)}"
                 )
+            match = OBSOLETE_CONTEXT_PATH.search(text)
+            self.assertIsNone(
+                match,
+                f"obsolete path {match.group(0)!r} in {path.relative_to(ROOT)}"
+                if match
+                else "",
+            )
 
     def test_markdown_links_resolve(self) -> None:
         markdown_files = [ROOT / "README.md", ROOT / "AGENTS.md"]

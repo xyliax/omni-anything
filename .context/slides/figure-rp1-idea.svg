@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="1230" viewBox="0 0 940 1230">
+  <defs>
+    <marker id="rp1-mustard" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="8.5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#B8901E"/>
+    </marker>
+  </defs>
+  <style>
+    .cjk { font-family: "Hiragino Sans GB", "PingFang SC", sans-serif; fill: #4A4438; }
+    .mono { font-family: "Menlo", "Hiragino Sans GB", "PingFang SC", monospace; fill: #4A4438; }
+    .gray { fill: #8A8272; }
+    .b { font-weight: 700; }
+    .mustard { fill: #B8901E; }
+  </style>
+
+  <rect width="940" height="1230" fill="#F6F2E8"/>
+  <rect x="18" y="18" width="904" height="1194" rx="26" fill="#FDFBF5" stroke="#E5DCC8" stroke-width="2"/>
+
+  <!-- GPU lane: two predictable periods -->
+  <text x="78" y="118" class="cjk b" font-size="36">GPU 显存</text>
+  <line x1="105" y1="315" x2="850" y2="315" stroke="#9A9182" stroke-width="2.5" stroke-linecap="round"/>
+  <g stroke="#D9641E" stroke-width="4" stroke-linecap="round">
+    <line x1="105" y1="172" x2="105" y2="329"/>
+    <line x1="478" y1="172" x2="478" y2="329"/>
+    <line x1="850" y1="172" x2="850" y2="329"/>
+  </g>
+  <rect x="230" y="205" width="185" height="80" rx="14" fill="#F2CBB8" stroke="#D9A183" stroke-width="2"/>
+  <text x="322.5" y="256" class="cjk b" font-size="30" text-anchor="middle">本周期计算</text>
+  <rect x="603" y="205" width="185" height="80" rx="14" fill="#F2CBB8" stroke="#D9A183" stroke-width="2"/>
+  <text x="850" y="150" class="mono gray" font-size="28" text-anchor="end">周期严格可预知</text>
+
+  <!-- Scheduled state movement -->
+  <g fill="none" stroke="#B8901E" stroke-width="4" stroke-linecap="round" marker-end="url(#rp1-mustard)">
+    <line x1="185" y1="600" x2="185" y2="370"/>
+    <line x1="438" y1="370" x2="438" y2="600"/>
+    <line x1="558" y1="600" x2="558" y2="370"/>
+    <line x1="811" y1="370" x2="811" y2="600"/>
+  </g>
+  <text x="205" y="485" class="mono b mustard" font-size="30">按时预取</text>
+  <text x="791" y="485" class="mono b mustard" font-size="30" text-anchor="end">用后释放</text>
+
+  <!-- Host-memory home for session state -->
+  <text x="78" y="656" class="cjk b" font-size="36">主机内存</text>
+  <rect x="78" y="688" width="784" height="210" rx="20" fill="#F7F4EC" stroke="#A89878" stroke-width="2.5"/>
+  <g fill="#D8CEB8" stroke="#A89878" stroke-width="2">
+    <rect x="112" y="726" width="116" height="92" rx="12"/>
+    <rect x="238" y="726" width="116" height="92" rx="12"/>
+    <rect x="364" y="726" width="116" height="92" rx="12"/>
+    <rect x="490" y="726" width="116" height="92" rx="12"/>
+    <rect x="616" y="726" width="116" height="92" rx="12"/>
+    <rect x="742" y="726" width="86" height="92" rx="12"/>
+  </g>
+  <text x="470" y="874" class="cjk b" font-size="30" text-anchor="middle">会话上下文状态 (KV)</text>
+
+  <line x1="72" y1="992" x2="868" y2="992" stroke="#E5DCC8" stroke-width="2" stroke-dasharray="7,9"/>
+  <text x="470" y="1060" class="cjk" font-size="30" text-anchor="middle">
+    <tspan x="470">迁移按时间表进行，与计算完全重叠</tspan>
+    <tspan x="470" dy="48">——显存只驻留正在计算的状态</tspan>
+  </text>
+</svg>

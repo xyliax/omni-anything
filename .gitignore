@@ -374,11 +374,11 @@ pyrightconfig.json
 !results/**/
 !results/**/*.log
 
-# context: keep digests/notes; large binaries stay local
-context/**/*.pdf
-context/**/*.pptx
-context/papers/**/*.log
-context/papers/.digest-logs/
+# .context: keep digests/notes; large binaries stay local
+.context/**/*.pdf
+.context/**/*.pptx
+.context/papers/**/*.log
+.context/papers/.digest-logs/
 
 # Accidental model / checkpoint drops (tracked third_party fixtures stay tracked)
 /models/

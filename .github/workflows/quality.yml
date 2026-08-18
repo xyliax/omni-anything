@@ -15,8 +15,8 @@ jobs:
       # File lists come from git, not from a hand-maintained directory list:
       # a hardcoded list once kept compiling a directory deleted weeks earlier
       # while never covering newly added ones.
-      - name: Compile tracked Python (pins and context excluded)
-        run: git ls-files -z '*.py' ':!:third_party/**' ':!:context/**' | xargs -0 -r python -m compileall -q
+      - name: Compile tracked Python (pins and .context excluded)
+        run: git ls-files -z '*.py' ':!:third_party/**' ':!:.context/**' | xargs -0 -r python -m compileall -q
       - name: Check tracked shell syntax
         run: git ls-files -z '*.sh' ':!:third_party/**' | xargs -0 -r -n1 bash -n
       - name: Run unit tests

@@ -8,8 +8,8 @@
   **发表:** arXiv / GitHub report, 2026
 - **Authors:** Chuanyu Qin, Chenxu Yang, Qingyi Si, Naibin Gu, Dingyu Yao, Zheng Lin, Peng Fu, Nan Duan, Jiaqi Wang
   **作者:** Chuanyu Qin、Chenxu Yang、Qingyi Si、Naibin Gu、Dingyu Yao、Zheng Lin、Peng Fu、Nan Duan、Jiaqi Wang
-- **Resources:** [Paper](https://arxiv.org/abs/2604.16893); [GitHub](https://github.com/cyuQ1n/EasyVideoR1); local clone `context/repos/EasyVideoR1`
-  **资源:** [Paper](https://arxiv.org/abs/2604.16893)；[GitHub](https://github.com/cyuQ1n/EasyVideoR1)；本地代码 `context/repos/EasyVideoR1`
+- **Resources:** [Paper](https://arxiv.org/abs/2604.16893); [GitHub](https://github.com/cyuQ1n/EasyVideoR1); local clone `.context/repos/EasyVideoR1`
+  **资源:** [Paper](https://arxiv.org/abs/2604.16893)；[GitHub](https://github.com/cyuQ1n/EasyVideoR1)；本地代码 `.context/repos/EasyVideoR1`
 
 - ## Orientation
     - **English:** EasyVideoR1 addresses the engineering gap between text/image RL frameworks and video RL: video inputs are expensive to decode and preprocess, reward types are diverse, and evaluation is sensitive to many hyperparameters.
@@ -87,26 +87,26 @@
       locator:: `paper.md`, Section 1
       note:: video-specific RL challenges.
     - **E3:** repo | README features | high
-      locator:: `context/repos/EasyVideoR1/README.md:16-42`
+      locator:: `.context/repos/EasyVideoR1/README.md:16-42`
       note:: speedup and feature claims.
     - **E4:** repo | data format | high
-      locator:: `context/repos/EasyVideoR1/README.md:75-102`
+      locator:: `.context/repos/EasyVideoR1/README.md:75-102`
       note:: minimal sample schema.
     - **E5:** repo | config | high
-      locator:: `context/repos/EasyVideoR1/examples/video_rl/video_rl.yaml:1-118`
+      locator:: `.context/repos/EasyVideoR1/examples/video_rl/video_rl.yaml:1-118`
       note:: GRPO, rollout n, mix-policy, reward function.
     - **E6:** code | rollout | high
-      locator:: `context/repos/EasyVideoR1/verl/workers/rollout/vllm_rollout_spmd.py:209-398`
+      locator:: `.context/repos/EasyVideoR1/verl/workers/rollout/vllm_rollout_spmd.py:209-398`
       note:: vLLM rollout and offline trajectory mixing.
     - **E7:** code | reward | high
-      locator:: `context/repos/EasyVideoR1/verl/workers/reward/function.py:29-154`; `examples/video_rl/reward_function/video_reward.py:820-877`
+      locator:: `.context/repos/EasyVideoR1/verl/workers/reward/function.py:29-154`; `examples/video_rl/reward_function/video_reward.py:820-877`
       note:: reward input and scoring.
     - **E8:** code | training loop | high
-      locator:: `context/repos/EasyVideoR1/verl/trainer/ray_trainer.py:645-958`
+      locator:: `.context/repos/EasyVideoR1/verl/trainer/ray_trainer.py:645-958`
       note:: rollout, reward, logprob, advantage, actor update.
     - **E9:** code | GRPO | high
-      locator:: `context/repos/EasyVideoR1/verl/trainer/core_algos.py:176-217`
+      locator:: `.context/repos/EasyVideoR1/verl/trainer/core_algos.py:176-217`
       note:: group-normalized outcome advantage.
     - **E10:** code | preprocessing | high
-      locator:: `context/repos/EasyVideoR1/scripts/preprocess_videos.py:1-120`
+      locator:: `.context/repos/EasyVideoR1/scripts/preprocess_videos.py:1-120`
       note:: offline video tensor cache.
