@@ -12,7 +12,7 @@ Run ID 格式 `<YYYYMMDD>_<HHMMSS>_<label>`；参数细节全部在该 run 的 `
 Perfetto 导出（写入 run 的 `derived/`，只写一次）：
 
 ```bash
-python -m tracekit.perfetto <run-id-or-path>
+python -m infra.trace.perfetto <run-id-or-path>
 ```
 
 ## 证据边界

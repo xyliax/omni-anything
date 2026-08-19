@@ -20,7 +20,7 @@ paper §2 把 swap 分析性排除、断言 resident 是唯一预算兼容选择
 ## 两条必须继承的方法论
 
 fresh-per-point（`experiments/run_fresh_sweep.sh`，每个数据点重新加载并拆除一次 worker）：长活 worker 顺序扫点会产生扫点污染，即前一点的残留状态污染后一点的读数，对策是 fresh process per datapoint。
-相位错开（`FD_PHASE_STAGGER=1`，`experiments/sustained_fd.py` 默认开）：让各路音频窗口互不重合；关掉时多路会流相同且相位对齐的音频，prefix cache 把 encode+prefill 去重，容量读数虚高。
+相位错开（`FD_PHASE_STAGGER=1`，pin 内 `experiments/sustained_fd.py` 默认开）：让各路音频窗口互不重合；关掉时多路会流相同且相位对齐的音频，prefix cache 把 encode+prefill 去重，容量读数虚高。
 
 ## 引用纪律
 

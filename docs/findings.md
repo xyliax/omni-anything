@@ -1,6 +1,6 @@
 # FINDINGS：真机实验发现清单（E 系列 = baseline 病理；H 系列 = conveyor 机制）
 
-*每条 = 一句话发现 + 关键数字 + 证据指针。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。产出这些结论的 E 系列运行证据与工具在 2026-08-07 实验体系重构（旧代号映射见 `docs/experiments.md` 附表）中整理：原始日志与图存于 git 历史（`109db82` 及更早的 `results/` 树），工具的后继实现在 `experiments/baseline/` 与 `tracekit/`；新证据一律落 `results/<experiment>/`。机制推演与逐 run 修订过程写在 `docs/experiment-log.md`，本文只收结论。*
+*每条 = 一句话发现 + 关键数字 + 证据指针。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。产出这些结论的 E 系列运行证据与工具在 2026-08-07 实验体系重构（旧代号映射见 `docs/experiments.md` 附表）中整理：原始日志与图存于 git 历史（`109db82` 及更早的 `results/` 树），工具的后继实现在 `engines/baseline/`、`experiments/baseline/` 与 `infra/trace/`；新证据一律落 `results/<experiment>/`。机制推演与逐 run 修订过程写在 `docs/experiment-log.md`，本文只收结论。*
 
 ---
 
@@ -12,7 +12,7 @@ vLLM realtime 的 multimodal input processing 是单线程的（`async_llm.py` �
 
 **A2 · 一个语句修复 input processing 瓶颈**
 把 `process_inputs` 移入 8 线程线程池（重活恰好都释放 GIL），frame-to-process（F−P）排队由 1015ms 降到 **3ms**，backlog 恒为 1。这是工程债，不是物理极限。
-证据：instrumented worker fork（monkeypatch，venv 零改动；现为 `experiments/baseline/worker/stream_server.py`）；e1paringest 运行全套（git 历史）。
+证据：instrumented worker fork（monkeypatch，venv 零改动；现为 `engines/baseline/worker/stream_server.py`）；e1paringest 运行全套（git 历史）。
 附注（2026-08-10 站点插桩 run + 隔离 bench 实测，替代 08-09 附注的组件级归因）：并行化后的每 chunk `process_inputs` 在系统内实测成本 **~279ms（238~528）**，五站分解证明 executor 派发/线程池排队/回循环等待/add_request 合计 <3ms，**全部时间与方差都在 FE 计算段内部**。隔离基准测试归因（单发 59ms 对照）：+同进程一个 Python 忙线程 → **630ms（10.7×，GIL 分时是首要原因）**；+一个并发 FE → 122ms（槽重叠，次要原因）；+16 个外部忙进程 → 86ms（排除跨进程核心竞争）。系统内 3× 膨胀 = 持续繁忙的事件循环的部分 GIL 占用 + 轻度槽重叠（279ms > 250ms 槽距）。线程钉扎无效、关逐步 detokenize 无效且略负（两次重复证伪）——因为都不减少循环的 GIL 占用。彻底修复 = FE 进程池（脱离共享 GIL，预期回到 ~90ms 且方差收紧）；方差本质是"循环瞬时 GIL 占用率"的涨落，非外生噪声，可消除。
 
 **A3 · KV cache 装不下有三种失效形态，由「耗尽时刻落在 tick 内还是 tick 间 × input 是否积压」决定**
@@ -47,7 +47,7 @@ compute-bound 和 memory-bound 透过同一个等待帽都读作 1601ms——定
 
 **B5 · harness 的交付滞后在正常运行时也线性无界增长（0.32 s/s）**
 worker 每段生成 33 token（配额公式 25n+8 的段内退化，FINDINGS C2）而 gateway 每 tick 只取走 25，净积压 +8 token/tick——按播放率折算，交付内容的陈旧度每秒增长 0.32 秒，正常运行 5 分钟即约 96 秒滞后，且 FIFO 队列永不作废。这是负载发生器的结构性质（Metronome 的 cadence-only 指标 by design 看不见它），不是引擎性质；对容量测量无害，但任何 content freshness 类指标必须先扣除此伪影。另：worker 的 text 流全量交付、token 流限流 25，同一响应的两条流互相漂移。
-证据：当前 baseline 证据见 `results/baseline/`；机制在 `experiments/baseline/worker/stream_server.py` 的 `step()`。
+证据：当前 baseline 证据见 `results/baseline/`；机制在 `engines/baseline/worker/stream_server.py` 的 `step()`。
 
 ## C. tick 内执行剖面（引擎每 2 秒在干什么）
 
@@ -103,7 +103,7 @@ Step 不再含 GPU 等待后，latency p50 退化为 0.15ms、TTFA 错误读数 
 
 **H3 · KV 部分释放原语（park）在 vLLM 既有原语上闭合，被动方案不存在**
 vLLM 抢占只作用于 RUNNING 请求、闲置 resumable 会话持块无任何释放路径，且 LRU 逐出序对循环负载反 Belady（先逐最快要用的）——被动「池满触发轮转」不可行。主动原语 = `free(request)`（与抢占共用的释放路径，前缀经 prefix cache 免费恢复）+ `evict_blocks`（精确销毁尾块）+ connector hash-match 回载，全部为引擎既有能力，补丁只新增状态转移。实现中修复两个上游 bug：eager-store 游标在 streaming 重入时漂移（CPU 镜像永远覆盖不到尾部）；`session.max_tokens` 冻结在构造值（C2 的同源现象，seed 时每段固定为 1 token）。
-证据：experiment-log 2026-08-10/11 park 系列条目；补丁在 `experiments/conveyor/worker/engine_patch/`。
+证据：experiment-log 2026-08-10/11 park 系列条目；补丁在 `engines/conveyor/worker/engine_patch/`。
 
 **H4 · 驻留核算：decode 结束瞬间 park + 常量底座 K，稳态驻留降 66%**
 auto-park-on-stop（在调度器停止转移处原地执行，零延迟零 RPC）+ keep-K 配额（闲置底座固定为 K+2 余量+1 未满块）：稳态池占用 **0.29 vs 全驻留假设 0.860**（保留 run 的 tick 窗重算口径 0.292），同时全驻留会话数 3 个占 79%（≈ slice 时长 × N / 周期的物理下界），回载窗口 p50=70ms、被逐尾块 CPU 覆盖率 100%，交付零恶化。镜像是增量 write-through：稳态 PCIe 上行 ≈ 增长率（~5 块/周期/会话），下行 ≈ 尾巴大小（随 L 线性涨——容量 roofline 的带宽线）。
@@ -120,7 +120,7 @@ warm start 模拟「请求自带上下文」，正确形态：全部会话 seed 
 
 **H7 · KV 预取（匿名具现化）：语义闭合成立，净收益暂被 FE 膨胀抵消**
 回载的可复用核心是「让内容在 GPU prefix cache 里存在」而非「回载某请求的尾巴」——据此把机制立成四层：状态权威（会话生命周期 resident/parked/materializing + 时序 + 延迟队列，块级事实不复制、按需查池）、指令面（`reload_kv`/`kv_state` utility + 发射策略）、传输（匿名块搬运，搭现有 offload load-event 机制，完成后按原 hash 注册、块转 cached-free = LRU 可弃 = 失败自动退回按需回载）、认领（vLLM 现有 resume hash match，零改动）。push 触发下首轮真机验证（N=8/seed=4096/K=128/120s，两次复跑一致）：**逐周期预取全部成功完成**（477-478 次，拷贝窗口 p50≈96ms，完整藏进 FE），**demand 大回载消失**（剩余 demand 全是 1-2 块的镜像前沿零头）；但 tick→prefill p50 仅 316→297ms（−19ms ≪ 理论 −70ms）——同 run FE 从 221 膨胀到 270ms（+50ms）把收益吃掉，疑与预取拷贝跨进程竞争 CPU/内存带宽，根因未定（FE 进程池方向可能一石二鸟）；末尾两次短交付在两次复跑中精确复现（同槽同会话同位置），是 prefetch 臂在最大上下文处的确定性签名，待解。发射策略已升级为事件驱动 pacing：池紧的 reload 延迟到下一次 park（容量释放事件）重评发射、chunk 认领即取消——本轮负载未触发（预算闸零触发），待更高压负载验证。
-证据：experiment-log 2026-08-15 条目；实现在 `experiments/conveyor/worker/engine_patch/`。
+证据：experiment-log 2026-08-15 条目；实现在 `engines/conveyor/worker/engine_patch/`。
 
 ## F. 测量方法论教训（来自本系列实测）
 
@@ -147,4 +147,4 @@ warm start 模拟「请求自带上下文」，正确形态：全部会话 seed 
 
 ## G. 工具资产（复用入口）
 
-暖启动种子（`--seed-tokens`，KV 池饱和时间 217→125s，context 成为受控变量）；scheduler 逐步 trace（sitecustomize 注入 EngineCore，现居 `tracekit/collectors/`）；每 request P/F/T 事件；Perfetto 导出（`python -m tracekit.perfetto`，泳道 + counter 一条命令）。
+暖启动种子（`--seed-tokens`，KV 池饱和时间 217→125s，context 成为受控变量）；scheduler 逐步 trace（sitecustomize 注入 EngineCore，现居 `infra/trace/collectors/`）；每 request P/F/T 事件；Perfetto 导出（`python -m infra.trace.perfetto`，泳道 + counter 一条命令）。

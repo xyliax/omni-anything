@@ -17,19 +17,19 @@ from unittest import mock
 
 from experiments.baseline.runner import collect_issues as baseline_issues
 from experiments.conveyor.runner import collect_issues as conveyor_issues
-from lab.artifacts import RunStore
-from tracekit.parse import WARMUP_SESSION
+from infra.run.artifacts import RunStore
+from infra.trace.parse import WARMUP_SESSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GATEWAY_GO = ROOT / "experiments" / "conveyor" / "gateway" / "main.go"
-BASELINE_WORKER = ROOT / "experiments" / "baseline" / "worker" / "stream_server.py"
-CONVEYOR_WORKER = ROOT / "experiments" / "conveyor" / "worker" / "stream_server.py"
+GATEWAY_GO = ROOT / "engines" / "conveyor" / "gateway" / "main.go"
+BASELINE_WORKER = ROOT / "engines" / "baseline" / "worker" / "stream_server.py"
+CONVEYOR_WORKER = ROOT / "engines" / "conveyor" / "worker" / "stream_server.py"
 ENGINE_PATCH = (
-    ROOT / "experiments" / "conveyor" / "worker" / "engine_patch" / "sitecustomize.py"
+    ROOT / "engines" / "conveyor" / "worker" / "engine_patch" / "sitecustomize.py"
 )
 ENGINE_FIX = (
-    ROOT / "experiments" / "baseline" / "worker" / "engine_fix" / "sitecustomize.py"
+    ROOT / "engines" / "baseline" / "worker" / "engine_fix" / "sitecustomize.py"
 )
 
 PARK_LINES_HEALTHY = (
@@ -158,14 +158,14 @@ class CrossLanguageLogContractTests(unittest.TestCase):
 
 class SharedObservationProducerTests(unittest.TestCase):
     """One observation mechanism for both arms: the workers must import the
-    shared tracekit producer, never carry a private copy (the two copies this
+    shared infra/trace producer, never carry a private copy (the two copies this
     replaced had already drifted — clock line, sampling period, stations)."""
 
     def test_both_workers_use_the_shared_producer(self) -> None:
         for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
             text = worker.read_text(encoding="utf-8")
             self.assertIn(
-                "from tracekit.collectors.worker_obs import perreq_logger, stat_logger_classes",
+                "from infra.trace.collectors.worker_obs import perreq_logger, stat_logger_classes",
                 text,
                 f"{worker} must import the shared observation producer",
             )

@@ -136,7 +136,8 @@ fabric.properties
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -358,7 +359,7 @@ pyrightconfig.json
 # omni-anything — project-specific (after templates so exceptions win)
 # =============================================================================
 
-# Reproducible local runtime built by environment/setup.sh
+# Reproducible local runtime built by infra/env/setup.sh
 /.venv-vllm023/
 /.build/
 /.tools/

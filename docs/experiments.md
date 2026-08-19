@@ -6,7 +6,7 @@
 
 ## baseline 引擎
 
-**模型 Qwen2.5-Omni-7B、workload 2s 硬 tick × 8 路（增量 prefill + decode 配额、context 持续增长；常量在 `experiments/baseline/config/`）、metronome 的 vLLM 0.23 栈 + 本仓库 paringest 模式（`experiments/baseline/`）。**
+**模型 Qwen2.5-Omni-7B、workload 2s 硬 tick × 8 路（增量 prefill + decode 配额、context 持续增长；常量在 `experiments/shared/` 与 `experiments/baseline/config.py`）、metronome 的 vLLM 0.23 栈 + 本仓库 paringest 模式（worker 在 `engines/baseline/`，测量装置在 `experiments/baseline/`）。**
 
 - KV 全程常驻 GPU（全部页被活跃请求持有，没有任何释放路径）。
 - 状态：可运行；当前正式证据见稳定入口 `results/baseline/`。

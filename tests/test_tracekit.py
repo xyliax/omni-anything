@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tracekit.bundle import build_bundle
-from tracekit.parse import parse_gpu, parse_kv, parse_park, parse_residency
-from tracekit.perfetto import MissingTimelineDataError, export
+from infra.trace.bundle import build_bundle
+from infra.trace.parse import parse_gpu, parse_kv, parse_park, parse_residency
+from infra.trace.perfetto import MissingTimelineDataError, export
 
 from .synthetic import make_run_dir, make_scheduler_run, read_trace, write_json
 

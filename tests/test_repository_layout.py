@@ -28,6 +28,16 @@ OBSOLETE_STRINGS = (
 )
 OBSOLETE_CONTEXT_PATH = re.compile(r"(?<![.\w/])" + "context" + r"/")
 OBSOLETE_RUNS_LAYER = re.compile(r"results/[\w-]+/" + "runs")
+# Directories dissolved by the 2026-08-19 system/measurement/infra split.
+# Path-position forms only (lookbehind): the bare words remain legal prose.
+OBSOLETE_SPLIT_PATHS = tuple(
+    re.compile(r"(?<![.\w/-])" + name + r"/") for name in ("la" + "b", "trace" + "kit", "environ" + "ment")
+)
+OBSOLETE_ENGINE_HOMES = (
+    "experiments/" + "baseline/worker",
+    "experiments/" + "conveyor/worker",
+    "experiments/" + "conveyor/gateway",
+)
 
 
 def run_directories() -> list[Path]:
@@ -51,7 +61,7 @@ def scan_targets() -> list[Path]:
     ]
     # .github is included deliberately: the CI workflow once kept compiling a
     # directory deleted weeks earlier because nothing scanned it.
-    for base in (".github", "docs", "environment", "experiments", "lab", "tracekit", "tests"):
+    for base in (".github", "docs", "engines", "experiments", "infra", "tests"):
         root = ROOT / base
         if root.is_dir():
             targets.extend(
@@ -64,7 +74,7 @@ def scan_targets() -> list[Path]:
 
 class RepositoryLayoutTests(unittest.TestCase):
     def test_obsolete_top_level_containers_do_not_return(self) -> None:
-        for name in ("harness", "calibration", "observability", "context"):
+        for name in ("harness", "calibration", "observability", "context", "lab", "tracekit", "environment"):
             self.assertFalse((ROOT / name).exists(), name)
         for name in OBSOLETE_STRINGS[-4:]:
             self.assertFalse((ROOT / "experiments" / name).exists(), name)
@@ -96,10 +106,22 @@ class RepositoryLayoutTests(unittest.TestCase):
                 if match
                 else "",
             )
+            for pattern in OBSOLETE_SPLIT_PATHS:
+                match = pattern.search(text)
+                self.assertIsNone(
+                    match,
+                    f"obsolete pre-split path {match.group(0)!r} in {path.relative_to(ROOT)}"
+                    if match
+                    else "",
+                )
+            for stale in OBSOLETE_ENGINE_HOMES:
+                self.assertNotIn(
+                    stale, text, f"obsolete engine home {stale!r} in {path.relative_to(ROOT)}"
+                )
 
     def test_markdown_links_resolve(self) -> None:
         markdown_files = [ROOT / "README.md", ROOT / "AGENTS.md"]
-        for base in ("docs", "environment", "experiments", "lab", "tracekit"):
+        for base in ("docs", "engines", "experiments", "infra"):
             root = ROOT / base
             if root.is_dir():
                 markdown_files.extend(root.rglob("*.md"))

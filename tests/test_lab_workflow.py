@@ -16,7 +16,7 @@ import time
 import unittest
 from pathlib import Path
 
-from lab.workflow import Launch, RunPlan, execute
+from infra.run.workflow import Launch, RunPlan, execute
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -7,7 +7,7 @@
 | 动作 | 允许 | 落点 |
 | --- | --- | --- |
 | 阅读对照 | 是 | 本目录下各 pin |
-| 改实验/插桩/方案代码 | 是 | 仓库 `experiments/`、`tracekit/`、`docs/` 文档、自有 fork/patch |
+| 改实验/插桩/方案代码 | 是 | 仓库 `engines/`、`experiments/`、`infra/trace/`、`docs/` 文档、自有 fork/patch |
 | 直接改 `third_party/*` 当实验代码 | **否** | — |
 | 下载模型权重、大数据集进本目录 | **否** | — |
 | 手改各 pin 内 `.gitrepo` | **否**（git-subrepo 维护） | — |

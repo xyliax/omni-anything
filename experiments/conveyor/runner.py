@@ -1,7 +1,7 @@
 """Conveyor run assembly: what is launched and what counts as an issue.
 
 Same shape as the baseline runner (commands, environments, and issue scanners
-live here; the chronological workflow is ``lab/workflow.py``). The differences
+live here; the chronological workflow is ``infra/run/workflow.py``). The differences
 are the mechanisms: the staggered gateway takes ``--slots`` and writes a
 per-firing tick log, the take-from-stock worker has no wait budget, and park
 runs inject the engine patch plus scan park.log for silent failures.
@@ -14,10 +14,10 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
-from lab.artifacts import RunStore, make_run_id, scan_worker_fatal
-from lab.probes import resolve_model_snapshot
-from lab.workflow import Launch, RunPlan, execute
-from tracekit.collect import apply_scheduler_trace, gpu_monitor_command
+from infra.run.artifacts import RunStore, make_run_id, scan_worker_fatal
+from infra.run.probes import resolve_model_snapshot
+from infra.run.workflow import Launch, RunPlan, execute
+from infra.trace.collect import apply_scheduler_trace, gpu_monitor_command
 
 from .config import ConveyorConfig, model, platform, workload
 
@@ -97,7 +97,7 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         )
     if config.park_enabled:
         # The park primitive lives in the spawned EngineCore process; inject it
-        # by prepending the engine_patch dir AHEAD of tracekit's collector dir
+        # by prepending the engine_patch dir AHEAD of the trace collector dir
         # (only the first sitecustomize on sys.path is imported — engine_patch's
         # chain-loads the trace collector when tracing is also on).
         env["OMNI_PARK_PATCH"] = "1"
@@ -116,7 +116,7 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
                 # warm start is state construction: hold auto-park until the
                 # barrier's finalize parks everyone in one burst.
                 env["OMNI_PARK_HOLD"] = "1"
-        patch_dir = config.root / "experiments" / "conveyor" / "worker" / "engine_patch"
+        patch_dir = config.root / "engines" / "conveyor" / "worker" / "engine_patch"
         env["PYTHONPATH"] = os.pathsep.join(
             filter(None, [str(patch_dir), env.get("PYTHONPATH", "")])
         )

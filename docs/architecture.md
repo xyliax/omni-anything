@@ -17,7 +17,7 @@
 
 **本项目的核心思路一句话**：每个会话每 2 秒里只有零点几秒真正在计算，其余时间它的 KV 闲置占用显存——把闲置会话的 KV 大部分搬到主机内存，轮到它计算之前再搬回来，用空闲的 PCIe 带宽赎回显存容量。
 
-**两个实验目录**：`experiments/baseline/` 是「现状」——直接用现有 vLLM 栈服务这个负载，用来展示它如何失败（已冻结，不再改）；`experiments/conveyor/` 是我们的新引擎，在 baseline 之上做了三件事：
+**两臂**（引擎在 `engines/`，测量装置在 `experiments/`）：baseline 臂是「现状」——直接用现有 vLLM 栈服务这个负载，用来展示它如何失败（对照臂：行为保持稳定，变更以对照公平为限）；conveyor 臂是我们的新引擎，在 baseline 之上做了三件事：
 
 1. **错开相位**：baseline 里 8 个会话在同一毫秒同时发起请求，形成惊群；conveyor 把它们均匀排开——每 250ms 只服务一个会话（称为一个「槽」），按固定顺序轮转。
 2. **取现货交付**：不等待本周期的计算完成，而是立即交付上一周期已生成的库存 token。代价是交付内容恰好滞后一片，换来的是发射节拍不被慢会话拖慢。
@@ -50,52 +50,52 @@
 ## 一、代码分层：五层单向依赖
 
 ```
-入口层      experiments/<exp>/__main__.py         argv → 关键字参数，纯翻译
-配置层      experiments/<exp>/config/             全部参数的唯一声明处（纯 Python 常量 + 逐 run 旋钮）
-声明层      experiments/<exp>/runner.py           本实验有什么不同：命令、环境、issue 扫描，组装成 RunPlan
-共享设施    lab/  +  tracekit/(采集侧)            实验无关的零件：运行工作流（lab/workflow 执行 RunPlan：
+入口层      experiments/<arm>/__main__.py         argv → 关键字参数，纯翻译
+配置层      experiments/shared/ + <arm>/config.py 公平性常量单份共享；臂旋钮与引擎常量各臂私有
+声明层      experiments/<arm>/runner.py           本臂有什么不同：命令、环境、issue 扫描，组装成 RunPlan
+共享设施    infra/run/ + infra/trace/(采集侧)     实验无关的零件：运行工作流（infra/run/workflow 执行 RunPlan：
                                                   就绪等待、client 看门狗、收尾判决）、证据目录、进程组、
                                                   探针、trace 注入
-─────────── 进程边界 ───────────
-执行层      experiments/<exp>/worker/             GPU 进程本体（venv python，被 argv+env 生出、被 gRPC 驱动）
-            gateway（Go）与 client（负载生成器）   baseline 用 pin 原样；conveyor 自带 gateway fork
+─────────── 进程边界（＝目录边界：engines/ 只被 spawn，不被 import） ───────────
+执行层      engines/<arm>/worker/                 GPU 进程本体（venv python，被 argv+env 生出、被 gRPC 驱动）
+            gateway（Go）与 client（负载生成器）   baseline 用 pin 原样；conveyor 自带 engines/conveyor/gateway/
 ─────────── 文件边界 ───────────
-离线层      tracekit/(解析导出侧)                 事后读 run 目录：解析、时钟对齐、Perfetto 导出
+离线层      infra/trace/(解析导出侧)              事后读 run 目录：解析、时钟对齐、Perfetto 导出
 ```
 
 两条结构性约束：
 
-1. **依赖单向向下**。`lab/`、`tracekit/`、`environment/` 不认识任何实验的名字；实验目录之间互不引用。唯一的反向边：`lab/` 复用 `environment/verify.py` 的探测函数（`capture` / `collect_software`）。
+1. **依赖单向向下**。`infra/`（run/env/trace）不认识任何实验的名字；两臂之间互不引用；`engines/` 不 import 任何东西也不被 import（无 `__init__.py`）。唯一的内部反向边：`infra/run/` 复用 `infra/env/verify.py` 的探测函数（`capture` / `collect_software`）。
 2. **跨越进程边界只有三种通道**：argv+环境变量（runner → 子进程，启动时一次性）、gRPC（gateway ↔ worker，运行期）、run 目录里的文件（一切 → 离线层）。没有任何跨进程的 Python import。
 
 ## 二、目录与文件职责
 
-### experiments/baseline/（现状对照臂，已冻结，~900 行）
+### baseline 臂（`experiments/baseline/` + `engines/baseline/`，对照臂，~900 行）
 
 | 文件 | 行数 | 职责 |
 | --- | --- | --- |
 | `__main__.py` | ~46 | `python -m experiments.baseline` 入口。七个参数（mode/trace/label/sessions/duration/seed-tokens/gpu），零配置知识，`run(argv, **vars(args))` 转发 |
-| `config/__init__.py` | ~146 | `BaselineConfig`（逐 run 旋钮 + 引擎常量如 MML=32768）、`MODES` 表、`required_artifact_names()`、`manifest_config()` |
-| `config/model.py` | ~28 | Qwen2.5-Omni-7B：id、锁定 revision、KV 几何（56KiB/token 及推导） |
-| `config/platform.py` | ~23 | 这台机器：默认卡号、venv 路径、两个端口、GPU 采样周期（与解析端耦合，只在此改） |
-| `config/workload.py` | ~28 | 2s tick、8 路、600s、tpt=25、实测 growth=78/tick |
-| `runner.py` | ~188 | 本实验的差异声明：worker/gateway/client 的命令与环境、issue 扫描（scheduler trace 错误、engine-fatal、client err），组装成 `RunPlan` 交 `lab/workflow` 执行 |
-| `worker/stream_server.py` | ~436 | GPU 进程本体。复制自 pin 内同名文件后永久分道（与来源的差异清单见其文件头 ORIGIN 节）。核心：每会话一个常驻可续 (resumable) 请求，每片只追加新音频、复用已有 KV；ingest 线程池补丁（含 IQ/IS/IE/IR/IA 五站插桩，与 conveyor 同插桩）；观测产出方是共享的 `tracekit/collectors/worker_obs.py`（kv.log / per_request.log，两臂同一套）。引擎几何参数全部必填——config/ 是唯一默认值声明处 |
-| `worker/engine_fix/sitecustomize.py` | ~80 | **seed run 专用的上游 bug 修复**（非机制）：vLLM 把 `session.max_tokens` 冻结在首个输入的参数上，seed 的 max_tokens=1 会把之后每段冻在 1 token（miss=94.8% 事故形态）；本补丁逐 chunk 刷新该字段。runner 仅在 `seed_tokens > 0` 时注入（`OMNI_SESSION_MAXTOKENS_FIX`）；非 seed run 行为在冻结/刷新两种语义下相同（worker 的分段配额是常量 tpt+8），正式 run 可比性不受影响 |
+| `config.py` | ~146 | `BaselineConfig`（逐 run 旋钮 + 引擎常量如 MML=32768）、`MODES` 表、`required_artifact_names()`、`manifest_config()` |
+| `../shared/model.py` | ~28 | Qwen2.5-Omni-7B：id、锁定 revision、KV 几何（56KiB/token 及推导）——公平性常量，两臂共享单份 |
+| `../shared/platform.py` | ~23 | 这台机器：默认卡号、venv 路径、两个端口、GPU 采样周期（与解析端耦合，只在此改）——两臂共享 |
+| `../shared/workload.py` | ~28 | 2s tick、8 路、600s、tpt=25、实测 growth=78/tick——两臂共享 |
+| `runner.py` | ~188 | 本实验的差异声明：worker/gateway/client 的命令与环境、issue 扫描（scheduler trace 错误、engine-fatal、client err），组装成 `RunPlan` 交 `infra/run/workflow` 执行 |
+| `engines/baseline/worker/stream_server.py` | ~436 | GPU 进程本体。复制自 pin 内同名文件后永久分道（与来源的差异清单见其文件头 ORIGIN 节）。核心：每会话一个常驻可续 (resumable) 请求，每片只追加新音频、复用已有 KV；ingest 线程池补丁（含 IQ/IS/IE/IR/IA 五站插桩，与 conveyor 同插桩）；观测产出方是共享的 `infra/trace/collectors/worker_obs.py`（kv.log / per_request.log，两臂同一套）。引擎几何参数全部必填——config.py 是唯一默认值声明处 |
+| `engines/baseline/worker/engine_fix/sitecustomize.py` | ~80 | **seed run 专用的上游 bug 修复**（非机制）：vLLM 把 `session.max_tokens` 冻结在首个输入的参数上，seed 的 max_tokens=1 会把之后每段冻在 1 token（miss=94.8% 事故形态）；本补丁逐 chunk 刷新该字段。runner 仅在 `seed_tokens > 0` 时注入（`OMNI_SESSION_MAXTOKENS_FIX`）；非 seed run 行为在冻结/刷新两种语义下相同（worker 的分段配额是常量 tpt+8），正式 run 可比性不受影响 |
 
-配置的读写规则：**两个设置入口**（命令行旋钮；改 config/ 常量文件），**一个消费者**（runner）。worker/gateway/client 不读 config——它们只收 runner 翻译后的 argv 和环境变量。
+配置的读写规则：**两个设置入口**（命令行旋钮；改 config.py / shared 常量文件），**一个消费者**（runner）。worker/gateway/client 不读 config——它们只收 runner 翻译后的 argv 和环境变量。
 
-### experiments/conveyor/（新引擎，~2000 行，含 gateway 与 engine_patch）
+### conveyor 臂（`experiments/conveyor/` + `engines/conveyor/`，~2000 行，含 gateway 与 engine_patch）
 
-骨架与 baseline 逐文件同形（`__main__.py` / `config/` / `runner.py` / `worker/`），差异全部是三个机制本身。每个文件先说一句它是干嘛的，再列细节：
+骨架与 baseline 逐文件同形（`__main__.py` / `config.py` / `runner.py` + `engines/conveyor/`），差异全部是三个机制本身。每个文件先说一句它是干嘛的，再列细节：
 
 | 文件 | 职责与差异 |
 | --- | --- |
-| `gateway/`（baseline 没有的层） | **实现错开相位的 Go 网关**，复制自 pin 的 gateway-go 后永久分道。要点：① 全局节拍器换成槽轮——每 250ms 醒一次、只服务本槽的会话，发射时刻钉在绝对网格 `t0+k×250ms` 上（晚醒自动回弹，不累积漂移）；② 会话按到达顺序轮流分配槽位；③ 指标口径适配取现货语义——`deadline_met` = 本 tick 交付 ≥ tpt 个 token，交付不足打 `[starve]` 日志；④ 每次发射写一行 `gateway_ticks.log`（发射晚了多少、给每个会话交付了多少）；⑤ 本仓库栈不可达的继承路径已剪除（turn-based 响应生命周期、vision 附件、AIMD 在线准入——pin 为 baseline 臂原样保留），只服务全双工槽轮一种形状，worker 永不健康则直接 fatal。差异全清单见文件头 ORIGIN 节 |
-| `worker/stream_server.py` | **实现取现货交付的 GPU 进程**，复制自 baseline worker 后永久分道。要点：① Step 收到新音频片后立即返回库存中的 token，不等待本片计算完成（阻塞式等待会把错开的槽重新串行化）；② 每段生成配额精确等于 tpt（任何多余产出都会在库存中累积，交付内容与音频的对应关系持续后移）；③ warm start 屏障——seed run 先完成全部会话的 seed prefill 才宣布就绪；④ 接入 vLLM 自带的 `SimpleCPUOffloadConnector` 做主机镜像池（`--host-offload-gib`）。差异全清单见文件头 ORIGIN 节 |
-| `worker/engine_patch/` | **引擎侧机制注入点**（PYTHONPATH 注入 vLLM 的 EngineCore 子进程），按「状态权威/指令面/传输/认领」分层：`sitecustomize.py` 只做门控与链式加载；`omni_state.py` 是**会话 KV 状态权威**——生命周期（resident/parked/materializing）、时序（push/park/claim 时刻）、延迟队列与三态分类查询（块级驻留事实的唯一真相源仍是池本身，registry 不复制它）；`omni_park.py` 是 park 原语本体（释放引用 + 精确销毁底座外尾块 + auto-park + 两个上游 bug 修复 + park.log 全部打点，事件上报 registry）；`omni_reload.py` 是**引擎指令面**——`reload_kv(session)`（让该会话的 KV 变为驻留）与 `kv_state(session)` 两个 utility + 发射策略（池紧的 reload 不拒绝而是**延迟**，park 事件驱动重发，chunk 认领即取消）；`omni_transfer.py` 是传输层——匿名块搬运，搭现有 offload load-event 机制（低优先流、抢占 flush 全部复用），完成后按原 hash 注册、块转 cached-free（LRU 可弃 = 预取失败自动退回按需回载）。认领层 = vLLM 现有 resume hash match，零改动——认领方无法区分块是 park 底座还是预取来的 |
-| `config/__init__.py` | `ConveyorConfig`：机制旋钮集中地——`slots`（槽数）、`park_keep_blocks`（底座 K，设置即启用 auto-park）、`host_offload_gib`（镜像池大小）、`prefetch`（off/push，push = 回载提前到 push 时刻与 FE 重叠；须与 park 同开）、`prefetch_min_free`（预取的池预算闸）、`sync_scheduling`（对照臂钉住同步调度用）等，每个旋钮的含义和取值理由都写在字段旁注释里；model/platform/workload 三个常量文件与 baseline 一致（同栈对比的前提） |
-| `runner.py` | 与 baseline runner 同形的差异声明（组装 `RunPlan` 交 `lab/workflow` 执行）：gateway 加 `--slots` 并写 `gateway_ticks.log`；worker 加镜像、park 与 prefetch 参数；park 开启时把 `engine_patch/` 前置到 PYTHONPATH 并设 `OMNI_PARK_KEEP`（prefetch 再加 `OMNI_PREFETCH`）等环境变量；issue 扫描多四类静默失败（会话死亡、交付饥饿、park 未生效、prefetch 未生效），扫描字符串与产出方由 `tests/test_run_validation.py` 钉住 |
+| `engines/conveyor/gateway/`（baseline 没有的层） | **实现错开相位的 Go 网关**，复制自 pin 的 gateway-go 后永久分道。要点：① 全局节拍器换成槽轮——每 250ms 醒一次、只服务本槽的会话，发射时刻钉在绝对网格 `t0+k×250ms` 上（晚醒自动回弹，不累积漂移）；② 会话按到达顺序轮流分配槽位；③ 指标口径适配取现货语义——`deadline_met` = 本 tick 交付 ≥ tpt 个 token，交付不足打 `[starve]` 日志；④ 每次发射写一行 `gateway_ticks.log`（发射晚了多少、给每个会话交付了多少）；⑤ 本仓库栈不可达的继承路径已剪除（turn-based 响应生命周期、vision 附件、AIMD 在线准入——pin 为 baseline 臂原样保留），只服务全双工槽轮一种形状，worker 永不健康则直接 fatal。差异全清单见文件头 ORIGIN 节 |
+| `engines/conveyor/worker/stream_server.py` | **实现取现货交付的 GPU 进程**，复制自 baseline worker 后永久分道。要点：① Step 收到新音频片后立即返回库存中的 token，不等待本片计算完成（阻塞式等待会把错开的槽重新串行化）；② 每段生成配额精确等于 tpt（任何多余产出都会在库存中累积，交付内容与音频的对应关系持续后移）；③ warm start 屏障——seed run 先完成全部会话的 seed prefill 才宣布就绪；④ 接入 vLLM 自带的 `SimpleCPUOffloadConnector` 做主机镜像池（`--host-offload-gib`）。差异全清单见文件头 ORIGIN 节 |
+| `engines/conveyor/worker/engine_patch/` | **引擎侧机制注入点**（PYTHONPATH 注入 vLLM 的 EngineCore 子进程），按「状态权威/指令面/传输/认领」分层：`sitecustomize.py` 只做门控与链式加载；`omni_state.py` 是**会话 KV 状态权威**——生命周期（resident/parked/materializing）、时序（push/park/claim 时刻）、延迟队列与三态分类查询（块级驻留事实的唯一真相源仍是池本身，registry 不复制它）；`omni_park.py` 是 park 原语本体（释放引用 + 精确销毁底座外尾块 + auto-park + 两个上游 bug 修复 + park.log 全部打点，事件上报 registry）；`omni_reload.py` 是**引擎指令面**——`reload_kv(session)`（让该会话的 KV 变为驻留）与 `kv_state(session)` 两个 utility + 发射策略（池紧的 reload 不拒绝而是**延迟**，park 事件驱动重发，chunk 认领即取消）；`omni_transfer.py` 是传输层——匿名块搬运，搭现有 offload load-event 机制（低优先流、抢占 flush 全部复用），完成后按原 hash 注册、块转 cached-free（LRU 可弃 = 预取失败自动退回按需回载）。认领层 = vLLM 现有 resume hash match，零改动——认领方无法区分块是 park 底座还是预取来的 |
+| `config.py` | `ConveyorConfig`：机制旋钮集中地——`slots`（槽数）、`park_keep_blocks`（底座 K，设置即启用 auto-park）、`host_offload_gib`（镜像池大小）、`prefetch`（off/push，push = 回载提前到 push 时刻与 FE 重叠；须与 park 同开）、`prefetch_min_free`（预取的池预算闸）、`sync_scheduling`（对照臂钉住同步调度用）等，每个旋钮的含义和取值理由都写在字段旁注释里；公平性常量在 `experiments/shared/`（单份，两臂共享——同栈对比的前提由结构保证） |
+| `runner.py` | 与 baseline runner 同形的差异声明（组装 `RunPlan` 交 `infra/run/workflow` 执行）：gateway 加 `--slots` 并写 `gateway_ticks.log`；worker 加镜像、park 与 prefetch 参数；park 开启时把 `engine_patch/` 前置到 PYTHONPATH 并设 `OMNI_PARK_KEEP`（prefetch 再加 `OMNI_PREFETCH`）等环境变量；issue 扫描多四类静默失败（会话死亡、交付饥饿、park 未生效、prefetch 未生效），扫描字符串与产出方由 `tests/test_run_validation.py` 钉住 |
 
 **机制现状**（2026-08-12）：三个机制全链路已实现并有权威证据——稳态显存占用 0.296 vs 全驻留假设的 0.860（66% 的 KV 换到了主机内存），回载中位 70ms，交付零恶化（证据见 `results/conveyor/`）。结论提炼在 `docs/findings.md` H 系列；实现过程的完整问题与根因记录在 `docs/experiment-log.md` 2026-08-10 起的条目。**指标可信度**：client 侧的 `deadline_met`（miss = 引擎未跟上）与 TTFA（含固有的一片滞后）可以引用；latency p50/p99 永久无效（取现货的 Step 不含任何 GPU 等待），延迟分布一律以 trace 侧为准。
 
@@ -133,7 +133,7 @@
 | FE 拥堵 | IS→IE 段膨胀（GIL 竞争）或 IQ→IS 排队（线程池满） | 3 |
 | 回载压进计算 | Perfetto 的 reload slice 与计算 slice 重叠 | 5a |
 
-### lab/（实验无关的运行设施，~500 行）
+### infra/run/（原 lab：实验无关的运行设施，~500 行）
 
 | 文件 | 职责 | 关键契约 |
 | --- | --- | --- |
@@ -142,7 +142,7 @@
 | `probes.py` | provenance 快照（git / pin / 主机 / GPU / 模型 snapshot 路径） | 只读探测，错误记录不抛；例外是 `resolve_model_snapshot`——revision 锁定的执行点，snapshot 不在缓存时 fail-fast（它直接进 worker argv，静默 None 曾造出 `--model None`） |
 | `process.py` | 进程组编排 | `start_new_session=True`，按 PGID 杀是收掉 vLLM EngineCore 子进程的唯一可靠办法；日志 `"xb"` 模式绝不追加 |
 
-### tracekit/（观测全链路，~1000 行）
+### infra/trace/（原 tracekit：观测全链路，~1000 行）
 
 采集侧（run 时活着）：
 
@@ -152,17 +152,17 @@
 | `collectors/worker_obs.py` | **两臂共享的 worker 观测产出方**：per_request.log 事件写入（含 C 双时钟配对行）与引擎 stat logger（kv.log / per_iteration.log，采样周期 `OMNI_STATLOG_PERIOD_S`）。worker 不得自带拷贝——曾经的两份拷贝已经漂移（时钟行、采样周期、五站），有测试钉住 |
 | `collectors/vllm_scheduler_trace/sitecustomize.py` | 借"每个 Python 进程启动必 import sitecustomize"钩进 vLLM EngineCore 子进程：`OMNI_SCHEDULER_TRACE` 记录每个调度步，`OMNI_RESIDENCY_LOG` 按同一采样周期记录**每会话 KV 驻留块数**（residency.log，两臂同一采样器：baseline 呈上下文增长阶梯，conveyor 呈 park 锯齿）；init 失败 `os._exit(78)`——被要求的 trace 是主证据，宁可显式失败 |
 
-离线侧（`python -m tracekit.perfetto <run>` 时才运行）：
+离线侧（`python -m infra.trace.perfetto <run>` 时才运行）：
 
 | 文件 | 职责 |
 | --- | --- |
 | `parse.py` | 七个解析器（per_request / kv / scheduler / residency / gpu / gateway_ticks / park），保存全部行格式知识（各解析器 docstring 给出精确 grammar） |
 | `bundle.py` | 按 run 目录里实际存在的文件组装数据包；时钟对齐（worker 写的双时钟配对行使对齐精确；旧 run 回退启发式并如实记录偏差） |
-| `perfetto.py` | 全部泳道的导出：引擎调度步、ingest 三段、KV 管理（PARK/mirror/reload）、gateway 发射、驻留与池占用 counter（驻留优先取 residency.log，旧 run 回退 park 采样点）。只写一次、失败即清理、metadata 记全部源文件 hash。**读图陷阱**（slice 宽是调度轴不是 GPU 执行轴等）见 `tracekit/AGENTS.md` |
+| `perfetto.py` | 全部泳道的导出：引擎调度步、ingest 三段、KV 管理（PARK/mirror/reload）、gateway 发射、驻留与池占用 counter（驻留优先取 residency.log，旧 run 回退 park 采样点）。只写一次、失败即清理、metadata 记全部源文件 hash。**读图陷阱**（slice 宽是调度轴不是 GPU 执行轴等）见 `infra/trace/AGENTS.md` |
 
-### environment/（锁定运行时，~270 行）
+### infra/env/（原 environment：锁定运行时，~270 行）
 
-`setup.sh`（建 venv、hash 锁安装、打补丁、编译两个 gateway、下载锁定模型）、`verify.py`（环境校验：探测库与 CLI 合一，runner 经它把软件快照写进 manifest）。`profiles/cuda13_vllm023/` 是唯一 profile。vLLM 升级前的重审清单在 `environment/README.md`。
+`setup.sh`（建 venv、hash 锁安装、打补丁、编译两个 gateway、下载锁定模型）、`verify.py`（环境校验：探测库与 CLI 合一，runner 经它把软件快照写进 manifest）。`profiles/cuda13_vllm023/` 是唯一 profile。vLLM 升级前的重审清单在 `infra/env/README.md`。
 
 ### third_party/metronome/（只读 pin）
 
@@ -170,7 +170,7 @@ baseline 复用四块：**gateway**（Go；全局节拍器每 2s 收集所有会
 
 ### tests/（47 个契约钉，~850 行；从仓库根 `python -m unittest discover` 运行）
 
-不测显而易见的代码，只钉会无声回归的决定：仓库布局一致性（`test_repository_layout.py`，扫描面含 `.github/`，含"每个保留 run 必须在 results 索引里"）、证据纪律与三种终态（artifacts）、运行工作流（`test_lab_workflow.py`：就绪 / 看门狗 / worker 早死 / SIGTERM→interrupted，跑在假子进程上）、run 判决的日志字符串契约、warmup 哨兵三处一致、观测产出方共享（两个 worker 必须引 `tracekit/collectors/worker_obs.py`，不得自带拷贝——`test_run_validation.py`，含 Go 侧 `[starve]` 产出方）、trace 格式知识与导出契约（tracekit）、venv 符号链接与 manifest 键契约（两个实验的 config）。GPU 路径的验收门是真实 run，不是这些测试。
+不测显而易见的代码，只钉会无声回归的决定：仓库布局一致性（`test_repository_layout.py`，扫描面含 `.github/`，含"每个保留 run 必须在 results 索引里"）、证据纪律与三种终态（artifacts）、运行工作流（`test_lab_workflow.py`：就绪 / 看门狗 / worker 早死 / SIGTERM→interrupted，跑在假子进程上）、run 判决的日志字符串契约、warmup 哨兵三处一致、观测产出方共享（两个 worker 必须引 `infra/trace/collectors/worker_obs.py`，不得自带拷贝——`test_run_validation.py`，含 Go 侧 `[starve]` 产出方）、trace 格式知识与导出契约（infra/trace）、venv 符号链接与 manifest 键契约（两个实验的 config）。GPU 路径的验收门是真实 run，不是这些测试。
 
 ## 三、运行时进程拓扑
 
@@ -189,18 +189,18 @@ runner（系统 python，编排进程）
 
 | 文件 | 写方 | 读方 | 备注 |
 | --- | --- | --- | --- |
-| `manifest.json` / `status.json` | `lab/workflow`（经 `lab/artifacts`） | tracekit bundle、人、守卫测试 | bundle 从 manifest 读 `period_ms`、`gpu_sample_period_s`——**跨模块键名契约**，有测试钉住 |
-| `kv.log` | worker（`tracekit/collectors/worker_obs.py` 的共享 stat logger；节流 `OMNI_STATLOG_PERIOD_S`，两臂默认 0.2s = 每 tick 10 采样；vanilla 模式的 pin worker 用自己的 1 Hz 版本） | `parse_kv` | 判读容量墙/starvation 的主证据；`pre=` 为累计抢占（evict 字段不捕获） |
+| `manifest.json` / `status.json` | `infra/run/workflow`（经 `infra/run/artifacts`） | trace bundle、人、守卫测试 | bundle 从 manifest 读 `period_ms`、`gpu_sample_period_s`——**跨模块键名契约**，有测试钉住 |
+| `kv.log` | worker（`infra/trace/collectors/worker_obs.py` 的共享 stat logger；节流 `OMNI_STATLOG_PERIOD_S`，两臂默认 0.2s = 每 tick 10 采样；vanilla 模式的 pin worker 用自己的 1 Hz 版本） | `parse_kv` | 判读容量墙/starvation 的主证据；`pre=` 为累计抢占（evict 字段不捕获） |
 | `per_request.log`（P/F/T/SEED + 五站） | worker（`worker_obs.perreq_logger`，两臂同一产出方） | `parse_per_request` | warmup 哨兵会话的 push 时间是双时钟桥；开头一行 `C <perf> <epoch>` 使对齐精确 |
-| `per_iteration.log` | worker（共享 stat logger，逐步） | 人（ad-hoc） | 行格式 `<t_rel> run=N wait=N gen=N ptok=N`（每引擎步一行，无节流）；无 tracekit 消费者 |
+| `per_iteration.log` | worker（共享 stat logger，逐步） | 人（ad-hoc） | 行格式 `<t_rel> run=N wait=N gen=N ptok=N`（每引擎步一行，无节流）；无 trace 套件消费者 |
 | `scheduler.log` | sitecustomize（EngineCore 内） | `parse_scheduler` | 请求 id 必须是 `s<sid>e<n>` 形状（`SESSION_PATTERN`），worker 侧有注释钉住 |
 | `residency.log` | sitecustomize（EngineCore 内，与 scheduler.log 同一钩子；`OMNI_RESIDENCY_LOG`，采样周期同 kv.log） | `parse_residency` | epoch 时钟直接对齐；行格式 `<epoch> <req_id>:<驻留块数> ...`——grip 计数，parked 会话按仍在显存的哈希链计（读作底座而非 0）；两臂统一的每会话驻留证据，trace 开启时为必需 artifact |
 | `gpu.csv` | nvidia-smi | `parse_gpu` | 采样周期经 manifest 传递，样本居中 |
 | `gateway_ticks.log` | conveyor gateway（`GW_TICKLOG`，每发射一行） | `parse_gateway_ticks` | epoch 时钟直接对齐 scheduler.log；每会话交付量在交付点测得，是取现货 deadline 口径的原始事实 |
 | `park.log` | engine_patch（EngineCore 内） | `parse_park` | epoch 时钟；四种行：park 行（held/evicted/cpu_covered/池占用前后，cpu_covered 是下界）、`S` 行（镜像发出）、`L` 行（加载发出，`trigger=demand|prefetch`，demand = resume 按需回载、prefetch = push 时刻的匿名具现化；无 trigger 的旧日志读作 demand）、`R` 行（该加载完成，L/R 按 (req, trigger) 配对）；park 开启时为必需 artifact，空文件即 issue |
-| `client.json` / `client.txt` | pin 的 client（结果文件由 `lab/workflow` 移入 run 目录） | finalize 校验、人 | 字段：`ev` = [已过秒数, latency_ms, miss01] 列表（latency 在取现货引擎下无意义，miss 为交付口径）、`ttfa`[ms]、`err`、`audio_out`、`total/duration/budget_ms`；pin 硬编码输出位置，一次 `replace` 调用是无法移除的适配 |
-| `derived/*` | tracekit 导出 | Perfetto UI、人 | 只写一次 |
+| `client.json` / `client.txt` | pin 的 client（结果文件由 `infra/run/workflow` 移入 run 目录） | finalize 校验、人 | 字段：`ev` = [已过秒数, latency_ms, miss01] 列表（latency 在取现货引擎下无意义，miss 为交付口径）、`ttfa`[ms]、`err`、`audio_out`、`total/duration/budget_ms`；pin 硬编码输出位置，一次 `replace` 调用是无法移除的适配 |
+| `derived/*` | infra/trace 导出 | Perfetto UI、人 | 只写一次 |
 
 ## 五、新实验的接入形状
 
-复用既有骨架：`experiments/<name>/{__main__.py, config/, runner.py, worker/}`（conveyor 就是按此接入的现成例子）。runner 只写差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `lab/workflow.execute`——就绪等待、看门狗、收尾判决直接继承；lab 其余三件与 tracekit 直接复用；worker 只要继续实现 metronome 的 proto，client 原样复用。**负载同构的边界**：两臂必须共享同一个 client 与全部 workload 常量（音频节奏、tpt、时长）——这保证「进入系统的负载」同构；gateway 与 worker 的差异**属于被比较的机制本身**（conveyor 的槽轮 gateway 正是三增量之一），不违反同构。证据落进 `results/<name>/`，解析与可视化链路随之继承。
+复用既有骨架：引擎放 `engines/<name>/`（worker/ 及可选 gateway/，只被 spawn），测量三件套放 `experiments/<name>/{__main__.py, config.py, runner.py}` 并 import `experiments/shared`（conveyor 就是按此接入的现成例子）。runner 只写差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `infra/run/workflow.execute`——就绪等待、看门狗、收尾判决直接继承；infra/run 其余三件与 infra/trace 直接复用；worker 只要继续实现 metronome 的 proto，client 原样复用。**负载同构的边界**：两臂必须共享同一个 client 与全部 workload 常量（音频节奏、tpt、时长）——这保证「进入系统的负载」同构；gateway 与 worker 的差异**属于被比较的机制本身**（conveyor 的槽轮 gateway 正是三增量之一），不违反同构。证据落进 `results/<name>/`，解析与可视化链路随之继承。

@@ -25,7 +25,7 @@ class BaselineConfigTests(unittest.TestCase):
         )
 
     def test_manifest_config_sections(self) -> None:
-        # period_ms is a cross-module contract: tracekit reads it back out of
+        # period_ms is a cross-module contract: infra/trace reads it back out of
         # each run's manifest to synthesize ticks.
         manifest = BaselineConfig(trace=True, sessions=16).manifest_config()
         self.assertEqual(manifest["workload"]["period_ms"], 2000)

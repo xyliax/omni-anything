@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lab.artifacts import RunStore, scan_worker_fatal
+from infra.run.artifacts import RunStore, scan_worker_fatal
 
 
 REQUIRED = ("alpha.log", "beta.json")

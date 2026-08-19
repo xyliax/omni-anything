@@ -2,7 +2,7 @@
 
 Everything experiment-specific lives here — commands, environments, and the
 issue scanners. The chronological workflow (readiness, watchdog, teardown,
-terminal verdict) is ``lab/workflow.py`` and is shared by every experiment.
+terminal verdict) is ``infra/run/workflow.py`` and is shared by every experiment.
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
-from lab.artifacts import RunStore, make_run_id, scan_worker_fatal
-from lab.probes import resolve_model_snapshot
-from lab.workflow import Launch, RunPlan, execute
-from tracekit.collect import apply_scheduler_trace, gpu_monitor_command
+from infra.run.artifacts import RunStore, make_run_id, scan_worker_fatal
+from infra.run.probes import resolve_model_snapshot
+from infra.run.workflow import Launch, RunPlan, execute
+from infra.trace.collect import apply_scheduler_trace, gpu_monitor_command
 
 from .config import BaselineConfig, model, platform, workload
 
@@ -90,7 +90,7 @@ def worker_environment(config: BaselineConfig, run_dir: Path) -> dict[str, str]:
         # sitecustomize on sys.path is imported, and engine_fix chain-loads
         # the collector when tracing is also on.
         env["OMNI_SESSION_MAXTOKENS_FIX"] = "1"
-        fix_dir = config.root / "experiments" / "baseline" / "worker" / "engine_fix"
+        fix_dir = config.root / "engines" / "baseline" / "worker" / "engine_fix"
         env["PYTHONPATH"] = os.pathsep.join(
             filter(None, [str(fix_dir), env.get("PYTHONPATH", "")])
         )
