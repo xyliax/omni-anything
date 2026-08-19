@@ -65,8 +65,8 @@
 
 两条结构性约束：
 
-1. **依赖单向向下**。`infra/`（run/env/trace）不认识任何实验的名字；两臂之间互不引用；`engines/` 不 import 任何东西也不被 import（无 `__init__.py`）。唯一的内部反向边：`infra/run/` 复用 `infra/env/verify.py` 的探测函数（`capture` / `collect_software`）。
-2. **跨越进程边界只有三种通道**：argv+环境变量（runner → 子进程，启动时一次性）、gRPC（gateway ↔ worker，运行期）、run 目录里的文件（一切 → 离线层）。没有任何跨进程的 Python import。
+1. **依赖单向向下**。`infra/`（run/env/trace）不认识任何实验的名字；两臂之间互不引用；`engines/` 不被 import、也不 import `experiments/`（约束由守卫测试钉住；无 `__init__.py` 只是标记，不是隔离机制）——引擎运行时唯一的第一方依赖是共享观测产出方：两个 worker 经 sys.path 导入 `infra/trace/collectors/worker_obs.py`（两臂必须同一份仪器，见测试钉）。唯一的 infra 内部反向边：`infra/run/` 复用 `infra/env/verify.py` 的探测函数（`capture` / `collect_software`）。
+2. **第一方组件跨进程只有三种通道**：argv+环境变量（runner → 子进程，启动时一次性）、gRPC（gateway ↔ worker，运行期）、run 目录里的文件（一切 → 离线层）。没有任何跨进程的 Python import。引擎内部另有一条 vLLM 自带的通道：worker 的 AsyncLLM 与 EngineCore 子进程之间走 msgpack/ZMQ IPC——engine_patch/engine_fix 的 sitecustomize 注入与 `reload_kv`/`kv_state` utility RPC 全部骑在这条链上（补丁生效在 EngineCore 进程内，不在 worker 进程内）。
 
 ## 二、目录与文件职责
 
@@ -97,9 +97,9 @@
 | `config.py` | `ConveyorConfig`：机制旋钮集中地——`slots`（槽数）、`park_keep_blocks`（底座 K，设置即启用 auto-park）、`host_offload_gib`（镜像池大小）、`prefetch`（off/push，push = 回载提前到 push 时刻与 FE 重叠；须与 park 同开）、`prefetch_min_free`（预取的池预算闸）、`sync_scheduling`（对照臂钉住同步调度用）等，每个旋钮的含义和取值理由都写在字段旁注释里；公平性常量在 `experiments/shared/`（单份，两臂共享——同栈对比的前提由结构保证） |
 | `runner.py` | 与 baseline runner 同形的差异声明（组装 `RunPlan` 交 `infra/run/workflow` 执行）：gateway 加 `--slots` 并写 `gateway_ticks.log`；worker 加镜像、park 与 prefetch 参数；park 开启时把 `engine_patch/` 前置到 PYTHONPATH 并设 `OMNI_PARK_KEEP`（prefetch 再加 `OMNI_PREFETCH`）等环境变量；issue 扫描多四类静默失败（会话死亡、交付饥饿、park 未生效、prefetch 未生效），扫描字符串与产出方由 `tests/test_run_validation.py` 钉住 |
 
-**机制现状**（2026-08-12）：三个机制全链路已实现并有权威证据——稳态显存占用 0.296 vs 全驻留假设的 0.860（66% 的 KV 换到了主机内存），回载中位 70ms，交付零恶化（证据见 `results/conveyor/`）。结论提炼在 `docs/findings.md` H 系列；实现过程的完整问题与根因记录在 `docs/experiment-log.md` 2026-08-10 起的条目。**指标可信度**：client 侧的 `deadline_met`（miss = 引擎未跟上）与 TTFA（含固有的一片滞后）可以引用；latency p50/p99 永久无效（取现货的 Step 不含任何 GPU 等待），延迟分布一律以 trace 侧为准。
+**机制现状**（2026-08-15）：三个机制增量全链路已实现并有权威证据——稳态显存占用 0.296 vs 全驻留假设的 0.860（66% 的 KV 换到了主机内存），回载中位 70ms，交付零恶化（证据见 `results/conveyor/`）；第四个增量 **KV 预取已实现且语义闭合**（逐周期预取全成、demand 大回载消失、拷贝窗口藏进 FE——FINDINGS H7），净收益暂被 FE 同步膨胀吃掉大半（−19ms ≪ 理论 −70ms），根因待查。结论提炼在 `docs/findings.md` H 系列；实现过程的完整问题与根因记录在 `docs/experiment-log.md` 2026-08-10 起的条目。**指标可信度**：client 侧的 `deadline_met`（miss = 引擎未跟上）与 TTFA（含固有的一片滞后）可以引用；latency p50/p99 永久无效（取现货的 Step 不含任何 GPU 等待），延迟分布一律以 trace 侧为准。
 
-**已知未决**：回载与 FE 串行——回载要等音频片完成 FE 后才触发，在关键路径上多付一个回载时长（当前 70ms，随尾巴变大而增长）；彻底解决需要「预取」原语（提前把尾巴搬回显存、与 FE 并行执行）；预取过早会延长显存驻留、抵消 park 的收益。
+**已知未决**：预取原语已把回载提前到 push 时刻与 FE 重叠（上一段），但 ①FE 膨胀根因未解（预取拷贝疑与 FE 竞争引擎侧 CPU/内存带宽，+50ms，FE 进程池方向可能一石二鸟）；②高压下的 pacing（池预算闸 + park 事件驱动重试）尚未在容量压力 run 中验证。
 
 #### 一个会话的一个周期：机制解说与仪器对照
 
@@ -170,7 +170,7 @@ baseline 复用四块：**gateway**（Go；全局节拍器每 2s 收集所有会
 
 ### tests/（47 个契约钉，~850 行；从仓库根 `python -m unittest discover` 运行）
 
-不测显而易见的代码，只钉会无声回归的决定：仓库布局一致性（`test_repository_layout.py`，扫描面含 `.github/`，含"每个保留 run 必须在 results 索引里"）、证据纪律与三种终态（artifacts）、运行工作流（`test_lab_workflow.py`：就绪 / 看门狗 / worker 早死 / SIGTERM→interrupted，跑在假子进程上）、run 判决的日志字符串契约、warmup 哨兵三处一致、观测产出方共享（两个 worker 必须引 `infra/trace/collectors/worker_obs.py`，不得自带拷贝——`test_run_validation.py`，含 Go 侧 `[starve]` 产出方）、trace 格式知识与导出契约（infra/trace）、venv 符号链接与 manifest 键契约（两个实验的 config）。GPU 路径的验收门是真实 run，不是这些测试。
+不测显而易见的代码，只钉会无声回归的决定：仓库布局一致性（`test_repository_layout.py`，扫描面含 `.github/`，含"每个保留 run 必须在 results 索引里"）、证据纪律与三种终态（artifacts）、运行工作流（`test_run_workflow.py`：就绪 / 看门狗 / worker 早死 / SIGTERM→interrupted，跑在假子进程上）、run 判决的日志字符串契约、warmup 哨兵三处一致、观测产出方共享（两个 worker 必须引 `infra/trace/collectors/worker_obs.py`，不得自带拷贝——`test_run_validation.py`，含 Go 侧 `[starve]` 产出方）、trace 格式知识与导出契约（infra/trace）、venv 符号链接与 manifest 键契约（两个实验的 config）。GPU 路径的验收门是真实 run，不是这些测试。
 
 ## 三、运行时进程拓扑
 
@@ -180,7 +180,9 @@ runner（系统 python，编排进程）
  ├─ 生成→ metronome-gateway（Go 二进制）
  ├─ 生成→ nvidia-smi --loop（旁路采样）
  └─ 生成→ sustained_fd client（venv python）
-运行期数据面：client ══20ms 音频══▶ gateway ══每 2s 一次 Step(8 路合批)══▶ worker ══token══▶ 原路返回
+运行期数据面（两臂 gateway 节拍不同，会话自身周期同为 2s）：
+baseline：client ══20ms 音频══▶ metronome-gateway ══每 2s 一次 Step（8 路合批）══▶ worker ══token══▶ 原路返回
+conveyor：client ══20ms 音频══▶ conveyor-gateway ══每 250ms 发射一个槽（N=8、slots=8 时通常一次一个会话）══▶ worker ══库存 token══▶ 原路返回
 ```
 
 时间语义的分工：**tick 与 deadline 只存在于 gateway**；worker 与 vLLM 引擎对 tick 零感知，按通用 serving 语义连续批处理。这种"引擎不知道节拍"的结构性信息缺失，是 baseline 各种失败的共同根源，也是 conveyor 全部机制实施改动的位置。

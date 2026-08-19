@@ -60,7 +60,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 | 路径 | 角色 | 读写 |
 | --- | --- | --- |
 | `docs/` | 事实与决策 | 任务要求时改 |
-| `engines/` | 引擎本体（baseline / conveyor）；只被 spawn、不被 import，无 `__init__.py` | 任务要求时改 |
+| `engines/` | 引擎本体（baseline / conveyor）；按架构约束只被 spawn、不被 import（守卫测试扫描），`__init__.py` 缺席只是标记 | 任务要求时改 |
 | `experiments/` | 测量层（协议入口 + runner + `shared/` 公平性常量 + 各臂 `config.py`） | 任务要求时改 |
 | `infra/run/` | 共享运行基础设施（原 lab） | 任务要求时改 |
 | `infra/trace/` | 独立 trace 套件（原 tracekit）；实验不得自带 trace/画图代码 | 任务要求时改 |

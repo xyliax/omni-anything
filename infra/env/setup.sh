@@ -125,7 +125,7 @@ fi
 
 if (( DOWNLOAD_MODELS )); then
   (cd "$ROOT" && "$VENV/bin/python" - <<'PY'
-from experiments.baseline.config import model
+from experiments.shared import model
 from huggingface_hub import snapshot_download
 path = snapshot_download(repo_id=model.ID, revision=model.REVISION)
 print(f"model snapshot: {path}")

@@ -52,11 +52,11 @@ worker may add another profile only if it actually requires incompatible
 dependencies.
 
 The patch is applied only inside the selected virtual environment. Blackwell-only Metronome fixes
-are intentionally outside the RTX 3090 profile. Models are experimental inputs, so their locks live
-with their owners as the `REVISION` constant in `experiments/<experiment>/config/model.py`
-(the runner resolves it via `lab.probes.resolve_model_snapshot` at launch, which fails fast
-when the pinned snapshot is not cached); `--download-models` imports those constants and
-fetches the pinned snapshots.
+are intentionally outside the RTX 3090 profile. Models are experimental inputs, so their lock lives
+with the fairness constants as the `REVISION` constant in `experiments/shared/model.py`
+(the runner resolves it via `infra.run.probes.resolve_model_snapshot` at launch, which fails fast
+when the pinned snapshot is not cached); `--download-models` imports that constant and
+fetches the pinned snapshot.
 
 ## Adding a profile
 

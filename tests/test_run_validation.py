@@ -3,7 +3,7 @@
 The issue scanners decide run success by substring-matching lines that other
 processes — including the Go gateway — print. These tests hold the producer
 and the consumer of each such string together, the same way
-``FATAL_WORKER_PATTERN`` is pinned in test_lab_artifacts.
+``FATAL_WORKER_PATTERN`` is pinned in test_run_artifacts.
 """
 
 from __future__ import annotations

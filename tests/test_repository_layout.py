@@ -33,6 +33,16 @@ OBSOLETE_RUNS_LAYER = re.compile(r"results/[\w-]+/" + "runs")
 OBSOLETE_SPLIT_PATHS = tuple(
     re.compile(r"(?<![.\w/-])" + name + r"/") for name in ("la" + "b", "trace" + "kit", "environ" + "ment")
 )
+# Python module form of the same dissolved packages (the README once kept
+# advertising the old trace-export module path because only the slash form
+# was guarded).
+OBSOLETE_MODULE_FORM = re.compile(
+    r"(?<![.\w])(" + "|".join(("la" + "b", "trace" + "kit", "environ" + "ment")) + r")"
+    r"\.(workflow|artifacts|probes|process|collect|collectors|parse|bundle|perfetto|verify)\b"
+)
+# engines/ is spawned by path, never imported; nothing enforces that at runtime
+# (no __init__.py is a marker, not a mechanism — PEP 420 would still import it).
+ENGINES_IMPORT = re.compile(r"(?m)^\s*(from|import)\s+" + "engines" + r"\b")
 OBSOLETE_ENGINE_HOMES = (
     "experiments/" + "baseline/worker",
     "experiments/" + "conveyor/worker",
@@ -74,8 +84,20 @@ def scan_targets() -> list[Path]:
 
 class RepositoryLayoutTests(unittest.TestCase):
     def test_obsolete_top_level_containers_do_not_return(self) -> None:
+        # Tolerate a stale directory that holds only gitignored bytecode caches:
+        # an in-place pull from a pre-split checkout leaves the old dirs behind
+        # with nothing but __pycache__ inside — a migration artifact, not a
+        # returning container.
         for name in ("harness", "calibration", "observability", "context", "lab", "tracekit", "environment"):
-            self.assertFalse((ROOT / name).exists(), name)
+            root = ROOT / name
+            if not root.exists():
+                continue
+            residue = [
+                path
+                for path in root.rglob("*")
+                if path.is_file() and "__pycache__" not in path.parts
+            ]
+            self.assertEqual(residue, [], f"{name}/ has returned with content: {residue[:3]}")
         for name in OBSOLETE_STRINGS[-4:]:
             self.assertFalse((ROOT / "experiments" / name).exists(), name)
 
@@ -118,6 +140,26 @@ class RepositoryLayoutTests(unittest.TestCase):
                 self.assertNotIn(
                     stale, text, f"obsolete engine home {stale!r} in {path.relative_to(ROOT)}"
                 )
+            match = OBSOLETE_MODULE_FORM.search(text)
+            self.assertIsNone(
+                match,
+                f"obsolete module form {match.group(0)!r} in {path.relative_to(ROOT)}"
+                if match
+                else "",
+            )
+
+    def test_engines_is_never_imported(self) -> None:
+        for path in scan_targets():
+            if path.suffix != ".py":
+                continue
+            match = ENGINES_IMPORT.search(path.read_text(encoding="utf-8"))
+            self.assertIsNone(
+                match,
+                f"engines/ must be spawned by path, not imported: "
+                f"{match.group(0).strip()!r} in {path.relative_to(ROOT)}"
+                if match
+                else "",
+            )
 
     def test_markdown_links_resolve(self) -> None:
         markdown_files = [ROOT / "README.md", ROOT / "AGENTS.md"]

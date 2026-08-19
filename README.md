@@ -8,7 +8,7 @@
 bash infra/env/setup.sh --profile cuda13_vllm023 --download-models   # 建 venv + 补丁 + 编译两个 gateway + 拉锁定模型
 python3 infra/env/verify.py --worker-python .venv-vllm023/bin/python # 校验环境
 python -m experiments.baseline --trace --duration 120 --label first    # 第一个 run（成功判据看 status.json 的 state，不是 exit 0）
-python -m tracekit.perfetto <run-id>                                   # 导出时间线，拖进 ui.perfetto.dev
+python -m infra.trace.perfetto <run-id>                                   # 导出时间线，拖进 ui.perfetto.dev
 ```
 
 契约、文档地图与上手入口见 [`AGENTS.md`](AGENTS.md)。
