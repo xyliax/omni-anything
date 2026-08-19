@@ -9,7 +9,7 @@
 **模型 Qwen2.5-Omni-7B、workload 2s 硬 tick × 8 路（增量 prefill + decode 配额、context 持续增长；常量在 `experiments/baseline/config/`）、metronome 的 vLLM 0.23 栈 + 本仓库 paringest 模式（`experiments/baseline/`）。**
 
 - KV 全程常驻 GPU（全部页被活跃请求持有，没有任何释放路径）。
-- 状态：可运行；当前正式证据见稳定入口 `results/baseline/runs/`。
+- 状态：可运行；当前正式证据见稳定入口 `results/baseline/`。
 - 产物：kv 池占用轨迹（kv.log）、容量墙 t_wall、per-tick miss、scheduler 逐步 trace。
 
 ## 已验证的主张
@@ -24,7 +24,7 @@
 ## 方法论（最低限度，对任何后续方案均有效）
 
 - 每点新起进程；正式 run 前人工确认 GPU 空闲（共享卡，邻居竞争实测使 decode 步最多翻倍）。
-- 每个数字可追溯到 `results/<experiment>/runs/` 下当前唯一的不可变 run。runner 不自动删除运行现场；版本库每个实验只保留最新且有效的一份。文档只引用实验级稳定入口，禁止写死具体 run ID。
+- 每个数字可追溯到 `results/<experiment>/` 下的不可变 run。runner 不自动删除运行现场；run 不做自动清理，旧 run 的删除经讨论定案（确认产生它的实现 bug 已修复、新证据已验收）后由人执行，规则见 `results/README.md`。文档只引用实验级稳定入口，禁止写死具体 run ID。
 - 判读看 kv.log 的 starvation 信号，客户端 miss=0% 不作健康判据（silent failure，FINDINGS B1）。
 - 饱和判据看滞后漂移（完工时刻逐 tick 后移），不看利用率（与 silent failure 纪律同源）。
 - 注入负载冻结先验：泊松均值 30s、LogNormal 中位 512、40% cancellation。

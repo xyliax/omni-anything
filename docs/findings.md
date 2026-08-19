@@ -1,6 +1,6 @@
 # FINDINGS：真机实验发现清单（E 系列 = baseline 病理；H 系列 = conveyor 机制）
 
-*每条 = 一句话发现 + 关键数字 + 证据指针。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。产出这些结论的 E 系列运行证据与工具在 2026-08-07 实验体系重构（旧代号映射见 `docs/experiments.md` 附表）中整理：原始日志与图存于 git 历史（`109db82` 及更早的 `results/` 树），工具的后继实现在 `experiments/baseline/` 与 `tracekit/`；新证据一律落 `results/<experiment>/runs/`。机制推演与逐 run 修订过程写在 `docs/experiment-log.md`，本文只收结论。*
+*每条 = 一句话发现 + 关键数字 + 证据指针。配置基线：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090 (24GB) + tick = 2s + N = 8 concurrent sessions。产出这些结论的 E 系列运行证据与工具在 2026-08-07 实验体系重构（旧代号映射见 `docs/experiments.md` 附表）中整理：原始日志与图存于 git 历史（`109db82` 及更早的 `results/` 树），工具的后继实现在 `experiments/baseline/` 与 `tracekit/`；新证据一律落 `results/<experiment>/`。机制推演与逐 run 修订过程写在 `docs/experiment-log.md`，本文只收结论。*
 
 ---
 
@@ -47,7 +47,7 @@ compute-bound 和 memory-bound 透过同一个等待帽都读作 1601ms——定
 
 **B5 · harness 的交付滞后在正常运行时也线性无界增长（0.32 s/s）**
 worker 每段生成 33 token（配额公式 25n+8 的段内退化，FINDINGS C2）而 gateway 每 tick 只取走 25，净积压 +8 token/tick——按播放率折算，交付内容的陈旧度每秒增长 0.32 秒，正常运行 5 分钟即约 96 秒滞后，且 FIFO 队列永不作废。这是负载发生器的结构性质（Metronome 的 cadence-only 指标 by design 看不见它），不是引擎性质；对容量测量无害，但任何 content freshness 类指标必须先扣除此伪影。另：worker 的 text 流全量交付、token 流限流 25，同一响应的两条流互相漂移。
-证据：当前 baseline 证据见 `results/baseline/runs/`；机制在 `experiments/baseline/worker/stream_server.py` 的 `step()`。
+证据：当前 baseline 证据见 `results/baseline/`；机制在 `experiments/baseline/worker/stream_server.py` 的 `step()`。
 
 ## C. tick 内执行剖面（引擎每 2 秒在干什么）
 
@@ -95,7 +95,7 @@ paper 明写 "memory cliff, not a compute drift"（含 stat-logger 图与亚稳�
 **H1 · 错开相位消除 ingest 惊群，无额外代价**
 gateway 槽轮（8 槽，250ms 间距）把 8 路同步到达铺成 247-252ms 等间距，各会话自身周期不变；ingest 从同步惊群（push→prefill 20-260ms 散布）收敛到接近无竞争的本征值。发射走**绝对网格**后每会话周期精确 2000.0ms（继承的重锚循环曾累积 +4ms/周期），534 次发射源头晚醒 max 1.2ms。
 2026-08-14 追记（观测统一后的首次同仪器直接对比，两臂同负载 N=8/seed=4096/120s）：五站插桩下 FE 段（IS→IE）baseline p50 **383ms** vs conveyor p50 **221ms**——惊群使 FE 膨胀 73%，惊群消除的收益首次有两臂同口径的直接测量；push→prefill p50 相应为 426ms vs 316ms。
-证据：当前 conveyor 与 baseline 证据见 `results/conveyor/runs/`、`results/baseline/runs/`。
+证据：当前 conveyor 与 baseline 证据见 `results/conveyor/`、`results/baseline/`。
 
 **H2 · 取现货交付使 client 侧全部实时指标失效，必须重建交付口径**
 Step 不再含 GPU 等待后，latency p50 退化为 0.15ms、TTFA 错误读数 2ms（真值 ≥ 一个周期）、饥饿完全不可见。重建：`deadline_met` = 本 tick 交付 ≥ tpt（miss = 引擎未跟上），TTFA 如实包含一片流水线滞后（~2005ms），latency 分布永久改走 trace 侧。教训同 F 系列：**评估协议必须随交付语义重建，否则指标全部正常与系统完全失效可以并存**。
@@ -108,15 +108,15 @@ vLLM 抢占只作用于 RUNNING 请求、闲置 resumable 会话持块无任何�
 **H4 · 驻留核算：decode 结束瞬间 park + 常量底座 K，稳态驻留降 66%**
 auto-park-on-stop（在调度器停止转移处原地执行，零延迟零 RPC）+ keep-K 配额（闲置底座固定为 K+2 余量+1 未满块）：稳态池占用 **0.29 vs 全驻留假设 0.860**（保留 run 的 tick 窗重算口径 0.292），同时全驻留会话数 3 个占 79%（≈ slice 时长 × N / 周期的物理下界），回载窗口 p50=70ms、被逐尾块 CPU 覆盖率 100%，交付零恶化。镜像是增量 write-through：稳态 PCIe 上行 ≈ 增长率（~5 块/周期/会话），下行 ≈ 尾巴大小（随 L 线性涨——容量 roofline 的带宽线）。
 2026-08-14 追记（实测对实测，替代「全驻留假设」的外推口径）：同负载 baseline 公平对照 run（N=8/seed=4096/120s）末池占用 **0.993**、斜率 0.458%/s、自身外推 t≈145s 占满（pre=0，恰在墙脚）；同一时刻 conveyor 稳态 ~0.29——**同负载实测驻留比 ≈ 3.4×（省 71%）**，且 baseline 是有限时间内必撞墙的单调轨迹，conveyor 是有界锯齿。
-证据：当前 conveyor 与 baseline 证据见 `results/conveyor/runs/`、`results/baseline/runs/`。
+证据：当前 conveyor 与 baseline 证据见 `results/conveyor/`、`results/baseline/`。
 
 **H5 · 回载与 FE 串行是当前关键路径的已知浪费**
 回载由 chunk 到达调度器触发（FE 之后），tick→计算片 = FE 272ms + 调度 15ms + 回载 70ms = 358ms 串行；FE 膨胀（本征 87ms → 系统内 272ms）根因为与事件循环分时 GIL（A2 附注的隔离基准测试 + 本轮微基准一致）。优化排序：FE 进程池（−185ms）> 预取原语（−70ms 且随尾巴增长）> Whisper 30s padding 消除（待验证音频塔约定）。
-证据：当前 conveyor 证据的 ingest 泳道分解见 `results/conveyor/runs/`；experiment-log 2026-08-12 条目。
+证据：当前 conveyor 证据的 ingest 泳道分解见 `results/conveyor/`；experiment-log 2026-08-12 条目。
 
 **H6 · warm start 的正确语义是屏障式状态构造，且不得在 seed 刚结束时 park**
 warm start 模拟「请求自带上下文」，正确形态：全部会话 seed prefill 完成后引擎才开始接收 tick（结构性屏障：ready 文件晚于最后一个 seed，gateway/client 晚于 ready），期间无任何机制交错。两个结构性事实决定屏障收尾**不能 park**：①镜像拷贝的发起只依赖各请求自身的调度步——已停止会话余下的 seed 块永远不会发起（实测 ~130/256）；②低优先级拷贝流被连续 seed prefill 完全占用（已发起仅确认 0-27/256）。收尾 park 会销毁无副本块 → 首 tick 全部会话重算整段 seed → 首段迟到 1-1.65s → 取现货库存永久偏移（+38 token）。正确收尾 = 只解除 auto-park 挂起：第 1 周期全驻留（无回载无重算），首次 auto-park 在正常调度中自然完成状态转换（覆盖率 8/8 全 100%），库存恒 25 = 设计值。同批口径精化：饥饿从会话**首次足额交付**起算（流水线爬坡阶段的欠额不算落后），与 TTFA 的首 token 语义分离；seed 输出 token 跳过消费指针（上下文不是回应）。warm start 属**负载状态构造**而非机制——baseline 公平对照臂已移植同一屏障（2026-08-14，惰性 seed 与 tick 混跑属同型错误）。
-证据：当前 conveyor 证据见 `results/conveyor/runs/`；三轮根因链在 experiment-log 2026-08-12 条目。
+证据：当前 conveyor 证据见 `results/conveyor/`；三轮根因链在 experiment-log 2026-08-12 条目。
 
 **H7 · KV 预取（匿名具现化）：语义闭合成立，净收益暂被 FE 膨胀抵消**
 回载的可复用核心是「让内容在 GPU prefix cache 里存在」而非「回载某请求的尾巴」——据此把机制立成四层：状态权威（会话生命周期 resident/parked/materializing + 时序 + 延迟队列，块级事实不复制、按需查池）、指令面（`reload_kv`/`kv_state` utility + 发射策略）、传输（匿名块搬运，搭现有 offload load-event 机制，完成后按原 hash 注册、块转 cached-free = LRU 可弃 = 失败自动退回按需回载）、认领（vLLM 现有 resume hash match，零改动）。push 触发下首轮真机验证（N=8/seed=4096/K=128/120s，两次复跑一致）：**逐周期预取全部成功完成**（477-478 次，拷贝窗口 p50≈96ms，完整藏进 FE），**demand 大回载消失**（剩余 demand 全是 1-2 块的镜像前沿零头）；但 tick→prefill p50 仅 316→297ms（−19ms ≪ 理论 −70ms）——同 run FE 从 221 膨胀到 270ms（+50ms）把收益吃掉，疑与预取拷贝跨进程竞争 CPU/内存带宽，根因未定（FE 进程池方向可能一石二鸟）；末尾两次短交付在两次复跑中精确复现（同槽同会话同位置），是 prefetch 臂在最大上下文处的确定性签名，待解。发射策略已升级为事件驱动 pacing：池紧的 reload 延迟到下一次 park（容量释放事件）重评发射、chunk 认领即取消——本轮负载未触发（预算闸零触发），待更高压负载验证。

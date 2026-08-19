@@ -79,7 +79,7 @@ class BaselineConfig:
 
     @property
     def output_root(self) -> Path:
-        return self.root / "results" / "baseline" / "runs"
+        return self.root / "results" / "baseline"
 
     @property
     def mode_spec(self) -> ModeSpec:

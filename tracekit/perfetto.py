@@ -445,7 +445,13 @@ def export(source: str | Path) -> str:
 
 def discover_runs() -> Iterable[Path]:
     root = ROOT / "results"
-    return sorted(run for runs in root.glob("*/runs") for run in runs.iterdir() if run.is_dir())
+    return sorted(
+        run
+        for experiment in root.iterdir()
+        if experiment.is_dir()
+        for run in experiment.iterdir()
+        if run.is_dir() and run.name != "aggregates"
+    )
 
 
 def main() -> None:

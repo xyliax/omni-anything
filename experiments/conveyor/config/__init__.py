@@ -117,7 +117,7 @@ class ConveyorConfig:
 
     @property
     def output_root(self) -> Path:
-        return self.root / "results" / "conveyor" / "runs"
+        return self.root / "results" / "conveyor"
 
     @property
     def worker_path(self) -> Path:

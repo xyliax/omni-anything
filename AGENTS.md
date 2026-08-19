@@ -53,7 +53,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 
 注入负载冻结先验（40% cancellation、LogNormal）写在 `docs/experiments.md` 方法论节。
 
-**FINDINGS ↔ 实验记录**：新的有效验证只 append `docs/experiment-log.md`；提炼结论只改 `docs/findings.md`。两者只引用 `results/<experiment>/runs/` 稳定入口，不写具体 run ID。
+**FINDINGS ↔ 实验记录**：新的有效验证只 append `docs/experiment-log.md`；提炼结论只改 `docs/findings.md`。两者只引用 `results/<experiment>/` 稳定入口，不写具体 run ID。
 
 ## 目录边界
 
@@ -63,7 +63,7 @@ Agent 工作入口。先读本文件，再打开任务所需的那一份权威�
 | `experiments/` | 实验目录（baseline / conveyor）；配置在各实验私有的 `config/` | 任务要求时改 |
 | `lab/` | 共享运行基础设施 | 任务要求时改 |
 | `tracekit/` | 独立 trace 套件；实验不得自带 trace/画图代码 | 任务要求时改 |
-| `results/` | 运行证据；runner 不自动删除，但版本库中每个实验只保留最新且有效的一个 run，规则见 `results/README.md` | 证据不改写结论 |
+| `results/` | 运行证据；不做自动清理，可同时保留多个 run，旧 run 的删除经讨论定案后由人执行，规则见 `results/README.md` | 证据不改写结论 |
 | `environment/` | 锁定运行时 profile 与校验 | 任务要求时改 |
 | `third_party/` | git-subrepo pin；见 `third_party/AGENTS.md` | **只读** |
 | `.context/references/` | 外部公开信息原文或整理 | 按题打开 |
@@ -76,7 +76,7 @@ PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 ba
 ## 行为约束
 
 - 进展、主线与数字以 `docs/findings.md`、`results/`、`docs/experiment-log.md` 为准。
-- 文档不得引用时间戳 run ID；证据统一指向 `results/<experiment>/runs/` 稳定入口，具体 ID 只存在于证据目录及其 provenance 文件中。
+- 文档不得引用时间戳 run ID；证据统一指向 `results/<experiment>/` 稳定入口，具体 ID 只存在于证据目录及其 provenance 文件中。
 - 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结先验）；引用与校准各在同一出处内进行。标定模型（Qwen3-1.7B，112KB/token）与主模型（7B，56KB/token）各有口径，引用时带模型限定。
 - 标准术语全仓一致：全双工 (full-duplex)、注入 (injection)、N* 可调度并发数 (schedulable concurrency)、饱和 (saturation)。
 - 编号空间存在重名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；论文主张（C1–C2）不带前缀；旧实验代号（E0–E6）属历史语境，映射见 `docs/experiments.md` 末行。

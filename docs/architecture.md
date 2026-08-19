@@ -97,7 +97,7 @@
 | `config/__init__.py` | `ConveyorConfig`：机制旋钮集中地——`slots`（槽数）、`park_keep_blocks`（底座 K，设置即启用 auto-park）、`host_offload_gib`（镜像池大小）、`prefetch`（off/push，push = 回载提前到 push 时刻与 FE 重叠；须与 park 同开）、`prefetch_min_free`（预取的池预算闸）、`sync_scheduling`（对照臂钉住同步调度用）等，每个旋钮的含义和取值理由都写在字段旁注释里；model/platform/workload 三个常量文件与 baseline 一致（同栈对比的前提） |
 | `runner.py` | 与 baseline runner 同形的差异声明（组装 `RunPlan` 交 `lab/workflow` 执行）：gateway 加 `--slots` 并写 `gateway_ticks.log`；worker 加镜像、park 与 prefetch 参数；park 开启时把 `engine_patch/` 前置到 PYTHONPATH 并设 `OMNI_PARK_KEEP`（prefetch 再加 `OMNI_PREFETCH`）等环境变量；issue 扫描多四类静默失败（会话死亡、交付饥饿、park 未生效、prefetch 未生效），扫描字符串与产出方由 `tests/test_run_validation.py` 钉住 |
 
-**机制现状**（2026-08-12）：三个机制全链路已实现并有权威证据——稳态显存占用 0.296 vs 全驻留假设的 0.860（66% 的 KV 换到了主机内存），回载中位 70ms，交付零恶化（证据见 `results/conveyor/runs/`）。结论提炼在 `docs/findings.md` H 系列；实现过程的完整问题与根因记录在 `docs/experiment-log.md` 2026-08-10 起的条目。**指标可信度**：client 侧的 `deadline_met`（miss = 引擎未跟上）与 TTFA（含固有的一片滞后）可以引用；latency p50/p99 永久无效（取现货的 Step 不含任何 GPU 等待），延迟分布一律以 trace 侧为准。
+**机制现状**（2026-08-12）：三个机制全链路已实现并有权威证据——稳态显存占用 0.296 vs 全驻留假设的 0.860（66% 的 KV 换到了主机内存），回载中位 70ms，交付零恶化（证据见 `results/conveyor/`）。结论提炼在 `docs/findings.md` H 系列；实现过程的完整问题与根因记录在 `docs/experiment-log.md` 2026-08-10 起的条目。**指标可信度**：client 侧的 `deadline_met`（miss = 引擎未跟上）与 TTFA（含固有的一片滞后）可以引用；latency p50/p99 永久无效（取现货的 Step 不含任何 GPU 等待），延迟分布一律以 trace 侧为准。
 
 **已知未决**：回载与 FE 串行——回载要等音频片完成 FE 后才触发，在关键路径上多付一个回载时长（当前 70ms，随尾巴变大而增长）；彻底解决需要「预取」原语（提前把尾巴搬回显存、与 FE 并行执行）；预取过早会延长显存驻留、抵消 park 的收益。
 
@@ -117,7 +117,7 @@
 | 7 | decode | 生成本段的 25 个 token，配额精确等于 tpt，不允许任何超出——多余产出会在库存中累积，交付内容对应的音频越来越旧（见指纹表「库存漂移」） | scheduler.log 单 token 行；worker.log 的 `inv_backlog` | 生成速率 12.5 tok/s/会话；`inv_backlog` 恒 ≈25 |
 | 8 | 停止、闲置 | 本段配额用完，会话进入等待下一片的闲置态。注意：vLLM 自己**永远不会**释放闲置会话的 KV（这正是要自建 park 的原因，论证见 FINDINGS H3） | kv.log 的 `run=` 在段间回落 | 每周期闲置 ≈(2s − 段时长) |
 | 9 | 镜像（后台备份） | 每个新写满的 KV 块被异步复制到主机内存池。只复制**新增量**——尾巴反复 park/回载不产生重复拷贝。注意它不是「搬走」：显存副本原地不动，真正释放显存的是 park | park.log `S` 行；Perfetto 的 KV mirror 标记 | 每周期备份量 ≈ 上下文增长量（个位数块）。每周期第一个 S 记的是上一段的收尾（预期行为） |
-| 10 | park（decode 结束瞬间） | 会话转入闲置态的那一行代码里，补丁原地释放它全部 KV 块的引用、销毁底座 K 之外的尾部（留 2 块余量给尚未备份完成的最新块，永不销毁块 0——它是所有会话共享的系统提示词）。显存占用随之下降；物理显存从不归还 CUDA，「释放」的含义是池内槽位可复用 | park.log park 行；Perfetto 的 PARK 标记 + 每会话驻留锯齿 counter；kv.log `kv=` 下降 | 稳态池占用 0.296 vs 全驻留 0.860（证据见 `results/conveyor/runs/`） |
+| 10 | park（decode 结束瞬间） | 会话转入闲置态的那一行代码里，补丁原地释放它全部 KV 块的引用、销毁底座 K 之外的尾部（留 2 块余量给尚未备份完成的最新块，永不销毁块 0——它是所有会话共享的系统提示词）。显存占用随之下降；物理显存从不归还 CUDA，「释放」的含义是池内槽位可复用 | park.log park 行；Perfetto 的 PARK 标记 + 每会话驻留锯齿 counter；kv.log `kv=` 下降 | 稳态池占用 0.296 vs 全驻留 0.860（证据见 `results/conveyor/`） |
 
 失效模式指纹（每种失效在仪器上的表现，按站点索引）：
 
@@ -203,4 +203,4 @@ runner（系统 python，编排进程）
 
 ## 五、新实验的接入形状
 
-复用既有骨架：`experiments/<name>/{__main__.py, config/, runner.py, worker/}`（conveyor 就是按此接入的现成例子）。runner 只写差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `lab/workflow.execute`——就绪等待、看门狗、收尾判决直接继承；lab 其余三件与 tracekit 直接复用；worker 只要继续实现 metronome 的 proto，client 原样复用。**负载同构的边界**：两臂必须共享同一个 client 与全部 workload 常量（音频节奏、tpt、时长）——这保证「进入系统的负载」同构；gateway 与 worker 的差异**属于被比较的机制本身**（conveyor 的槽轮 gateway 正是三增量之一），不违反同构。证据落进 `results/<name>/runs/`，解析与可视化链路随之继承。
+复用既有骨架：`experiments/<name>/{__main__.py, config/, runner.py, worker/}`（conveyor 就是按此接入的现成例子）。runner 只写差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `lab/workflow.execute`——就绪等待、看门狗、收尾判决直接继承；lab 其余三件与 tracekit 直接复用；worker 只要继续实现 metronome 的 proto，client 原样复用。**负载同构的边界**：两臂必须共享同一个 client 与全部 workload 常量（音频节奏、tpt、时长）——这保证「进入系统的负载」同构；gateway 与 worker 的差异**属于被比较的机制本身**（conveyor 的槽轮 gateway 正是三增量之一），不违反同构。证据落进 `results/<name>/`，解析与可视化链路随之继承。

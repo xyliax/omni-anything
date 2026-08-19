@@ -27,6 +27,17 @@ OBSOLETE_STRINGS = (
     "e3_phase_" + "scheduling",
 )
 OBSOLETE_CONTEXT_PATH = re.compile(r"(?<![.\w/])" + "context" + r"/")
+OBSOLETE_RUNS_LAYER = re.compile(r"results/[\w-]+/" + "runs")
+
+
+def run_directories() -> list[Path]:
+    return [
+        run
+        for experiment in (ROOT / "results").iterdir()
+        if experiment.is_dir()
+        for run in experiment.iterdir()
+        if run.is_dir() and run.name != "aggregates"
+    ]
 
 
 def scan_targets() -> list[Path]:
@@ -78,6 +89,13 @@ class RepositoryLayoutTests(unittest.TestCase):
                 if match
                 else "",
             )
+            match = OBSOLETE_RUNS_LAYER.search(text)
+            self.assertIsNone(
+                match,
+                f"obsolete runs/ layer {match.group(0)!r} in {path.relative_to(ROOT)}"
+                if match
+                else "",
+            )
 
     def test_markdown_links_resolve(self) -> None:
         markdown_files = [ROOT / "README.md", ROOT / "AGENTS.md"]
@@ -96,13 +114,12 @@ class RepositoryLayoutTests(unittest.TestCase):
                     f"broken link in {document.relative_to(ROOT)}: {target}",
                 )
 
-    def test_each_experiment_retains_exactly_one_run(self) -> None:
-        for runs in (ROOT / "results").glob("*/runs"):
-            retained = [run for run in runs.iterdir() if run.is_dir()]
-            self.assertEqual(
-                len(retained),
-                1,
-                f"{runs.relative_to(ROOT)} must contain exactly one current run",
+    def test_run_directories_use_run_id_shape(self) -> None:
+        for run in run_directories():
+            self.assertRegex(
+                run.name,
+                RUN_ID,
+                f"{run.relative_to(ROOT)} is not a run-id directory",
             )
 
     def test_documents_do_not_pin_run_ids(self) -> None:
@@ -116,16 +133,13 @@ class RepositoryLayoutTests(unittest.TestCase):
             )
 
     def test_formal_runs_have_terminal_status(self) -> None:
-        for runs in (ROOT / "results").glob("*/runs"):
-            for run in runs.iterdir():
-                if not run.is_dir():
-                    continue
-                status = json.loads((run / "status.json").read_text(encoding="utf-8"))
-                self.assertIn(status["state"], {"success", "failed", "interrupted"}, run.name)
+        for run in run_directories():
+            status = json.loads((run / "status.json").read_text(encoding="utf-8"))
+            self.assertIn(status["state"], {"success", "failed", "interrupted"}, run.name)
 
     def test_aggregate_sources_and_artifacts_are_valid(self) -> None:
         for aggregates in (ROOT / "results").glob("*/aggregates"):
-            runs = aggregates.parent / "runs"
+            runs = aggregates.parent
             for aggregate in (path for path in aggregates.iterdir() if path.is_dir()):
                 manifest = json.loads((aggregate / "manifest.json").read_text(encoding="utf-8"))
                 for run_id in manifest["source_runs"]:

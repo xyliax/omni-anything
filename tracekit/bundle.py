@@ -49,7 +49,7 @@ class RunFiles:
 
 
 def _run_files(directory: Path) -> RunFiles:
-    experiment = directory.parent.parent.name if directory.parent.name == "runs" else "external"
+    experiment = directory.parent.name if directory.parent.parent == RESULTS_ROOT else "external"
     return RunFiles(
         experiment=experiment,
         run_id=directory.name,
@@ -78,12 +78,12 @@ def resolve_run(source: str | Path) -> RunFiles:
             candidates.append(repository_relative.resolve())
         parts = direct.parts
         if len(parts) == 2:
-            scoped = RESULTS_ROOT / parts[0] / "runs" / parts[1]
+            scoped = RESULTS_ROOT / parts[0] / parts[1]
             if scoped.is_dir():
                 candidates.append(scoped.resolve())
         candidates.extend(
             path.resolve()
-            for path in RESULTS_ROOT.glob(f"*/runs/{str(source)}")
+            for path in RESULTS_ROOT.glob(f"*/{str(source)}")
             if path.is_dir()
         )
     unique = sorted(set(candidates))

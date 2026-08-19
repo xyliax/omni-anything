@@ -1,6 +1,6 @@
 # baseline
 
-真机 baseline：现有 vLLM-realtime 栈如何 serve 双工负载。每次运行起一个全新 worker，证据先落入 `results/baseline/runs/<run-id>/` 的不可变目录；版本库只保留最新且有效的一份，文档引用稳定入口 `results/baseline/runs/`。
+真机 baseline：现有 vLLM-realtime 栈如何 serve 双工负载。每次运行起一个全新 worker，证据先落入 `results/baseline/<run-id>/` 的不可变目录；run 不做自动清理，旧 run 的删除经讨论定案后由人执行（规则见 `results/README.md`），文档引用稳定入口 `results/baseline/`。
 
 ## 不变量
 

@@ -18,7 +18,7 @@ SCHEDULER_LINES = (
 
 
 def make_run_dir(results_root: Path, experiment: str, run_id: str) -> Path:
-    run = results_root / experiment / "runs" / run_id
+    run = results_root / experiment / run_id
     run.mkdir(parents=True)
     return run
 
