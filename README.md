@@ -19,15 +19,37 @@ python -m infra.trace.perfetto <run-id-or-path>
 
 一次运行是否成功以 `status.json` 的终态和 validation 为准，不能只看进程 exit code。完整实验协议见 [`docs/experiments.md`](docs/experiments.md)。
 
-## Reading Paths
+## Documentation Guide
 
-| 目的 | 阅读顺序 |
+五份人类文档按事实类型分工，不按开发过程堆叠记录：
+
+| Document | Answers |
 | --- | --- |
-| 第一次了解项目 | [`Problem`](docs/problem.md) → [`System`](docs/system.md) → [`Findings`](docs/findings.md) |
-| 判断实验是否可信 | [`Experiments`](docs/experiments.md) → [`Findings`](docs/findings.md) → [`Evidence Registry`](docs/agent/evidence.json) |
-| 修改或运行代码 | [`AGENTS.md`](AGENTS.md) → 对应目录的 `AGENTS.md` |
-| 理解 IPC、monkeypatch 与完整 runtime | [`Agent Task Router`](docs/agent/README.md) → [`System Map`](docs/agent/system-map.json) → [`Dynamic Edges`](docs/agent/dynamic-edges.json) |
+| 本页 | 项目定位、当前边界与阅读入口 |
+| [`Problem`](docs/problem.md) | 研究什么、为什么重要、范围在哪里 |
+| [`System`](docs/system.md) | 机制与端到端系统如何工作 |
+| [`Experiments`](docs/experiments.md) | 配置、指标、比较和证据怎样才有效 |
+| [`Findings`](docs/findings.md) | 当前证据支持哪些结论、成熟度与限制 |
 
-## Documentation Contract
+第一次阅读按 `Problem → System → Findings`；审计一个数字按 `Findings → Experiments → Evidence Registry`。代码已经实现不等于机制已验证，机制已验证也不等于具备 formal performance evidence。
 
-人类文档解释问题、系统、协议与结论；Agent 文档维护代码定位、动态边、修改影响和验证方法；运行证据保存精确 provenance。每类事实只有一个 owner，详细规则见 [`AGENTS.md`](AGENTS.md)。
+若陈述看似冲突，按事实类型回到唯一 owner：范围看 `Problem`，机制语义看 `System`，实验口径看 `Experiments`，当前结论看 `Findings`，精确 run 与 hash 看 [`Evidence Registry`](docs/agent/evidence.json)。
+
+### Agent Documentation
+
+Agent 文档不是第二套项目事实，而是把上述事实映射到代码和维护动作。Agent 按固定链路工作：
+
+```text
+AGENTS.md → task guide → human owner → registry → nearest AGENTS.md → code and tests
+```
+
+| Layer | Purpose |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md) | 按任务找到事实 owner，并声明全仓边界 |
+| [`Task Router`](docs/agent/README.md) | 选择最小 read-set 和交付要求 |
+| `system-map` / `dynamic-edges` | 定位组件、进程、IPC 与 monkeypatch |
+| `contracts` / `change-impact` | 约束不变量，并指出改动必须同步检查什么 |
+| 最近一层 `AGENTS.md` | 说明目标目录的局部边界与验证方法 |
+| `evidence` / `records` | 连接 finding、证据角色、exact run 与历史过程 |
+
+普通读者无需逐项阅读；审计 runtime、修改影响或结论 provenance 时再进入对应 registry。Agent 文档不能覆盖人类事实 owner 中的研究语义、协议或结论。

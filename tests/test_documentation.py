@@ -426,6 +426,18 @@ class DocumentationTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, f"{module}: {result.stderr}")
 
+    def test_readme_has_a_human_documentation_guide(self) -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("## Documentation Guide", text)
+        for owner in ("Problem", "System", "Experiments", "Findings"):
+            self.assertIn(f"[`{owner}`]", text)
+        self.assertIn("代码已经实现不等于机制已验证", text)
+        self.assertIn("若陈述看似冲突", text)
+        self.assertIn("### Agent Documentation", text)
+        self.assertIn("Agent 文档不是第二套项目事实", text)
+        for layer in ("Task Router", "system-map", "dynamic-edges", "change-impact"):
+            self.assertIn(layer, text)
+
 
 if __name__ == "__main__":
     unittest.main()
