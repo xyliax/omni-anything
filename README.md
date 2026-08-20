@@ -4,7 +4,7 @@
 
 ## Current Status
 
-当前仓库包含 baseline 与 conveyor 两个可运行测量臂，以及 phase staggering、take-from-stock delivery、KV park 与 KV prefetch 的实现路径。每项机制的成熟度、量化结论和限制只在 [`docs/findings.md`](docs/findings.md) 维护。
+当前仓库包含 baseline 与 conveyor 两个可运行测量臂。conveyor 用错开相位（phase staggering）分散会话发射，用取现货交付（take-from-stock delivery）即时返回上一周期库存，用 KV 部分释放（park）回收可恢复的闲置尾部，再用 KV 预取（prefetch）提前搬回这些尾部。完整机制见 [`System`](docs/system.md#experimental-arms)，成熟度、量化结论和限制只在 [`Findings`](docs/findings.md#current-state) 维护。
 
 项目目标是前台与 injection 后台共存；当前可执行主路径集中在全双工前台、KV 驻留机制和容量测量，injection 的端到端联合对比协议尚未接入。抽象问题与当前实现边界见 [`docs/problem.md`](docs/problem.md)。
 
@@ -23,7 +23,7 @@ python -m infra.trace.perfetto <run-id-or-path>
 
 五份人类文档按事实类型分工，不按开发过程堆叠记录：
 
-| Document | Answers |
+| 文档 | 回答的问题 |
 | --- | --- |
 | 本页 | 项目定位、当前边界与阅读入口 |
 | [`Problem`](docs/problem.md) | 研究什么、为什么重要、范围在哪里 |
@@ -43,7 +43,7 @@ Agent 文档不是第二套项目事实，而是把上述事实映射到代码�
 AGENTS.md → task guide → human owner → registry → nearest AGENTS.md → code and tests
 ```
 
-| Layer | Purpose |
+| 层级 | 作用 |
 | --- | --- |
 | [`AGENTS.md`](AGENTS.md) | 按任务找到事实 owner，并声明全仓边界 |
 | [`Task Router`](docs/agent/README.md) | 选择最小 read-set 和交付要求 |

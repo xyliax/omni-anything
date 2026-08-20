@@ -10,18 +10,18 @@
 
 当前真机测量栈的可执行常量在 `experiments/shared/`，arm-private 行为在各自 `config.py`。下表明确区分 delivery quota 与实际生成行为：
 
-| Concept | Shared Workload | Baseline Behavior | Conveyor Behavior |
+| 配置项 | 共享负载值 | Baseline 行为 | Conveyor 行为 |
 | --- | ---: | ---: | ---: |
-| Model | Qwen2.5-Omni-7B | shared | shared |
-| Runtime | vLLM 0.23 | shared | shared |
-| Device | RTX 3090 | shared | shared |
-| Session period | 2000 ms | 每周期推进 | 每会话仍为 2000 ms；gateway 在周期内分 slot |
-| Default sessions | 8 | shared | shared |
-| Delivery quota `tpt` | 25 token/tick | gateway 每 tick 消费 25 | gateway 每 tick 消费 25 |
-| Actual segment generation | arm behavior | `tpt + 8 = 33` | 精确 `tpt = 25` |
-| KV bytes/token | 56 KiB | shared | shared |
+| 模型 | Qwen2.5-Omni-7B | 共享 | 共享 |
+| 运行时 | vLLM 0.23 | 共享 | 共享 |
+| 设备 | RTX 3090 | 共享 | 共享 |
+| 会话周期 | 2000 ms | 每周期推进 | 每会话仍为 2000 ms；gateway 在周期内分 slot |
+| 默认会话数 | 8 | 共享 | 共享 |
+| 交付配额 `tpt` | 25 token/tick | gateway 每 tick 消费 25 | gateway 每 tick 消费 25 |
+| 实际每段生成量 | 由实验臂决定 | `tpt + 8 = 33` | 精确 `tpt = 25` |
+| 每 token KV 字节数 | 56 KiB | 共享 | 共享 |
 
-baseline 的 33 token 是历史 harness 行为，不是负载要求；它会造成库存漂移，但为了保持对照语义仍需显式记录。conveyor 必须精确生成 delivery quota，否则 take-from-stock pipeline 会无界积压。
+baseline 的 33 token 是历史 harness 行为，不是负载要求；它会造成库存漂移，但为了保持对照语义仍需显式记录。conveyor 必须精确生成 delivery quota，否则交付流水线会无界积压。
 
 如表中数值与代码不一致，以评审确认后的协议修改为准，并在同一 change transaction 中同步 `experiments/shared/`、arm config 和配置测试；不得静默让文档或代码单方面成为新版本。
 
@@ -51,14 +51,14 @@ baseline 允许为公平性、可观测性和上游 bug 修复而变化，但每
 
 ### Conveyor
 
-`PROTOCOL-CONVEYOR` 与正式对比使用的 `paringest` baseline 共享模型、workload、client 和 observation producer，只改变被比较机制：
+`PROTOCOL-CONVEYOR` 与正式对比使用的 `paringest` baseline 共享模型、workload、client 和 observation producer，只改变以下机制；直观定义见 [`System`](system.md#experimental-arms)：
 
-- gateway phase staggering；
-- worker take-from-stock delivery；
-- EngineCore KV park；
-- optional KV prefetch。
+- gateway 错开相位（phase staggering）：把会话发射分散到周期内；
+- worker 取现货交付（take-from-stock delivery）：立即返回上一周期库存；
+- EngineCore KV 部分释放（park）：回收可由主机镜像恢复的闲置尾部；
+- 可选的 KV 预取（prefetch）：在请求进入引擎前提前搬回尾部。
 
-park run 当前要求 synchronous scheduling；相应对照如果用于量化 park 效果，也必须钉住同一 scheduling mode，避免一次比较同时改变两个变量。
+KV 部分释放 run 当前要求 synchronous scheduling；相应对照如果用于量化该机制，也必须钉住同一 scheduling mode，避免一次比较同时改变两个变量。
 
 ### Injection Status
 
@@ -75,7 +75,7 @@ park run 当前要求 synchronous scheduling；相应对照如果用于量化 pa
 
 两臂直接比较时必须共享：
 
-| Controlled Variable | Executable Owner |
+| 受控变量 | 可执行权威 |
 | --- | --- |
 | Model ID、revision、KV geometry | `experiments/shared/model.py` |
 | Tick、sessions、duration、delivery quota、audio chunk | `experiments/shared/workload.py` |
@@ -84,7 +84,7 @@ park run 当前要求 synchronous scheduling；相应对照如果用于量化 pa
 | Observation producer 和时钟语义 | `paringest` baseline 与 conveyor 共用 `infra/trace/collectors/`；vanilla 保留上游观测，只作参考 |
 | Warm-start barrier semantics | 两臂 worker/runner 的对应实现 |
 
-arm-private config 只包含真正被比较的行为，例如 mode、slot、park、prefetch 和 scheduling mode。worker 的引擎参数由 runner 必填；gateway 虽保留独立启动所需的 CLI fallback，受管 run 一律显式传入协议值。runner 把最终展开值写进 manifest，运行证据不从进程内 fallback 反推配置。
+arm-private config 只包含真正被比较的行为，例如 mode、slot、`park`、`prefetch` 和 scheduling mode。worker 的引擎参数由 runner 必填；gateway 虽保留独立启动所需的 CLI fallback，受管 run 一律显式传入协议值。runner 把最终展开值写进 manifest，运行证据不从进程内 fallback 反推配置。
 
 若一次 smoke 两臂使用不同 seed、GPU 或外部负载条件，它们只能证明各自迁移后可运行，不能构成跨臂对照。
 
@@ -98,11 +98,11 @@ arm-private config 只包含真正被比较的行为，例如 mode、slot、park
 
 ### Warm Start
 
-seed 表示请求进入测量时已经拥有 context。全部 session 的 seed prefill 完成后，gateway/client 才能开始 tick；seed output 不进入 delivery inventory。warm-start 阶段不计作普通 tick，也不能与 park 交错。任何 `warm-start barrier timed out` 日志都是 validation failure，即使 worker 随后写出了 ready file。详细状态语义见 [`System`](system.md#warm-start)。
+seed 表示请求进入测量时已经拥有 context。全部 session 的 seed prefill 完成后，gateway/client 才能开始 tick；seed output 不进入 delivery inventory。warm-start 阶段不计作普通 tick，也不能与 KV 部分释放交错。任何 `warm-start barrier timed out` 日志都是 validation failure，即使 worker 随后写出了 ready file。详细状态语义见 [`System`](system.md#warm-start)。
 
 ### Phase
 
-输入 phase 必须由协议显式控制或记录。关闭 phase staggering 时，相同音频同步进入多路会话还可能触发 prefix-cache 去重，制造虚高容量；任何此类运行必须在 manifest 和 finding scope 中说明。
+输入 phase 必须由协议显式控制或记录。关闭错开相位时，相同音频同步进入多路会话还可能触发 prefix-cache 去重，制造虚高容量；任何此类运行必须在 manifest 和 finding scope 中说明。
 
 ### Repetition
 
@@ -110,10 +110,10 @@ seed 表示请求进入测量时已经拥有 context。全部 session 的 seed p
 
 ## Metric Semantics
 
-| Metric | Definition | Misuse To Avoid |
+| 指标 | 定义 | 禁止误用 |
 | --- | --- | --- |
 | `deadline_met` | conveyor 按实际交付量定义；pin baseline 的同名字段仍只比较 `gpu_ms` 与 budget，不能作为 correctness gate | 正式 paringest baseline 由 worker `delivery` 记录和 runner validation 检查；首次足额前属于 TTFA，但每个会话必须在 run 内至少足额一次，之后任何欠额都是 starvation |
-| TTFA | 第一个非 seed、非空交付；take-from-stock 包含固有 pipeline latency | 不能用旧的“首个 Step 返回”口径 |
+| TTFA | 第一个非 seed、非空交付；取现货交付包含固有 pipeline latency | 不能用旧的“首个 Step 返回”口径 |
 | Client latency | transport/Step latency | conveyor 下不包含 GPU 工作，不能当计算延迟 |
 | Tick-to-prefill | gateway/worker 时钟对齐后的 input 到 prefill | 旧 run 的启发式对齐必须标记偏差 |
 | Content freshness | 生成内容与对应输入的逻辑距离 | cadence 正常不代表 freshness 正常 |
@@ -162,12 +162,12 @@ diagnostic evidence 可以支撑机制语义、故障指纹和根因探索。它
 
 `third_party/metronome/` 是只读 git-subrepo pin，精确 commit 以其 `.gitrepo` 为准。它在本项目中有四个角色：
 
-| Role | Meaning |
+| 角色 | 含义 |
 | --- | --- |
-| Main baseline | vanilla resumable-request serving，context 无界增长 |
-| Lossy comparison | request recycling 或 in-engine sliding-window KV |
-| Orthogonal mechanism | AIMD admission control，处理 capacity 之外的过载 |
-| Experimental scaffold | gateway、proto、client 与 worker 的来源 |
+| 主 baseline | vanilla resumable-request serving，context 无界增长 |
+| 有损对照 | request recycling 或 in-engine sliding-window KV |
+| 正交机制 | AIMD admission control，处理 capacity 之外的过载 |
+| 实验脚手架 | gateway、proto、client 与 worker 的来源 |
 
 必须继承的两条方法论是 fresh process per point，以及显式控制 phase；但本项目不继承 pin 中已经被论文订正的旧归因。
 

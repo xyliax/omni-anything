@@ -94,16 +94,25 @@ class DocumentationTests(unittest.TestCase):
         expected = {str(path.relative_to(ROOT)) for path in HUMAN_DOCS}
         self.assertEqual(set(ownership["human_core"]), expected)
 
-    def test_human_headings_are_english_and_spaced(self) -> None:
+    def test_human_headings_follow_paper_style_and_are_spaced(self) -> None:
         for path in HUMAN_DOCS:
             lines = path.read_text(encoding="utf-8").splitlines()
             for index, line in enumerate(lines):
                 if not re.match(r"^#{1,6}\s+", line):
                     continue
-                self.assertIsNone(
-                    CJK.search(line),
-                    f"human heading must be English: {path.relative_to(ROOT)}:{index + 1}",
-                )
+                finding = re.match(r"^### FINDING-[A-Z]\d+\s+—\s+(.+)$", line)
+                if finding:
+                    self.assertIsNotNone(
+                        CJK.search(finding.group(1)),
+                        f"finding title must explain the stable ID in Chinese: "
+                        f"{path.relative_to(ROOT)}:{index + 1}",
+                    )
+                else:
+                    self.assertIsNone(
+                        CJK.search(line),
+                        f"paper-style heading must be English: "
+                        f"{path.relative_to(ROOT)}:{index + 1}",
+                    )
                 if index + 1 < len(lines):
                     self.assertEqual(
                         lines[index + 1],
@@ -111,6 +120,29 @@ class DocumentationTests(unittest.TestCase):
                         f"heading must be followed by a blank line: "
                         f"{path.relative_to(ROOT)}:{index + 1}",
                     )
+
+    def test_system_explains_mechanisms_and_end_to_end_topology(self) -> None:
+        text = (ROOT / "docs" / "system.md").read_text(encoding="utf-8")
+        for mechanism_row in (
+            "| 错开相位（phase staggering） | 保持每路周期不变，把不同会话分散到周期内不同时间点，避免同步拥堵 | Gateway |",
+            "| 取现货交付（take-from-stock delivery） | tick 到来时先交付上一周期已生成的库存，不让网关等待本周期 GPU 计算 | Worker |",
+            "| KV 部分释放（park） | 会话空闲时只保留固定 KV 底座，释放可由主机镜像恢复的尾部 | EngineCore |",
+            "| KV 预取（prefetch） | 在真实请求进入 EngineCore 前提前搬回已释放尾部，隐藏请求路径上的回载延迟 | Worker + EngineCore |",
+        ):
+            self.assertIn(mechanism_row, text)
+        self.assertIn(
+            "按需回载（demand reload）指真实请求到达后才恢复缺失的 KV 尾部",
+            text,
+        )
+        for topology_edge in (
+            "CS <-->|WebSocket<br/>音频 / tick 事件| GW",
+            "GW -->|gRPC Step<br/>输入切片 / 交付结果| WK",
+            "WK <-->|msgpack/ZMQ<br/>请求 / utility 指令| EC",
+            "PATCH -.->|sitecustomize monkeypatch<br/>仅 conveyor| EC",
+            "STORE --> TRACE --> EVID",
+            "R -->|manifest / validation| STORE",
+        ):
+            self.assertIn(topology_edge, text)
 
     def test_agent_registries_are_valid_json(self) -> None:
         for name in AGENT_REGISTRIES:
@@ -385,12 +417,12 @@ class DocumentationTests(unittest.TestCase):
     def test_measured_profile_table_matches_executable_constants(self) -> None:
         text = (ROOT / "docs" / "experiments.md").read_text(encoding="utf-8")
         expected_rows = (
-            f"| Model | {model.ID.rsplit('/', 1)[-1]} |",
-            f"| Device | {platform.DEVICE_NAME} |",
-            f"| Session period | {workload.PERIOD_MS} ms |",
-            f"| Default sessions | {workload.SESSIONS} |",
-            f"| Delivery quota `tpt` | {workload.TOKENS_PER_TICK} token/tick |",
-            f"| KV bytes/token | {model.KV_BYTES_PER_TOKEN // 1024} KiB |",
+            f"| 模型 | {model.ID.rsplit('/', 1)[-1]} |",
+            f"| 设备 | {platform.DEVICE_NAME} |",
+            f"| 会话周期 | {workload.PERIOD_MS} ms |",
+            f"| 默认会话数 | {workload.SESSIONS} |",
+            f"| 交付配额 `tpt` | {workload.TOKENS_PER_TICK} token/tick |",
+            f"| 每 token KV 字节数 | {model.KV_BYTES_PER_TOKEN // 1024} KiB |",
         )
         for row in expected_rows:
             self.assertIn(row, text)
@@ -399,7 +431,7 @@ class DocumentationTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         runtime = re.search(r"(?m)^vllm(?:\[[^]]+\])?==(\d+\.\d+)", requirements)
         self.assertIsNotNone(runtime)
-        self.assertIn(f"| Runtime | vLLM {runtime.group(1)} |", text)
+        self.assertIn(f"| 运行时 | vLLM {runtime.group(1)} |", text)
 
     def test_problem_delegates_measured_profile_identity(self) -> None:
         text = (ROOT / "docs" / "problem.md").read_text(encoding="utf-8")

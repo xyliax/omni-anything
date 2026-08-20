@@ -78,7 +78,8 @@
 
 ## Documentation Style
 
-- 人类核心文档的标题与子标题使用英文，正文使用中文；稳定 heading 用于 deep link。
+- 人类核心文档的论文式章节标题使用英文，正文使用中文；稳定 heading 用于 deep link。`docs/findings.md` 的 `FINDING-*` claim card 保留稳定 ID，标题说明使用中文。
+- 专有机制首次出现时使用“中文名称（英文术语）+ 简短定义”，后文优先使用中文；通用系统术语可以保留英文。
 - `README.md` 只做落地页，不保存实验数字。
 - `docs/system.md` 不保存结果数字；`docs/experiments.md` 不保存结论；`docs/findings.md` 不重复完整协议。
 - Agent JSON 使用稳定 ID、repo-relative path、symbol、owner 和 verification；不要使用易漂移的行号。
