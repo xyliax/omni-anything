@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-YYYY-MM-DD-SHORT-NAME",
+  "date": "YYYY-MM-DD",
+  "question": "",
+  "configuration_profile": "",
+  "change": "",
+  "result": "",
+  "verdict": "diagnostic",
+  "evidence": [],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": []
+}

@@ -125,10 +125,71 @@ class ConveyorIssueScanTests(IssueScanTestCase):
         )
         self.assertEqual(conveyor_issues(self.store), [])
 
+    def test_step_error_and_client_health_are_issues(self) -> None:
+        self.write("gateway.log", "Step error: rpc unavailable\n")
+        self.write("client.json", '{"err": 0, "realtime": false}\n')
+        self.assertEqual(
+            conveyor_issues(self.store),
+            [
+                "gateway reported 1 Step error(s)",
+                "client failed real-time acceptance (realtime=false)",
+            ],
+        )
+
+    def test_session_that_never_reaches_quota_is_an_issue(self) -> None:
+        self.write(
+            "manifest.json",
+            '{"config": {"workload": {"sessions": 2, "tokens_per_tick": 25}}}\n',
+        )
+        self.write(
+            "gateway_ticks.log",
+            "1755080000.000001 slot=0 n=2 deliv=1:25,2:1\n"
+            "1755080002.000001 slot=0 n=2 deliv=1:25,2:1\n",
+        )
+        self.assertEqual(
+            conveyor_issues(self.store),
+            ["1 conveyor session(s) never reached full delivery"],
+        )
+
+    def test_bounded_startup_ramp_reaches_full_delivery(self) -> None:
+        self.write(
+            "manifest.json",
+            '{"config": {"workload": {"sessions": 2, "tokens_per_tick": 25}}}\n',
+        )
+        self.write(
+            "gateway_ticks.log",
+            "1755080000.000001 slot=0 n=0\n"
+            "1755080000.250001 slot=1 n=2 deliv=1:1,2:0\n"
+            "1755080002.250001 slot=1 n=2 deliv=1:25,2:25\n",
+        )
+        self.assertEqual(conveyor_issues(self.store), [])
+
+    def test_malformed_delivery_record_is_an_issue_not_an_exception(self) -> None:
+        self.write(
+            "manifest.json",
+            '{"config": {"workload": {"sessions": 1, "tokens_per_tick": 25}}}\n',
+        )
+        self.write(
+            "gateway_ticks.log",
+            "1755080000.000001 slot=0 n=1 deliv=not-a-count\n",
+        )
+        self.assertEqual(
+            conveyor_issues(self.store),
+            [
+                "malformed conveyor delivery record in gateway_ticks.log",
+                "1 conveyor session(s) never reached full delivery",
+            ],
+        )
+
 
 class BaselineIssueScanTests(IssueScanTestCase):
     def test_healthy_run_yields_no_issues(self) -> None:
-        self.write("worker.log", "2026-08-13 [stream-worker] engine warm\n")
+        self.write(
+            "worker.log",
+            "2026-08-13 [stream-worker] engine warm\n"
+            "2026-08-13 [stream-worker] delivery tpt=25 deliv=1:25,2:25\n",
+        )
+        self.write("manifest.json", '{"config": {"mode": "paringest"}}\n')
         self.write("client.json", '{"err": 0}\n')
         self.assertEqual(baseline_issues(self.store), [])
 
@@ -143,17 +204,136 @@ class BaselineIssueScanTests(IssueScanTestCase):
             ],
         )
 
+    def test_delivery_session_step_and_client_failures_are_caught(self) -> None:
+        self.write(
+            "worker.log",
+            "session 2 ended: RuntimeError: dead\n"
+            "delivery tpt=25 deliv=1:25,2:25\n"
+            "delivery tpt=25 deliv=1:24,2:0\n",
+        )
+        self.write("manifest.json", '{"config": {"mode": "paringest"}}\n')
+        self.write("gateway.log", "Step error: rpc unavailable\n")
+        self.write("client.json", '{"err": 0, "realtime": false}\n')
+        self.assertEqual(
+            baseline_issues(self.store),
+            [
+                "1 session(s) died mid-run (see worker.log 'ended:' lines)",
+                "2 baseline session delivery(ies) below quota "
+                "(see worker.log 'delivery' lines)",
+                "gateway reported 1 Step error(s)",
+                "client failed real-time acceptance (realtime=false)",
+            ],
+        )
+
+    def test_paringest_requires_delivery_records_but_vanilla_does_not(self) -> None:
+        self.write("worker.log", "engine warm\n")
+        self.write("manifest.json", '{"config": {"mode": "paringest"}}\n')
+        self.assertEqual(
+            baseline_issues(self.store),
+            ["paringest worker produced no delivery-completeness records"],
+        )
+        self.write("manifest.json", '{"config": {"mode": "vanilla"}}\n')
+        self.assertEqual(baseline_issues(self.store), [])
+
+    def test_startup_partial_is_ttfa_but_never_full_is_an_issue(self) -> None:
+        self.write("worker.log", "delivery tpt=25 deliv=1:1,2:0\n")
+        self.write("manifest.json", '{"config": {"mode": "paringest"}}\n')
+        self.assertEqual(
+            baseline_issues(self.store),
+            ["2 baseline session(s) never reached full delivery"],
+        )
+        self.write(
+            "worker.log",
+            "delivery tpt=25 deliv=1:1,2:0\n"
+            "delivery tpt=25 deliv=1:25,2:25\n",
+        )
+        self.assertEqual(baseline_issues(self.store), [])
+
+    def test_manifest_session_absent_from_all_delivery_rows_is_an_issue(self) -> None:
+        self.write("worker.log", "delivery tpt=25 deliv=1:25\n")
+        self.write(
+            "manifest.json",
+            '{"config": {"mode": "paringest", "workload": {"sessions": 2}}}\n',
+        )
+        self.assertEqual(
+            baseline_issues(self.store),
+            ["1 baseline session(s) never reached full delivery"],
+        )
+
+    def test_log_cannot_self_report_a_lower_quota_than_manifest(self) -> None:
+        self.write("worker.log", "delivery tpt=1 deliv=1:1\n")
+        self.write(
+            "manifest.json",
+            '{"config": {"mode": "paringest", "workload": '
+            '{"sessions": 1, "tokens_per_tick": 25}}}\n',
+        )
+        self.assertEqual(
+            baseline_issues(self.store),
+            [
+                "baseline delivery quota does not match manifest",
+                "1 baseline session(s) never reached full delivery",
+            ],
+        )
+
+    def test_malformed_baseline_delivery_record_is_not_silently_skipped(self) -> None:
+        self.write("worker.log", "delivery tpt=25 missing-deliv-field\n")
+        self.write("manifest.json", '{"config": {"mode": "paringest"}}\n')
+        self.assertEqual(
+            baseline_issues(self.store),
+            [
+                "malformed baseline delivery record in worker.log",
+                "paringest worker produced no delivery-completeness records",
+            ],
+        )
+
+
+class SharedClientHealthTests(IssueScanTestCase):
+    def test_starved_client_invalidates_both_arms(self) -> None:
+        self.write("client.json", '{"err": 0, "starved": true}\n')
+        for scanner in (baseline_issues, conveyor_issues):
+            with self.subTest(scanner=scanner.__module__):
+                self.assertEqual(
+                    scanner(self.store),
+                    ["client received no ticks (starved=true)"],
+                )
+
+
+class WarmStartIssueScanTests(IssueScanTestCase):
+    def test_timeout_invalidates_both_arms(self) -> None:
+        self.write(
+            "worker.log",
+            "2026-08-20 [stream-worker] warm-start barrier timed out (7/8 seeded)\n",
+        )
+        for scanner in (baseline_issues, conveyor_issues):
+            with self.subTest(scanner=scanner.__module__):
+                self.assertEqual(scanner(self.store), ["worker log contains a fatal error"])
+
 
 class CrossLanguageLogContractTests(unittest.TestCase):
     """The producer side of every scanned string, pinned at the source."""
 
     def test_gateway_prints_the_starve_line_the_scanner_greps(self) -> None:
-        self.assertIn('log.Printf("[starve] ', GATEWAY_GO.read_text(encoding="utf-8"))
+        text = GATEWAY_GO.read_text(encoding="utf-8")
+        self.assertIn('log.Printf("[starve] ', text)
+        self.assertIn('deliv = append(deliv, fmt.Sprintf("%d:0", s.id))', text)
 
     def test_worker_prints_the_lines_the_scanner_greps(self) -> None:
         text = CONVEYOR_WORKER.read_text(encoding="utf-8")
         self.assertIn('ended: %s', text)       # dead-session scan
         self.assertIn('RPC failed', text)      # park transport-failure scan
+
+    def test_both_workers_print_the_warm_start_timeout(self) -> None:
+        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
+            self.assertIn(
+                'log.error("warm-start barrier timed out',
+                worker.read_text(encoding="utf-8"),
+            )
+
+    def test_baseline_worker_prints_delivery_completeness(self) -> None:
+        self.assertIn(
+            'log.info("delivery tpt=%d deliv=%s"',
+            BASELINE_WORKER.read_text(encoding="utf-8"),
+        )
 
 
 class SharedObservationProducerTests(unittest.TestCase):

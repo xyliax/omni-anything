@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "contracts": [
+    {
+      "id": "CONTRACT-ENGINE-BOUNDARY",
+      "rule": "engines are spawned by path, never imported; engines do not import experiments",
+      "owners": ["engines/AGENTS.md", "docs/agent/system-map.json"],
+      "verification": ["tests/test_repository_layout.py"]
+    },
+    {
+      "id": "CONTRACT-SHARED-OBSERVATION",
+      "rule": "the paringest baseline and conveyor workers use the same worker observation producer; vanilla remains an upstream reference target",
+      "owners": ["infra/trace/AGENTS.md"],
+      "verification": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "CONTRACT-DELIVERY-RATE",
+      "rule": "conveyor segment generation equals delivery quota; baseline over-generation remains explicit arm behavior",
+      "owners": ["docs/experiments.md", "experiments/shared/workload.py"],
+      "verification": ["tests/test_baseline_config.py", "tests/test_conveyor_config.py"]
+    },
+    {
+      "id": "CONTRACT-DELIVERY-HEALTH",
+      "rule": "paringest baseline and conveyor validation reject Step errors, session death, client-health failure, and measured per-session short delivery after first full delivery; a session that never reaches full delivery also fails; vanilla is reference-only",
+      "owners": ["docs/experiments.md", "experiments/baseline/runner.py", "experiments/conveyor/runner.py"],
+      "verification": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "CONTRACT-WARM-START",
+      "rule": "formal seeded evidence requires all seed prefill before ticks, excludes seed output from inventory, performs no finalization park, and rejects barrier timeout logs",
+      "owners": ["docs/system.md", "docs/experiments.md"],
+      "verification": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "CONTRACT-PARK-SAFETY",
+      "rule": "park runs on an idle scheduler transition, records mirror coverage, and exposes uncovered-tail recomputation instead of silently claiming a complete reload; LARGE-prefill review is currently offline, not a status gate",
+      "owners": ["docs/system.md", "engines/conveyor/AGENTS.md"],
+      "verification": ["park.log coverage and offline scheduler/Perfetto recompute review"]
+    },
+    {
+      "id": "CONTRACT-KV-STATE-AUTHORITY",
+      "rule": "registry lifecycle is a control-phase hint; block pools, request status, and transfer events own actual residency and readiness",
+      "owners": ["docs/system.md", "engines/conveyor/worker/engine_patch/omni_state.py"],
+      "verification": ["tests/test_documentation.py"]
+    },
+    {
+      "id": "CONTRACT-CLIENT-SHARD-HANDOFF",
+      "rule": "the pinned client uses non-namespaced /tmp shard files and shared ports, so runs must not overlap; managed workflow deletes stale shard and aggregate files, requires every expected shard plus the controller to recreate results, and cleans temporary files on exit",
+      "owners": ["docs/experiments.md", "docs/agent/dynamic-edges.json"],
+      "verification": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+    },
+    {
+      "id": "CONTRACT-PREFETCH-FALLBACK",
+      "rule": "prefetch changes latency only; refusal, delay or eviction falls back to demand reload",
+      "owners": ["docs/system.md", "engines/conveyor/AGENTS.md"],
+      "verification": ["park.log trigger and completion evidence"]
+    },
+    {
+      "id": "CONTRACT-EVIDENCE-PROVENANCE",
+      "rule": "formal evidence is clean; dirty diagnostic evidence carries a reconstructable patch artifact",
+      "owners": ["docs/experiments.md", "results/README.md"],
+      "verification": ["tests/test_documentation.py"]
+    }
+  ],
+  "experiment_record_v1": {
+    "required_fields": [
+      "schema_version",
+      "record_id",
+      "date",
+      "question",
+      "configuration_profile",
+      "change",
+      "result",
+      "verdict",
+      "evidence",
+      "affects_findings",
+      "supersedes",
+      "remaining_uncertainty"
+    ]
+  }
+}

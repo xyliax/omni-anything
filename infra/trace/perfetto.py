@@ -148,7 +148,7 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
     spans consecutive schedule() calls and is labeled with the batch content.
     In steady state that width numerically equals the GPU execution time; at
     transitions (around prefills) it does not, and no execution timestamps
-    exist in the evidence (FINDINGS F3: never draw beyond the instrument).
+    exist in the evidence (FINDING-F3: never draw beyond the instrument).
     """
     steps = bundle.get("steps") or []
     if not steps:

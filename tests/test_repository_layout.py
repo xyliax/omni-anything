@@ -48,6 +48,12 @@ OBSOLETE_ENGINE_HOMES = (
     "experiments/" + "conveyor/worker",
     "experiments/" + "conveyor/gateway",
 )
+OBSOLETE_DOCUMENTS = (
+    "docs/architecture.md",
+    "docs/experiment-log.md",
+    "docs/metronome.md",
+    "infra/env/README.md",
+)
 
 
 def run_directories() -> list[Path]:
@@ -100,6 +106,8 @@ class RepositoryLayoutTests(unittest.TestCase):
             self.assertEqual(residue, [], f"{name}/ has returned with content: {residue[:3]}")
         for name in OBSOLETE_STRINGS[-4:]:
             self.assertFalse((ROOT / "experiments" / name).exists(), name)
+        for name in OBSOLETE_DOCUMENTS:
+            self.assertFalse((ROOT / name).exists(), f"superseded document returned: {name}")
 
     def test_no_text_references_obsolete_paths(self) -> None:
         """Covers docs/, README.md, and AGENTS.md — including backtick paths.

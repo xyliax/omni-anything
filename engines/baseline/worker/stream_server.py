@@ -333,6 +333,16 @@ class StreamingEngine:
                     remaining.discard(sid)
             if remaining:
                 time.sleep(0.003)
+        # The pin gateway's deadline_met field measures gpu_ms, not delivery
+        # completeness. Emit actual token counts so run validation catches
+        # cadence-green empty/short deliveries. The warmup sentinel is state
+        # construction, not a measured tick.
+        normal_sids = sorted(sid for sid in pending if sid < WARMUP_SID)
+        if normal_sids:
+            delivered = ",".join(
+                f"{sid}:{len(out.get(sid, ([], ''))[0])}" for sid in normal_sids
+            )
+            log.info("delivery tpt=%d deliv=%s", tpt, delivered)
         return out, (time.perf_counter() - t0) * 1000.0
 
     def cancel(self, sid: int):
@@ -445,9 +455,11 @@ def main():
     # STATE CONSTRUCTION ("each session already has context"), so the engine
     # only starts taking tick input once that context exists — seeds and
     # ticks must not race (lazy seeding would mix seed LARGE prefills into
-    # the first ticks' cadence). Structural: gateway and client only start
-    # after the ready file, so the first tick physically cannot precede the
-    # last seed. RELIES ON DETERMINISTIC SIDS: the gateway assigns 1..N in
+    # the first ticks' cadence). On the success path, gateway and client only
+    # start after the ready file. A barrier timeout currently continues to
+    # ready for diagnostic capture, but the shared worker-fatal scanner makes
+    # that run fail validation. RELIES ON DETERMINISTIC SIDS: the gateway
+    # assigns 1..N in
     # admission order and the client opens exactly N sessions; a session
     # beyond N falls back to lazy seeding at its first push, with a log line.
     if args.seed_tokens and args.pre_seed_sessions:

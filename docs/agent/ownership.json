@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "human_core": [
+    "README.md",
+    "docs/problem.md",
+    "docs/system.md",
+    "docs/experiments.md",
+    "docs/findings.md"
+  ],
+  "domains": {
+    "problem_definition": "docs/problem.md",
+    "mechanism_semantics": "docs/system.md",
+    "experiment_protocol": "docs/experiments.md",
+    "current_findings": "docs/findings.md",
+    "code_topology": "docs/agent/system-map.json",
+    "dynamic_bindings": "docs/agent/dynamic-edges.json",
+    "operational_contracts": "docs/agent/contracts.json",
+    "change_impact": "docs/agent/change-impact.json",
+    "evidence_aliases": "docs/agent/evidence.json",
+    "historical_experiments": ["docs/agent/records/", "docs/agent/legacy-experiment-log.md"],
+    "directory_rules": "nearest AGENTS.md; results/README.md is the explicit evidence-operations exception",
+    "exact_run_artifacts": "results/"
+  },
+  "volatile_content": {
+    "performance_numbers": ["docs/findings.md", "docs/agent/evidence.json", "results/"],
+    "mechanism_status": ["docs/findings.md"],
+    "exact_run_ids": ["docs/agent/evidence.json", "results/"],
+    "experiment_protocol_values": ["docs/experiments.md", "experiments/shared/", "experiments/*/config.py"]
+  },
+  "projections": {
+    "README.md": "non-numeric summary only",
+    "AGENTS.md": "routing and constraints only",
+    "docs/system.md": "semantic explanation without result measurements",
+    "docs/agent/*.json": "paths, ids, bindings and verification without independent research claims"
+  }
+}

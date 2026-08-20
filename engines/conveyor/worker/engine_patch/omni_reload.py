@@ -10,7 +10,7 @@ utilities and one issuing policy:
   skip, mirrored -> move, gap -> recompute territory); execution is an
   anonymous materialization on the transport layer (omni_transfer), claimed
   by vLLM's untouched resume path. The worker fires it at chunk-push time so
-  the copy overlaps feature extraction (FINDINGS H5).
+  the copy overlaps feature extraction (FINDING-H5).
 - ``EngineCore.kv_state(request_id)`` — query: lifecycle + live block
   classification for one session (debugging / experiments / future
   policies).

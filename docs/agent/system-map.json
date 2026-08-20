@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "external_nodes": [
+    {
+      "id": "python-interpreter",
+      "kind": "runtime-hook-host",
+      "locator": "worker Python recorded in manifest process commands and locked by the selected environment profile",
+      "role": "imports the first sitecustomize found on PYTHONPATH before worker or EngineCore code runs"
+    },
+    {
+      "id": "vllm-engine-core",
+      "kind": "dependency-subprocess",
+      "locator": "vLLM 0.23 installed in the worker environment and audited through infra/env/AGENTS.md",
+      "role": "owns Scheduler, EngineCore, block pools and the msgpack/ZMQ utility dispatch target"
+    }
+  ],
+  "components": [
+    {
+      "id": "baseline-entry",
+      "kind": "cli",
+      "path": "experiments/baseline/__main__.py",
+      "entrypoints": ["main", "parser"]
+    },
+    {
+      "id": "baseline-runner",
+      "kind": "process-orchestrator",
+      "path": "experiments/baseline/runner.py",
+      "entrypoints": ["collect_issues", "plan", "run"]
+    },
+    {
+      "id": "conveyor-entry",
+      "kind": "cli",
+      "path": "experiments/conveyor/__main__.py",
+      "entrypoints": ["main", "parser"]
+    },
+    {
+      "id": "conveyor-runner",
+      "kind": "process-orchestrator",
+      "path": "experiments/conveyor/runner.py",
+      "entrypoints": ["collect_issues", "plan", "run"]
+    },
+    {
+      "id": "run-workflow",
+      "kind": "shared-orchestrator",
+      "path": "infra/run/workflow.py",
+      "entrypoints": ["RunPlan", "execute"]
+    },
+    {
+      "id": "run-artifact-validation",
+      "kind": "shared-validation",
+      "path": "infra/run/artifacts.py",
+      "entrypoints": ["RunStore", "scan_client_health", "scan_worker_fatal"]
+    },
+    {
+      "id": "baseline-gateway",
+      "kind": "go-process",
+      "path": "third_party/metronome/gateway-go/main.go",
+      "entrypoints": ["main"]
+    },
+    {
+      "id": "conveyor-gateway",
+      "kind": "go-process",
+      "path": "engines/conveyor/gateway/main.go",
+      "entrypoints": ["main"]
+    },
+    {
+      "id": "baseline-vanilla-worker",
+      "kind": "python-process",
+      "path": "third_party/metronome/worker/stream_server.py",
+      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+    },
+    {
+      "id": "baseline-paringest-worker",
+      "kind": "python-process",
+      "path": "engines/baseline/worker/stream_server.py",
+      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+    },
+    {
+      "id": "conveyor-worker",
+      "kind": "python-process",
+      "path": "engines/conveyor/worker/stream_server.py",
+      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+    },
+    {
+      "id": "engine-patch-loader",
+      "kind": "implicit-python-entry",
+      "path": "engines/conveyor/worker/engine_patch/sitecustomize.py",
+      "entrypoints": ["sitecustomize module import"]
+    },
+    {
+      "id": "baseline-engine-fix-loader",
+      "kind": "implicit-python-entry",
+      "path": "engines/baseline/worker/engine_fix/sitecustomize.py",
+      "entrypoints": ["sitecustomize module import"]
+    },
+    {
+      "id": "kv-state-registry",
+      "kind": "runtime-state",
+      "path": "engines/conveyor/worker/engine_patch/omni_state.py",
+      "entrypoints": ["Registry", "SessionKV", "Classification"]
+    },
+    {
+      "id": "kv-park-patch",
+      "kind": "runtime-monkeypatch",
+      "path": "engines/conveyor/worker/engine_patch/omni_park.py",
+      "entrypoints": ["apply", "_park_request"]
+    },
+    {
+      "id": "kv-reload-patch",
+      "kind": "runtime-monkeypatch",
+      "path": "engines/conveyor/worker/engine_patch/omni_reload.py",
+      "entrypoints": ["apply", "reload_kv", "kv_state"]
+    },
+    {
+      "id": "kv-transfer-patch",
+      "kind": "runtime-monkeypatch",
+      "path": "engines/conveyor/worker/engine_patch/omni_transfer.py",
+      "entrypoints": ["apply", "enqueue"]
+    },
+    {
+      "id": "sustained-client-controller",
+      "kind": "load-generator-controller",
+      "path": "third_party/metronome/experiments/sustained_fd.py",
+      "entrypoints": ["main", "report"]
+    },
+    {
+      "id": "sustained-client-shard",
+      "kind": "load-generator-subprocess",
+      "path": "third_party/metronome/experiments/sustained_fd.py",
+      "entrypoints": ["shard_main", "fd_session"]
+    },
+    {
+      "id": "gpu-monitor",
+      "kind": "external-process-command-factory",
+      "path": "infra/trace/collect.py",
+      "entrypoints": ["gpu_monitor_command"]
+    },
+    {
+      "id": "worker-observation",
+      "kind": "shared-observation-producer",
+      "path": "infra/trace/collectors/worker_obs.py",
+      "entrypoints": ["perreq_logger"]
+    },
+    {
+      "id": "engine-observation",
+      "kind": "implicit-python-entry",
+      "path": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
+      "entrypoints": ["sitecustomize module import"]
+    },
+    {
+      "id": "trace-exporter",
+      "kind": "offline-tool",
+      "path": "infra/trace/perfetto.py",
+      "entrypoints": ["export", "main"]
+    }
+  ]
+}

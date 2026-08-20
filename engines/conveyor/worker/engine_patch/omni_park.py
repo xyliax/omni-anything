@@ -79,7 +79,7 @@ Evidence: OMNI_PARK_LOG carries FOUR line kinds, all epoch-clock —
 ``<epoch> S req=<id> blocks=<n>`` (mirror-copy issuance = offload activity),
 ``<epoch> L req=<id> cpu_tok=<n> gpu_tok=<m> trigger=demand|prefetch``
 (load admitted; demand = WAITING_FOR_REMOTE_KVS on resume, prefetch =
-anonymous materialization issued by omni_prefetch) and ``<epoch> R req=<id>
+anonymous materialization issued by omni_reload) and ``<epoch> R req=<id>
 [trigger=prefetch]`` (that load completed). infra/trace parses all four
 (parse_park, pairing L/R per (req, trigger)) and renders them as PARK
 instants, KV mirror instants and paired KV-reload/prefetch slices; the runner

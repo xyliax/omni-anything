@@ -1,11 +1,11 @@
-"""Session KV state authority for the conveyor engine patch.
+"""Session KV control-state registry for the conveyor engine patch.
 
 The engine layer above vLLM's core owns three things vLLM has no concept of:
 which sessions exist as long-lived resumable requests, where each session
 stands in its residency lifecycle, and when its KV last moved. This module is
 that authority — the mechanisms (park, reload, transfer) report events here,
 and policies (reload pacing today; governors and phase coordination later)
-read here and register callbacks.
+read here and register callbacks. Physical block residency remains pool-owned.
 
 DESIGN INVARIANT — one truth source per fact. Block-level residency truth
 lives in the pools themselves (a block is GPU-resident iff the GPU prefix
@@ -13,8 +13,10 @@ cache resolves its hash; mirrored iff the CPU pool does): this registry never
 copies block state, because a copy is a second truth source that drifts. What
 it owns is exactly what the pools cannot know:
 
-- lifecycle:   "resident" (all KV on GPU) | "parked" (tail evicted) |
-               "materializing" (an anonymous reload is in flight)
+- lifecycle:   "resident" (no outstanding park/materialization control
+               action; not proof that every block is already on GPU) |
+               "parked" (tail evicted) | "materializing" (an anonymous
+               reload is in flight)
 - timing:      last push / park / claim instants (the raw material for any
                pacing or phase algorithm)
 - deferral:    reloads the pacing policy chose to hold until capacity frees
@@ -45,7 +47,7 @@ class SessionKV:
     """Lifecycle and timing for one resumable session (no block state)."""
 
     external: str
-    lifecycle: str = "resident"      # resident | parked | materializing
+    lifecycle: str = "resident"      # control phase; block truth stays in pools
     last_push_t: float = 0.0
     last_park_t: float = 0.0
     last_claim_t: float = 0.0
@@ -103,9 +105,13 @@ class Registry:
             session.lifecycle = "resident"
 
     def on_claimed(self, request_id: str, scheduler) -> None:
-        """The session's next chunk reached the scheduler: whatever was not
-        materialized by now is covered by demand load / recompute — any
-        deferred reload for this session is moot."""
+        """The session's next chunk reached the scheduler, so the demand path
+        owns any missing tail and a deferred anonymous reload is moot.
+
+        ``resident`` here means the registry has no outstanding control
+        action. Demand load or recompute can still be in progress; callers
+        that need physical readiness must inspect the pools/request status.
+        """
         session = self._session(request_id)
         session.lifecycle = "resident"
         session.last_claim_t = time.time()

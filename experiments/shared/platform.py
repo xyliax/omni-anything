@@ -9,6 +9,7 @@ the scheduler clock). The card is shared and the co-tenant is bursty
 a formal run.
 """
 
+DEVICE_NAME = "RTX 3090"
 DEFAULT_GPU_INDEX = 3  # per-run knob (--gpu); this is just the usual card
 WORKER_PYTHON = ".venv-vllm023/bin/python"
 WORKER_PORT = 50054
@@ -18,6 +19,7 @@ GPU_SAMPLE_PERIOD_S = 0.2
 
 def manifest() -> dict:
     return {
+        "device_name": DEVICE_NAME,
         "worker_python": WORKER_PYTHON,
         "worker_port": WORKER_PORT,
         "gateway_port": GATEWAY_PORT,

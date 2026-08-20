@@ -397,3 +397,9 @@ pyrightconfig.json
 # Profiling / Nsight dumps
 *.nsys-rep
 *.qdrep
+
+# The repository-owned environment contract must remain trackable when a
+# case-insensitive filesystem matches the generic `ENV/` rule above.
+!infra/
+!infra/env/
+!infra/env/AGENTS.md

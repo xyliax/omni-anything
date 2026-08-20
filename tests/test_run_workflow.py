@@ -45,6 +45,7 @@ class WorkflowTests(unittest.TestCase):
         client_timeout_s: int = 30,
         worker: tuple[str, ...] | None = None,
         client_result: Path | None = None,
+        client_scratch_results: tuple[Path, ...] = (),
         required: tuple[str, ...] = ("worker.log", "client.txt"),
     ) -> RunPlan:
         if worker is None:
@@ -65,6 +66,7 @@ class WorkflowTests(unittest.TestCase):
             client=Launch("client", client, "client.txt", cwd=self.tmp),
             client_timeout_s=client_timeout_s,
             client_result=client_result,
+            client_scratch_results=client_scratch_results,
             required_artifacts=required,
         )
 
@@ -104,6 +106,48 @@ class WorkflowTests(unittest.TestCase):
         )
         # the whole run (manifest, startup, timeout, teardown) stays bounded
         self.assertLess(time.monotonic() - started, 30)
+
+    def test_client_shard_results_must_be_fresh_and_are_cleaned(self) -> None:
+        scratch = self.tmp / "fixed-shard.json"
+        scratch.write_text("stale", encoding="utf-8")
+        client = bash(
+            f'test ! -e "{scratch}"; printf \'{{"ev": []}}\' > "{scratch}"; echo fresh'
+        )
+        code, _ = execute(
+            self.plan(client, client_scratch_results=(scratch,)), ["test-argv"]
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(self.status()["state"], "success")
+        self.assertFalse(scratch.exists())
+
+    def test_missing_fresh_client_shard_result_fails_the_run(self) -> None:
+        scratch = self.tmp / "fixed-shard.json"
+        scratch.write_text("stale", encoding="utf-8")
+        code, _ = execute(
+            self.plan(bash("echo done"), client_scratch_results=(scratch,)),
+            ["test-argv"],
+        )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(self.status()["state"], "failed")
+        self.assertIn(
+            "1 client shard(s) produced no fresh result",
+            self.status()["validation"]["issues"],
+        )
+        self.assertFalse(scratch.exists())
+
+    def test_client_aggregate_result_must_also_be_fresh(self) -> None:
+        result = self.tmp / "hardcoded-client-output.json"
+        result.write_text('{"err": 0}', encoding="utf-8")
+        code, _ = execute(
+            self.plan(bash("echo done"), client_result=result), ["test-argv"]
+        )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(self.status()["state"], "failed")
+        self.assertIn(
+            "client produced no fresh aggregate result",
+            self.status()["validation"]["issues"],
+        )
+        self.assertFalse(result.exists())
 
     def test_worker_death_before_readiness_fails_with_terminal_status(self) -> None:
         with self.assertRaises(RuntimeError):

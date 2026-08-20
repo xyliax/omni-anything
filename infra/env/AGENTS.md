@@ -1,4 +1,4 @@
-# Runtime environments
+# Runtime Environment
 
 `infra/env/` is the project-level entry point for reproducible software environments. It is not
 owned by one experiment. Runtime-specific versions, model revisions, and patches are grouped into
@@ -13,7 +13,7 @@ named profiles so later experiments can use a different stack without weakening 
 The filesystem represents implemented environments only, so there is currently one directory under
 `profiles/`.
 
-## New-machine setup
+## New-Machine Setup
 
 Supported host: Linux x86_64, Python 3.12 with `venv`, and an NVIDIA driver capable of running the
 CUDA 13 runtime shipped by the locked wheels. Go 1.22.5+ is used for the gateway; setup downloads a
@@ -37,7 +37,7 @@ edits `third_party/`:
 
 All three paths are ignored by Git.
 
-## Profile contents
+## Profile Contents
 
 ```text
 profiles/cuda13_vllm023/
@@ -58,19 +58,19 @@ with the fairness constants as the `REVISION` constant in `experiments/shared/mo
 when the pinned snapshot is not cached); `--download-models` imports that constant and
 fetches the pinned snapshot.
 
-## Adding a profile
+## Adding a Profile
 
 Add a profile only when its consumer is implemented. A profile must provide a complete hashed lock,
-versioned patches, setup dispatch, verification checks, and CPU-only tests. Each consuming experiment
-must pin its own immutable model revision in `config/model.py`. Do not silently change
+versioned patches, setup dispatch, verification checks, and CPU-only tests. The measured stack pins
+its immutable model revision once in `experiments/shared/model.py`. Do not silently change
 `cuda13_vllm023` to satisfy a future worker; that would make existing evidence harder to reproduce.
 
-## Upgrading vLLM (re-audit checklist)
+## Upgrading vLLM
 
 The stack monkeypatches and forks private engine internals. Before bumping the vLLM version,
 re-audit every item against the new source:
 
-1. `experiments/*/worker/stream_server.py` — the paringest copy of
+1. `engines/*/worker/stream_server.py` — the paringest and conveyor copies of
    `AsyncLLM._add_streaming_input_request` (second-order fork of a private API).
 2. `engines/conveyor/worker/engine_patch/sitecustomize.py` — every wrapped symbol:
    `EngineCore` utility dispatch, `Scheduler._handle_stopped_request` /

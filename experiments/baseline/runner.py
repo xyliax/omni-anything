@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
-from infra.run.artifacts import RunStore, make_run_id, scan_worker_fatal
+from infra.run.artifacts import RunStore, make_run_id, scan_client_health, scan_worker_fatal
 from infra.run.probes import resolve_model_snapshot
 from infra.run.workflow import Launch, RunPlan, execute
 from infra.trace.collect import apply_scheduler_trace, gpu_monitor_command
@@ -136,15 +136,125 @@ def client_command(config: BaselineConfig, run_id: str) -> list[str]:
 def collect_issues(store: RunStore) -> list[str]:
     """Baseline-specific validation on top of the generic artifact checks."""
     issues: list[str] = []
+    manifest_config: dict[str, Any] = {}
+    manifest = store.file("manifest.json")
+    if manifest.is_file():
+        try:
+            loaded_manifest = json.loads(manifest.read_text(encoding="utf-8"))
+            config_value = loaded_manifest.get("config", {})
+            if isinstance(config_value, dict):
+                manifest_config = config_value
+        except (json.JSONDecodeError, OSError, TypeError, AttributeError):
+            # Generic artifact validation owns malformed manifests. Continue
+            # scanning independent first-party health signals.
+            pass
+    mode = manifest_config.get("mode")
+    expected_sessions: set[int] | None = None
+    expected_quota: int | None = None
+    workload_config = manifest_config.get("workload", {})
+    if isinstance(workload_config, dict):
+        sessions = workload_config.get("sessions")
+        quota = workload_config.get("tokens_per_tick")
+        if (
+            isinstance(sessions, int)
+            and not isinstance(sessions, bool)
+            and sessions > 0
+        ):
+            # Fresh-process-per-point makes gateway IDs exactly 1..N.
+            expected_sessions = set(range(1, sessions + 1))
+        if (
+            isinstance(quota, int)
+            and not isinstance(quota, bool)
+            and quota > 0
+        ):
+            expected_quota = quota
     scheduler_errors = store.file("scheduler_errors.log")
     if scheduler_errors.is_file() and scheduler_errors.stat().st_size:
         issues.append("scheduler trace reported serialization errors")
-    issues.extend(scan_worker_fatal(store.file("worker.log")))
-    client_json = store.file("client.json")
-    if client_json.is_file():
-        client_errors = int(json.loads(client_json.read_text(encoding="utf-8")).get("err", 0))
-        if client_errors:
-            issues.append(f"client reported {client_errors} session error(s)")
+    worker_log = store.file("worker.log")
+    issues.extend(scan_worker_fatal(worker_log))
+    if worker_log.is_file():
+        worker_text = worker_log.read_text(encoding="utf-8", errors="replace")
+        dead = worker_text.count(" ended: ")
+        if dead:
+            issues.append(f"{dead} session(s) died mid-run (see worker.log 'ended:' lines)")
+        delivery_rows = 0
+        short_deliveries = 0
+        observed_sessions: set[int] = set()
+        full_sessions: set[int] = set()
+        malformed_delivery = False
+        quota_mismatch = False
+        for line in worker_text.splitlines():
+            marker = "delivery tpt="
+            if marker not in line:
+                continue
+            payload = line.split(marker, 1)[1]
+            tpt_text, separator, delivered = payload.partition(" deliv=")
+            if not separator:
+                malformed_delivery = True
+                continue
+            try:
+                reported_quota = int(tpt_text)
+                counts: list[tuple[int, int]] = []
+                for pair in delivered.split(","):
+                    session_text, pair_separator, count_text = pair.rpartition(":")
+                    if not pair_separator:
+                        raise ValueError
+                    counts.append((int(session_text), int(count_text)))
+            except ValueError:
+                malformed_delivery = True
+                continue
+            session_ids = [session for session, _ in counts]
+            if (
+                reported_quota <= 0
+                or not counts
+                or len(set(session_ids)) != len(session_ids)
+                or any(session <= 0 or count < 0 for session, count in counts)
+                or (
+                    expected_sessions is not None
+                    and not set(session_ids) <= expected_sessions
+                )
+            ):
+                malformed_delivery = True
+                continue
+            if expected_quota is not None and reported_quota != expected_quota:
+                quota_mismatch = True
+            effective_quota = expected_quota or reported_quota
+            delivery_rows += 1
+            for session, count in counts:
+                observed_sessions.add(session)
+                if count >= effective_quota:
+                    full_sessions.add(session)
+                elif session in full_sessions:
+                    # As in conveyor, startup fill belongs to TTFA. A session
+                    # becomes starvation-eligible after its first full frame.
+                    short_deliveries += 1
+        if malformed_delivery:
+            issues.append("malformed baseline delivery record in worker.log")
+        if quota_mismatch:
+            issues.append("baseline delivery quota does not match manifest")
+        if short_deliveries:
+            issues.append(
+                f"{short_deliveries} baseline session delivery(ies) below quota "
+                "(see worker.log 'delivery' lines)"
+            )
+        if mode == "paringest" and not delivery_rows:
+            issues.append("paringest worker produced no delivery-completeness records")
+        if mode == "paringest":
+            required_sessions = expected_sessions or observed_sessions
+            never_full = required_sessions - full_sessions
+            if never_full:
+                issues.append(
+                    f"{len(never_full)} baseline session(s) never reached full delivery"
+                )
+    gateway_log = store.file("gateway.log")
+    if gateway_log.is_file():
+        step_errors = gateway_log.read_text(
+            encoding="utf-8", errors="replace"
+        ).count("Step error:")
+        if step_errors:
+            issues.append(f"gateway reported {step_errors} Step error(s)")
+    issues.extend(scan_client_health(store.file("client.json")))
     return issues
 
 
@@ -194,6 +304,9 @@ def plan(config: BaselineConfig, run_id: str) -> RunPlan:
         ),
         client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
         client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",
+        client_scratch_results=tuple(
+            Path("/tmp") / f"sfd_{index}.json" for index in range(config.client_shards)
+        ),
         required_artifacts=config.required_artifact_names(),
         collect_issues=collect_issues,
     )

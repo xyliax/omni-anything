@@ -21,10 +21,11 @@ from typing import Sequence
 SCHEMA_VERSION = 2
 
 # Deliberately narrow: a background-thread traceback in worker.log must NOT
-# fail a run; only these engine-fatal signatures do (test-pinned).
+# fail a run; only engine-fatal or evidence-contract-breaking signatures do
+# (test-pinned).
 FATAL_WORKER_PATTERN = re.compile(
     r"EngineCore failed to start|OutOfMemoryError|CUDA out of memory|"
-    r"scheduler trace initialization failed",
+    r"scheduler trace initialization failed|warm-start barrier timed out",
     re.IGNORECASE,
 )
 
@@ -66,6 +67,30 @@ def scan_worker_fatal(path: Path) -> list[str]:
     if FATAL_WORKER_PATTERN.search(text):
         return ["worker log contains a fatal error"]
     return []
+
+
+def scan_client_health(path: Path) -> list[str]:
+    """Return the shared full-duplex client acceptance issues."""
+    if not path.is_file():
+        return []
+    try:
+        result = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, TypeError):
+        return ["client.json is not valid JSON"]
+    if not isinstance(result, dict):
+        return ["client.json is not a JSON object"]
+    issues: list[str] = []
+    try:
+        errors = int(result.get("err", 0))
+    except (TypeError, ValueError):
+        return ["client.json has an invalid err field"]
+    if errors:
+        issues.append(f"client reported {errors} session error(s)")
+    if result.get("starved") is True:
+        issues.append("client received no ticks (starved=true)")
+    elif result.get("realtime") is False:
+        issues.append("client failed real-time acceptance (realtime=false)")
+    return issues
 
 
 @dataclass

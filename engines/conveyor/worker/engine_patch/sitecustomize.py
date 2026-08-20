@@ -10,10 +10,10 @@ also imports this file (PYTHONPATH applies to every python child); applying
 the patches there is harmless — only the EngineCore process ever receives
 utility calls or runs the scheduler.
 
-Layout (the materialization pattern — state authority / semantic / transport
+Layout (the materialization pattern — control state / semantic / transport
 / claim):
 
-- ``omni_state.py``     session KV state authority: lifecycle (resident /
+- ``omni_state.py``     session KV control registry: lifecycle (resident /
                         parked / materializing), timing, deferred queue, and
                         the live block classification — mechanisms report
                         events here, policies read and subscribe (no gate:

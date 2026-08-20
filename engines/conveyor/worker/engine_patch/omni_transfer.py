@@ -1,7 +1,7 @@
 """Anonymous KV load transport: move content blocks CPU->GPU outside any request.
 
 The TRANSPORT layer of the materialization pattern (semantic layer:
-``omni_prefetch``; claim layer: vLLM's existing resume hash-match, untouched).
+``omni_reload``; claim layer: vLLM's existing resume hash-match, untouched).
 Jobs enqueued here ride the stock ``SimpleCPUOffload`` load-event machinery —
 the same low-priority CUDA stream, event accounting, and preemption flush as
 demand reloads — so this module contains NO copy code of its own. What it

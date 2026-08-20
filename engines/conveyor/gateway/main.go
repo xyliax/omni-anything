@@ -262,6 +262,13 @@ func tickLoop() {
 		for _, s := range active {
 			o := byID[s.id]
 			if o == nil {
+				s.mu.Lock()
+				hadFull := s.fdFull
+				s.mu.Unlock()
+				deliv = append(deliv, fmt.Sprintf("%d:0", s.id))
+				if hadFull {
+					starvedN++
+				}
 				continue
 			}
 			deliv = append(deliv, fmt.Sprintf("%d:%d", s.id, len(o.Tokens)))

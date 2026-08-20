@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "edges": [
+    {
+      "id": "EDGE-RUNNER-WORKER",
+      "from": "run-workflow",
+      "to": ["baseline-vanilla-worker", "baseline-paringest-worker", "conveyor-worker"],
+      "binding": "subprocess argv + environment; exactly one worker target is selected per run",
+      "source": "infra/run/workflow.py",
+      "why_static_tools_miss": ["baseline target path is selected from mode data", "new process"],
+      "observe": ["manifest.json process commands", "worker.log"],
+      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-RUNNER-GATEWAY",
+      "from": "run-workflow",
+      "to": ["baseline-gateway", "conveyor-gateway"],
+      "binding": "subprocess argv + environment",
+      "source": "infra/run/workflow.py",
+      "why_static_tools_miss": ["binary path is runner data", "new process"],
+      "observe": ["manifest.json process commands", "gateway.log"],
+      "verify": ["tests/test_run_workflow.py"]
+    },
+    {
+      "id": "EDGE-RUNNER-CLIENT-CONTROLLER",
+      "from": "run-workflow",
+      "to": "sustained-client-controller",
+      "binding": "subprocess argv + environment",
+      "source": "infra/run/workflow.py",
+      "why_static_tools_miss": ["script path and argv are runner data", "new process"],
+      "observe": ["manifest.json process commands", "client.txt", "client.json"],
+      "verify": ["tests/test_run_workflow.py"]
+    },
+    {
+      "id": "EDGE-CLIENT-CONTROLLER-SHARDS",
+      "from": "sustained-client-controller",
+      "to": "sustained-client-shard",
+      "binding": "one-or-more Python subprocesses selected by --shards",
+      "source": "third_party/metronome/experiments/sustained_fd.py",
+      "why_static_tools_miss": ["self-spawn through __file__", "multiplicity is runtime configuration"],
+      "observe": ["manifest.json client_shards", "client.txt"],
+      "verify": ["tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-CLIENT-SHARD-RESULT",
+      "from": "sustained-client-shard",
+      "to": "sustained-client-controller",
+      "binding": "fixed temporary JSON files /tmp/sfd_<shard-index>.json",
+      "source": "third_party/metronome/experiments/sustained_fd.py",
+      "why_static_tools_miss": ["producer and consumer communicate through files", "path is formatted at runtime"],
+      "hazards": ["paths are not namespaced by run id; concurrent repository runs can delete or overwrite each other's shard output", "direct invocation outside the managed workflow can consume stale shard output"],
+      "safety": ["RunPlan declares every expected scratch path", "workflow deletes old files before launch", "every shard must recreate its file before the run can pass", "workflow deletes scratch files on every exit path"],
+      "observe": ["controller aggregation into client.json"],
+      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-CLIENT-CONTROLLER-RESULT",
+      "from": "sustained-client-controller",
+      "to": "run-artifact-validation",
+      "binding": "controller writes third_party/metronome/results/sustained_fd/<run-id>.json; workflow moves the fresh file to run/client.json",
+      "source": "third_party/metronome/experiments/sustained_fd.py",
+      "why_static_tools_miss": ["producer and consumer communicate through a formatted file path", "workflow and pinned client never call each other"],
+      "safety": ["workflow deletes any pre-existing aggregate before launch", "missing fresh aggregate is a run issue", "temporary aggregate is deleted on every exit path"],
+      "observe": ["client.json", "status.json validation"],
+      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-RUNNER-GPU-MONITOR",
+      "from": "run-workflow",
+      "to": "gpu-monitor",
+      "binding": "nvidia-smi subprocess argv built by gpu_monitor_command",
+      "source": "infra/trace/collect.py",
+      "why_static_tools_miss": ["external executable", "command assembled as data"],
+      "observe": ["manifest.json service commands", "gpu.csv"],
+      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-CLIENT-GATEWAY-WEBSOCKET",
+      "from": "sustained-client-shard",
+      "to": ["baseline-gateway", "conveyor-gateway"],
+      "binding": "bidirectional WebSocket: audio/config upstream and tick/audio events downstream",
+      "source": "third_party/metronome/bench/realtime_client.py",
+      "why_static_tools_miss": ["network process boundary", "protocol messages are JSON strings", "cross-language endpoint"],
+      "observe": ["client.txt", "gateway.log", "client.json"],
+      "verify": ["tests/test_documentation.py"]
+    },
+    {
+      "id": "EDGE-BASELINE-GATEWAY-WORKER-STEP",
+      "from": "baseline-gateway",
+      "to": ["baseline-vanilla-worker", "baseline-paringest-worker"],
+      "binding": "protobuf gRPC Step",
+      "source": "third_party/metronome/proto/inference.proto",
+      "why_static_tools_miss": ["cross-language", "generated protobuf bindings", "network process boundary"],
+      "observe": ["gateway.log", "per_request.log when paringest tracing is enabled"],
+      "verify": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-CONVEYOR-GATEWAY-WORKER-STEP",
+      "from": "conveyor-gateway",
+      "to": "conveyor-worker",
+      "binding": "protobuf gRPC Step",
+      "source": "third_party/metronome/proto/inference.proto",
+      "why_static_tools_miss": ["cross-language", "generated protobuf bindings", "network process boundary"],
+      "observe": ["gateway.log", "gateway_ticks.log", "per_request.log"],
+      "verify": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-BASELINE-WORKER-ENGINECORE",
+      "from": ["baseline-vanilla-worker", "baseline-paringest-worker"],
+      "to": "vllm-engine-core",
+      "binding": "vLLM AsyncMPClient multiprocess request IPC",
+      "source": "vLLM 0.23 runtime dependency",
+      "why_static_tools_miss": ["external dependency", "multiprocess message dispatch"],
+      "observe": ["worker.log", "scheduler.log when tracing is enabled"],
+      "verify": ["infra/env/AGENTS.md"]
+    },
+    {
+      "id": "EDGE-CONVEYOR-WORKER-ENGINECORE",
+      "from": "conveyor-worker",
+      "to": "vllm-engine-core",
+      "binding": "vLLM AsyncMPClient over msgpack/ZMQ, including call_utility_async method-name dispatch",
+      "source": "vLLM 0.23 runtime dependency",
+      "why_static_tools_miss": ["external dependency", "multiprocess message dispatch", "utility method name sent as data"],
+      "utility_commands": ["reload_kv", "park_tail_blocks", "warm_start_finalize", "kv_state"],
+      "observe": ["worker.log", "scheduler.log", "park.log"],
+      "verify": ["infra/env/AGENTS.md"]
+    },
+    {
+      "id": "EDGE-SITECUSTOMIZE-ENGINE-PATCH",
+      "from": "python-interpreter",
+      "to": "engine-patch-loader",
+      "binding": "PYTHONPATH + implicit sitecustomize import",
+      "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
+      "why_static_tools_miss": ["implicit interpreter hook", "environment-controlled activation"],
+      "observe": ["worker.log patch activation", "exit 78 on initialization failure"],
+      "verify": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-SITECUSTOMIZE-BASELINE-FIX",
+      "from": "python-interpreter",
+      "to": "baseline-engine-fix-loader",
+      "binding": "PYTHONPATH + implicit sitecustomize import when a seed run enables the fix",
+      "source": "engines/baseline/worker/engine_fix/sitecustomize.py",
+      "why_static_tools_miss": ["implicit interpreter hook", "environment-controlled activation"],
+      "observe": ["worker.log fix activation", "seed segment generation"],
+      "verify": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-SITECUSTOMIZE-TRACE-CHAIN",
+      "from": ["python-interpreter", "engine-patch-loader", "baseline-engine-fix-loader"],
+      "to": "engine-observation",
+      "binding": "PYTHONPATH sitecustomize or explicit chain loading from the arm patch",
+      "source": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
+      "why_static_tools_miss": ["implicit interpreter hook", "sitecustomize precedence", "manual chain loading"],
+      "observe": ["scheduler.log", "residency.log", "exit 78 on initialization failure"],
+      "verify": ["tests/test_run_validation.py", "tests/test_trace.py"]
+    },
+    {
+      "id": "EDGE-PATCH-LOADER-MODULES",
+      "from": "engine-patch-loader",
+      "to": ["kv-park-patch", "kv-reload-patch", "kv-transfer-patch", "kv-state-registry"],
+      "binding": "import-time module loading followed by explicit apply calls",
+      "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
+      "why_static_tools_miss": ["implicit sitecustomize entry", "import-time side effect", "apply chain is environment-gated"],
+      "observe": ["patch activation log", "exit 78 on initialization failure"],
+      "verify": ["tests/test_conveyor_config.py", "tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-CONVEYOR-PATCH-VLLM",
+      "from": ["kv-park-patch", "kv-reload-patch", "kv-transfer-patch"],
+      "to": "vllm-engine-core",
+      "binding": "runtime class assignment and wrapper installation on private vLLM 0.23 symbols",
+      "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
+      "patch_targets": [
+        "EngineCore.park_tail_blocks",
+        "EngineCore.warm_start_finalize",
+        "EngineCore.reload_kv",
+        "EngineCore.kv_state",
+        "Scheduler._handle_stopped_request",
+        "Scheduler._update_request_as_session",
+        "Scheduler._update_waiting_for_remote_kv",
+        "Scheduler._update_from_kv_xfer_finished",
+        "SimpleCPUOffloadConnector.update_state_after_alloc",
+        "SimpleCPUOffloadScheduler._prepare_eager_store_specs",
+        "SimpleCPUOffloadScheduler.build_connector_meta"
+      ],
+      "why_static_tools_miss": ["monkeypatch", "external dependency", "class methods replaced after import"],
+      "observe": ["park.log park/S/L/R events", "scheduler.log"],
+      "verify": ["infra/env/AGENTS.md", "tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-BASELINE-FIX-VLLM",
+      "from": "baseline-engine-fix-loader",
+      "to": "vllm-engine-core",
+      "binding": "runtime wrapper installation for seeded paringest runs",
+      "source": "engines/baseline/worker/engine_fix/sitecustomize.py",
+      "patch_targets": ["Scheduler._update_request_as_session"],
+      "why_static_tools_miss": ["sitecustomize monkeypatch", "environment gate", "external dependency"],
+      "observe": ["seeded segment generation", "worker.log"],
+      "verify": ["tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-TRACE-PATCH-VLLM",
+      "from": "engine-observation",
+      "to": "vllm-engine-core",
+      "binding": "runtime observation wrapper installed after sitecustomize import",
+      "source": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
+      "patch_targets": ["Scheduler.schedule"],
+      "why_static_tools_miss": ["sitecustomize monkeypatch", "observation wrapper chains with mechanism patches"],
+      "observe": ["scheduler.log", "residency.log"],
+      "verify": ["tests/test_trace.py", "tests/test_run_validation.py"]
+    },
+    {
+      "id": "EDGE-WORKER-RELOAD-UTILITY",
+      "from": "conveyor-worker",
+      "to": "kv-reload-patch",
+      "binding": "EngineCore call_utility_async command dispatch",
+      "source": "engines/conveyor/worker/stream_server.py",
+      "why_static_tools_miss": ["method name is a message field", "cross-process dispatch via getattr"],
+      "observe": ["park.log trigger=prefetch", "park.log L/R pairs"],
+      "verify": ["EVIDENCE-H7-PREFETCH"]
+    },
+    {
+      "id": "EDGE-OBSERVATION-ARTIFACTS",
+      "from": ["worker-observation", "engine-observation", "conveyor-gateway", "gpu-monitor"],
+      "to": "trace-exporter",
+      "binding": "immutable run artifacts parsed offline",
+      "source": "infra/trace/parse.py",
+      "why_static_tools_miss": ["producer and consumer never call each other", "file schema is the interface"],
+      "observe": ["manifest.json", "derived timeline metadata source hashes"],
+      "verify": ["tests/test_trace.py", "tests/test_run_artifacts.py"]
+    }
+  ]
+}

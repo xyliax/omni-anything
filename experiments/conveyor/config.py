@@ -78,10 +78,10 @@ class ConveyorConfig:
     sync_scheduling: bool = False
 
     # conveyor mechanism: KV PREFETCH (materialization). "push" = at each
-    # chunk push the worker asks the engine (omni_prefetch utility) to move
+    # chunk push the worker asks the engine (omni_reload utility) to move
     # the session's parked-but-mirrored blocks back into the GPU prefix
     # cache, so the ~70ms reload copy overlaps the ~270ms FE window instead
-    # of serializing after it (FINDINGS H5). Correctness never depends on
+    # of serializing after it (FINDING-H5). Correctness never depends on
     # it: refused / late / LRU-evicted prefetches degrade to the demand
     # reload. prefetch_min_free is the engine-side pool budget gate (refuse
     # when free space would drop below this fraction). Requires park —

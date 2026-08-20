@@ -1,86 +1,95 @@
-# AGENTS.md
+# Agent Entry Point
 
-Agent 工作入口。先读本文件，再打开任务所需的那一份权威文档。
+本文件是 Agent 的唯一根入口。先判断任务类型，再打开对应的权威文档和最近一层 `AGENTS.md`；不要默认读完整个仓库。
 
-## 项目一句话
+## Project Scope
 
-在单张 GPU 上同时服务两类负载：双工语音前台 (duplex speech foreground) 的硬 tick（固定周期 T 的硬 deadline 帧，inelastic），与后台 agent 结果注入 (injection，delay-tolerant 弹性)。
+项目研究在单张 GPU 上共同服务两类负载：具有硬 tick deadline 的全双工语音前台，以及 delay-tolerant 的后台 agent 结果注入。当前实现边界、机制成熟度和实验结论不在本文件重复，分别以 [`docs/problem.md`](docs/problem.md) 和 [`docs/findings.md`](docs/findings.md) 为准。
 
-方案层重建中：原候选方案（KV conveyor）已于 2026-08-08 整体废除（历史在 git），新方案由项目负责人设计、增量实现，已验证三个机制增量 + 一个半结论增量（结论在 `docs/findings.md` H 系列）：**错开相位**（gateway 槽轮 + 绝对网格）、**取现货交付**（含指标口径重建）、**KV 部分释放原语 park**（decode 结束瞬间引擎侧 auto-park + keep-K 底座，稳态驻留降 66%，vLLM 调度器轻量补丁）、**KV 预取**（匿名具现化 + reload_kv 指令面 + 事件驱动 pacing——语义闭合已验证，净收益待 FE 膨胀根因解决，FINDINGS H7）。观测两臂统一（同一套仪器产出方：kv.log 0.2s / C 双时钟 / 五站 ingest / residency.log 每会话驻留）；全链路白盒可观测（单份 Perfetto 时间线覆盖全部机制，读图指南在 `docs/architecture.md`「一个会话的一个周期」）。容量主张（N 扫描 + roofline）待正式对比 run。问题定义与实测事实不受影响（`docs/problem.md`、`docs/findings.md`）。
+每次开始实质任务时先检查远端是否更新；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重新读取本文件和任务路径上的局部 `AGENTS.md`。
 
-- **真机实测栈**：vLLM 0.23 + Qwen2.5-Omni-7B + RTX 3090，tick = 2s（机器可读形态在 `experiments/shared/` 与 `experiments/baseline/config.py`）
-- **论文外推配置**：文本代理双工与 tick 结构写在 `docs/experiments.md`；与实测栈是两套配置，两套数字不得混用
+## Task Router
 
-## 实验体系
+| 任务 | 必读入口 |
+| --- | --- |
+| 理解研究问题 | [`docs/problem.md`](docs/problem.md) |
+| 理解机制与端到端流程 | [`docs/system.md`](docs/system.md) |
+| 设计、运行或比较实验 | [`docs/experiments.md`](docs/experiments.md) + `experiments/AGENTS.md` |
+| 引用当前状态、数字或结论 | [`docs/findings.md`](docs/findings.md) + [`docs/agent/evidence.json`](docs/agent/evidence.json) |
+| 理解 IPC、subprocess、monkeypatch | [`docs/agent/dynamic-edges.json`](docs/agent/dynamic-edges.json) |
+| 修改代码 | [`docs/agent/README.md`](docs/agent/README.md) + 最近一层 `AGENTS.md` |
+| 分析历史实验过程 | [`docs/agent/legacy-experiment-log.md`](docs/agent/legacy-experiment-log.md) |
+| 操作运行证据 | `results/README.md`（Agent/维护者契约） |
+| 修改第三方 pin | `third_party/AGENTS.md`；仅限用户明确要求 |
 
-主实验（定义与协议的唯一权威是 `docs/experiments.md`）：**baseline 是对照臂（行为保持稳定、变更以对照公平为限，有正式 run）；conveyor 增量实现中，对比协议待机制齐备后重建**；旧 E0–E6 编号的映射见该文末行。
+更细的任务 read-set 和交付要求由 [`docs/agent/README.md`](docs/agent/README.md) 持有。
 
-| 目录 | 一句话 | 状态 |
+## Single-Owner Rule
+
+| 事实域 | 唯一 owner |
+| --- | --- |
+| 问题定义、研究范围、术语 | [`docs/problem.md`](docs/problem.md) |
+| 机制语义、状态机、端到端流程 | [`docs/system.md`](docs/system.md) |
+| 实验配置域、arms、指标与协议 | [`docs/experiments.md`](docs/experiments.md) |
+| 当前状态、结论、数字与限制 | [`docs/findings.md`](docs/findings.md) |
+| 组件、代码入口与动态调用边 | `docs/agent/*.json` |
+| 历史实验过程 | `docs/agent/legacy-experiment-log.md` 与后续结构化 record |
+| 精确 run、hash 与 provenance | `docs/agent/evidence.json` + `results/` |
+| 目录操作约束 | 最近一层 `AGENTS.md`；`results/README.md` 是证据操作的显式例外 |
+
+完整且机器可检验的所有权声明见 [`docs/agent/ownership.json`](docs/agent/ownership.json)。概念解释可以自洽；易变的数字、状态、协议和路径不得手工复制。其他文档只能链接 owner、写无数字摘要，或包含由测试校验的生成内容。
+
+## Repository Boundaries
+
+| 路径 | 角色 | 约束 |
 | --- | --- | --- |
-| `engines/baseline/` + `experiments/baseline/` | baseline 引擎（metronome 的 vLLM 栈 + paringest 模式）与其测量装置 | 可运行，有正式 run；对照臂，行为保持稳定 |
-| `engines/conveyor/` + `experiments/conveyor/` | 新引擎（错开相位 gateway 槽轮 + 取现货 worker + 镜像/park/回载/预取全链路 engine_patch，含 reload_kv 指令面与状态权威）与其测量装置 | 三个机制增量已验证 + 预取半结论（FINDINGS H 系列）；容量主张待正式 run |
+| `docs/` | 人类事实层与 Agent 索引 | 人类核心文档只保留 problem/system/experiments/findings |
+| `engines/` | baseline/conveyor 引擎本体 | 被 runner 按路径 spawn；不 import `experiments` |
+| `experiments/` | 配置、runner 与公平性常量 | 负载/模型/平台常量在 `shared/` 单份持有 |
+| `infra/run/` | 运行工作流、进程与 artifact | 不认识具体实验名 |
+| `infra/trace/` | 观测生产、解析、对齐与 Perfetto | 实验不得私建 trace/画图实现 |
+| `infra/env/` | 锁定运行环境 | 操作契约见本目录 `AGENTS.md` |
+| `results/` | 不可变运行证据 | 规则见 `results/README.md` |
+| `third_party/` | git-subrepo pin | 只读，除非用户明确授权 pin 操作 |
+| `.context/` | 讨论、外部整理和表达草稿 | 不是项目事实；被采纳内容单向提升到 owner |
 
-横向设施集中在 `infra/`：`infra/run/`（运行工作流 / run 目录 / 进程 / 探针——runner 只声明差异，时间线全仓一份）、`infra/trace/`（trace 与可视化能力集中于此：采集、解析、对齐、Perfetto；临时画图属一次性行为，产物不入库）、`infra/env/`（锁定运行时 profile 与校验）。配置的归属判据：负载/模型/平台常量共享（`experiments/shared/`，公平性由结构保证）；臂行为常量私有（各臂 `config.py`，纯 Python 常量）。
+根目录只保留 `README.md`、本文件和兼容 symlink `CLAUDE.md`。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓 worker 从其复制后永久分道，不追随上游文件更新。
 
-## 事实层与 `.context/`
+## Change Transactions
 
-**`docs/` 是事实与决策层**（本项目结论、问题、方案、实验、纪律）。  
-**根目录只留本文件与 `README.md`（入口）。**  
-**`.context/` 是思考原料与工作语境（讨论、设想、外部整理、表达草稿），不构成项目事实。**
+| 改动类型 | 同一事务内必须检查 |
+| --- | --- |
+| 机制语义或状态机 | 代码、`docs/system.md`、contracts、dynamic edges、对应测试 |
+| 进程拓扑或 IPC | runner/engine、system map、dynamic edges、manifest/trace 覆盖 |
+| 实验协议或配置 | `docs/experiments.md`、可执行 config、manifest、协议测试 |
+| 新诊断 run | raw artifacts、结构化 record；有保留价值时登记 evidence |
+| 接受新结论 | evidence alias、record、finding card、current-state table |
+| 仅实现尚未验证的优化 | 不得提前修改 findings 的性能状态 |
 
-归属测试：删除该文件，项目正确性或可理解性是否受损？受损 → `docs/`；只是「重新收集要花时间」→ `.context/`。
+修改影响的机器可读版本见 [`docs/agent/change-impact.json`](docs/agent/change-impact.json)。
 
-| 维度 | `docs/`（事实层） | `.context/` |
-| --- | --- | --- |
-| 内容 | 本项目结论、问题、方案、实验、纪律 | 讨论与设想（ideas）、外部整理（references / papers）、表达草稿（slides） |
-| 过时 | 过时是 bug | 允许滞后，快照打日期即可 |
-| 内聚 | 一篇文档完整持有自己的主题；**兄弟文档之间少交叉引用** | 结论只住 `docs/`，此处只收原料 |
+## Evidence Discipline
 
-**交叉引用纪律**：本文件是唯一文档地图。`docs/` 各文自洽可读，跨主题由读者经本表跳转。允许的外指：`results/`、`engines/`、`experiments/`、`infra/`、`third_party/`、外部 URL、以及 `.context/` 作证据原料（结论仍写在 `docs/`）。
+- 文档引用 `FINDING-*`、`CLAIM-*`、`EXP-*` 和 `EVIDENCE-*` 的完整命名空间，不使用裸 `C1`、`E1` 或 `H7`。
+- 人类文档和结构化 record 不写具体时间戳 run ID；record 只引用 `EVIDENCE-*`，精确 ID 由 `docs/agent/evidence.json` 解析到 run manifest、provenance 和 aggregates。
+- 每个数字标明实测、模拟器标定、线性外推或冻结先验，并带模型/配置域限定。
+- formal evidence 要求 clean source；diagnostic evidence 可以 dirty，但必须保留可重建的 patch artifact。旧证据若不满足新纪律，必须在 registry 中显式降级，不能伪装成可复现 formal evidence。
+- 成功以 `status.json` 终态和 validation 为准，exit 0 本身不构成成功。
 
-提升通道（单向）：`.context/ideas/` 被采纳 → 写入 `docs/`；digest 中项目依赖的结论上移，原文留 `.context/papers/`。
+## Documentation Style
 
-## 权威文档（`docs/`）
+- 人类核心文档的标题与子标题使用英文，正文使用中文；稳定 heading 用于 deep link。
+- `README.md` 只做落地页，不保存实验数字。
+- `docs/system.md` 不保存结果数字；`docs/experiments.md` 不保存结论；`docs/findings.md` 不重复完整协议。
+- Agent JSON 使用稳定 ID、repo-relative path、symbol、owner 和 verification；不要使用易漂移的行号。
+- 新的实验过程记录使用结构化 schema；`legacy-experiment-log.md` 已冻结，只读。
 
-| 文档 | 状态 | 完整持有 |
-| --- | --- | --- |
-| `docs/problem.md` | 结论 | 问题定义、负载三要素、实测事实、瓶颈与可行域、领域空白、与 Metronome 关系 |
-| `docs/findings.md` | 结论 | 一句话发现 + 证据指针（E 系列 = baseline 病理，H 系列 = conveyor 机制）；**看结论从这里开始** |
-| `docs/architecture.md` | 事实（随代码同步） | 代码分层、进程拓扑、文件格式契约、新实验接入形状；**改代码结构时同步更新** |
-| `docs/experiments.md` | 协议 | baseline 引擎定义、已验证主张、实验方法论；对比协议待新方案定型后重建 |
-| `docs/experiment-log.md` | 过程记录（append-only） | 真机验证过程；记录日期、配置与结论，但不写具体 run ID 或时间戳路径 |
-| `docs/metronome.md` | 纪律 | `third_party/metronome/` pin 的 baseline 角色、必继承方法论、引用订正 |
+## Required Checks
 
-注入负载冻结先验（40% cancellation、LogNormal）写在 `docs/experiments.md` 方法论节。
+从仓库根运行：
 
-**FINDINGS ↔ 实验记录**：新的有效验证只 append `docs/experiment-log.md`；提炼结论只改 `docs/findings.md`。两者只引用 `results/<experiment>/` 稳定入口，不写具体 run ID。
+```bash
+python -m pytest
+```
 
-## 目录边界
-
-| 路径 | 角色 | 读写 |
-| --- | --- | --- |
-| `docs/` | 事实与决策 | 任务要求时改 |
-| `engines/` | 引擎本体（baseline / conveyor）；按架构约束只被 spawn、不被 import（守卫测试扫描），`__init__.py` 缺席只是标记 | 任务要求时改 |
-| `experiments/` | 测量层（协议入口 + runner + `shared/` 公平性常量 + 各臂 `config.py`） | 任务要求时改 |
-| `infra/run/` | 共享运行基础设施（原 lab） | 任务要求时改 |
-| `infra/trace/` | 独立 trace 套件（原 tracekit）；实验不得自带 trace/画图代码 | 任务要求时改 |
-| `results/` | 运行证据；不做自动清理，可同时保留多个 run，旧 run 的删除经讨论定案后由人执行，规则见 `results/README.md` | 证据不改写结论 |
-| `infra/env/` | 锁定运行时 profile 与校验（原 environment） | 任务要求时改 |
-| `third_party/` | git-subrepo pin；见 `third_party/AGENTS.md` | **只读** |
-| `.context/references/` | 外部公开信息原文或整理 | 按题打开 |
-| `.context/papers/` | 跨主题 digest 池 | 按题打开 |
-| `.context/ideas/` | 未进事实层的设想 | 按题打开 |
-| `.context/slides/` | 表达草稿 | 可滞后；仅幻灯片任务时打开 |
-
-PDF/PPTX 默认不入库（根 `.gitignore`）。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓库的 worker（`engines/baseline/worker/stream_server.py`，与 pin 内同名）复制自该 pin 后永久分道，不追上游更新。
-
-## 行为约束
-
-- 进展、主线与数字以 `docs/findings.md`、`results/`、`docs/experiment-log.md` 为准。
-- 文档不得引用时间戳 run ID；证据统一指向 `results/<experiment>/` 稳定入口，具体 ID 只存在于证据目录及其 provenance 文件中。
-- 每个数字带出处限定（实测 / 早期模拟器标定 / 线性外推 / 冻结先验）；引用与校准各在同一出处内进行。标定模型（Qwen3-1.7B，112KB/token）与主模型（7B，56KB/token）各有口径，引用时带模型限定。
-- 标准术语全仓一致：全双工 (full-duplex)、注入 (injection)、N* 可调度并发数 (schedulable concurrency)、饱和 (saturation)。
-- 编号空间存在重名：`docs/findings.md` 条目码引用时必须带前缀（如「FINDINGS E3」「FINDINGS C1」）；论文主张（C1–C2）不带前缀；旧实验代号（E0–E6）属历史语境，映射见 `docs/experiments.md` 末行。
-- 外部「现状如何」类断言注意查证日期。引用 Metronome 容量数字前读 `docs/metronome.md` 订正节。
-- `README.md` 只做对外定位（GitHub 落地页）；契约、地图与索引在 AGENTS.md 体系（根、`engines/`、`experiments/` 各级、`infra/` 各级、`third_party/`）。
-- 守卫测试：`tests/test_repository_layout.py` 扫描包括 `docs/`、`README.md`、本文件在内的全部文本层（含反引号内联路径）；改动目录结构时同步改文档即可保持通过。
+文档契约、路径、链接、ID、Agent registry 和 evidence 关系由 `tests/test_documentation.py` 与 `tests/test_repository_layout.py` 守卫。修改结构时必须同步更新 owner 和测试，不能通过放宽断言隐藏不一致。

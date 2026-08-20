@@ -64,6 +64,10 @@ class RunPlan:
     # The pinned client hardcodes its output location; when set, the file is
     # moved into the run directory as client.json after the client exits.
     client_result: Path | None = None
+    # The pinned controller's nested shards also use fixed paths. Managed
+    # runs delete them before launch, require every shard to recreate its file,
+    # then delete them on every exit path so stale data cannot cross runs.
+    client_scratch_results: tuple[Path, ...] = ()
     required_artifacts: tuple[str, ...] = ()
     collect_issues: Callable[[RunStore], list[str]] = _no_issues
     manifest_extra: dict[str, Any] = field(default_factory=dict)
@@ -131,6 +135,10 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
         for service in plan.services:
             _start(processes, store, service)
         store.write_status(state="running", phase="client", started_at=manifest["started_at"])
+        for scratch in plan.client_scratch_results:
+            scratch.unlink(missing_ok=True)
+        if plan.client_result is not None:
+            plan.client_result.unlink(missing_ok=True)
         client = _start(processes, store, plan.client)
         try:
             exit_code = client.wait(timeout=plan.client_timeout_s)
@@ -139,8 +147,18 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
             workflow_issues.append(
                 f"client exceeded its {plan.client_timeout_s}s watchdog and was terminated"
             )
-        if plan.client_result is not None and plan.client_result.is_file():
-            plan.client_result.replace(store.file("client.json"))
+        missing_scratch = [
+            path for path in plan.client_scratch_results if not path.is_file()
+        ]
+        if missing_scratch:
+            workflow_issues.append(
+                f"{len(missing_scratch)} client shard(s) produced no fresh result"
+            )
+        if plan.client_result is not None:
+            if plan.client_result.is_file():
+                plan.client_result.replace(store.file("client.json"))
+            else:
+                workflow_issues.append("client produced no fresh aggregate result")
     except KeyboardInterrupt:
         interrupted = True
         exit_code = 130
@@ -149,6 +167,10 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
             signal.signal(signal.SIGTERM, previous_sigterm)
         processes.cleanup()
         plan.ready_file.unlink(missing_ok=True)
+        for scratch in plan.client_scratch_results:
+            scratch.unlink(missing_ok=True)
+        if plan.client_result is not None:
+            plan.client_result.unlink(missing_ok=True)
         status = store.finalize(
             required=plan.required_artifacts,
             exit_code=exit_code,

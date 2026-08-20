@@ -16,7 +16,7 @@ Behavioral changes vs that origin:
   3. BANDWIDTH-FOR-VRAM KV rotation. The GPU KV pool stays FULL (same --gpu-mem as baseline).
      The expansion is in residency, achieved ACTIVELY (passive pool-pressure preemption cannot
      express it — vLLM only preempts RUNNING requests and its LRU is anti-Belady for cyclic
-     loads, see FINDINGS H3): vLLM's stock SimpleCPUOffloadConnector keeps an incremental host
+     loads, see FINDING-H3): vLLM's stock SimpleCPUOffloadConnector keeps an incremental host
      mirror of every full block (--host-offload-gib pool), the park primitive (item 4) releases
      each session's tail beyond quota K the instant its slice stops, and the tail reloads by
      hash-match on the next chunk. Idle-time residency stays pinned at K while contexts grow;
@@ -217,7 +217,7 @@ class StreamingEngine:
         self.park_delay_s = park_delay_s          # push -> park delay; slice must be done by then
         self.park_refused_why: dict = {}          # reason -> count, shown in the periodic step log
         self.park_error = 0                       # RPC transport failure (never expected)
-        # push-triggered prefetch (engine-side omni_prefetch, utility RPC at
+        # push-triggered prefetch (engine-side omni_reload, utility RPC at
         # each chunk push so the reload copy overlaps FE). Refusals are
         # normal per-cycle outcomes (resident / pool-pressure / in-flight).
         self.prefetch = prefetch == "push"
@@ -369,7 +369,7 @@ class StreamingEngine:
             if self.prefetch and sid < WARMUP_SID:
                 # push-triggered: issue the materialization NOW so the
                 # CPU->GPU copy overlaps this chunk's feature extraction
-                # (~70ms copy inside the ~270ms FE window, FINDINGS H5).
+                # (~70ms copy inside the ~270ms FE window, FINDING-H5).
                 asyncio.run_coroutine_threadsafe(self._prefetch_after_push(sid), self.loop)
             if self.park_tail_blocks and sid < WARMUP_SID:   # warmup sentinel never parks
                 asyncio.run_coroutine_threadsafe(self._park_after(sid), self.loop)
@@ -584,9 +584,11 @@ def main():
     # already has context"; the correct semantics is that the engine only
     # starts taking tick input once that context exists — not seeds and ticks
     # racing (the seed-flood transient: startup batch sync, early misses, a
-    # permanent inventory scar). The barrier is structural: gateway and client
-    # only start after the ready file, so the first tick physically cannot
-    # precede the last seed. RELIES ON DETERMINISTIC SIDS: the gateway assigns
+    # permanent inventory scar). On the success path, gateway and client only
+    # start after the ready file. A barrier timeout currently continues to
+    # ready for diagnostic capture, but the shared worker-fatal scanner makes
+    # that run fail validation. RELIES ON DETERMINISTIC SIDS: the gateway
+    # assigns
     # 1..N in admission order and the client opens exactly N sessions; a
     # session beyond N (e.g. a reconnect) falls back to lazy seeding at its
     # first push, with a log line.

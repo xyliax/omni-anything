@@ -12,7 +12,7 @@
 | 下载模型权重、大数据集进本目录 | **否** | — |
 | 手改各 pin 内 `.gitrepo` | **否**（git-subrepo 维护） | — |
 
-实验路径上真正被本仓库代码引用的只有 `metronome/`（gateway/proto/client 复用与 worker 分道来源，纪律在 `docs/metronome.md`）。其余 pin 默认**按题打开**，不批量读入 session。
+实验路径上真正被本仓库代码引用的只有 `metronome/`（gateway/proto/client 复用与 worker 分道来源，实验角色在 `docs/experiments.md`）。其余 pin 默认**按题打开**，不批量读入 session。
 
 ## 当前 pins
 
@@ -20,7 +20,7 @@
 
 | 路径 | 上游 | 何时打开 |
 | --- | --- | --- |
-| `metronome/` | https://github.com/19PINE-AI/metronome | baseline harness、gateway/worker 对照；用法纪律在 `docs/metronome.md` |
+| `metronome/` | https://github.com/19PINE-AI/metronome | baseline、gateway/worker 对照；实验角色在 `docs/experiments.md` |
 | `DuplexOmni/` | https://github.com/MuyeHuang/DuplexOmni | 前台双工 + 后台异步写回；480ms 拍 / 注入通道 |
 | `moshi/` | https://github.com/kyutai-labs/moshi | 锁步全双工模型与官方服务端 |
 | `personaplex/` | https://github.com/NVIDIA/personaplex | 可控角色/音色双工；规格与 server 形态 |
@@ -37,7 +37,7 @@ git subrepo status third_party/<name>
 ```
 
 - 新增 pin：同步更新本文件 pins 表。
-- 升级 pin：`subrepo pull` 后确认 `.gitrepo` commit，并检查 `experiments/` 各 runner/worker 是否仍指向预期路径（尤其 `metronome/` 的 proto 与 client）。
+- 升级 pin：`subrepo pull` 后确认 `.gitrepo` commit，并分别检查 `experiments/*/runner.py`、`engines/*/worker/` 以及 `metronome/` 的 proto、client 与 gateway 路径。
 - 不要把弱相关/历史线仓库默认 subrepo 进本目录（视频 RL、agent 训练平台、带大体积 demo 媒体的 clone 等）。
 
 ## 与事实源的关系

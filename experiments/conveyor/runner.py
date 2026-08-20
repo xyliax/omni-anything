@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 from typing import Any, Sequence
 
-from infra.run.artifacts import RunStore, make_run_id, scan_worker_fatal
+from infra.run.artifacts import RunStore, make_run_id, scan_client_health, scan_worker_fatal
 from infra.run.probes import resolve_model_snapshot
 from infra.run.workflow import Launch, RunPlan, execute
 from infra.trace.collect import apply_scheduler_trace, gpu_monitor_command
@@ -103,7 +103,7 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         env["OMNI_PARK_PATCH"] = "1"
         env["OMNI_PARK_LOG"] = str(run_dir / "park.log")
         if config.prefetch != "off":
-            # engine-side gate for omni_prefetch (the worker's --prefetch only
+            # engine-side gate for omni_reload (the worker's --prefetch only
             # arms the push trigger); prefetch requires park (validated), so
             # the PYTHONPATH prepend below always covers it.
             env["OMNI_PREFETCH"] = "1"
@@ -114,7 +114,8 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
             env["OMNI_PARK_KEEP"] = str(config.park_keep_blocks)
             if config.seed_tokens:
                 # warm start is state construction: hold auto-park until the
-                # barrier's finalize parks everyone in one burst.
+                # barrier's finalize releases the hold without parking; the
+                # first normal segment stop establishes the parked posture.
                 env["OMNI_PARK_HOLD"] = "1"
         patch_dir = config.root / "engines" / "conveyor" / "worker" / "engine_patch"
         env["PYTHONPATH"] = os.pathsep.join(
@@ -176,26 +177,26 @@ def collect_issues(store: RunStore) -> list[str]:
     issues.extend(scan_worker_fatal(store.file("worker.log")))
     worker_log = store.file("worker.log")
     if worker_log.is_file():
-        # a dead session keeps the run cadence-green (silent failure, FINDINGS B1):
+        # a dead session keeps the run cadence-green (silent failure, FINDING-B1):
         # the engine-side death log is the only place it shows.
         dead = worker_log.read_text(encoding="utf-8", errors="replace").count(" ended: ")
         if dead:
             issues.append(f"{dead} session(s) died mid-run (see worker.log 'ended:' lines)")
     gateway_log = store.file("gateway.log")
     if gateway_log.is_file():
+        gateway_text = gateway_log.read_text(encoding="utf-8", errors="replace")
+        step_errors = gateway_text.count("Step error:")
+        if step_errors:
+            issues.append(f"gateway reported {step_errors} Step error(s)")
         # a slow-but-alive engine is equally cadence-green under take-from-stock:
         # short deliveries only show as the gateway's [starve] lines.
-        starved = gateway_log.read_text(encoding="utf-8", errors="replace").count("[starve]")
+        starved = gateway_text.count("[starve]")
         if starved:
             issues.append(
                 f"{starved} slot firing(s) short-delivered tokens "
                 "(engine behind; see gateway.log '[starve]' lines)"
             )
-    client_json = store.file("client.json")
-    if client_json.is_file():
-        client_errors = int(json.loads(client_json.read_text(encoding="utf-8")).get("err", 0))
-        if client_errors:
-            issues.append(f"client reported {client_errors} session error(s)")
+    issues.extend(scan_client_health(store.file("client.json")))
     park_log = store.file("park.log")
     if park_log.is_file():
         # park enabled but never effective would masquerade as evidence (same
@@ -219,13 +220,88 @@ def collect_issues(store: RunStore) -> list[str]:
             if park_errors:
                 issues.append(f"{park_errors} park RPC failure(s) (see worker.log)")
     manifest = store.file("manifest.json")
+    manifest_config: dict[str, Any] = {}
+    if manifest.is_file():
+        try:
+            loaded_manifest = json.loads(manifest.read_text(encoding="utf-8"))
+            config_value = loaded_manifest.get("config", {})
+            if isinstance(config_value, dict):
+                manifest_config = config_value
+        except (json.JSONDecodeError, OSError, TypeError, AttributeError):
+            # Generic artifact validation owns malformed manifests. Keep this
+            # experiment-specific scanner total so it can still report the
+            # independent health failures visible in the remaining logs.
+            pass
+    workload_config = manifest_config.get("workload", {})
+    if isinstance(workload_config, dict):
+        sessions = workload_config.get("sessions")
+        quota = workload_config.get("tokens_per_tick")
+        if (
+            isinstance(sessions, int)
+            and not isinstance(sessions, bool)
+            and sessions > 0
+            and isinstance(quota, int)
+            and not isinstance(quota, bool)
+            and quota > 0
+        ):
+            full_sessions: set[int] = set()
+            malformed_delivery = False
+            tick_log = store.file("gateway_ticks.log")
+            if tick_log.is_file():
+                for line in tick_log.read_text(
+                    encoding="utf-8", errors="replace"
+                ).splitlines():
+                    fields = {
+                        key: value
+                        for field in line.split()
+                        if "=" in field
+                        for key, value in (field.split("=", 1),)
+                    }
+                    try:
+                        served = int(fields["n"])
+                    except (KeyError, ValueError):
+                        malformed_delivery = True
+                        continue
+                    if served == 0:
+                        # Empty startup/teardown firings are grid evidence, not
+                        # delivery evidence, and intentionally carry no deliv=.
+                        continue
+                    try:
+                        delivered = [
+                            tuple(int(value) for value in pair.rsplit(":", 1))
+                            for pair in fields["deliv"].split(",")
+                        ]
+                    except (KeyError, ValueError):
+                        malformed_delivery = True
+                        continue
+                    session_ids = [session for session, _ in delivered]
+                    if (
+                        served < 0
+                        or len(delivered) != served
+                        or len(set(session_ids)) != len(session_ids)
+                        or any(session <= 0 or count < 0 for session, count in delivered)
+                    ):
+                        malformed_delivery = True
+                        continue
+                    full_sessions.update(
+                        session for session, count in delivered if count >= quota
+                    )
+            if malformed_delivery:
+                issues.append("malformed conveyor delivery record in gateway_ticks.log")
+            expected_sessions = set(range(1, sessions + 1))
+            never_full = expected_sessions - full_sessions
+            if never_full:
+                issues.append(
+                    f"{len(never_full)} conveyor session(s) never reached full delivery"
+                )
     if manifest.is_file() and park_log.is_file():
         # same shape as the zero-park scan: a requested prefetch that never
         # materialized anything would masquerade as evidence. Only L lines
         # count — R-only would mean completions without issues (impossible),
         # and demand L lines flow regardless of the mechanism.
-        engine = json.loads(manifest.read_text(encoding="utf-8")).get(
-            "config", {}).get("engine", {})
+        engine = manifest_config.get("engine", {})
+        if not isinstance(engine, dict):
+            engine = {}
         if engine.get("prefetch", "off") != "off":
             prefetched = 0
             with park_log.open(encoding="utf-8", errors="replace") as handle:
@@ -284,6 +360,9 @@ def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
         ),
         client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
         client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",
+        client_scratch_results=tuple(
+            Path("/tmp") / f"sfd_{index}.json" for index in range(config.client_shards)
+        ),
         required_artifacts=config.required_artifact_names(),
         collect_issues=collect_issues,
     )

@@ -1,6 +1,6 @@
 # baseline（测量装置）
 
-真机 baseline 臂：现有 vLLM-realtime 栈如何 serve 双工负载。引擎本体在 `engines/baseline/`。每次运行起一个全新 worker，证据先落入 `results/baseline/<run-id>/` 的不可变目录；run 不做自动清理，旧 run 的删除经讨论定案后由人执行（规则见 `results/README.md`），文档引用稳定入口 `results/baseline/`。
+真机 baseline 臂：现有 vLLM-realtime 栈如何 serve 双工负载。引擎本体在 `engines/baseline/`。每次运行起一个全新 worker，证据先落入 `results/baseline/<run-id>/` 的不可变目录；run 不做自动清理，旧 run 的删除经讨论定案后由人执行（规则见 `results/README.md`），人类文档通过 `EVIDENCE-*` alias 引用。
 
 ## 不变量
 
@@ -8,6 +8,7 @@
 - `runner.py` 只声明本臂的差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `infra/run/workflow` 执行；config / artifacts 不导入编排。
 - `worker_python` 不做 `resolve()`：Python 靠被调用的 venv 路径找 `pyvenv.cfg`。
 - runner 会完整保留本次运行现场；exit 0 不能救有 issue 的 run；操作者中断（SIGINT/SIGTERM）落成 `interrupted` 终态。长期保留规则见 `results/README.md`。
+- `paringest` worker 每个 Step 写逐会话 `delivery tpt=... deliv=...`；首次足额前允许 TTFA ramp，但每个会话必须在 run 内至少足额一次，首次足额后的 short delivery、session death、gateway Step error 和 client-health failure 都判为 issue。`vanilla` 没有这条第一方 completeness 记录，只作参考 target。
 
 ## 模式
 
