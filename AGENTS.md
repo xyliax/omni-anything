@@ -4,7 +4,7 @@
 
 ## Project Scope
 
-项目研究在单张 GPU 上共同服务两类负载：具有硬 tick deadline 的全双工语音前台，以及 delay-tolerant 的后台 agent 结果注入。当前实现边界、机制成熟度和实验结论不在本文件重复，分别以 [`docs/problem.md`](docs/problem.md) 和 [`docs/findings.md`](docs/findings.md) 为准。
+项目研究单张 GPU 上的周期性交互模型服务：持续增长的 KV 工作集可能在每周期计算饱和前先耗尽 GPU KV capacity。当前实测 runner 是 Qwen2.5-Omni audio-input、Thinker-only 路径；研究范围、术语、实现边界和证据成熟度分别以 [`docs/problem.md`](docs/problem.md) 与 [`docs/findings.md`](docs/findings.md) 为准。
 
 每次开始实质任务时先检查远端是否更新；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重新读取本文件和任务路径上的局部 `AGENTS.md`。
 
@@ -30,14 +30,31 @@
 | --- | --- |
 | 问题定义、研究范围、术语 | [`docs/problem.md`](docs/problem.md) |
 | 机制语义、状态机、端到端流程 | [`docs/system.md`](docs/system.md) |
-| 实验配置域、arms、指标与协议 | [`docs/experiments.md`](docs/experiments.md) |
+| 实验配置域、evaluated systems、指标与协议 | [`docs/experiments.md`](docs/experiments.md) |
 | 当前状态、结论、数字与限制 | [`docs/findings.md`](docs/findings.md) |
+| research mechanism / system requirement / implementation choice 的分类纪律 | 本文件「Research Classification」 |
 | 组件、代码入口与动态调用边 | `docs/agent/*.json` |
 | 历史实验过程 | `docs/agent/legacy-experiment-log.md` 与后续结构化 record |
 | 精确 run、hash 与 provenance | `docs/agent/evidence.json` + `results/` |
 | 目录操作约束 | 最近一层 `AGENTS.md`；`results/README.md` 是证据操作的显式例外 |
 
 完整且机器可检验的所有权声明见 [`docs/agent/ownership.json`](docs/agent/ownership.json)。概念解释可以自洽；易变的数字、状态、协议和路径不得手工复制。其他文档只能链接 owner、写无数字摘要，或包含由测试校验的生成内容。
+
+## Research Classification
+
+论文叙事、文档评审和命名统一使用以下三层；本节是分类标准的唯一文字 owner，其他文档只应用分类结果，不复制整套规则。
+
+| 层级 | 判定标准 | 文档位置 |
+| --- | --- | --- |
+| Research mechanism | 直接支撑 paper claim，具有明确因果假设，可独立 ablation，并有证据或明确的待验证状态 | 可进入 README、`docs/system.md` 的机制表和 `docs/findings.md` 的机制状态表 |
+| System requirement | 研究设计成立所需的不变量或约束；规定系统必须满足什么，但不声称创新 | 写入 `docs/system.md` 的设计不变量或约束 |
+| Implementation choice | 当前代码对 requirement 的一种可替换实现；用于 workflow、维护和诊断 | 写入实现流程、局部 `AGENTS.md` 或 registry，不进入贡献或机制列表 |
+
+代码差异、独有开关或 matched baseline/Conveyor configuration 差异本身不构成 research mechanism。若替换某项接口、缓冲或同步实现而不改变 paper claim 与对应 ablation，该项应归为 implementation choice；由实现变化引出的测量口径可以形成 finding，但不能反向包装为机制创新。
+
+## Terminology Discipline
+
+[`docs/problem.md`](docs/problem.md#terminology) 是论文核心术语的唯一 canonical glossary。新增 paper-facing 核心词前必须先更新词表，声明对象、定义与类别，迁移旧同义词，并通过 terminology guard。实现 identifier 和 repository-governance vocabulary 不得进入 contribution 或 mechanism narrative。
 
 ## Repository Boundaries
 

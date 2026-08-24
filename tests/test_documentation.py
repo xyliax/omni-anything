@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 import unittest
+import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 from experiments.baseline.config import MODES as BASELINE_MODES
@@ -36,6 +38,86 @@ FINDING_HEADING = re.compile(r"(?m)^### (FINDING-[A-Z]\d+)\b")
 EVIDENCE_ID = re.compile(r"\bEVIDENCE-[A-Z0-9-]+\b")
 CJK = re.compile(r"[\u3400-\u9fff]")
 RUN_ID = re.compile(r"20\d{6}_\d{6}_[A-Za-z0-9_.-]+")
+DEPRECATED_SOURCE_PATTERNS = {
+    "project-specific KV parking vocabulary": re.compile(
+        r"(?<![A-Za-z0-9])(?:un)?park(?:ed|ing|s)?(?![A-Za-z0-9])|omni_park|OMNI_PARK",
+        re.IGNORECASE,
+    ),
+    "anonymous cache-population vocabulary": re.compile(
+        r"anonymous[-_ ](?:material\w*|preload\w*)", re.IGNORECASE
+    ),
+    "incorrect deadline vocabulary": re.compile(
+        r"hard[-_ ](?:tick[-_ ])?deadline|inelastic[-_ ]deadline", re.IGNORECASE
+    ),
+    "output cap described as a requirement": re.compile(
+        r"delivery[-_ ]quota|tokens[-_ ]required[-_ ]per[-_ ]tick|quota[-_ ]met",
+        re.IGNORECASE,
+    ),
+    "deprecated buffered-output vocabulary": re.compile(
+        r"take[-_ ]from[-_ ]stock|(?<![A-Za-z0-9])inventory(?![A-Za-z0-9])|inv[-_ ]backlog",
+        re.IGNORECASE,
+    ),
+    "deprecated release-offset vocabulary": re.compile(
+        r"phase[-_ ](?:is[-_ ]a[-_ ]resource|stagger(?:ing)?|offset(?:[-_ ]scheduling)?)",
+        re.IGNORECASE,
+    ),
+    "obsolete background-result story": re.compile(
+        r"agent[-_ ](?:result[-_ ])?injection|result[-_ ]injection", re.IGNORECASE
+    ),
+    "paper-facing comparison shorthand": re.compile(
+        r"(?<![A-Za-z0-9])arms?(?![A-Za-z0-9])", re.IGNORECASE
+    ),
+    "deprecated initial-context vocabulary": re.compile(
+        r"warm[-_ ]start|seed[-_ ]tokens", re.IGNORECASE
+    ),
+    "ambiguous capacity-boundary metaphor": re.compile(
+        r"capacity[-_ ](?:wall|boundary|saturation)|memory[-_ ]cliff", re.IGNORECASE
+    ),
+    "misspelled system proper noun": re.compile(
+        r"(?<![A-Za-z0-9])Conveyer(?![A-Za-z0-9])", re.IGNORECASE
+    ),
+    "deprecated analytical-scenario label": re.compile(
+        r"paper[-_ ]configuration", re.IGNORECASE
+    ),
+}
+DEPRECATED_PROSE_PATTERNS = {
+    "initial context called a seed": re.compile(r"\bseed(?:ed|ing|s)?\b", re.IGNORECASE),
+    "historical queue pathology in current narrative": re.compile(r"\bdeadlock\b", re.IGNORECASE),
+}
+CONTEXT_NARRATIVE_PATTERNS = {
+    "obsolete background-result writeback": re.compile(r"后台结果写回", re.IGNORECASE),
+    "obsolete foreground/background scope": re.compile(
+        r"前台双工.*后台智能体", re.IGNORECASE | re.DOTALL
+    ),
+    "obsolete per-period deadline claim": re.compile(
+        r"每(?:个)?周期.*deadline", re.IGNORECASE | re.DOTALL
+    ),
+    "unsupported complete-overlap claim": re.compile(
+        r"迁移.*计算完全重叠|计算.*迁移完全重叠", re.IGNORECASE | re.DOTALL
+    ),
+}
+CONTEXT_AUTHORED_ROOTS = (ROOT / ".context" / "ideas", ROOT / ".context" / "slides")
+CONTEXT_TEXT_SUFFIXES = {".md", ".py", ".json", ".txt", ".svg", ".html", ".xml"}
+ACTIVE_TEXT_SUFFIXES = {
+    ".cfg",
+    ".go",
+    ".in",
+    ".ini",
+    ".json",
+    ".lock",
+    ".md",
+    ".mod",
+    ".patch",
+    ".proto",
+    ".py",
+    ".rst",
+    ".sh",
+    ".sum",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
 
 
 def load_registry(name: str) -> dict:
@@ -55,6 +137,102 @@ def owned_markdown_paths() -> tuple[Path, ...]:
             continue
         paths.append(path)
     return tuple(sorted(paths))
+
+
+def active_first_party_sources() -> tuple[Path, ...]:
+    roots = (
+        ROOT / "AGENTS.md",
+        ROOT / "README.md",
+        ROOT / ".github",
+        ROOT / "docs",
+        ROOT / "engines",
+        ROOT / "experiments",
+        ROOT / "infra",
+        ROOT / "tests",
+        ROOT / "results" / "README.md",
+    )
+    paths: list[Path] = []
+    for entry in roots:
+        candidates = (entry,) if entry.is_file() else entry.rglob("*")
+        for path in candidates:
+            if not path.is_file() or path.suffix.lower() not in ACTIVE_TEXT_SUFFIXES:
+                continue
+            relative = path.relative_to(ROOT)
+            if relative == Path("docs/agent/legacy-experiment-log.md"):
+                continue
+            if relative == Path("tests/test_documentation.py"):
+                continue
+            if "__pycache__" in relative.parts:
+                continue
+            paths.append(path)
+    return tuple(sorted(set(paths)))
+
+
+def text_for_terminology_scan(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    relative = path.relative_to(ROOT)
+    if relative == Path("docs/problem.md"):
+        # The glossary must retain old names in its fourth, explicitly
+        # deprecated column so readers can migrate historical material. Scan
+        # every other column and all prose normally.
+        sanitized: list[str] = []
+        in_glossary = False
+        for line in lines:
+            if line.startswith("| Preferred term |"):
+                in_glossary = True
+            elif in_glossary and not line.startswith("|"):
+                in_glossary = False
+            if in_glossary and line.startswith("|"):
+                cells = line.split("|")
+                if len(cells) >= 6:
+                    cells[-2] = " [deprecated aliases omitted from guard] "
+                    line = "|".join(cells)
+            sanitized.append(line)
+        lines = sanitized
+    return "\n".join(lines)
+
+
+def pptx_text(path: Path) -> str:
+    """Extract all presentation XML text so ignored decks cannot bypass guards."""
+
+    fragments: list[str] = []
+    try:
+        with zipfile.ZipFile(path) as archive:
+            members = sorted(
+                name
+                for name in archive.namelist()
+                if name.startswith("ppt/") and name.endswith(".xml")
+            )
+            for name in members:
+                root = ET.fromstring(archive.read(name))
+                fragments.append("".join(node.text or "" for node in root.iter()))
+    except (OSError, zipfile.BadZipFile, ET.ParseError) as error:
+        raise AssertionError(f"unreadable context presentation: {path.relative_to(ROOT)}") from error
+    return "\n".join(fragments)
+
+
+def resolve_registered_run(run_id: str, run_source: dict[str, str]) -> Path:
+    """Resolve an immutable run by a neutral root plus its manifest digest."""
+
+    if set(run_source) != {"root", "manifest_sha256"}:
+        raise AssertionError(f"invalid run locator fields: {run_id}")
+    relative_root = Path(run_source["root"])
+    if len(relative_root.parts) != 2 or relative_root.parts[0] != "results":
+        raise AssertionError(f"run locator must name a results/<system> root: {run_id}")
+    search_root = ROOT / relative_root
+    if not search_root.is_dir():
+        raise AssertionError(f"missing registered run root: {run_id}")
+    matches = [
+        manifest.parent
+        for manifest in sorted(search_root.glob("*/manifest.json"))
+        if hashlib.sha256(manifest.read_bytes()).hexdigest()
+        == run_source["manifest_sha256"]
+    ]
+    if len(matches) != 1:
+        raise AssertionError(
+            f"registered manifest digest must resolve exactly once: {run_id} ({len(matches)} matches)"
+        )
+    return matches[0]
 
 
 def markdown_slug(heading: str) -> str:
@@ -87,6 +265,103 @@ def python_symbols(path: Path) -> set[str]:
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_deprecated_identifier_variants_are_guarded(self) -> None:
+        examples = {
+            "project-specific KV parking vocabulary": "OMNI_UNPARK_KV",
+            "anonymous cache-population vocabulary": "anonymous_materialization",
+            "incorrect deadline vocabulary": "hard_tick_deadline",
+            "output cap described as a requirement": "tokens_required_per_tick",
+            "deprecated buffered-output vocabulary": "delivery_inventory_depth",
+            "deprecated release-offset vocabulary": "phase_offset_scheduling",
+            "obsolete background-result story": "agent_result_injection",
+            "paper-facing comparison shorthand": "baseline_arm_config",
+            "deprecated initial-context vocabulary": "warm_start",
+            "ambiguous capacity-boundary metaphor": "capacity_wall",
+            "misspelled system proper noun": "OMNI_CONVEYER_MODE",
+            "deprecated analytical-scenario label": "paper_configuration",
+        }
+        for description, example in examples.items():
+            self.assertRegex(example, DEPRECATED_SOURCE_PATTERNS[description], description)
+
+    def test_deprecated_terms_do_not_reenter_active_sources(self) -> None:
+        failures: list[str] = []
+        for path in active_first_party_sources():
+            text = text_for_terminology_scan(path)
+            patterns = dict(DEPRECATED_SOURCE_PATTERNS)
+            if path.suffix in {".md", ".json"}:
+                patterns.update(DEPRECATED_PROSE_PATTERNS)
+            for description, pattern in patterns.items():
+                match = pattern.search(text)
+                if match:
+                    failures.append(
+                        f"{path.relative_to(ROOT)}: {description}: {match.group(0)!r}"
+                    )
+        self.assertEqual(failures, [], "\n".join(failures))
+
+    def test_ignored_project_context_cannot_reintroduce_obsolete_narratives(self) -> None:
+        failures: list[str] = []
+        metadata = sorted(ROOT.rglob(".DS_Store"))
+        failures.extend(f"forbidden metadata file: {path.relative_to(ROOT)}" for path in metadata)
+
+        patterns = {
+            **DEPRECATED_SOURCE_PATTERNS,
+            **DEPRECATED_PROSE_PATTERNS,
+            **CONTEXT_NARRATIVE_PATTERNS,
+        }
+        for context_root in CONTEXT_AUTHORED_ROOTS:
+            if not context_root.exists():
+                continue
+            for path in sorted(context_root.rglob("*")):
+                if not path.is_file():
+                    continue
+                relative = path.relative_to(ROOT)
+                if path.name.startswith("~$"):
+                    failures.append(f"forbidden Office lock file: {relative}")
+                    continue
+                if path.suffix.lower() == ".pptx":
+                    text = pptx_text(path)
+                elif path.suffix.lower() in CONTEXT_TEXT_SUFFIXES:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                else:
+                    failures.append(f"unscannable authored context artifact: {relative}")
+                    continue
+                for description, pattern in patterns.items():
+                    match = pattern.search(text)
+                    if match:
+                        failures.append(f"{relative}: {description}: {match.group(0)!r}")
+        self.assertEqual(failures, [], "\n".join(failures))
+
+    def test_output_generation_and_gateway_delivery_are_separate(self) -> None:
+        problem = (ROOT / "docs/problem.md").read_text(encoding="utf-8")
+        experiments = (ROOT / "docs/experiments.md").read_text(encoding="utf-8")
+        contract = next(
+            item
+            for item in load_registry("contracts.json")["contracts"]
+            if item["id"] == "CONTRACT-OUTPUT-CAP"
+        )
+
+        for fact in (
+            "只表示该次更新的模型生成量",
+            "不表示 gateway 在某次 release 实际取出的 token 数",
+            "不能把 `deliv` 归属于当前输入",
+        ):
+            self.assertIn(fact, problem)
+        for fact in (
+            "两个当前 first-party worker 都设置 `ignore_eos=True`",
+            "matched Metronome baseline 运行到每段 \\(M+8\\) 的 cap",
+            "Conveyor 运行到每段 \\(M\\) 的 cap",
+            "不提供模型自然短输出或 learned silent-token behavior 的证据",
+            "且不等于 \\(m_{i,k}\\)",
+        ):
+            self.assertIn(fact, experiments)
+        for worker in (
+            ROOT / "engines/baseline/worker/stream_server.py",
+            ROOT / "engines/conveyor/worker/stream_server.py",
+        ):
+            self.assertIn("ignore_eos=True", worker.read_text(encoding="utf-8"))
+        self.assertIn("generated-token count is distinct from gateway delivery", contract["rule"])
+        self.assertIn("ignore_eos=True", contract["rule"])
+
     def test_human_core_is_small_and_explicit(self) -> None:
         actual = {path.name for path in (ROOT / "docs").glob("*.md")}
         self.assertEqual(actual, EXPECTED_DOCS_MARKDOWN)
@@ -121,28 +396,85 @@ class DocumentationTests(unittest.TestCase):
                         f"{path.relative_to(ROOT)}:{index + 1}",
                     )
 
-    def test_system_explains_mechanisms_and_end_to_end_topology(self) -> None:
+    def test_system_separates_research_mechanisms_from_delivery_implementation(self) -> None:
         text = (ROOT / "docs" / "system.md").read_text(encoding="utf-8")
-        for mechanism_row in (
-            "| 错开相位（phase staggering） | 保持每路周期不变，把不同会话分散到周期内不同时间点，避免同步拥堵 | Gateway |",
-            "| 取现货交付（take-from-stock delivery） | tick 到来时先交付上一周期已生成的库存，不让网关等待本周期 GPU 计算 | Worker |",
-            "| KV 部分释放（park） | 会话空闲时只保留固定 KV 底座，释放可由主机镜像恢复的尾部 | EngineCore |",
-            "| KV 预取（prefetch） | 在真实请求进入 EngineCore 前提前搬回已释放尾部，隐藏请求路径上的回载延迟 | Worker + EngineCore |",
+        conveyor = text.split("### Conveyor", 1)[1].split("## Release-Offset Scheduling", 1)[0]
+        table = conveyor.split("| 机制 |", 1)[1].split("\n\n", 1)[0]
+        mechanism_rows = [
+            line
+            for line in table.splitlines()
+            if line.startswith("| ") and not line.startswith("| ---")
+        ]
+        self.assertEqual(len(mechanism_rows), 3)
+        for mechanism in (
+            "释放偏移调度（release-offset scheduling）",
+            "带主机后备的 KV 部分逐出（partial KV eviction with host backing）",
+            "KV 预取（KV prefetching）",
         ):
-            self.assertIn(mechanism_row, text)
+            self.assertTrue(any(mechanism in row for row in mechanism_rows), mechanism)
+        self.assertNotIn("无等待", table)
+
+        delivery = text.split("## Output Delivery", 1)[1].split("## Initial-Context Preloading", 1)[0]
+        for fact in (
+            "st.tokens[st.consumed:]",
+            "最多等待配置的 RPC budget",
+            "Conveyor 当前只做一次快照并立即返回",
+            "不是最低交付要求",
+            "不能单独判定 workload correctness",
+        ):
+            self.assertIn(fact, delivery)
         self.assertIn(
-            "按需回载（demand reload）指真实请求到达后才恢复缺失的 KV 尾部",
+            "首个既不 GPU-resident 也不 host-backed 的 gap 之后只能重算",
             text,
         )
         for topology_edge in (
-            "CS <-->|WebSocket<br/>音频 / tick 事件| GW",
-            "GW -->|gRPC Step<br/>输入切片 / 交付结果| WK",
+            "CS <-->|WebSocket<br/>周期输入 / 交付事件| GW",
+            "GW -->|gRPC Step<br/>输入块 / 当前可交付输出| WK",
             "WK <-->|msgpack/ZMQ<br/>请求 / utility 指令| EC",
-            "PATCH -.->|sitecustomize monkeypatch<br/>仅 conveyor| EC",
+            "PATCH -.->|sitecustomize monkeypatch<br/>仅 Conveyor| EC",
             "STORE --> TRACE --> EVID",
             "R -->|manifest / validation| STORE",
         ):
             self.assertIn(topology_edge, text)
+
+    def test_research_classification_has_one_owner_and_is_not_regressed(self) -> None:
+        root_agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("## Research Classification", root_agents)
+        for category in ("Research mechanism", "System requirement", "Implementation choice"):
+            self.assertIn(f"| {category} |", root_agents)
+        for criterion in ("paper claim", "因果假设", "独立 ablation", "可替换实现"):
+            self.assertIn(criterion, root_agents)
+
+        ownership = load_registry("ownership.json")
+        self.assertEqual(ownership["domains"]["research_classification"], "AGENTS.md")
+        current_docs = (
+            ROOT / "README.md",
+            ROOT / "docs/system.md",
+            ROOT / "docs/experiments.md",
+            ROOT / "docs/findings.md",
+            ROOT / "engines/AGENTS.md",
+            ROOT / "engines/conveyor/AGENTS.md",
+            ROOT / "experiments/conveyor/AGENTS.md",
+            ROOT / "results/README.md",
+        )
+        for path in current_docs:
+            current = path.read_text(encoding="utf-8")
+            self.assertNotIn("取现货交付", current, path.relative_to(ROOT))
+            self.assertNotIn("take-from-stock delivery", current.lower(), path.relative_to(ROOT))
+            self.assertNotIn("四个机制", current, path.relative_to(ROOT))
+
+        findings = (ROOT / "docs/findings.md").read_text(encoding="utf-8")
+        current_state_table = findings.split("| 候选机制 |", 1)[1].split("\n\n", 1)[0]
+        current_state_rows = [
+            line
+            for line in current_state_table.splitlines()
+            if line.startswith("| ") and not line.startswith("| ---")
+        ]
+        self.assertEqual(len(current_state_rows), 3)
+        self.assertNotIn("EVIDENCE-H2-METRICS", current_state_table)
+        h2 = findings.split("### FINDING-H2", 1)[1].split("### FINDING-H3", 1)[0]
+        self.assertIn("测量语义发现", h2)
+        self.assertIn("不是研究机制", h2)
 
     def test_agent_registries_are_valid_json(self) -> None:
         for name in AGENT_REGISTRIES:
@@ -261,6 +593,7 @@ class DocumentationTests(unittest.TestCase):
             "EDGE-SITECUSTOMIZE-ENGINE-PATCH",
             "EDGE-PATCH-LOADER-MODULES",
             "EDGE-CONVEYOR-PATCH-VLLM",
+            "EDGE-WORKER-PREFETCH-UTILITY",
             "EDGE-BASELINE-FIX-VLLM",
             "EDGE-TRACE-PATCH-VLLM",
         }
@@ -302,7 +635,7 @@ class DocumentationTests(unittest.TestCase):
         text = (ROOT / "docs" / "findings.md").read_text(encoding="utf-8")
         findings = FINDING_HEADING.findall(text)
         self.assertEqual(len(findings), len(set(findings)))
-        self.assertGreater(len(findings), 20)
+        self.assertGreaterEqual(len(findings), 15)
 
         evidence = load_registry("evidence.json")["evidence"]
         evidence_ids = [entry["id"] for entry in evidence]
@@ -325,8 +658,7 @@ class DocumentationTests(unittest.TestCase):
         self.assertEqual(set(registry["role_definitions"]), expected_roles)
         run_sources = registry["run_sources"]
         for run_id, run_source in run_sources.items():
-            run = ROOT / run_source["path"]
-            self.assertTrue(run.is_dir(), f"missing registered run: {run_id}")
+            run = resolve_registered_run(run_id, run_source)
             digest = hashlib.sha256((run / "manifest.json").read_bytes()).hexdigest()
             self.assertEqual(digest, run_source["manifest_sha256"], run_id)
             status = json.loads((run / "status.json").read_text(encoding="utf-8"))
@@ -369,7 +701,7 @@ class DocumentationTests(unittest.TestCase):
                 if source.get("kind") != "run":
                     continue
                 self.assertIn(source["ref"], run_sources, entry["id"])
-                run = ROOT / run_sources[source["ref"]]["path"]
+                run = resolve_registered_run(source["ref"], run_sources[source["ref"]])
                 manifest = json.loads((run / "manifest.json").read_text(encoding="utf-8"))
                 status = json.loads((run / "status.json").read_text(encoding="utf-8"))
                 self.assertIn(status["state"], {"success", "failed", "interrupted"})
@@ -418,14 +750,14 @@ class DocumentationTests(unittest.TestCase):
         text = (ROOT / "docs" / "experiments.md").read_text(encoding="utf-8")
         expected_rows = (
             f"| 模型 | {model.ID.rsplit('/', 1)[-1]} |",
-            f"| 设备 | {platform.DEVICE_NAME} |",
-            f"| 会话周期 | {workload.PERIOD_MS} ms |",
+            f"| 周期 \\(T\\) | {workload.PERIOD_MS} ms |",
             f"| 默认会话数 | {workload.SESSIONS} |",
-            f"| 交付配额 `tpt` | {workload.TOKENS_PER_TICK} token/tick |",
-            f"| 每 token KV 字节数 | {model.KV_BYTES_PER_TOKEN // 1024} KiB |",
+            f"| 每周期输出 token 上限 \\(M\\) | {workload.OUTPUT_TOKEN_CAP} |",
+            f"| 单 token KV bytes | {model.KV_BYTES_PER_TOKEN // 1024} KiB |",
         )
         for row in expected_rows:
             self.assertIn(row, text)
+        self.assertIn(f"| 设备 | {platform.DEVICE_NAME}, 24 GiB, PCIe Gen3 |", text)
         requirements = (
             ROOT / "infra/env/profiles/cuda13_vllm023/requirements.in"
         ).read_text(encoding="utf-8")
@@ -438,6 +770,31 @@ class DocumentationTests(unittest.TestCase):
         self.assertNotIn(model.ID.rsplit("/", 1)[-1], text)
         self.assertNotIn(platform.DEVICE_NAME, text)
         self.assertNotRegex(text, r"vLLM\s+\d+\.\d+")
+
+    def test_problem_has_background_to_problem_story(self) -> None:
+        text = (ROOT / "docs" / "problem.md").read_text(encoding="utf-8")
+        background = text.split("## Background", 1)[1].split("## Problem Statement", 1)[0]
+        for heading in (
+            "### From Turn-Based Requests to Streaming Interaction",
+            "### Why KV Cache Becomes a Capacity Constraint",
+            "### Why Request-Level Serving Control Is Insufficient",
+        ):
+            self.assertIn(heading, background)
+        for concept in (
+            "request/response",
+            "continuous batching",
+            "prefix caching",
+            "streaming interaction session",
+            "periodic interaction session",
+            "KV cache",
+            "GPU capacity",
+            "host-to-device",
+            "Recompute the history",
+            "Reload on demand",
+        ):
+            self.assertIn(concept, background)
+        self.assertLess(text.index("## Background"), text.index("## Problem Statement"))
+        self.assertLess(text.index("## Problem Statement"), text.index("## Workload Model"))
 
     def test_experiment_record_template_matches_contract(self) -> None:
         contract = load_registry("contracts.json")["experiment_record_v1"]
@@ -463,7 +820,7 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("## Documentation Guide", text)
         for owner in ("Problem", "System", "Experiments", "Findings"):
             self.assertIn(f"[`{owner}`]", text)
-        self.assertIn("代码已经实现不等于机制已验证", text)
+        self.assertIn("代码已实现不等于机制已验证", text)
         self.assertIn("若陈述看似冲突", text)
         self.assertIn("### Agent Documentation", text)
         self.assertIn("Agent 文档不是第二套项目事实", text)

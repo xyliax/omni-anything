@@ -25,7 +25,7 @@ def scheduler_trace_environment(
     The returned ``PYTHONPATH`` entry must be *prepended* to any existing
     value so ``sitecustomize`` is imported by every spawned interpreter.
     ``residency_path`` additionally turns on the per-session KV residency
-    sampler (same hook, same collector — one mechanism for every arm).
+    sampler (same hook and collector for every evaluated system).
     """
     settings = {
         SCHEDULER_TRACE_ENV: str(trace_path),

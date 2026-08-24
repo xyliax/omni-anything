@@ -121,8 +121,8 @@
       "binding": "vLLM AsyncMPClient over msgpack/ZMQ, including call_utility_async method-name dispatch",
       "source": "vLLM 0.23 runtime dependency",
       "why_static_tools_miss": ["external dependency", "multiprocess message dispatch", "utility method name sent as data"],
-      "utility_commands": ["reload_kv", "park_tail_blocks", "warm_start_finalize", "kv_state"],
-      "observe": ["worker.log", "scheduler.log", "park.log"],
+      "utility_commands": ["prefetch_kv", "evict_tail_blocks", "initial_context_finalize", "kv_state"],
+      "observe": ["worker.log", "scheduler.log", "kv_events.log"],
       "verify": ["infra/env/AGENTS.md"]
     },
     {
@@ -139,17 +139,17 @@
       "id": "EDGE-SITECUSTOMIZE-BASELINE-FIX",
       "from": "python-interpreter",
       "to": "baseline-engine-fix-loader",
-      "binding": "PYTHONPATH + implicit sitecustomize import when a seed run enables the fix",
+      "binding": "PYTHONPATH + implicit sitecustomize import when initial-context preloading enables the fix",
       "source": "engines/baseline/worker/engine_fix/sitecustomize.py",
       "why_static_tools_miss": ["implicit interpreter hook", "environment-controlled activation"],
-      "observe": ["worker.log fix activation", "seed segment generation"],
+      "observe": ["worker.log fix activation", "initial-context segment generation"],
       "verify": ["tests/test_run_validation.py"]
     },
     {
       "id": "EDGE-SITECUSTOMIZE-TRACE-CHAIN",
       "from": ["python-interpreter", "engine-patch-loader", "baseline-engine-fix-loader"],
       "to": "engine-observation",
-      "binding": "PYTHONPATH sitecustomize or explicit chain loading from the arm patch",
+      "binding": "PYTHONPATH sitecustomize or explicit chain loading from a first-party engine patch",
       "source": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
       "why_static_tools_miss": ["implicit interpreter hook", "sitecustomize precedence", "manual chain loading"],
       "observe": ["scheduler.log", "residency.log", "exit 78 on initialization failure"],
@@ -158,7 +158,7 @@
     {
       "id": "EDGE-PATCH-LOADER-MODULES",
       "from": "engine-patch-loader",
-      "to": ["kv-park-patch", "kv-reload-patch", "kv-transfer-patch", "kv-state-registry"],
+      "to": ["kv-eviction-patch", "kv-prefetch-policy", "kv-prefetch-transport", "kv-state-registry"],
       "binding": "import-time module loading followed by explicit apply calls",
       "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
       "why_static_tools_miss": ["implicit sitecustomize entry", "import-time side effect", "apply chain is environment-gated"],
@@ -167,14 +167,14 @@
     },
     {
       "id": "EDGE-CONVEYOR-PATCH-VLLM",
-      "from": ["kv-park-patch", "kv-reload-patch", "kv-transfer-patch"],
+      "from": ["kv-eviction-patch", "kv-prefetch-policy", "kv-prefetch-transport"],
       "to": "vllm-engine-core",
       "binding": "runtime class assignment and wrapper installation on private vLLM 0.23 symbols",
       "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
       "patch_targets": [
-        "EngineCore.park_tail_blocks",
-        "EngineCore.warm_start_finalize",
-        "EngineCore.reload_kv",
+        "EngineCore.evict_tail_blocks",
+        "EngineCore.initial_context_finalize",
+        "EngineCore.prefetch_kv",
         "EngineCore.kv_state",
         "Scheduler._handle_stopped_request",
         "Scheduler._update_request_as_session",
@@ -185,18 +185,18 @@
         "SimpleCPUOffloadScheduler.build_connector_meta"
       ],
       "why_static_tools_miss": ["monkeypatch", "external dependency", "class methods replaced after import"],
-      "observe": ["park.log park/S/L/R events", "scheduler.log"],
+      "observe": ["kv_events.log E/B/L/R events", "scheduler.log"],
       "verify": ["infra/env/AGENTS.md", "tests/test_run_validation.py"]
     },
     {
       "id": "EDGE-BASELINE-FIX-VLLM",
       "from": "baseline-engine-fix-loader",
       "to": "vllm-engine-core",
-      "binding": "runtime wrapper installation for seeded paringest runs",
+      "binding": "runtime wrapper installation for initial-context paringest runs",
       "source": "engines/baseline/worker/engine_fix/sitecustomize.py",
       "patch_targets": ["Scheduler._update_request_as_session"],
       "why_static_tools_miss": ["sitecustomize monkeypatch", "environment gate", "external dependency"],
-      "observe": ["seeded segment generation", "worker.log"],
+      "observe": ["initial-context segment generation", "worker.log"],
       "verify": ["tests/test_run_validation.py"]
     },
     {
@@ -211,13 +211,13 @@
       "verify": ["tests/test_trace.py", "tests/test_run_validation.py"]
     },
     {
-      "id": "EDGE-WORKER-RELOAD-UTILITY",
+      "id": "EDGE-WORKER-PREFETCH-UTILITY",
       "from": "conveyor-worker",
-      "to": "kv-reload-patch",
+      "to": "kv-prefetch-policy",
       "binding": "EngineCore call_utility_async command dispatch",
       "source": "engines/conveyor/worker/stream_server.py",
       "why_static_tools_miss": ["method name is a message field", "cross-process dispatch via getattr"],
-      "observe": ["park.log trigger=prefetch", "park.log L/R pairs"],
+      "observe": ["kv_events.log trigger=prefetch", "kv_events.log L/R pairs"],
       "verify": ["EVIDENCE-H7-PREFETCH"]
     },
     {

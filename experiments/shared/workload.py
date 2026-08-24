@@ -1,19 +1,19 @@
-"""The duplex voice workload as measured on this stack: hard 2 s ticks,
-8 concurrent sessions, 600 s horizon.
+"""Shared offered-load constants for the current measured stack.
 
-GROWTH_TOKENS_PER_TICK = 78 is a measured value (53 audio tokens + ~25
-generated per tick); it feeds capacity models, not the live client.
-TOKENS_PER_TICK = 25 is the per-segment decode quota passed to the worker
-and gateway.
+``OUTPUT_TOKEN_CAP`` is a harness-configured upper bound and gateway
+consumption limit. It is not a minimum delivery requirement and is not derived
+from an audio playback rate: the current runner exposes Thinker text output
+only. ``CONTEXT_GROWTH_TOKENS_PER_PERIOD`` is a measured input-plus-output
+quantity used by capacity models, not by the live client.
 """
 
 PERIOD_MS = 2000
 SESSIONS = 8
 DURATION_S = 600
 CHUNK_MS = 20
-TOKENS_PER_TICK = 25
+OUTPUT_TOKEN_CAP = 25
 MAX_AUDIO_CHUNKS = 64
-GROWTH_TOKENS_PER_TICK = 78
+CONTEXT_GROWTH_TOKENS_PER_PERIOD = 78
 
 
 def manifest(sessions: int, duration_s: int) -> dict:
@@ -22,7 +22,7 @@ def manifest(sessions: int, duration_s: int) -> dict:
         "sessions": sessions,
         "duration_s": duration_s,
         "chunk_ms": CHUNK_MS,
-        "tokens_per_tick": TOKENS_PER_TICK,
+        "output_token_cap": OUTPUT_TOKEN_CAP,
         "max_audio_chunks": MAX_AUDIO_CHUNKS,
-        "growth_tokens_per_tick": GROWTH_TOKENS_PER_TICK,
+        "context_growth_tokens_per_period": CONTEXT_GROWTH_TOKENS_PER_PERIOD,
     }

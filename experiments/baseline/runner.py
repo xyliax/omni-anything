@@ -42,8 +42,8 @@ def worker_command(config: BaselineConfig, ready_file: Path) -> list[str]:
         str(config.max_model_len),
         "--max-num-seqs",
         str(config.max_num_seqs),
-        "--tpt",
-        str(workload.TOKENS_PER_TICK),
+        "--output-token-cap" if config.mode_spec.parallel_ingest else "--tpt",
+        str(workload.OUTPUT_TOKEN_CAP),
         "--max-audio-chunks",
         str(workload.MAX_AUDIO_CHUNKS),
         "--wait-budget-s",
@@ -52,10 +52,10 @@ def worker_command(config: BaselineConfig, ready_file: Path) -> list[str]:
         str(ready_file),
     ]
     if config.mode_spec.parallel_ingest:
-        command.extend(["--seed-tokens", str(config.seed_tokens)])
-        # warm-start barrier: all seed prefills complete before ready (state
+        command.extend(["--initial-context-tokens", str(config.initial_context_tokens)])
+        # initialization barrier: all initial context prefills complete before ready (state
         # construction precedes the tick cadence, same semantics as conveyor)
-        command.extend(["--pre-seed-sessions", str(config.sessions if config.seed_tokens else 0)])
+        command.extend(["--preload-sessions", str(config.sessions if config.initial_context_tokens else 0)])
     return command
 
 
@@ -82,9 +82,9 @@ def worker_environment(config: BaselineConfig, run_dir: Path) -> dict[str, str]:
             run_dir / "scheduler_errors.log",
             run_dir / "residency.log",
         )
-    if config.seed_tokens:
-        # Seed runs need the frozen-max_tokens fix in the EngineCore process
-        # (worker/engine_fix/sitecustomize.py) — without it the seed's
+    if config.initial_context_tokens:
+        # Initial-context runs need the frozen-max_tokens fix in EngineCore
+        # (worker/engine_fix/sitecustomize.py) — without it the initial context's
         # max_tokens=1 caps every segment at 1 token while cadence stays
         # green. Prepend AHEAD of the trace collector dir: only the first
         # sitecustomize on sys.path is imported, and engine_fix chain-loads
@@ -107,7 +107,7 @@ def gateway_command(config: BaselineConfig) -> list[str]:
         "--period-ms",
         str(workload.PERIOD_MS),
         "--tpt",
-        str(workload.TOKENS_PER_TICK),
+        str(workload.OUTPUT_TOKEN_CAP),
     ]
 
 
@@ -150,11 +150,11 @@ def collect_issues(store: RunStore) -> list[str]:
             pass
     mode = manifest_config.get("mode")
     expected_sessions: set[int] | None = None
-    expected_quota: int | None = None
+    expected_output_cap: int | None = None
     workload_config = manifest_config.get("workload", {})
     if isinstance(workload_config, dict):
         sessions = workload_config.get("sessions")
-        quota = workload_config.get("tokens_per_tick")
+        output_cap = workload_config.get("output_token_cap")
         if (
             isinstance(sessions, int)
             and not isinstance(sessions, bool)
@@ -163,11 +163,11 @@ def collect_issues(store: RunStore) -> list[str]:
             # Fresh-process-per-point makes gateway IDs exactly 1..N.
             expected_sessions = set(range(1, sessions + 1))
         if (
-            isinstance(quota, int)
-            and not isinstance(quota, bool)
-            and quota > 0
+            isinstance(output_cap, int)
+            and not isinstance(output_cap, bool)
+            and output_cap > 0
         ):
-            expected_quota = quota
+            expected_output_cap = output_cap
     scheduler_errors = store.file("scheduler_errors.log")
     if scheduler_errors.is_file() and scheduler_errors.stat().st_size:
         issues.append("scheduler trace reported serialization errors")
@@ -179,22 +179,20 @@ def collect_issues(store: RunStore) -> list[str]:
         if dead:
             issues.append(f"{dead} session(s) died mid-run (see worker.log 'ended:' lines)")
         delivery_rows = 0
-        short_deliveries = 0
         observed_sessions: set[int] = set()
-        full_sessions: set[int] = set()
         malformed_delivery = False
-        quota_mismatch = False
+        output_cap_mismatch = False
         for line in worker_text.splitlines():
-            marker = "delivery tpt="
+            marker = "delivery output_token_cap="
             if marker not in line:
                 continue
             payload = line.split(marker, 1)[1]
-            tpt_text, separator, delivered = payload.partition(" deliv=")
+            output_cap_text, separator, delivered = payload.partition(" deliv=")
             if not separator:
                 malformed_delivery = True
                 continue
             try:
-                reported_quota = int(tpt_text)
+                reported_output_cap = int(output_cap_text)
                 counts: list[tuple[int, int]] = []
                 for pair in delivered.split(","):
                     session_text, pair_separator, count_text = pair.rpartition(":")
@@ -206,7 +204,7 @@ def collect_issues(store: RunStore) -> list[str]:
                 continue
             session_ids = [session for session, _ in counts]
             if (
-                reported_quota <= 0
+                reported_output_cap <= 0
                 or not counts
                 or len(set(session_ids)) != len(session_ids)
                 or any(session <= 0 or count < 0 for session, count in counts)
@@ -217,36 +215,17 @@ def collect_issues(store: RunStore) -> list[str]:
             ):
                 malformed_delivery = True
                 continue
-            if expected_quota is not None and reported_quota != expected_quota:
-                quota_mismatch = True
-            effective_quota = expected_quota or reported_quota
+            if expected_output_cap is not None and reported_output_cap != expected_output_cap:
+                output_cap_mismatch = True
             delivery_rows += 1
             for session, count in counts:
                 observed_sessions.add(session)
-                if count >= effective_quota:
-                    full_sessions.add(session)
-                elif session in full_sessions:
-                    # As in conveyor, startup fill belongs to TTFA. A session
-                    # becomes starvation-eligible after its first full frame.
-                    short_deliveries += 1
         if malformed_delivery:
             issues.append("malformed baseline delivery record in worker.log")
-        if quota_mismatch:
-            issues.append("baseline delivery quota does not match manifest")
-        if short_deliveries:
-            issues.append(
-                f"{short_deliveries} baseline session delivery(ies) below quota "
-                "(see worker.log 'delivery' lines)"
-            )
+        if output_cap_mismatch:
+            issues.append("baseline output cap does not match manifest")
         if mode == "paringest" and not delivery_rows:
-            issues.append("paringest worker produced no delivery-completeness records")
-        if mode == "paringest":
-            required_sessions = expected_sessions or observed_sessions
-            never_full = required_sessions - full_sessions
-            if never_full:
-                issues.append(
-                    f"{len(never_full)} baseline session(s) never reached full delivery"
-                )
+            issues.append("paringest worker produced no delivery records")
     gateway_log = store.file("gateway.log")
     if gateway_log.is_file():
         step_errors = gateway_log.read_text(
@@ -261,8 +240,6 @@ def collect_issues(store: RunStore) -> list[str]:
 def plan(config: BaselineConfig, run_id: str) -> RunPlan:
     run_dir = config.output_root / run_id
     ready_file = run_dir / ".worker-ready"
-    client_env = os.environ.copy()
-    client_env["FD_PHASE_STAGGER"] = "1"
     return RunPlan(
         experiment=config.experiment_name,
         run_id=run_id,
@@ -300,7 +277,6 @@ def plan(config: BaselineConfig, run_id: str) -> RunPlan:
             tuple(client_command(config, run_id)),
             "client.txt",
             cwd=config.metronome_root,
-            env=client_env,
         ),
         client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
         client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",

@@ -1,32 +1,20 @@
 # baseline（测量装置）
 
-真机 baseline 臂：现有 vLLM-realtime 栈如何 serve 双工负载。引擎本体在 `engines/baseline/`。每次运行起一个全新 worker，证据先落入 `results/baseline/<run-id>/` 的不可变目录；run 不做自动清理，旧 run 的删除经讨论定案后由人执行（规则见 `results/README.md`），人类文档通过 `EVIDENCE-*` alias 引用。
+`paringest` 是 matched Metronome baseline 的 implementation identifier；`vanilla` 直接指向第三方 pin，只作 upstream reference。两者每个点都启动 fresh worker，并把证据写入不可变 run 目录。
 
-## 不变量
+## Invariants
 
-- **`mode` 是行为，`trace` 是观测**：观测开关绝不表示为另一个实现模式。
-- `runner.py` 只声明本臂的差异（命令、环境、issue 扫描），组装 `RunPlan` 交 `infra/run/workflow` 执行；config / artifacts 不导入编排。
-- `worker_python` 不做 `resolve()`：Python 靠被调用的 venv 路径找 `pyvenv.cfg`。
-- runner 会完整保留本次运行现场；exit 0 不能救有 issue 的 run；操作者中断（SIGINT/SIGTERM）落成 `interrupted` 终态。长期保留规则见 `results/README.md`。
-- `paringest` worker 每个 Step 写逐会话 `delivery tpt=... deliv=...`；首次足额前允许 TTFA ramp，但每个会话必须在 run 内至少足额一次，首次足额后的 short delivery、session death、gateway Step error 和 client-health failure 都判为 issue。`vanilla` 没有这条第一方 completeness 记录，只作参考 target。
+- `mode` 选择实现行为，`trace` 只选择观测。
+- `paringest` 记录 `delivery output_token_cap=... deliv=...`。记录损坏、session death、RPC error 和 client failure 是 run issue；`deliv < output cap` 本身不再作为 correctness failure。
+- initial-context preloading 只允许 `paringest`；EngineCore fix 逐 segment 刷新冻结的 `session.max_tokens`。
+- 当前 worker 的 per-segment decode cap 是 \(M+8\)。在统一为 \(M\) 并重跑前，它不是 Conveyor 的最终公平对照。
 
-## 模式
-
-| mode | worker | 说明 |
-| --- | --- | --- |
-| `vanilla` | `third_party/metronome/worker/stream_server.py`（pin 内，原样） | 参照 baseline |
-| `paringest` | `engines/baseline/worker/stream_server.py` | 并行 ingest 修复 + 插桩（出处与分道纪律见 `engines/baseline/AGENTS.md`） |
-
-## 用法
+## Usage
 
 ```bash
-python -m experiments.baseline --trace --label my-label   # paringest 是默认 mode
+python -m experiments.baseline --trace --label my-label
 python -m experiments.baseline --mode vanilla
-python -m experiments.baseline --trace --sessions 16 --duration 120 --seed-tokens 4000
+python -m experiments.baseline --trace --sessions 16 --duration 120 --initial-context-tokens 4000
 ```
 
-参数来源两处、各司其职：`experiments/shared/`（model / platform / workload——本栈的固定事实，两臂共享）与本目录 `config.py`（逐 run 旋钮与引擎常量）。命令行只暴露逐 run 会变的旋钮（mode / trace / label / sessions / duration / seed-tokens / gpu）。
-
-## 判读
-
-健康判据看 `kv.log` 的 starvation 信号，不要只看客户端 miss=0%（silent failure：会话崩溃后 cadence 指标仍全部正常）。Perfetto 导出：`python -m infra.trace.perfetto baseline/<run-id>`。
+容量判读必须联合 `kv.log`、scheduler、session liveness 与 GPU utilization；client cadence 正常不证明模型持续进展。

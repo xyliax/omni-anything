@@ -25,7 +25,7 @@ SCHEMA_VERSION = 2
 # (test-pinned).
 FATAL_WORKER_PATTERN = re.compile(
     r"EngineCore failed to start|OutOfMemoryError|CUDA out of memory|"
-    r"scheduler trace initialization failed|warm-start barrier timed out",
+    r"scheduler trace initialization failed|initialization barrier timed out",
     re.IGNORECASE,
 )
 

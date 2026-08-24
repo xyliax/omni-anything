@@ -10,6 +10,8 @@
 4. 遇到数字或机制状态，回到 `docs/findings.md`；
 5. 遇到 exact run 或 provenance，查询 `evidence.json`；
 6. 不根据静态 import 图猜测 subprocess、gRPC、ZMQ 或 monkeypatch，查询 `dynamic-edges.json`。
+7. 判断代码差异能否进入 paper 机制列表时，只读取根 [`AGENTS.md`](../../AGENTS.md#research-classification) 的 `Research Classification`，本目录不另建分类标准。
+8. paper-facing 命名必须先查 [`docs/problem.md`](../problem.md#terminology)；实现 identifier 不得反向成为论文术语。
 
 ## Registries
 
@@ -34,4 +36,4 @@
 
 ## Historical Records
 
-[`legacy-experiment-log.md`](legacy-experiment-log.md) 是旧 append-only 日志的冻结迁移件，不是 current-state owner。后续 experiment record 按 [`records/README.md`](records/README.md) 创建，使用 `contracts.json` 中的 `experiment_record_v1` 字段；只有被接受的结论才进入 findings。
+[`legacy-experiment-log.md`](legacy-experiment-log.md) 是旧 append-only 日志的冻结迁移件，不是 current-state owner，也不是 paper prose source。它保留历史术语和过时研究故事；只有用户明确要求分析历史实验时才读取。后续 experiment record 按 [`records/README.md`](records/README.md) 创建，使用 `contracts.json` 中的 `experiment_record_v1` 字段；只有被接受的结论才进入 findings。

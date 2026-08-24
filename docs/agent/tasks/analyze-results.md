@@ -2,26 +2,22 @@
 
 ## Read Set
 
-1. `docs/experiments.md#metric-semantics`
-2. `docs/system.md#one-session-cycle`
-3. `infra/trace/AGENTS.md`
-4. 对应 `status.json`、`manifest.json` 和 raw artifacts
-5. `docs/agent/evidence.json`
+1. `results/README.md`；
+2. 目标 run 的 `manifest.json`、`status.json` 与 raw artifacts；
+3. `docs/experiments.md` 的 measurement semantics；
+4. `infra/trace/AGENTS.md` 与 parser/exporter；
+5. 需要与已接受结论比较时，再读 `docs/findings.md` 与 `docs/agent/evidence.json`。
 
 ## Analysis Order
 
-1. 按 `evidence.json.role_definitions` 判断证据是 formal、diagnostic、source audit、external audit 还是 legacy-unreconstructable；
-2. 检查 workload、model、GPU、seed、scheduling 与 observation；
-3. 检查 session death、从未足额的 session、首次足额后的 starvation、inventory drift 和 missing artifacts；
-4. 使用 C 双时钟行；仅历史 run 允许启发式对齐；
-5. 沿 one-session cycle 对齐 gateway、ingest、prefill、decode、reload、park；
-6. 将结论限制在证据实际支持的 scope。
+1. 先验证 terminal state、required artifact hashes、git provenance 与 evidence role。
+2. 检查 workload、model、GPU、initial context、scheduling mode、output cap 和 observation 配置。
+3. 检查 session death、RPC/client error、初始化超时、缺失或畸形 delivery records，以及已启用 KV 机制是否真正产生事件。
+4. 对齐 one-session cycle：gateway release、input processing、scheduler admission、KV reload/prefetch、prefill、decode、partial eviction。
+5. 分开解释 application release latency、service-RPC latency、engine iteration time、实际输出量和 output backlog；它们不可相互替代。
+6. 使用 `kv_events.log` 的 `E/B/L/R` 事件解释 eviction、host-backing frontier、load issue 与 completion；host coverage gap 后的部分必须按 recomputation 处理。
+7. 标记数字是实测、模拟器标定、线性外推还是冻结先验，并写清配置域。
 
-## Forbidden Inferences
+## Output Discipline
 
-- client miss=0 不等于系统健康；
-- conveyor 的 Step latency 不等于 GPU latency；
-- scheduler slice 不等于 CUDA execution duration；
-- 单次 smoke 不等于性能结论；
-- dirty 且没有 patch artifact 的 run 不等于可复现 formal evidence。
-- `legacy-unreconstructable` 和 `source-audit` 都不能支撑新的性能数字。
+单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要从 cadence green、单次 `deadline_met`、输出达到上限或 short output 单独推断 correctness、freshness 或 playback QoE。

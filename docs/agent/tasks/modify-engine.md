@@ -2,21 +2,20 @@
 
 ## Read Set
 
-1. `engines/AGENTS.md`
-2. 目标 arm 的 `AGENTS.md`
-3. `docs/system.md` 中对应机制
-4. `docs/agent/contracts.json`
-5. `docs/agent/dynamic-edges.json`
-6. `docs/agent/change-impact.json`
+1. 根 `AGENTS.md` 的 `Research Classification` 与 `Change Transactions`；
+2. 目标 evaluated system 最近一层 `AGENTS.md`；
+3. `docs/system.md`；
+4. `docs/agent/system-map.json`、`dynamic-edges.json`、`contracts.json` 与 `change-impact.json`；
+5. 目标 source 及其直接 runtime dependency。
 
-## Change Rules
+## Required Reasoning
 
-- engine 不 import `experiments`；runner 通过 path、argv 和 env 驱动它；
-- 修改 private vLLM API 前先读 `infra/env/AGENTS.md` 的 upgrade audit；
-- 新 patch 必须有门控、加载确认、失败硬终止和可观察事件；
-- 不复制 worker observation producer；
-- 只实现尚未跑实验时，不修改 finding 的性能状态。
+- 先判定改动是 research mechanism、system requirement 还是 implementation choice。
+- 若修改 KV 管理，分别说明 session activity、request ownership、GPU block placement、host backing coverage 与 transfer state 如何变化。
+- 若修改进程、IPC、utility command 或 monkeypatch，必须同步更新 system map、dynamic edges 和 producer/consumer contract tests。
+- 不得因存在一个新开关、补丁或代码差异就把它提升为 paper mechanism。
+- 未经新 run 验证的实现优化不得提前改变 `docs/findings.md` 中的性能状态。
 
 ## Verification
 
-至少运行 change-impact 中命中的单元测试和 `tests/test_documentation.py`。涉及 GPU/EngineCore 语义时，CPU 测试不能代替 diagnostic run；run 必须登记源码重建能力。
+执行 `change-impact.json` 指向的定向测试，随后从根目录运行 `python -m pytest`。若变更影响 artifact schema，必须同时更新 parser、Perfetto exporter、runner required artifacts 和 tests。

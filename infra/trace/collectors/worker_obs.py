@@ -1,6 +1,6 @@
 """Worker-process observation producers, shared by every experiment's worker.
 
-One observation mechanism for all arms: baseline and conveyor import THIS
+One observation mechanism for all evaluated systems: baseline and Conveyor import THIS
 module for the per-request event log (``per_request.log``) and the engine
 stat logger (``kv.log`` / ``per_iteration.log``). A worker must never carry
 its own copy — the two copies this module replaced had already drifted
@@ -61,7 +61,7 @@ def stat_logger_classes() -> list | None:
     - kv.log: throttled scheduler snapshots (kv usage, running/waiting,
       cumulative preemptions). Period from ``OMNI_STATLOG_PERIOD_S`` —
       the runners set 0.2s = 10 samples/tick, matching the GPU sampler's
-      rationale (1 Hz was too coarse for the park sawtooth).
+      rationale (1 Hz was too coarse for the eviction sawtooth).
     - per_iteration.log (if ``PERITER_LOG`` set): engine-step composition,
       one line per step, no throttle.
 

@@ -1,193 +1,192 @@
 # Experiments
 
-## Purpose
+## Evaluation Readiness
 
-本文是实验语义和比较协议的唯一 owner：定义配置域、实验 arms、controlled variables、指标、运行纪律、证据等级和 Metronome baseline 角色。当前结果与机制状态只在 [`Findings`](findings.md) 维护，本文不根据某次 run 改写协议。
+当前仓库可以运行 Upstream Metronome、matched Metronome baseline 和 Conveyor，但还不能直接写论文 Evaluation。最重要的阻塞项是 matched baseline 每段配置的 decode cap 为 \(M+8\)，而 Conveyor 为 \(M\)。两者接收相同 offered input，当前却不执行相同 decode work。正式比较必须在独立实验事务中统一该行为、保留新 manifest，并重新运行全部论文数据；本次术语清理不静默改变已有执行结果。
+
+当前 Qwen2.5-Omni runner 只产生 Thinker 文本 token，不含 Talker、Code2Wav 或 PCM 输出。因此以下 output cap 与交付计数都是 serving-harness 变量，不能解释为音频播放率或最低媒体交付要求。
 
 ## Configuration Domains
 
+项目区分三个配置域：
+
+| 配置域 | 用途 | 证据地位 |
+| --- | --- | --- |
+| Abstract Model | 使用 \(T,D,M,N,K\) 表达周期、延迟目标、输出上限、会话数和保留前缀 | 问题与资源模型 |
+| Measured Stack | 本仓锁定模型、runtime、device 和 client 的真机实例 | 当前可运行、结论必须带域限定 |
+| Analytical Reference Scenario | 用于多资源 roofline 或外部硬件 profile 的参数场景 | 只有校准与验证后才能支持外推 |
+
+Analytical Reference Scenario 不因计划写入论文就自动成为实测配置。线性外推必须明确标为推导，不能称作已经验证的 roofline。
+
 ### Measured Stack
 
-当前真机测量栈的可执行常量在 `experiments/shared/`，arm-private 行为在各自 `config.py`。下表明确区分 delivery quota 与实际生成行为：
+| 参数 | 当前值 |
+| --- | --- |
+| 模型 | Qwen2.5-Omni-7B |
+| 执行路径 | Thinker text only |
+| 运行时 | vLLM 0.23 |
+| 设备 | RTX 3090, 24 GiB, PCIe Gen3 |
 
-| 配置项 | 共享负载值 | Baseline 行为 | Conveyor 行为 |
-| --- | ---: | ---: | ---: |
-| 模型 | Qwen2.5-Omni-7B | 共享 | 共享 |
-| 运行时 | vLLM 0.23 | 共享 | 共享 |
-| 设备 | RTX 3090 | 共享 | 共享 |
-| 会话周期 | 2000 ms | 每周期推进 | 每会话仍为 2000 ms；gateway 在周期内分 slot |
-| 默认会话数 | 8 | 共享 | 共享 |
-| 交付配额 `tpt` | 25 token/tick | gateway 每 tick 消费 25 | gateway 每 tick 消费 25 |
-| 实际每段生成量 | 由实验臂决定 | `tpt + 8 = 33` | 精确 `tpt = 25` |
-| 每 token KV 字节数 | 56 KiB | 共享 | 共享 |
+model revision、依赖锁和 GPU index 仍以 executable config 与 run manifest 为准；表中设备是当前证据域，不是系统成立的硬件要求。
 
-baseline 的 33 token 是历史 harness 行为，不是负载要求；它会造成库存漂移，但为了保持对照语义仍需显式记录。conveyor 必须精确生成 delivery quota，否则交付流水线会无界积压。
+### Measured Workload
 
-如表中数值与代码不一致，以评审确认后的协议修改为准，并在同一 change transaction 中同步 `experiments/shared/`、arm config 和配置测试；不得静默让文档或代码单方面成为新版本。
+| 参数 | 当前值 | 语义 |
+| --- | --- | --- |
+| 周期 \(T\) | 2000 ms | 同一会话相邻两次应用级 release 的间隔 |
+| 默认会话数 | 8 | 单个 run 的默认并发点，不是容量结论 |
+| run horizon | 600 s | 默认持续时间 |
+| 输入块 | 20 ms PCM chunks，由 client 在一个周期内累计 | offered input |
+| 每周期输出 token 上限 \(M\) | 25 | harness cap 和 gateway consumption limit，不是最低交付量 |
+| measured context growth | 78 token/period | 当前栈标定值，用于容量模型，不驱动 client |
+| 单 token KV bytes | 56 KiB | 当前模型和精度下的几何 |
 
-### Paper Configuration
+这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。文档测试校验表格与代码一致。
 
-论文外推配置使用 Qwen3-1.7B 的 112 KiB/token 标定口径和 480 ms tick，用于公式、roofline 与文本代理负载讨论，不进入当前真机主对比。它与 measured stack 是两套 profile：
+### Executed Decode Difference
 
-- 不能把 480 ms 写成真机 runner 的周期；
-- 不能把 112 KiB/token 用于 Qwen2.5-Omni-7B retained run；
-- 不能把模拟器或线性外推数字写成真机实测；
-- 引用时必须显式标明 `measured`、`paper extrapolation`、`simulator calibration` 或 `frozen prior`。
+| Evaluated system | offered input | gateway consumption cap | worker per-segment decode cap | 当前比较资格 |
+| --- | --- | --- | --- | --- |
+| Upstream Metronome | 当前音频输入 | \(M\) | 上游行为 | 参考，不作主要公平对比 |
+| matched Metronome baseline | 与 Conveyor 同源 | \(M\) | \(M+8\) | 不合格；需修复并重跑 |
+| Conveyor | 与 matched baseline 同源 | \(M\) | \(M\) | 可做机制诊断，暂不可作最终跨系统结论 |
 
-## Experimental Arms
+两个当前 first-party worker 都设置 `ignore_eos=True`。因此在正常 measured path 上，生成不会因 EOS 提前结束：matched Metronome baseline 运行到每段 \(M+8\) 的 cap，Conveyor 运行到每段 \(M\) 的 cap；只有 model-length 边界或异常终止等例外会提前结束。33-vs-25 的差异会改变 decode work，并可能造成未交付输出 backlog，不能只把它描述为交付层的小误差。这个 harness 不提供模型自然短输出或 learned silent-token behavior 的证据。
 
-### Baseline
+## Evaluated Systems
 
-`PROTOCOL-BASELINE` 使用 metronome 式 vLLM-realtime 栈：
+### Upstream Metronome
 
-- 每个 session 是持续的 resumable request；
-- context 和 GPU KV residency 持续增长；
-- gateway 以全局 tick 推进会话；
-- `vanilla` 使用 pin 内 worker，保留上游参考行为和上游 logger；
-- `paringest` 使用本仓 worker，修复 input processing 并加入与 conveyor 统一的观测；它是正式跨臂测量使用的 baseline target；
-- seed run 使用最小 engine fix 刷新被上游冻结的 `session.max_tokens`，这不是 conveyor 机制。
+Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配。
 
-baseline 允许为公平性、可观测性和上游 bug 修复而变化，但每次变化必须说明为什么不改变被比较语义。不能把“baseline”理解成永远禁止修复 silent failure 的旧快照。
+### Matched Metronome Baseline
+
+`experiments/baseline` 的默认 `paringest` 配置是正式对比候选。它保留 Metronome 的 resumable request 和默认 GPU KV residency，只修复 host-side input processing、initial-context 场景下冻结的 `session.max_tokens`，并接入共同 observation producer。`vanilla` 和 `paringest` 是 artifact/implementation identifiers，不是论文中的两个系统贡献。
 
 ### Conveyor
 
-`PROTOCOL-CONVEYOR` 与正式对比使用的 `paringest` baseline 共享模型、workload、client 和 observation producer，只改变以下机制；直观定义见 [`System`](system.md#experimental-arms)：
+Conveyor 的可执行配置包含以下研究开关和实现控制：
 
-- gateway 错开相位（phase staggering）：把会话发射分散到周期内；
-- worker 取现货交付（take-from-stock delivery）：立即返回上一周期库存；
-- EngineCore KV 部分释放（park）：回收可由主机镜像恢复的闲置尾部；
-- 可选的 KV 预取（prefetch）：在请求进入引擎前提前搬回尾部。
-
-KV 部分释放 run 当前要求 synchronous scheduling；相应对照如果用于量化该机制，也必须钉住同一 scheduling mode，避免一次比较同时改变两个变量。
-
-### Injection Status
-
-注入负载的冻结先验是：Poisson 到达均值 30 s、LogNormal 长度中位 512 token、40% cancellation。它们属于未来联合协议的输入分布，不表示当前 runner 已经执行 injection producer。
-
-在 injection 端到端接入以前，项目可以验证 foreground、KV lifecycle 和 capacity 机制，但不能做以下主张：
-
-- foreground 与 injection 的最终联合吞吐；
-- cancellation 对真实后台结果的端到端收益；
-- injection latency distribution；
-- 前后台 admission policy 的最终性能。
-
-## Fairness Contract
-
-两臂直接比较时必须共享：
-
-| 受控变量 | 可执行权威 |
-| --- | --- |
-| Model ID、revision、KV geometry | `experiments/shared/model.py` |
-| Tick、sessions、duration、delivery quota、audio chunk | `experiments/shared/workload.py` |
-| Device、ports、worker Python、sampling period | `experiments/shared/platform.py` |
-| Client implementation 和输入音频 | Metronome pin + runner command |
-| Observation producer 和时钟语义 | `paringest` baseline 与 conveyor 共用 `infra/trace/collectors/`；vanilla 保留上游观测，只作参考 |
-| Warm-start barrier semantics | 两臂 worker/runner 的对应实现 |
-
-arm-private config 只包含真正被比较的行为，例如 mode、slot、`park`、`prefetch` 和 scheduling mode。worker 的引擎参数由 runner 必填；gateway 虽保留独立启动所需的 CLI fallback，受管 run 一律显式传入协议值。runner 把最终展开值写进 manifest，运行证据不从进程内 fallback 反推配置。
-
-若一次 smoke 两臂使用不同 seed、GPU 或外部负载条件，它们只能证明各自迁移后可运行，不能构成跨臂对照。
-
-## Workload Protocol
-
-### Fresh Process Per Point
-
-每个数据点重新启动 worker、EngineCore、gateway 和 client。长活进程顺序扫点会继承 KV、allocator、cache 和 host 状态，形成 sweep contamination。
-
-同一宿主上的仓库实验不得并行运行：两臂共享固定端口/GPU，pinned client shard 还通过未按 run ID 隔离的 `/tmp/sfd_<index>.json` 汇总结果；重叠运行会发生端口冲突或互删输出。受管 workflow 在启动 client 前删除本次 shard 集合和 controller aggregate 的旧文件，要求每个 shard 及 controller 重新生成结果，并在所有退出路径清理；直接绕过 runner 不具备这条新鲜度保证。
-
-### Warm Start
-
-seed 表示请求进入测量时已经拥有 context。全部 session 的 seed prefill 完成后，gateway/client 才能开始 tick；seed output 不进入 delivery inventory。warm-start 阶段不计作普通 tick，也不能与 KV 部分释放交错。任何 `warm-start barrier timed out` 日志都是 validation failure，即使 worker 随后写出了 ready file。详细状态语义见 [`System`](system.md#warm-start)。
-
-### Phase
-
-输入 phase 必须由协议显式控制或记录。关闭错开相位时，相同音频同步进入多路会话还可能触发 prefix-cache 去重，制造虚高容量；任何此类运行必须在 manifest 和 finding scope 中说明。
-
-### Repetition
-
-主结果点要求乱序重复至少三次并报告中位数，同时保留每次 run 的离散度。单次 smoke、故障复现和语义验证可以作为 diagnostic evidence，但不能自动升级为正式性能结论。
-
-## Metric Semantics
-
-| 指标 | 定义 | 禁止误用 |
+| 配置 | 类型 | 当前接口 |
 | --- | --- | --- |
-| `deadline_met` | conveyor 按实际交付量定义；pin baseline 的同名字段仍只比较 `gpu_ms` 与 budget，不能作为 correctness gate | 正式 paringest baseline 由 worker `delivery` 记录和 runner validation 检查；首次足额前属于 TTFA，但每个会话必须在 run 内至少足额一次，之后任何欠额都是 starvation |
-| TTFA | 第一个非 seed、非空交付；取现货交付包含固有 pipeline latency | 不能用旧的“首个 Step 返回”口径 |
-| Client latency | transport/Step latency | conveyor 下不包含 GPU 工作，不能当计算延迟 |
-| Tick-to-prefill | gateway/worker 时钟对齐后的 input 到 prefill | 旧 run 的启发式对齐必须标记偏差 |
-| Content freshness | 生成内容与对应输入的逻辑距离 | cadence 正常不代表 freshness 正常 |
-| Inventory depth | 已生成未交付 token | 应长期有界；斜率不为零即 drift |
-| KV occupancy | pool 已使用比例 | 必须结合 per-session residency 和 starvation |
-| Schedulable concurrency `N*` | 在定义的 deadline/freshness/health gates 下可持续的最大 `N` | 不能只用 GPU utilization 或短 run 外推 |
+| release-offset scheduling | research mechanism | gateway `--slots` |
+| partial KV eviction, fixed-tail mode | mechanism experiment | `--evict-tail-blocks` |
+| partial KV eviction, retained-prefix mode | main mechanism configuration | `--retained-prefix-blocks` |
+| KV prefetching | research mechanism candidate | `--prefetch push` |
+| synchronous scheduling | matched-control requirement for current eviction implementation | `sync_scheduling` |
+| no-wait `Step` | implementation choice | Conveyor worker behavior |
 
-silent failure 判读必须联合使用 client、worker、EngineCore 和 trace。client miss=0 不能覆盖 session death、stale content、inventory drift 或 irreversible starvation。
+KV eviction 当前要求 synchronous scheduling，以避免 speculative engine iteration 与 block free 竞态。评估逐出机制时，control configuration 必须钉住相同 scheduling mode；否则一次比较同时改变两项因素。
 
-## Saturation and Acceptance
+## Initial-Context Preloading
 
-capacity saturation 由 KV occupancy、re-admission、starvation 和长期 backlog 共同判定；deadline saturation 由完工时刻逐 tick 后移或 delivery failure 判定。GPU utilization 不是任一边界的充分条件。
+`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。全部 initial-context prefills 完成后 runner 才开始周期输入；初始化产生的单 token 不进入输出交付缓冲。
 
-一个 run 至少满足以下条件才能进入 evidence registry：
+Conveyor 在 initialization barrier 期间暂停 automatic KV eviction，并在 barrier 结束时只解除暂停。matched baseline 使用独立 engine fix 刷新后续 segment 的 `session.max_tokens`。任何 `initialization barrier timed out` 日志都使 run validation 失败。
 
-1. `status.json` 为终态；
-2. required artifacts 全部存在且非空；
-3. issue scanner 没有被 exit code 掩盖，并已检查 Step error、session death、client health、从未足额的会话与首次足额后的 short delivery；
-4. manifest 足以恢复配置、命令、软件和模型 revision；
-5. 与比较对象的 controlled variables 一致，或明确标为不可比较；
-6. finding 所依赖的观测事件真实出现；
-7. 证据等级和 source provenance 满足下一节要求。
+这项设置是 workload state construction，不是研究机制。论文实验应报告 initial context length，而不是把它写成系统设计。
 
-## Evidence Levels
+## Measurement Semantics
 
-### Formal Evidence
+### Repository Health Gates
 
-formal evidence 可以支撑论文性能、容量和跨臂主张，要求：
+以下条件可以直接判定 run 无法作为证据：
 
-- clean worktree；
-- 运行 commit、third-party pin、模型 revision、命令和配置完整；
-- protocol-compatible comparison；
-- validation 通过；
-- 需要重复的结果完成规定 repetitions；
-- exact run 通过 `EVIDENCE-*` alias 登记，而不是写入人类 prose。
+- process、worker session 或 service RPC 出错；
+- client 没有收到周期事件，或 client artifact 报错；
+- initialization barrier 超时；
+- manifest、required artifact、hash 或 terminal status 不完整；
+- 启用 KV eviction 或 prefetch 却没有对应 `E` 或 `L trigger=prefetch` 事件；
+- 日志语法损坏，无法解析实际交付量或时序。
 
-### Diagnostic Evidence
+### Implementation Diagnostics
 
-diagnostic evidence 可以支撑机制语义、故障指纹和根因探索。它允许 failed run 或 dirty worktree，但 dirty 运行必须保存可重建的 binary diff、untracked source bundle 和 hash。没有 patch artifact 的历史 dirty run必须在 registry 中标为 `legacy-unreconstructable`，不能称作 formal。
+以下字段只用于诊断，不能单独充当论文 correctness 或 QoE gate：
 
-### Experiment Records
+| 字段 | 当前含义 | 禁止解释 |
+| --- | --- | --- |
+| protobuf `tokens_per_tick` / internal `tpt` | 继承的 wire identifier，项目把它解释为 output cap \(M\) | 每周期必须交付的 token 数 |
+| `deadline_met` | Upstream Metronome 与 Conveyor 当前含义不同；Conveyor 仅表示 service RPC 是否在 period 内返回 | 模型响应完成、音频未卡顿 |
+| `deliv` | 某次 release 实际从未交付输出缓冲取出的 token 数；可以为 0 到 \(M\)，且不等于 \(m_{i,k}\) | 单独等于 content freshness，或归属于当前输入 |
+| `output_backlog` | 已生成未交付 token 数 | 固定阈值即论文 SLO |
+| `gpu_ms` | worker 返回的实现字段；无等待 Conveyor 路径不包含本次 GPU 工作 | 统一的端到端 latency |
+| large prefill | 可能发生重算的诊断指纹 | 未结合 host coverage 就证明 reload 失败 |
 
-新实验过程使用结构化 record，记录 question、configuration profile、change、result、verdict、evidence alias、affected findings、supersedes 和 remaining uncertainty。旧的 append-only 日志已冻结在 [`legacy-experiment-log.md`](agent/legacy-experiment-log.md)，只用于历史追溯。
+单次 `deliv` 少于 \(M\) 不再使 run 自动失败。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务落后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
 
-## Metronome Baseline
+## Planned EuroSys Evaluation
 
-`third_party/metronome/` 是只读 git-subrepo pin，精确 commit 以其 `.gitrepo` 为准。它在本项目中有四个角色：
+正式 Evaluation 建议围绕六个 reviewer question 组织；每个问题对应一个主图或表，而不是按代码模块罗列 microbenchmark。
 
-| 角色 | 含义 |
-| --- | --- |
-| 主 baseline | vanilla resumable-request serving，context 无界增长 |
-| 有损对照 | request recycling 或 in-engine sliding-window KV |
-| 正交机制 | AIMD admission control，处理 capacity 之外的过载 |
-| 实验脚手架 | gateway、proto、client 与 worker 的来源 |
+### Q1: Does KV Capacity Limit Concurrency Before Compute?
 
-必须继承的两条方法论是 fresh process per point，以及显式控制 phase；但本项目不继承 pin 中已经被论文订正的旧归因。
+- 在统一 decode cap 后，对 matched baseline 扫描 \(N\) 与 context length；
+- 同时报告 GPU KV occupancy、每周期 busy time、SM utilization、HBM bandwidth、queue state 和 session liveness；
+- 展示容量边界出现时仍有多少 compute headroom；
+- 将 host-side feature extraction 隔离，避免把工程拥堵误归因于 KV capacity。
 
-引用纪律：
+主结果应是 capacity frontier，而不是某个 baseline 队列故障的复现。
 
-- 归因以 paper 的 “memory cliff, not a compute drift” 为准；repo 旧笔记中的 attention drift 不作为现行结论；
-- 上游等待帽读数同时混合 compute-bound 与 memory-bound，不能单独定性；
-- 可引用的 `N*`、显存外推和论文配置必须说明设备与方法，不能拿来校准本仓消费卡数字；
-- Metronome 没有覆盖真实 injection producer 和应用层 cancellation；proto 中存在字段不等于协议已实现；
-- pin 的升级和只读规则由 `third_party/AGENTS.md` 持有。
+### Q2: How Much Concurrency Does Conveyor Recover?
 
-## Legacy Identifiers
+- 在同模型、输入、decode cap、scheduler mode 和 observation 下扫描 \(N\)；
+- 报告 matched baseline 与 Conveyor 的可持续区间、GPU KV occupancy 和每会话 GPU-resident blocks；
+- 同时报告 host memory footprint、H2D/D2H bytes 和 context-length sensitivity；
+- 分开给出测量区间与资源模型预测，不用短 run 线性外推代替稳定性实验。
 
-跨文档引用必须使用完整命名空间：
+最大可调度并发的正式 gate 必须在 latency/QoE 指标确定后再冻结。
 
-```text
-FINDING-H7     当前发现
-CLAIM-C1       论文主张
-EXP-E1         历史实验代号
-EVIDENCE-H7-*  精确证据 alias
-```
+### Q3: What Is the Latency Cost of Capacity Expansion?
 
-旧 `E0–E6` 只属于历史语境，其中 `EXP-E1` 对应当前 baseline 病理实验；其他映射保留在 git 历史和 legacy experiment log，不再把裸 `E1` 当成现行实验名。
+- 从 input release 分解 feature extraction、scheduler admission、on-demand reload、prefill 和 decode；
+- 报告每会话分布和 tail，而不仅是聚合均值；
+- 对 context length、retained prefix \(K\) 和 session count 做敏感性分析；
+- 若加入完整音频输出链，再报告 jitter-buffer consumption 或 playback stall；当前 Thinker-only 路径不得代报。
+
+### Q4: Which Mechanism Provides Which Benefit?
+
+采用正交消融：
+
+1. matched baseline；
+2. 仅 release offsets；
+3. release offsets + host backing + partial eviction；
+4. 加 KV prefetch；
+5. retained-prefix \(K\) sweep；
+6. matched synchronous-scheduling control。
+
+release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要分别测量；后者不能只由机制直觉推断。
+
+### Q5: Does the Resource Model Generalize?
+
+- 标定 KV bytes/token、decode/prefill compute、HBM traffic 和 PCIe copy throughput；
+- 用这些 primitive 构建 capacity / compute / restore-bandwidth roofline；
+- 在至少一个额外 GPU 或不同互连 profile 上验证预测误差；
+- 清楚区分实测点、模拟器标定和 analytical scenario。
+
+### Q6: What Are the Overheads and Failure Boundaries?
+
+- host-backing CPU memory 与 D2H overhead；
+- partial eviction 和 prefix-match bookkeeping overhead；
+- prefetch 的命中、迟到、capacity deferral 和 LRU eviction；
+- host coverage 缺口引发的 recomputation；
+- 长时间稳定性、context-length limit、session churn 和异常路径。
+
+## Run Protocol
+
+每个正式数据点至少要求：
+
+1. clean source 和唯一 commit；
+2. fresh worker、固定 model revision 和环境 profile；
+3. 完整 manifest，记录 expanded config；
+4. 足够长的 steady-state window，排除 warmup 与 initialization；
+5. 重复运行、方差或置信区间；
+6. 成功的 terminal `status.json` 和全部 required artifact hashes；
+7. finding card 明确配置域、指标定义、样本数和限制。
+
+成功进程退出不等于成功 run；验证规则由 runner 和 `results/README.md` 执行。
+
+## Evidence Acceptance
+
+论文主结果只能使用 clean-source formal evidence。dirty run 可用于诊断，但必须保留可重建 patch artifact；缺少原始 artifact 的历史数字只能标为 legacy-unreconstructable，不能在新图中伪装为可复算结果。
+
+旧 `results/` 与旧 manifest 使用产生它们时的 schema，不改写。新 run 使用 `kv_events.log`、`initial_context_tokens`、`output_token_cap`、`retained_prefix_blocks` 等当前接口。

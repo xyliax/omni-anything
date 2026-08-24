@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from .bundle import ROOT, _config_value, build_bundle, resolve_run
+from .bundle import ROOT, build_bundle, resolve_run
 from .parse import is_prefill
 
 
@@ -28,8 +28,8 @@ METADATA_SCHEMA_VERSION = 7
 # Fallback duration for the final or isolated engine step (median decode step).
 DEFAULT_STEP_S = 0.021
 SEGMENT_GAP_S = 0.5
-# Prefills beyond this are not per-tick chunks: warm-start seeding or (after a
-# park) suspect recompute of a region that should have reloaded from CPU.
+# Prefills beyond this are not normal periodic chunks: initial-context preloading or (after a
+# eviction) suspect recompute of a region that should have reloaded from CPU.
 LARGE_PREFILL_TOKENS = 400
 
 
@@ -165,8 +165,8 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
         for session, tokens, encoder in entries:
             if is_prefill(tokens, encoder):
                 # Chunk-sized prefills (~50-200 tok) are the healthy per-tick
-                # shape; anything larger is either warm-start seeding or a
-                # parked/evicted region being RECOMPUTED instead of reloaded —
+                # shape; anything larger is either initial-context preloading or a
+                # partially evicted/evicted region being RECOMPUTED instead of reloaded —
                 # flag it so a broken reload path shows on the timeline.
                 name = (
                     f"sched prefill LARGE ({tokens} tokens)"
@@ -194,7 +194,7 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
         next_start = steps[index + 1][0] if index + 1 < len(steps) else None
         if next_start is None or next_start - start > SEGMENT_GAP_S:
             builder.counter(1, start + DEFAULT_STEP_S, "batch (concurrent sessions)", {"sessions": 0})
-    for session, time_s in (bundle.get("starve") or {}).items():
+    for session, time_s in (bundle.get("last_token_growth") or {}).items():
         # honest label: this is simply the LAST time tokens grew — healthy
         # sessions get one at run end too; only an EARLY marker means starvation.
         builder.instant(1, int(session), time_s, "last token growth", {"session": int(session)})
@@ -225,30 +225,30 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                         {"ms": round((end - start) * 1000, 1)},
                     )
 
-    # KV management on the session lanes (park.log, exact epoch alignment):
-    # a PARK instant releases the session's grip and destroys its tail; the
+    # KV management on the session lanes (kv_events.log, exact epoch alignment):
+    # a KV EVICT instant releases the session's grip and destroys its tail; the
     # following "KV reload" slice is the CPU->GPU window on resume
     # (WAITING_FOR_REMOTE_KVS admission -> completion). A reload slice that
     # pushes into the compute slice — or a LARGE prefill instead of a reload —
     # is the mechanism failing on-screen.
-    for park in bundle.get("parks") or []:
+    for eviction in bundle.get("kv_evictions") or []:
         builder.instant(
             1,
-            park["session"],
-            park["time"],
-            f"PARK -{park['evicted']} blocks",
+            eviction["session"],
+            eviction["time"],
+            f"KV EVICT -{eviction['evicted']} blocks",
             {
-                "held": park["held"],
-                "evicted": park["evicted"],
-                "cpu_covered": park["cpu_covered"],
+                "owned_before": eviction["owned_before"],
+                "evicted": eviction["evicted"],
+                "host_backed": eviction["host_backed"],
                 "pool_usage_drop": round(
-                    park["usage_before"] - park["usage_after"], 4
+                    eviction["usage_before"] - eviction["usage_after"], 4
                 ),
             },
         )
     for reload_event in bundle.get("reloads") or []:
         # demand reloads sit on the resume critical path; prefetch loads are
-        # anonymous materializations that should land INSIDE the FE window —
+        # KV prefetches that should land INSIDE the FE window —
         # name them apart so the overlap (or its failure) reads on sight.
         kind = "KV prefetch" if reload_event.get("trigger") == "prefetch" else "KV reload"
         if reload_event["end"] is not None:
@@ -272,44 +272,54 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                 f"{kind} started (never completed)",
                 {"cpu_tok": reload_event["cpu_tok"]},
             )
-    for offload in bundle.get("offloads") or []:
+    for backing in bundle.get("host_backing") or []:
         builder.instant(
             1,
-            offload["session"],
-            offload["time"],
-            f"KV mirror ({offload['blocks']} blocks)",
-            {"blocks": offload["blocks"]},
+            backing["session"],
+            backing["time"],
+            f"KV host backing (+{backing['blocks']} blocks)",
+            {"blocks": backing["blocks"]},
         )
     if bundle.get("residency"):
         # per-session residency counters from the uniform sampler
-        # (residency.log, both arms): baseline shows the context-growth
-        # staircase, conveyor the park sawtooth — same track, same source.
+        # (residency.log, both evaluated systems): baseline shows the context-growth
+        # staircase, conveyor the eviction sawtooth — same track, same source.
         builder.process(4, "kv residency (blocks, sampled)")
         for time_s, entries in bundle["residency"]:
             for session, blocks in entries:
                 builder.counter(4, time_s, f"session {session}", {"blocks": blocks})
-    elif bundle.get("parks"):
+    elif bundle.get("kv_evictions"):
         # LEGACY fallback (runs predating residency.log): sawtooth sampled at
-        # park instants, three points per cycle: the grip just before release
+        # eviction instants, three points per cycle: the grip just before release
         # (upper envelope = context growth), the pinned floor just after
         # (held - evicted), and the restoration at reload admission
-        # (approximated by the preceding park's held).
-        builder.process(4, "kv residency (blocks, sampled at parks)")
+        # (approximated by the preceding eviction's held).
+        builder.process(4, "kv residency (blocks, sampled at evictions)")
         events: list[tuple[float, int, int]] = []
-        for park in bundle["parks"]:
-            events.append((park["time"], park["session"], park["held"]))
+        for eviction in bundle["kv_evictions"]:
             events.append(
-                (park["time"] + 0.001, park["session"], park["held"] - park["evicted"])
+                (eviction["time"], eviction["session"], eviction["owned_before"])
+            )
+            events.append(
+                (
+                    eviction["time"] + 0.001,
+                    eviction["session"],
+                    eviction["owned_before"] - eviction["evicted"],
+                )
             )
         for reload_event in bundle.get("reloads") or []:
             prior = [
-                p for p in bundle["parks"]
+                p for p in bundle["kv_evictions"]
                 if p["session"] == reload_event["session"]
                 and p["time"] < reload_event["time"]
             ]
             if prior:
                 events.append(
-                    (reload_event["time"], reload_event["session"], prior[-1]["held"])
+                    (
+                        reload_event["time"],
+                        reload_event["session"],
+                        prior[-1]["owned_before"],
+                    )
                 )
         for time_s, session, blocks in sorted(events):
             builder.counter(4, time_s, f"session {session}", {"blocks": blocks})
@@ -324,21 +334,8 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
         # the gap between the two tracks is the gRPC/lock segment.
         builder.thread(2, 1, "slot firings (gateway clock)")
         builder.thread(2, 2, "push clusters (worker-side)")
-        tpt = int(_config_value(bundle.get("manifest"), "tokens_per_tick") or 0)
-        # STARVED marks mirror the gateway's exemption: starvation counting
-        # begins at a session's first FULL (>= tpt) delivery — everything
-        # before that is take-from-stock pipeline ramp, not falling behind.
-        seen_full: set = set()
         for row in firings:
             delivered = row.get("deliv") or {}
-            starved = (
-                sorted(
-                    sid for sid, tok in delivered.items()
-                    if tok < tpt and sid in seen_full
-                )
-                if tpt else []
-            )
-            seen_full.update(sid for sid, tok in delivered.items() if tok >= tpt)
             builder.slice(
                 2,
                 1,
@@ -353,11 +350,6 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                     "delivered": {str(sid): tok for sid, tok in sorted(delivered.items())},
                 },
             )
-            if starved:
-                builder.instant(
-                    2, 1, row["time"], f"STARVED delivery x{len(starved)}",
-                    {"sessions": starved},
-                )
             builder.counter(
                 2, row["time"], "delivered tokens/firing",
                 {"tokens": sum(delivered.values())},

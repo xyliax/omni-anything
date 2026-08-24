@@ -24,20 +24,25 @@ def parser() -> argparse.ArgumentParser:
         "--duration", dest="duration_s", type=int,
         help="run duration in seconds (default: workload constant)",
     )
-    ap.add_argument("--seed-tokens", type=int, default=0, help="warm-start prefill tokens per session")
     ap.add_argument(
-        "--park-tail-blocks", type=int,
-        help="park primitive, fixed mode: destroy this many tail KV blocks per session per slice",
+        "--initial-context-tokens",
+        type=int,
+        default=0,
+        help="initial context length to preload per session",
     )
     ap.add_argument(
-        "--park-keep-blocks", type=int,
-        help="park primitive, quota mode: destroy everything beyond this resident floor "
-             "(overrides --park-tail-blocks)",
+        "--evict-tail-blocks", type=int,
+        help="fixed mode: evict this many tail KV blocks after a session becomes idle",
+    )
+    ap.add_argument(
+        "--retained-prefix-blocks", type=int,
+        help="retain this many GPU prefix blocks for an idle session "
+             "(overrides --evict-tail-blocks)",
     )
     ap.add_argument(
         "--prefetch", choices=("off", "push"),
-        help="KV prefetch: push = materialize the parked tail at chunk-push time so the "
-             "reload copy overlaps FE (requires park; default: off)",
+        help="KV prefetch: push = copy host-backed blocks into the GPU prefix cache at "
+             "input release (requires KV eviction; default: off)",
     )
     ap.add_argument("--gpu", type=int, help="GPU index to run on (default: the usual card)")
     return ap

@@ -1,25 +1,22 @@
-"""Anonymous KV load transport: move content blocks CPU->GPU outside any request.
+"""Transport adapter for copying prefetched KV blocks from host to GPU.
 
-The TRANSPORT layer of the materialization pattern (semantic layer:
-``omni_reload``; claim layer: vLLM's existing resume hash-match, untouched).
 Jobs enqueued here ride the stock ``SimpleCPUOffload`` load-event machinery —
 the same low-priority CUDA stream, event accounting, and preemption flush as
-demand reloads — so this module contains NO copy code of its own. What it
-owns is block lifecycle bookkeeping:
+on-demand reloads. This module contains no device-copy implementation of its
+own; it only adapts block and completion bookkeeping:
 
 - at enqueue the GPU destination blocks are already allocated (ref_cnt=1,
   hash stamped) and the CPU source blocks pinned (``touch``) by the caller;
 - ``build_connector_meta`` (wrapped) splices pending jobs into the step's
   load event under a SYNTHETIC id (``omni-prefetch-<n>``) — request ids only
   matter for completion reporting, the worker executes copies by event;
-- ``Scheduler._update_from_kv_xfer_finished`` (wrapped) strips synthetic ids
+- ``Scheduler._update_from_kv_xfer_finished`` (wrapped) removes synthetic ids
   from ``finished_recving`` BEFORE the original runs (it asserts every id is
   a live request — a synthetic id would crash it), then completes the job:
   register each block's hash into the GPU prefix cache (contents are on GPU
   only now — registering earlier would let a hash match claim garbage), then
   ``free_blocks`` both sides — the GPU blocks become cached-free (claimable
-  by resume, LRU-evictable under pressure: the graceful-degradation property
-  correctness relies on), the CPU pins are released.
+  by resume and LRU-evictable under pressure), and releases the CPU pins.
 
 Blocks belong to the cache, never to a request: a cancelled session, a
 chunk overtaking the copy, or pool pressure all degrade to "a cache entry
@@ -50,9 +47,7 @@ class _Job:
 
 
 def enqueue(gpu_blocks, cpu_blocks, gpu_pool, cpu_pool, on_done=None) -> None:
-    """Queue one anonymous CPU->GPU materialization; it joins the next
-    engine step's load event (steps flow every ~20ms at the operating
-    point, so the copy launches within one step)."""
+    """Queue one KV prefetch on the next engine iteration's load event."""
     _pending.append(_Job(gpu_blocks, cpu_blocks, gpu_pool, cpu_pool, on_done))
 
 

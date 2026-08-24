@@ -1,10 +1,8 @@
 """Conveyor run assembly: what is launched and what counts as an issue.
 
-Same shape as the baseline runner (commands, environments, and issue scanners
-live here; the chronological workflow is ``infra/run/workflow.py``). The differences
-are the mechanisms: the staggered gateway takes ``--slots`` and writes a
-per-firing tick log, the take-from-stock worker has no wait budget, and park
-runs inject the engine patch plus scan park.log for silent failures.
+Same shape as the matched Metronome runner. Conveyor adds release slots,
+partial KV eviction, and optional KV prefetch. New KV-management evidence is
+written to ``kv_events.log``.
 """
 
 from __future__ import annotations
@@ -44,29 +42,29 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
         str(config.max_model_len),
         "--max-num-seqs",
         str(config.max_num_seqs),
-        "--tpt",
-        str(workload.TOKENS_PER_TICK),
+        "--output-token-cap",
+        str(workload.OUTPUT_TOKEN_CAP),
         "--max-audio-chunks",
         str(workload.MAX_AUDIO_CHUNKS),
-        "--seed-tokens",
-        str(config.seed_tokens),
-        "--pre-seed-sessions",
-        str(config.sessions if config.seed_tokens else 0),
+        "--initial-context-tokens",
+        str(config.initial_context_tokens),
+        "--preload-sessions",
+        str(config.sessions if config.initial_context_tokens else 0),
         "--host-offload-gib",
         str(config.host_offload_gib),
     ]
     if config.kv_pool_gib is not None:   # optional exact-byte cap; default full pool
         cmd += ["--kv-pool-gib", str(config.kv_pool_gib)]
-    if config.sync_scheduling and not config.park_enabled:
-        cmd += ["--sync-scheduling"]   # control arm pinning; park implies it
+    if config.sync_scheduling and not config.kv_eviction_enabled:
+        cmd += ["--sync-scheduling"]
     if config.prefetch != "off":
         cmd += ["--prefetch", config.prefetch]   # push trigger lives in the worker
-    if config.park_enabled and config.park_keep_blocks is None:
-        # fixed-tail mode: worker-side timer + RPC. Quota mode is engine-side
-        # auto-park-on-stop and needs no worker knobs (see worker_environment).
+    if config.kv_eviction_enabled and config.retained_prefix_blocks is None:
+        # Fixed-tail mode uses a worker timer and RPC. Retained-prefix mode is
+        # applied at the engine's idle transition and needs no worker timer.
         cmd += [
-            "--park-tail-blocks", str(config.park_tail_blocks),
-            "--park-delay-s", str(config.park_delay_s),
+            "--evict-tail-blocks", str(config.evict_tail_blocks),
+            "--eviction-delay-s", str(config.eviction_delay_s),
         ]
     cmd += ["--ready-file", str(ready_file)]
     return cmd
@@ -95,28 +93,26 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
             run_dir / "scheduler_errors.log",
             run_dir / "residency.log",
         )
-    if config.park_enabled:
-        # The park primitive lives in the spawned EngineCore process; inject it
+    if config.kv_eviction_enabled:
+        # KV management lives in the spawned EngineCore process; inject it
         # by prepending the engine_patch dir AHEAD of the trace collector dir
         # (only the first sitecustomize on sys.path is imported — engine_patch's
         # chain-loads the trace collector when tracing is also on).
-        env["OMNI_PARK_PATCH"] = "1"
-        env["OMNI_PARK_LOG"] = str(run_dir / "park.log")
+        env["OMNI_KV_EVICTION"] = "1"
+        env["OMNI_KV_EVENTS_LOG"] = str(run_dir / "kv_events.log")
         if config.prefetch != "off":
-            # engine-side gate for omni_reload (the worker's --prefetch only
-            # arms the push trigger); prefetch requires park (validated), so
+            # Engine-side gate for omni_prefetch. The worker flag only enables
+            # the release-time trigger; validation ensures eviction is enabled.
             # the PYTHONPATH prepend below always covers it.
             env["OMNI_PREFETCH"] = "1"
             env["OMNI_PREFETCH_MIN_FREE"] = str(config.prefetch_min_free)
-        if config.park_keep_blocks is not None:
-            # quota mode: the engine parks each session the instant its slice
-            # stops (zero delay, no RPC) — everything beyond K blocks evicted.
-            env["OMNI_PARK_KEEP"] = str(config.park_keep_blocks)
-            if config.seed_tokens:
-                # warm start is state construction: hold auto-park until the
-                # barrier's finalize releases the hold without parking; the
-                # first normal segment stop establishes the parked posture.
-                env["OMNI_PARK_HOLD"] = "1"
+        if config.retained_prefix_blocks is not None:
+            # Retained-prefix mode evicts beyond K at the idle transition.
+            env["OMNI_RETAINED_PREFIX_BLOCKS"] = str(config.retained_prefix_blocks)
+            if config.initial_context_tokens:
+                # Initial-context preloading is state construction. Release the
+                # hold at the barrier without evicting there.
+                env["OMNI_HOLD_KV_EVICTION"] = "1"
         patch_dir = config.root / "engines" / "conveyor" / "worker" / "engine_patch"
         env["PYTHONPATH"] = os.pathsep.join(
             filter(None, [str(patch_dir), env.get("PYTHONPATH", "")])
@@ -135,8 +131,8 @@ def gateway_command(config: ConveyorConfig) -> list[str]:
         str(workload.PERIOD_MS),
         "--slots",
         str(config.slots),
-        "--tpt",
-        str(workload.TOKENS_PER_TICK),
+        "--output-token-cap",
+        str(workload.OUTPUT_TOKEN_CAP),
     ]
 
 
@@ -188,37 +184,23 @@ def collect_issues(store: RunStore) -> list[str]:
         step_errors = gateway_text.count("Step error:")
         if step_errors:
             issues.append(f"gateway reported {step_errors} Step error(s)")
-        # a slow-but-alive engine is equally cadence-green under take-from-stock:
-        # short deliveries only show as the gateway's [starve] lines.
-        starved = gateway_text.count("[starve]")
-        if starved:
-            issues.append(
-                f"{starved} slot firing(s) short-delivered tokens "
-                "(engine behind; see gateway.log '[starve]' lines)"
-            )
     issues.extend(scan_client_health(store.file("client.json")))
-    park_log = store.file("park.log")
-    if park_log.is_file():
-        # park enabled but never effective would masquerade as evidence (same
-        # shape as the dead-session and [starve] scans above).
-        # count park lines only: S/L/R lines flow whenever the mirror moves,
-        # so raw line count would pass a run where park itself never fired.
-        parks = 0
-        with park_log.open(encoding="utf-8", errors="replace") as handle:
+    kv_events_log = store.file("kv_events.log")
+    if kv_events_log.is_file():
+        evictions = 0
+        with kv_events_log.open(encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 fields = line.split()
-                if len(fields) > 1 and fields[1].startswith("req="):
-                    parks += 1
-        if not parks:
-            issues.append("park enabled but park.log recorded zero parks")
+                if len(fields) > 1 and fields[1] == "E":
+                    evictions += 1
+        if not evictions:
+            issues.append("KV eviction enabled but kv_events.log recorded zero evictions")
         elif worker_log.is_file():
-            # refusals (incl. unknown request) are normal per-cycle outcomes;
-            # only RPC transport failures are never expected.
-            park_errors = worker_log.read_text(
+            eviction_errors = worker_log.read_text(
                 encoding="utf-8", errors="replace"
-            ).count("RPC failed")
-            if park_errors:
-                issues.append(f"{park_errors} park RPC failure(s) (see worker.log)")
+            ).count("KV eviction s")
+            if eviction_errors:
+                issues.append(f"{eviction_errors} KV-eviction RPC failure(s) (see worker.log)")
     manifest = store.file("manifest.json")
     manifest_config: dict[str, Any] = {}
     if manifest.is_file():
@@ -235,16 +217,15 @@ def collect_issues(store: RunStore) -> list[str]:
     workload_config = manifest_config.get("workload", {})
     if isinstance(workload_config, dict):
         sessions = workload_config.get("sessions")
-        quota = workload_config.get("tokens_per_tick")
+        output_cap = workload_config.get("output_token_cap")
         if (
             isinstance(sessions, int)
             and not isinstance(sessions, bool)
             and sessions > 0
-            and isinstance(quota, int)
-            and not isinstance(quota, bool)
-            and quota > 0
+            and isinstance(output_cap, int)
+            and not isinstance(output_cap, bool)
+            and output_cap > 0
         ):
-            full_sessions: set[int] = set()
             malformed_delivery = False
             tick_log = store.file("gateway_ticks.log")
             if tick_log.is_file():
@@ -283,20 +264,11 @@ def collect_issues(store: RunStore) -> list[str]:
                     ):
                         malformed_delivery = True
                         continue
-                    full_sessions.update(
-                        session for session, count in delivered if count >= quota
-                    )
             if malformed_delivery:
                 issues.append("malformed conveyor delivery record in gateway_ticks.log")
-            expected_sessions = set(range(1, sessions + 1))
-            never_full = expected_sessions - full_sessions
-            if never_full:
-                issues.append(
-                    f"{len(never_full)} conveyor session(s) never reached full delivery"
-                )
-    if manifest.is_file() and park_log.is_file():
-        # same shape as the zero-park scan: a requested prefetch that never
-        # materialized anything would masquerade as evidence. Only L lines
+    if manifest.is_file() and kv_events_log.is_file():
+        # A requested prefetch with no L issue event would masquerade as evidence.
+        # Only L lines
         # count — R-only would mean completions without issues (impossible),
         # and demand L lines flow regardless of the mechanism.
         engine = manifest_config.get("engine", {})
@@ -304,21 +276,19 @@ def collect_issues(store: RunStore) -> list[str]:
             engine = {}
         if engine.get("prefetch", "off") != "off":
             prefetched = 0
-            with park_log.open(encoding="utf-8", errors="replace") as handle:
+            with kv_events_log.open(encoding="utf-8", errors="replace") as handle:
                 for line in handle:
                     parts = line.split()
                     if len(parts) > 1 and parts[1] == "L" and "trigger=prefetch" in line:
                         prefetched += 1
             if not prefetched:
-                issues.append("prefetch enabled but park.log recorded zero prefetch loads")
+                issues.append("prefetch enabled but kv_events.log recorded zero prefetch loads")
     return issues
 
 
 def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
     run_dir = config.output_root / run_id
     ready_file = run_dir / ".worker-ready"
-    client_env = os.environ.copy()
-    client_env["FD_PHASE_STAGGER"] = "1"
     return RunPlan(
         experiment=config.experiment_name,
         run_id=run_id,
@@ -356,7 +326,6 @@ def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
             tuple(client_command(config, run_id)),
             "client.txt",
             cwd=config.metronome_root,
-            env=client_env,
         ),
         client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
         client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",

@@ -8,7 +8,7 @@ named profiles so later experiments can use a different stack without weakening 
 
 | Profile | Purpose | Used by | Status |
 | --- | --- | --- | --- |
-| `cuda13_vllm023` | CUDA 13 Python stack, vLLM 0.23, PyTorch/CUDA analysis dependencies, and Metronome gateway | baseline & conveyor（全部真机 run） | Implemented and locked |
+| `cuda13_vllm023` | CUDA 13 Python stack, vLLM 0.23, PyTorch/CUDA analysis dependencies, and Metronome gateway | matched Metronome baseline 与 Conveyor（全部真机 run） | Implemented and locked |
 
 The filesystem represents implemented environments only, so there is currently one directory under
 `profiles/`.
@@ -30,8 +30,8 @@ edits `third_party/`:
 
 ```text
 .venv-vllm023/              Python environment and resolved pip freeze
-.build/metronome-gateway    built Go gateway (baseline arm, verbatim from the pin)
-.build/conveyor-gateway     built Go gateway (conveyor arm, staggered fork)
+.build/metronome-gateway    built Go gateway (upstream Metronome, verbatim from the pin)
+.build/conveyor-gateway     built Go gateway (Conveyor's release-offset fork)
 .tools/                     optional repository-local Go toolchain
 ```
 
@@ -70,7 +70,7 @@ its immutable model revision once in `experiments/shared/model.py`. Do not silen
 The stack monkeypatches and forks private engine internals. Before bumping the vLLM version,
 re-audit every item against the new source:
 
-1. `engines/*/worker/stream_server.py` — the paringest and conveyor copies of
+1. `engines/*/worker/stream_server.py` — the paringest and Conveyor copies of
    `AsyncLLM._add_streaming_input_request` (second-order fork of a private API).
 2. `engines/conveyor/worker/engine_patch/sitecustomize.py` — every wrapped symbol:
    `EngineCore` utility dispatch, `Scheduler._handle_stopped_request` /

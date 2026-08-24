@@ -97,24 +97,24 @@
       "id": "kv-state-registry",
       "kind": "runtime-state",
       "path": "engines/conveyor/worker/engine_patch/omni_state.py",
-      "entrypoints": ["Registry", "SessionKV", "Classification"]
+      "entrypoints": ["Registry", "SessionKVControl", "BlockCoverage"]
     },
     {
-      "id": "kv-park-patch",
+      "id": "kv-eviction-patch",
       "kind": "runtime-monkeypatch",
-      "path": "engines/conveyor/worker/engine_patch/omni_park.py",
-      "entrypoints": ["apply", "_park_request"]
+      "path": "engines/conveyor/worker/engine_patch/omni_evict.py",
+      "entrypoints": ["apply", "_evict_idle_kv"]
     },
     {
-      "id": "kv-reload-patch",
+      "id": "kv-prefetch-policy",
       "kind": "runtime-monkeypatch",
-      "path": "engines/conveyor/worker/engine_patch/omni_reload.py",
-      "entrypoints": ["apply", "reload_kv", "kv_state"]
+      "path": "engines/conveyor/worker/engine_patch/omni_prefetch.py",
+      "entrypoints": ["apply", "prefetch_kv", "kv_state"]
     },
     {
-      "id": "kv-transfer-patch",
+      "id": "kv-prefetch-transport",
       "kind": "runtime-monkeypatch",
-      "path": "engines/conveyor/worker/engine_patch/omni_transfer.py",
+      "path": "engines/conveyor/worker/engine_patch/omni_prefetch_transport.py",
       "entrypoints": ["apply", "enqueue"]
     },
     {

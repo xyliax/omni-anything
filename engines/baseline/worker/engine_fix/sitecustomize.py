@@ -2,19 +2,19 @@
 refresh ``session.max_tokens`` from each streaming chunk's sampling params.
 
 The engine's stop check reads ``session.max_tokens``, which upstream freezes
-at request construction — the FIRST streaming input's params. A warm-started
-session's first input is the seed prefill with ``max_tokens=1``, so without
+at request construction — the FIRST streaming input's params. An initial-context
+session's first input is the initial context prefill with ``max_tokens=1``, so without
 this fix every later segment is capped at 1 token while the tick cadence
-stays green (the miss=94.8% incident, experiment-log 2026-08-10). The
+can look healthy to cadence-only monitoring. The
 baseline runner therefore prepends this dir to ``PYTHONPATH`` and sets
-``OMNI_SESSION_MAXTOKENS_FIX=1`` exactly when ``seed_tokens > 0``.
+``OMNI_SESSION_MAXTOKENS_FIX=1`` exactly when ``initial_context_tokens > 0``.
 
 This is a BUG FIX, not a mechanism: it makes the engine honor the sampling
-params the worker actually sent for each segment — no park, no mirror, no
+params the worker actually sent for each segment — no KV eviction, no host copy, no
 scheduling change. The conveyor engine_patch carries the identical refresh
-inside its session-update wrapper (park runs); baseline runs no mechanism,
-so the fix lives standalone here. Behavior equivalence for non-seed runs is
-kept by the worker's constant per-segment cap (tpt+8): frozen-at-first-input
+inside its session-update wrapper (KV eviction runs); baseline runs no mechanism,
+so the fix lives standalone here. Behavior equivalence for non-initial context runs is
+kept by the worker's constant per-segment cap (output_token_cap+8): frozen-at-first-input
 and refreshed-per-chunk regimes then agree, so the frozen baseline's formal
 runs remain comparable.
 
@@ -53,7 +53,7 @@ if os.environ.get("OMNI_SESSION_MAXTOKENS_FIX"):
         Scheduler._update_request_as_session = _update_request_as_session
     except Exception as error:
         _fail("initialization", error)
-        # A requested fix must not silently vanish: a seeded run without it
+        # A requested fix must not silently vanish: a preloaded run without it
         # dies at 1 token/segment while cadence metrics stay green. 78 =
         # EX_CONFIG, matching the trace collector's convention.
         os._exit(78)

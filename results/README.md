@@ -19,8 +19,10 @@ python -m infra.trace.perfetto <run-id-or-path>
 
 | Experiment | 浏览入口 | 证据性质 |
 | --- | --- | --- |
-| baseline | `results/baseline/` | 端到端 Qwen-Omni/vLLM/metronome 真实执行 |
-| conveyor | `results/conveyor/` | 新引擎（错开相位 gateway + 取现货 worker），与 baseline 同模型同栈同 workload |
+| baseline | `results/baseline/` | Upstream/Matched Metronome 的真实执行；身份由 manifest `mode` 区分 |
+| conveyor | `results/conveyor/` | Conveyor 真实执行；机制与实现边界以 `docs/system.md` 为准 |
+
+两个目录共享 offered-input、model 和 platform 常量，但历史 worker 的 per-segment decode cap 不同。统一 cap 并重跑前，不得把旧跨系统 run 描述为相同 executed workload。
 
 上表目录用于维护者浏览，不直接构成 finding citation。引用已接受证据时先使用 `docs/agent/evidence.json` 中的 `EVIDENCE-*` alias，再由 alias 解析到 exact run；分析某次运行时才直接读取其 `manifest.json`、`status.json` 和 artifact hash。
 

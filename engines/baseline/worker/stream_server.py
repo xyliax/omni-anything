@@ -11,7 +11,7 @@ Run through experiments/baseline with the environment built by infra/env/setup.s
 
 Bridge: gRPC Step (sync, gRPC threadpool) <-> a single asyncio loop thread that runs AsyncLLM and one
 long-lived engine.generate() per session fed by a per-session asyncio.Queue. Step pushes each due
-session's chunk and waits (bounded) for up to tpt new tokens, then returns them.
+session's chunk and waits (bounded) for up to output_token_cap new tokens, then returns them.
 
 ORIGIN: copied from third_party/metronome/worker/stream_server.py (the pin stays untouched and
 is still run verbatim by --mode vanilla) and permanently diverged; upstream updates are not
@@ -19,12 +19,12 @@ tracked. Behavioral changes vs that origin:
   1. mm_processor_cache_gb 8 -> 0 (avoid cross-thread mutation of the LRU under parallel ingest)
   2. AsyncLLM._add_streaming_input_request is monkeypatched with a hand-copied vLLM 0.23 internal
      (second-order fork of a private API; any vLLM upgrade must re-audit it)
-  3. warm-start prefill via --seed-tokens is added (the seed prompt predicate checks it),
-     with the same warm-start barrier as the conveyor worker (--pre-seed-sessions: ALL
-     seed prefills complete before ready — state construction precedes the tick cadence).
-     Seed runs REQUIRE the engine_fix sitecustomize (worker/engine_fix/, injected by the
-     runner when seed_tokens > 0): upstream freezes session.max_tokens at the first
-     input's params — the seed's max_tokens=1 would cap every segment at 1 token.
+  3. initial-context preloading via --initial-context-tokens is added (the initial context prompt predicate checks it),
+     with the same initialization barrier as the Conveyor worker (--preload-sessions: ALL
+     initial context prefills complete before ready — state construction precedes the tick cadence).
+     Initial-context runs require the engine_fix sitecustomize (worker/engine_fix/, injected by the
+     runner when initial_context_tokens > 0): upstream freezes session.max_tokens at the first
+     input's params — the initial context's max_tokens=1 would cap every segment at 1 token.
   4. upstream features this repo never runs were removed: windowed/sliding KV, turn-eos eval
      mode, non-Qwen2.5-Omni prompt templates
 No experiment may add another copy of this worker.
@@ -46,7 +46,9 @@ PARINGEST variant: additionally monkeypatches AsyncLLM._add_streaming_input_requ
 chunk's input_processor.process_inputs runs in a ThreadPoolExecutor instead of synchronously on
 the event loop (vllm 0.23 async_llm.py handle_inputs blocks the loop ~265ms/chunk on this host,
 serializing all sessions' ingest). mm processor cache is disabled (mm_processor_cache_gb=0) to
-avoid cross-thread mutation of its LRU state; hits are ~absent under FD_PHASE_STAGGER anyway.
+avoid cross-thread mutation of its LRU state; hits are ~absent when the inherited
+client uses a distinct starting position within each session's audio array, which
+prevents identical input windows from creating artificial prefix-cache reuse.
 Per-session chunk ORDER is preserved: each session's handle_inputs task still awaits its own
 chunks sequentially — only different sessions overlap.
 """
@@ -198,15 +200,15 @@ class Session:
 class StreamingEngine:
     """AsyncLLM + per-session resident resumable requests, driven from a sync Step()."""
 
-    def __init__(self, model, gpu_mem, max_model_len, max_num_seqs, tpt, wait_budget_s,
-                 max_audio_chunks, seed_tokens=0):
+    def __init__(self, model, gpu_mem, max_model_len, max_num_seqs, output_token_cap, wait_budget_s,
+                 max_audio_chunks, initial_context_tokens=0):
         from vllm import SamplingParams
         from vllm.engine.arg_utils import AsyncEngineArgs
         from vllm.v1.engine.async_llm import AsyncLLM
         self.SamplingParams = SamplingParams
-        self.tpt = tpt
+        self.output_token_cap = output_token_cap
         self.wait_budget = wait_budget_s
-        self.seed_tokens = seed_tokens   # warm-start: prefill ~K filler tokens per session at start
+        self.initial_context_tokens = initial_context_tokens   # prefill ~K initial-context tokens per session
         self.sessions: dict[int, Session] = {}
         self.lock = threading.Lock()
         self.loop = asyncio.new_event_loop()
@@ -237,21 +239,21 @@ class StreamingEngine:
     # ---- per-session resident resumable request (unbounded append-to-resident-KV) ----
     async def _run_session(self, sid: int, st: Session):
         from vllm.engine.protocol import StreamingInput
-        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.tpt + 8, ignore_eos=True)
+        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap + 8, ignore_eos=True)
         n = [0]
 
         async def gen():
-            # WARM-START: one-shot prefill of approximately seed_tokens filler text so sessions
+            # Preload approximately initial_context_tokens before measurement.
             # begin with pre-grown context (KV bytes are modality-agnostic). Per-sid unique prefix
             # defeats prefix-cache dedup, which would otherwise make capacity look optimistic.
             # max_tokens=1: prefill, one token, on.
-            if self.seed_tokens:
+            if self.initial_context_tokens:
                 import random as _rnd
                 _r = _rnd.Random(9973 * (sid + 1))
                 _vocab = ("alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel",
                           "india","juliet","kilo","lima","mike","november","oscar","papa")
-                filler = " ".join(_r.choice(_vocab) for _ in range(int(self.seed_tokens / 1.6)))  # ~1.6 tok/word measured
-                _pev("SEED", sid, self.seed_tokens)
+                filler = " ".join(_r.choice(_vocab) for _ in range(int(self.initial_context_tokens / 1.6)))  # ~1.6 tok/word measured
+                _pev("INITCTX", sid, self.initial_context_tokens)
                 yield StreamingInput(
                     prompt={"prompt": HEAD + f"[context {sid}] " + filler + INSTR + ASST},
                     sampling_params=self.SamplingParams(temperature=0.0, max_tokens=1,
@@ -265,16 +267,16 @@ class StreamingEngine:
                 st.frame += 1; n[0] += 1
                 _pev("F", sid, st.frame)
                 prompt = (HEAD + APH + INSTR + ASST) \
-                    if (n[0] == 1 and not self.seed_tokens) else (APH + TRAIL)
+                    if (n[0] == 1 and not self.initial_context_tokens) else (APH + TRAIL)
                 # max_tokens is PER-SEGMENT (each chunk's update folds prior
                 # output into the prompt and clears the output count). The
                 # engine's stop check reads a value frozen at the FIRST input
                 # (upstream bug), so every formal run effectively capped each
-                # segment at tpt+8 regardless of what was sent; declare that
+                # segment at output_token_cap+8 regardless of what was sent; declare that
                 # cap explicitly so behavior is IDENTICAL whether the frozen
-                # regime or the seed-run refresh fix (engine_fix, injected
-                # only when --seed-tokens > 0) is in effect.
-                sp = self.SamplingParams(temperature=0.0, max_tokens=self.tpt + 8,
+                # regime or the initial context-run refresh fix (engine_fix, injected
+                # only when --initial-context-tokens > 0) is in effect.
+                sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap + 8,
                                          ignore_eos=True)
                 yield StreamingInput(
                     prompt={"prompt": prompt, "multi_modal_data": {"audio": (arr, sr)}},
@@ -296,19 +298,22 @@ class StreamingEngine:
     def _ensure(self, sid: int) -> Session:
         st = self.sessions.get(sid)
         if st is None:
-            if getattr(self, "pre_seeded_n", 0) and sid < WARMUP_SID:
-                # a session beyond the pre-seed set (reconnect / sid drift):
-                # it seeds lazily at this first push — functional but outside
-                # the warm-start barrier's semantics, so make it visible.
-                log.warning("session s%d created after the warm-start barrier "
-                            "(pre-seeded 1..%d); seeding lazily", sid, self.pre_seeded_n)
+            if getattr(self, "preloaded_n", 0) and sid < WARMUP_SID:
+                # a session beyond the pre-initial context set (reconnect / sid drift):
+                # A reconnect beyond the initialization set preloads lazily.
+                log.warning(
+                    "session s%d created after the initialization barrier "
+                    "(preloaded 1..%d); preloading lazily",
+                    sid,
+                    self.preloaded_n,
+                )
             st = Session(self.loop)
             self.sessions[sid] = st
             st.task = asyncio.run_coroutine_threadsafe(self._run_session(sid, st), self.loop)
         return st
 
     # ---- sync Step bridge ----
-    def step(self, sid_audio: dict, tpt: int) -> dict:
+    def step(self, sid_audio: dict, output_token_cap: int) -> dict:
         t0 = time.perf_counter()
         pending = []
         for sid, (arr, sr) in sid_audio.items():
@@ -323,7 +328,7 @@ class StreamingEngine:
             for sid in list(remaining):
                 st = self.sessions[sid]
                 if len(st.tokens) > st.consumed:
-                    new = st.tokens[st.consumed: st.consumed + tpt]
+                    new = st.tokens[st.consumed: st.consumed + output_token_cap]
                     txt = st.text[st.consumed_text:]
                     out[sid] = (new, txt)
                     st.consumed += len(new)
@@ -342,7 +347,7 @@ class StreamingEngine:
             delivered = ",".join(
                 f"{sid}:{len(out.get(sid, ([], ''))[0])}" for sid in normal_sids
             )
-            log.info("delivery tpt=%d deliv=%s", tpt, delivered)
+            log.info("delivery output_token_cap=%d deliv=%s", output_token_cap, delivered)
         return out, (time.perf_counter() - t0) * 1000.0
 
     def cancel(self, sid: int):
@@ -377,7 +382,7 @@ class Servicer(pb_grpc.InferenceServicer):
 
     def Step(self, request, context):
         with self.lock:
-            tpt = int(request.tokens_per_tick or 1)
+            output_token_cap = int(request.tokens_per_tick or 1)
             cont = {}
             all_sids = []
             for s in request.sessions:
@@ -390,7 +395,7 @@ class Servicer(pb_grpc.InferenceServicer):
                     cont[s.sid] = (arr.copy(), int(s.sample_rate or 16000))
             outs, lat = ({}, 0.0)
             if cont:
-                outs, lat = self.eng.step(cont, tpt)
+                outs, lat = self.eng.step(cont, output_token_cap)
             resp = pb.StepResponse(gpu_ms=float(lat))
             for sid in all_sids:
                 tk, txt = outs.get(sid, ([], ""))
@@ -424,67 +429,66 @@ def main():
     ap.add_argument("--gpu-mem", type=float, required=True)
     ap.add_argument("--max-model-len", type=int, required=True)
     ap.add_argument("--max-num-seqs", type=int, required=True)
-    ap.add_argument("--tpt", type=int, required=True)
+    ap.add_argument("--output-token-cap", type=int, required=True)
     ap.add_argument("--wait-budget-s", type=float, required=True)
     ap.add_argument("--max-audio-chunks", type=int, required=True)
-    ap.add_argument("--seed-tokens", type=int, default=0,
-                    help="warm-start: prefill about this many unique filler text tokens per "
+    ap.add_argument("--initial-context-tokens", type=int, default=0,
+                    help="initial context: prefill about this many unique filler text tokens per "
                          "session at start (0 = off) — compresses time-to-wall, makes ctx a "
                          "controlled variable")
-    ap.add_argument("--pre-seed-sessions", type=int, default=0,
-                    help="warm-start barrier: pre-create this many sessions (sids 1..N) and "
-                         "finish ALL their seed prefills before advertising ready — ticks "
-                         "then start against fully-seeded sessions (requires --seed-tokens)")
+    ap.add_argument("--preload-sessions", type=int, default=0,
+                    help="initialization barrier: pre-create this many sessions (sids 1..N), "
+                         "finish all initial-context prefills, then advertise ready "
+                         "(requires --initial-context-tokens)")
     ap.add_argument("--ready-file", default=None)
     args = ap.parse_args()
 
     log.info("loading STREAMING worker: %s (vLLM 0.23 append-to-resident-KV, unbounded)", args.model)
     eng = StreamingEngine(args.model, args.gpu_mem, args.max_model_len, args.max_num_seqs,
-                          args.tpt, args.wait_budget_s, args.max_audio_chunks,
-                          seed_tokens=args.seed_tokens)
+                          args.output_token_cap, args.wait_budget_s, args.max_audio_chunks,
+                          initial_context_tokens=args.initial_context_tokens)
     # warm: one short session so JIT/CUDA-graph cost is paid before advertising ready.
     try:
         sil = (np.zeros(32000, dtype=np.float32), 16000)
-        eng.step({WARMUP_SID: sil}, args.tpt); eng.cancel(WARMUP_SID)
+        eng.step({WARMUP_SID: sil}, args.output_token_cap); eng.cancel(WARMUP_SID)
         log.info("engine warm")
     except Exception:
         log.exception("warmup failed (continuing)")
 
-    # WARM-START BARRIER (same semantics as the conveyor worker, minus the
-    # park finalize — baseline runs no mechanism): warm start is a one-shot
-    # STATE CONSTRUCTION ("each session already has context"), so the engine
-    # only starts taking tick input once that context exists — seeds and
-    # ticks must not race (lazy seeding would mix seed LARGE prefills into
-    # the first ticks' cadence). On the success path, gateway and client only
-    # start after the ready file. A barrier timeout currently continues to
+    # INITIALIZATION BARRIER: build every requested initial context before
+    # advertising ready. A barrier timeout currently continues to
     # ready for diagnostic capture, but the shared worker-fatal scanner makes
     # that run fail validation. RELIES ON DETERMINISTIC SIDS: the gateway
     # assigns 1..N in
     # admission order and the client opens exactly N sessions; a session
-    # beyond N falls back to lazy seeding at its first push, with a log line.
-    if args.seed_tokens and args.pre_seed_sessions:
-        n = args.pre_seed_sessions
-        log.info("warm-start barrier: seeding %d sessions x %d tokens ...", n, args.seed_tokens)
+    # beyond N falls back to lazy preloading at its first push, with a log line.
+    if args.initial_context_tokens and args.preload_sessions:
+        n = args.preload_sessions
+        log.info(
+            "initialization barrier: preloading %d sessions x %d tokens ...",
+            n,
+            args.initial_context_tokens,
+        )
         t0 = time.monotonic()
         for sid in range(1, n + 1):
-            eng._ensure(sid)   # gen() yields the seed input immediately, no audio needed
+            eng._ensure(sid)   # gen() yields the initial context input immediately, no audio needed
         while True:
             done = sum(1 for sid in range(1, n + 1) if eng.sessions[sid].tokens)
             if done == n:
                 break
             if time.monotonic() - t0 > 300:
-                log.error("warm-start barrier timed out (%d/%d seeded)", done, n)
+                log.error("initialization barrier timed out (%d/%d preloaded)", done, n)
                 break
             time.sleep(0.5)
-        # the seed's output token is CONTEXT, not response: skip it in
+        # the initial context's output token is CONTEXT, not response: skip it in
         # delivery, or every session's first tick returns a junk token.
         for sid in range(1, n + 1):
             st = eng.sessions[sid]
             st.consumed = len(st.tokens)
             st.consumed_text = len(st.text)
-        log.info("warm-start barrier done: %d sessions seeded in %.1fs",
+        log.info("initialization barrier done: %d sessions preloaded in %.1fs",
                  n, time.monotonic() - t0)
-        eng.pre_seeded_n = n
+        eng.preloaded_n = n
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8),
                          options=[("grpc.max_receive_message_length", 256 * 1024 * 1024),

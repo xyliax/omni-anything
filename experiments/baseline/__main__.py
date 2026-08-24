@@ -25,7 +25,12 @@ def parser() -> argparse.ArgumentParser:
         "--duration", dest="duration_s", type=int,
         help="run duration in seconds (default: workload constant)",
     )
-    ap.add_argument("--seed-tokens", type=int, default=0, help="warm-start prefill tokens per session")
+    ap.add_argument(
+        "--initial-context-tokens",
+        type=int,
+        default=0,
+        help="initial context length to preload per session",
+    )
     ap.add_argument("--gpu", type=int, help="GPU index to run on (default: the usual card)")
     return ap
 

@@ -13,9 +13,9 @@ These preserve hard-won format knowledge:
   heuristic — see bundle.align_perf_family)
 - GPU sample timestamps are centered in their own sampling interval, so the
   parser must be told the sampler period (see the platform profile)
-- gateway_ticks.log and park.log are epoch-clock (no pairing needed);
-  park.log carries four line kinds (park / S mirror / L reload-admit /
-  R reload-done), see parse_park
+- gateway_ticks.log and kv_events.log are epoch-clock (no pairing needed);
+  kv_events.log carries E eviction / B host-backing / L load-issue /
+  R load-completion rows, see parse_kv_events
 - residency.log is epoch-clock too (written by the same EngineCore collector
   as scheduler.log): one row per sample, ``<epoch> <request_id>:<blocks> ...``
 """
@@ -110,7 +110,7 @@ def parse_per_request(path: Path) -> dict[str, Any]:
         result["ticks"] = [
             round(timestamp - first_push, 3) for timestamp in logical_ticks
         ]
-        result["starve"] = {
+        result["last_token_growth"] = {
             session: round(last_token_growth(rows) - first_push, 1)
             for session, rows in tokens.items()
             if rows
@@ -138,7 +138,7 @@ def parse_gateway_ticks(path: Path) -> list[dict[str, Any]]:
     Line: ``<wake_epoch> slot=N late_ms=F sample_ms=F grpc_ms=F gpu_ms=F n=K
     [deliv=<sid>:<tok>,...]``. Timestamps are epoch-clock (same family as
     scheduler.log), so alignment is exact — no clock pairing. ``deliv`` counts
-    are measured at the delivery point (the take-from-stock deadline fact).
+    are measured at the output-delivery point.
     """
     rows: list[dict[str, Any]] = []
     if not path.is_file():
@@ -167,34 +167,19 @@ def parse_gateway_ticks(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def parse_park(path: Path) -> dict[str, list[dict[str, Any]]]:
-    """Park and reload events from the conveyor engine patch's park.log.
+def parse_kv_events(path: Path) -> dict[str, list[dict[str, Any]]]:
+    """Parse partial eviction, host-backing, and load events.
 
-    Four line kinds, all epoch-clock (exact alignment, no pairing needed):
-
-    - park:   ``<epoch> req=<id> held=N evicted=N cpu_covered=N usage_before=F
-      usage_after=F`` — one per successful park.
-    - load:   ``<epoch> L req=<id> cpu_tok=N gpu_tok=N [trigger=demand|prefetch]``
-      — a CPU-supplied load was issued: demand = resume reload (request enters
-      WAITING_FOR_REMOTE_KVS), prefetch = anonymous materialization at
-      chunk-push time. Missing ``trigger`` (pre-prefetch logs) reads as
-      demand.
-    - loaded: ``<epoch> R req=<id> [trigger=...]`` — that load completed.
-    - store:  ``<epoch> S req=<id> blocks=N`` — the eager mirror's frontier
-      advanced N blocks for this session (offload activity; upper bound on
-      copies, dedup-skips included).
-
-    Returns ``{"parks": [...], "reloads": [...], "offloads": [...]}``; reloads
-    carry a ``trigger`` field and are L/R pairs matched per (request, trigger)
-    in order (an unmatched L keeps ``end=None``). The session id is parsed
-    out of the request id (``s<sid>e1-...``).
+    New artifacts use four explicit row kinds: ``E`` partial eviction, ``B``
+    host-backing progress, ``L`` load issue, and ``R`` load completion. Loads
+    are paired by request and trigger; an unmatched issue keeps ``end=None``.
     """
-    parks: list[dict[str, Any]] = []
+    kv_evictions: list[dict[str, Any]] = []
     reloads: list[dict[str, Any]] = []
-    offloads: list[dict[str, Any]] = []
+    host_backing: list[dict[str, Any]] = []
     open_loads: dict[tuple[str, str], list[dict[str, Any]]] = {}
     if not path.is_file():
-        return {"parks": [], "reloads": [], "offloads": []}
+        return {"kv_evictions": [], "reloads": [], "host_backing": []}
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line_number, line in enumerate(handle, 1):
             parts = line.split()
@@ -203,29 +188,27 @@ def parse_park(path: Path) -> dict[str, list[dict[str, Any]]]:
             try:
                 timestamp = float(parts[0])
                 kind = parts[1]
-                if kind in ("L", "R", "S"):
-                    fields = dict(item.split("=", 1) for item in parts[2:])
-                else:
-                    kind = "park"
-                    fields = dict(item.split("=", 1) for item in parts[1:])
+                if kind not in ("E", "B", "L", "R"):
+                    raise ValueError(f"unknown KV event kind: {kind}")
+                fields = dict(item.split("=", 1) for item in parts[2:])
                 match = SESSION_PATTERN.match(fields["req"])
                 if not match or int(match.group(1)) == WARMUP_SESSION:
                     continue
                 session = int(match.group(1))
-                if kind == "park":
-                    parks.append(
+                if kind == "E":
+                    kv_evictions.append(
                         {
                             "time": timestamp,
                             "session": session,
-                            "held": int(fields["held"]),
+                            "owned_before": int(fields["owned_before"]),
                             "evicted": int(fields["evicted"]),
-                            "cpu_covered": int(fields["cpu_covered"]),
+                            "host_backed": int(fields["host_backed"]),
                             "usage_before": float(fields["usage_before"]),
                             "usage_after": float(fields["usage_after"]),
                         }
                     )
-                elif kind == "S":
-                    offloads.append(
+                elif kind == "B":
+                    host_backing.append(
                         {
                             "time": timestamp,
                             "session": session,
@@ -244,14 +227,18 @@ def parse_park(path: Path) -> dict[str, list[dict[str, Any]]]:
                     }
                     reloads.append(event)
                     open_loads.setdefault((fields["req"], trigger), []).append(event)
-                else:  # R
+                else:
                     trigger = fields.get("trigger", "demand")
                     pending = open_loads.get((fields["req"], trigger))
                     if pending:
                         pending.pop(0)["end"] = timestamp
             except (KeyError, ValueError, IndexError) as exc:
-                raise ValueError(f"invalid park row {path}:{line_number}") from exc
-    return {"parks": parks, "reloads": reloads, "offloads": offloads}
+                raise ValueError(f"invalid KV-event row {path}:{line_number}") from exc
+    return {
+        "kv_evictions": kv_evictions,
+        "reloads": reloads,
+        "host_backing": host_backing,
+    }
 
 
 def parse_residency(path: Path) -> list[list[Any]]:
@@ -259,8 +246,8 @@ def parse_residency(path: Path) -> list[list[Any]]:
 
     Line: ``<epoch_s> <request_id>:<blocks> ...`` — one row per sample
     (throttled at the source by ``OMNI_STATLOG_PERIOD_S``), one field per
-    live request. ``blocks`` is the request's grip or, when parked, its
-    still-GPU-cached prefix chain. Returns ``[[epoch_s, [[sid, blocks],
+    live request. ``blocks`` is request-owned residency or, after partial
+    eviction, the still-GPU-cached prefix chain. Returns ``[[epoch_s, [[sid, blocks],
     ...]], ...]`` with the warmup sentinel excluded — epoch clock, so
     alignment against scheduler.log is exact.
     """

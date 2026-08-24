@@ -18,7 +18,7 @@ from .parse import (
     parse_gateway_ticks,
     parse_gpu,
     parse_kv,
-    parse_park,
+    parse_kv_events,
     parse_per_request,
     parse_residency,
     parse_scheduler,
@@ -45,7 +45,7 @@ class RunFiles:
     residency: Path
     gpu: Path
     gateway_ticks: Path
-    park: Path
+    kv_events: Path
 
 
 def _run_files(directory: Path) -> RunFiles:
@@ -62,7 +62,7 @@ def _run_files(directory: Path) -> RunFiles:
         residency=directory / "residency.log",
         gpu=directory / "gpu.csv",
         gateway_ticks=directory / "gateway_ticks.log",
-        park=directory / "park.log",
+        kv_events=directory / "kv_events.log",
     )
 
 
@@ -139,9 +139,10 @@ def _shift_perf_family(bundle: dict[str, Any], shift: float) -> None:
         bundle["kv"] = [
             [round(float(row[0]) + shift, 2), *row[1:]] for row in bundle["kv"]
         ]
-    if "starve" in bundle:
-        bundle["starve"] = {
-            session: round(time + shift, 1) for session, time in bundle["starve"].items()
+    if "last_token_growth" in bundle:
+        bundle["last_token_growth"] = {
+            session: round(time + shift, 1)
+            for session, time in bundle["last_token_growth"].items()
         }
     if "ingest" in bundle:
         bundle["ingest"] = {
@@ -219,7 +220,7 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
         "status": read_json(files.status),
     }
     per_request = parse_per_request(files.per_request)
-    for key in ("ticks", "pushes", "starve", "ingest"):
+    for key in ("ticks", "pushes", "last_token_growth", "ingest"):
         if key in per_request:
             bundle[key] = per_request[key]
     kv = parse_kv(files.kv, per_request.get("warm_push"), per_request.get("first_push"))
@@ -249,21 +250,29 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
         bundle["gateway_firings"] = [
             {**row, "time": round(row["time"] - base, 3)} for row in firings
         ]
-    park = parse_park(files.park)
-    if park["parks"] or park["reloads"] or park["offloads"]:
-        # park.log is epoch-clock (engine patch): exact alignment. Without a
-        # scheduler.log the fallback base is per-family (park events anchor to
-        # their own first event, gpu to its own) — flag it so ad-hoc consumers
-        # don't cross-read misaligned series.
-        first = (park["parks"] or park["offloads"] or park["reloads"])[0]["time"]
+    kv_events = parse_kv_events(files.kv_events)
+    if (
+        kv_events["kv_evictions"]
+        or kv_events["reloads"]
+        or kv_events["host_backing"]
+    ):
+        # kv_events.log is epoch-clock. Without scheduler.log, event families
+        # use their own first event as zero; flag the alignment limitation.
+        first = (
+            kv_events["kv_evictions"]
+            or kv_events["host_backing"]
+            or kv_events["reloads"]
+        )[0]["time"]
         base = steps_origin if steps_origin is not None else first
         if steps_origin is None:
             bundle["alignment_warning"] = "per-family zero points (no scheduler.log)"
-        bundle["parks"] = [
-            {**row, "time": round(row["time"] - base, 3)} for row in park["parks"]
+        bundle["kv_evictions"] = [
+            {**row, "time": round(row["time"] - base, 3)}
+            for row in kv_events["kv_evictions"]
         ]
-        bundle["offloads"] = [
-            {**row, "time": round(row["time"] - base, 3)} for row in park["offloads"]
+        bundle["host_backing"] = [
+            {**row, "time": round(row["time"] - base, 3)}
+            for row in kv_events["host_backing"]
         ]
         bundle["reloads"] = [
             {
@@ -271,7 +280,7 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
                 "time": round(row["time"] - base, 3),
                 "end": None if row["end"] is None else round(row["end"] - base, 3),
             }
-            for row in park["reloads"]
+            for row in kv_events["reloads"]
         ]
 
     if steps_origin is None or not align_exact(bundle, per_request, steps_origin):

@@ -21,24 +21,28 @@ class ConveyorConfigTests(unittest.TestCase):
             set(ConveyorConfig(trace=True).required_artifact_names()),
             base | {"scheduler.log", "residency.log", "per_request.log", "per_iteration.log"},
         )
+        self.assertEqual(
+            set(ConveyorConfig(retained_prefix_blocks=128).required_artifact_names()),
+            base | {"kv_events.log"},
+        )
 
     def test_manifest_records_slots_and_matches_baseline_stack(self) -> None:
         # The two engines must be compared on an identical stack: same model
-        # geometry and workload constants as baseline, plus the slots knob.
+        # geometry and workload constants as baseline, plus the release slots.
         manifest = ConveyorConfig(trace=True).manifest_config()
         self.assertEqual(manifest["engine"]["slots"], 8)
         self.assertEqual(manifest["workload"]["period_ms"], 2000)
         self.assertEqual(manifest["model"]["kv_geometry"]["bytes_per_token"], 57344)
 
-    def test_prefetch_requires_park(self) -> None:
-        # Without park nothing is ever missing from the GPU cache; a
-        # prefetch-only run would masquerade as a mechanism arm.
+    def test_prefetch_requires_kv_eviction(self) -> None:
+        # Without KV eviction nothing is intentionally missing from the GPU
+        # cache, so a prefetch-only run would not exercise the mechanism.
         with self.assertRaises(ValueError):
             ConveyorConfig(prefetch="push")
-        config = ConveyorConfig(prefetch="push", park_keep_blocks=128, seed_tokens=4096)
+        config = ConveyorConfig(prefetch="push", retained_prefix_blocks=128, initial_context_tokens=4096)
         self.assertEqual(config.manifest_config()["engine"]["prefetch"], "push")
         with self.assertRaises(ValueError):
-            ConveyorConfig(prefetch="timer", park_keep_blocks=128)
+            ConveyorConfig(prefetch="timer", retained_prefix_blocks=128)
 
 
 if __name__ == "__main__":

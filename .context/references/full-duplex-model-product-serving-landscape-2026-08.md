@@ -5,7 +5,7 @@ Updated: 2026-08-03
 
 ## 划界
 
-本文整理外部公开规格与证据，不是本仓库结论。
+本文是有日期的外部公开规格整理，不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。任何内容进入 paper 前都必须重新核验原始来源，并按 [`docs/problem.md`](../../docs/problem.md#terminology) 与四份 human owner 重新表述；不得从本文件把外部系统的后台任务、音频播放链或指标定义投射到当前原型。
 
 只把下面这种系统算作**模型级全双工（model-level full-duplex）**：模型在输出期间继续吸收输入，并把 silence、overlap、backchannel、打断或主动开口当作模型时间上下文或学到的动作。以下两类不自动算：
 
@@ -14,7 +14,7 @@ Updated: 2026-08-03
 
 **tick** 指模型或调度器完成一次交互决策的原生时间量子，不是网络包长、首包延迟或评测给定的 deadline。
 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。
-**N\*** 指可调度并发数（schedulable concurrency），本文按 miss rate ≤ 1% 的判据读。
+本文外部材料表格中的 **N\*** 只沿用被整理来源的 schedulable-concurrency 口径，不为本项目冻结验收阈值。
 
 公开证据摘要（截至 2026-08-07）：
 
@@ -215,8 +215,7 @@ Moshi 7B 多路并发没有任何官方数字（论文全文、README、FAQ 均�
 [Metronome][metronome]（**2026-07-02**，论文 v1）是 serving 系统：周期性将所有到期 session 的小 prefill + 短 decode 组成一批，用有界 KV + attention sinks 避免长期 memory cliff，再用 AIMD 准入求可调度并发数 N\*。
 所有实验均为**单张 NVIDIA RTX PRO 6000 Blackwell**、真实音频以 20ms 网络 chunk 输入、各路 session 起始相位按时间表错开；容量不是 prefix-cache 复用出来的。
 
-口径注（本文一次性说明）：下表的 90 s 新会话数字属短爆发口径，上游仓库自认早期短爆发的墙钟数字受扫点污染，引用具体墙钟秒数前按 `docs/metronome.md` 的订正纪律核对。
-可稳定引用的是「无界 KV 出现 memory cliff 且 GPU 时间占用偏低」与「KV 有界后 deadline 先于显存到达」这一层结论。
+口径注：下表的 90 s 新会话数字属短爆发口径，不能替代长时稳态容量。引用具体数字或定性结论前必须回到 Metronome 论文、artifact 与对应版本重新核对；本文件不提供项目内 evidence alias。
 
 | 被 serve 的模型 | 实验 frame budget | 90 s 新会话单 GPU 容量 | 长会话证据 |
 | --- | ---: | ---: | --- |

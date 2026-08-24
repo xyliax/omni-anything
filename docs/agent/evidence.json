@@ -2,16 +2,16 @@
   "schema_version": 1,
   "run_sources": {
     "RUN-BASELINE-RETAINED": {
-      "path": "results/baseline/20260814_103653_paringest-n8-seed4096",
+      "root": "results/baseline",
       "manifest_sha256": "8b08b3155286d245f8314c8a57e8319984ded38417cfabf48dfa9f50f49d2a6c"
     },
     "RUN-CONVEYOR-RETAINED": {
-      "path": "results/conveyor/20260812_200208_park-cleanwarm-r2",
+      "root": "results/conveyor",
       "manifest_sha256": "6c9825c693f20c04b927c90aff494298200265b1c5fd9b9bda80011c62584731"
     }
   },
   "role_definitions": {
-    "formal": "reproducible clean-source evidence eligible for performance or cross-arm claims",
+    "formal": "reproducible clean-source evidence eligible for performance or matched-system claims",
     "diagnostic": "reconstructable non-formal evidence; dirty runs require a retained patch artifact",
     "legacy-unreconstructable": "historical evidence missing raw data, clean provenance, or a reconstructable patch; never eligible as formal",
     "source-audit": "current source supports semantic claims only, not measured performance",
@@ -21,65 +21,166 @@
     {
       "id": "EVIDENCE-LEGACY-BASELINE",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-A1", "FINDING-A2", "FINDING-A3", "FINDING-A4", "FINDING-A5", "FINDING-A6", "FINDING-B1", "FINDING-B2", "FINDING-B3", "FINDING-B4", "FINDING-B5", "FINDING-C1", "FINDING-C2", "FINDING-C3", "FINDING-D1", "FINDING-D2", "FINDING-D3", "FINDING-D5", "FINDING-F1", "FINDING-F2", "FINDING-F3", "FINDING-F4", "FINDING-F5", "FINDING-F6"],
-      "sources": [{"kind": "git-history", "ref": "109db82eeec843f1ad5ab230137381b62dc88989 and earlier results tree"}],
+      "supports": [
+        "FINDING-A1",
+        "FINDING-A2",
+        "FINDING-B1",
+        "FINDING-B2",
+        "FINDING-C1",
+        "FINDING-C2",
+        "FINDING-C3",
+        "FINDING-D1",
+        "FINDING-D2",
+        "FINDING-D3",
+        "FINDING-D5"
+      ],
+      "sources": [
+        {
+          "kind": "git-history",
+          "ref": "109db82eeec843f1ad5ab230137381b62dc88989 and earlier results tree"
+        }
+      ],
       "reproducibility": "historical artifacts; validate individual claims before promotion"
-    },
-    {
-      "id": "EVIDENCE-ECOSYSTEM-SOURCES",
-      "role": "external-source-audit",
-      "supports": ["FINDING-E1", "FINDING-E2", "FINDING-E3", "FINDING-E4"],
-      "sources": [{"kind": "third-party-pin", "path": "third_party/metronome"}, {"kind": "dated-context", "path": ".context/references"}],
-      "reproducibility": "source and date must be rechecked before a current-state citation"
     },
     {
       "id": "EVIDENCE-H1-COMPARISON",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H1"],
-      "sources": [{"kind": "run", "ref": "RUN-BASELINE-RETAINED"}, {"kind": "run", "ref": "RUN-CONVEYOR-RETAINED"}],
-      "reproducibility": "both retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery-completeness records and fails current acceptance; not formal under the current protocol"
+      "supports": [
+        "FINDING-H1"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-BASELINE-RETAINED"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONVEYOR-RETAINED"
+        }
+      ],
+      "reproducibility": "both retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; not formal under the current protocol"
     },
     {
       "id": "EVIDENCE-H2-METRICS",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H2", "FINDING-F7"],
-      "sources": [{"kind": "source", "path": "engines/conveyor/gateway/main.go"}, {"kind": "source", "path": "engines/conveyor/worker/stream_server.py"}, {"kind": "legacy-record", "path": "docs/agent/legacy-experiment-log.md", "date": "2026-08-10"}],
+      "supports": [
+        "FINDING-H2",
+        "FINDING-F7"
+      ],
+      "sources": [
+        {
+          "kind": "source",
+          "path": "engines/conveyor/gateway/main.go"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py"
+        },
+        {
+          "kind": "legacy-record",
+          "path": "docs/agent/legacy-experiment-log.md",
+          "date": "2026-08-10"
+        }
+      ],
       "reproducibility": "metric implementation remains in source; original diagnostic run is not retained"
     },
     {
-      "id": "EVIDENCE-H3-PARK-SEMANTICS",
+      "id": "EVIDENCE-H3-KV-EVICTION-SEMANTICS",
       "role": "source-audit",
-      "supports": ["FINDING-H3"],
-      "sources": [{"kind": "legacy-record", "path": "docs/agent/legacy-experiment-log.md", "date": "2026-08-10/11"}, {"kind": "source", "path": "engines/conveyor/worker/engine_patch"}],
-      "reproducibility": "semantic source is current; original audit run is historical"
+      "supports": [
+        "FINDING-H3"
+      ],
+      "sources": [
+        {
+          "kind": "legacy-record",
+          "path": "docs/agent/legacy-experiment-log.md",
+          "date": "2026-08-10/11"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch"
+        }
+      ],
+      "reproducibility": "current source supports the semantics; the original audit run is historical"
     },
     {
       "id": "EVIDENCE-H4-RESIDENCY",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H4"],
-      "sources": [{"kind": "run", "ref": "RUN-BASELINE-RETAINED"}, {"kind": "run", "ref": "RUN-CONVEYOR-RETAINED"}],
-      "reproducibility": "retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery-completeness records and fails current acceptance; rerun clean before a formal paper claim"
+      "supports": [
+        "FINDING-H4"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-BASELINE-RETAINED"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONVEYOR-RETAINED"
+        }
+      ],
+      "reproducibility": "retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; rerun clean before a formal paper claim"
     },
     {
       "id": "EVIDENCE-H5-CRITICAL-PATH",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H5"],
-      "sources": [{"kind": "run", "ref": "RUN-CONVEYOR-RETAINED"}, {"kind": "legacy-record", "path": "docs/agent/legacy-experiment-log.md", "date": "2026-08-12"}],
+      "supports": [
+        "FINDING-H5"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-CONVEYOR-RETAINED"
+        },
+        {
+          "kind": "legacy-record",
+          "path": "docs/agent/legacy-experiment-log.md",
+          "date": "2026-08-12"
+        }
+      ],
       "reproducibility": "diagnostic timing only"
     },
     {
-      "id": "EVIDENCE-H6-WARM-START",
+      "id": "EVIDENCE-H6-INITIAL-CONTEXT",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H6"],
-      "sources": [{"kind": "run", "ref": "RUN-CONVEYOR-RETAINED"}, {"kind": "legacy-record", "path": "docs/agent/legacy-experiment-log.md", "date": "2026-08-12"}],
-      "reproducibility": "current source retains the semantics; retained run predates the current formal provenance rule"
+      "supports": [
+        "FINDING-H6"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-CONVEYOR-RETAINED"
+        },
+        {
+          "kind": "legacy-record",
+          "path": "docs/agent/legacy-experiment-log.md",
+          "date": "2026-08-12"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_evict.py"
+        }
+      ],
+      "reproducibility": "current source retains the semantics; the retained run predates the current formal provenance rule"
     },
     {
       "id": "EVIDENCE-H7-PREFETCH",
       "role": "legacy-unreconstructable",
-      "supports": ["FINDING-H7"],
-      "sources": [{"kind": "legacy-record", "path": "docs/agent/legacy-experiment-log.md", "date": "2026-08-15"}, {"kind": "source", "path": "engines/conveyor/worker/engine_patch"}],
-      "reproducibility": "raw prefetch run is not retained; semantics are recorded but performance evidence must be rerun"
+      "supports": [
+        "FINDING-H7"
+      ],
+      "sources": [
+        {
+          "kind": "legacy-record",
+          "path": "docs/agent/legacy-experiment-log.md",
+          "date": "2026-08-15"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch"
+        }
+      ],
+      "reproducibility": "raw prefetch run is not retained; current source supports semantics only and performance evidence must be rerun"
     }
   ]
 }

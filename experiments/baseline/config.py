@@ -44,7 +44,7 @@ class BaselineConfig:
     root = ROOT
 
     # engine constants — change here, not on the command line
-    max_model_len = 32768  # >= 32768 so long runs hit the capacity wall, not a MML stall
+    max_model_len = 32768  # let long runs reach the GPU KV-capacity limit before the MML limit
     max_num_seqs = 16
     gpu_memory_utilization = 0.9
     wait_budget_s = 1.6
@@ -52,14 +52,14 @@ class BaselineConfig:
     startup_timeout_s = 360
     kv_log_period_s = 0.2   # kv.log sampling; 10 samples/tick (same rationale
                             # as platform.GPU_SAMPLE_PERIOD_S) — identical to
-                            # conveyor's, the two arms must observe on one grid
+                            # Conveyor's; both systems observe on one grid
 
     mode: str = "paringest"
     trace: bool = False
     label: str | None = None
     sessions: int = workload.SESSIONS
     duration_s: int = workload.DURATION_S
-    seed_tokens: int = 0
+    initial_context_tokens: int = 0
     gpu: int = platform.DEFAULT_GPU_INDEX
 
     def __post_init__(self) -> None:
@@ -105,8 +105,8 @@ class BaselineConfig:
     def validate(self) -> None:
         if self.mode not in MODES:
             raise ValueError(f"unknown baseline mode: {self.mode} (known: {', '.join(sorted(MODES))})")
-        if self.seed_tokens and not self.mode_spec.parallel_ingest:
-            raise ValueError("seed-tokens requires paringest mode")
+        if self.initial_context_tokens and not self.mode_spec.parallel_ingest:
+            raise ValueError("initial-context-tokens requires paringest mode")
         if self.sessions <= 0 or self.sessions % self.client_shards:
             raise ValueError("sessions must be positive and evenly divisible by client shards")
         if self.duration_s <= 0:
@@ -132,9 +132,9 @@ class BaselineConfig:
                 "max_num_seqs": self.max_num_seqs,
                 "gpu_memory_utilization": self.gpu_memory_utilization,
                 "wait_budget_s": self.wait_budget_s,
-                "seed_tokens": self.seed_tokens,
-                # seed runs inject the frozen-max_tokens engine fix (runner)
-                "session_max_tokens_fix": bool(self.seed_tokens),
+                "initial_context_tokens": self.initial_context_tokens,
+                # initial context runs inject the frozen-max_tokens engine fix (runner)
+                "session_max_tokens_fix": bool(self.initial_context_tokens),
                 "ingest_workers": self.ingest_workers,
                 "startup_timeout_s": self.startup_timeout_s,
             },

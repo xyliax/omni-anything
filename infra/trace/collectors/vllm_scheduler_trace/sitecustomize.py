@@ -15,19 +15,19 @@ Two artifacts, one hook (a wrapper around ``Scheduler.schedule``):
   ``E`` marks a request that also scheduled encoder input in that step.
 
 - ``OMNI_RESIDENCY_LOG`` — per-session KV residency samples, throttled by
-  ``OMNI_STATLOG_PERIOD_S`` (default 1.0; the runners set 0.2s so both arms
+  ``OMNI_STATLOG_PERIOD_S`` (default 1.0; the runners set 0.2s so both systems
   sample kv.log and residency on the same grid)::
 
     <unix_s> <request_id>:<resident_blocks> ...
 
   ``resident_blocks`` counts the request's grip (allocated blocks) or, when
-  the request holds none (parked under the conveyor engine patch), its
-  still-GPU-cached prefix chain walked by block hash — so a parked session
+  the request holds none (partially evicted under the conveyor engine patch), its
+  still-GPU-cached prefix chain walked by block hash — so a partially evicted session
   reads as its pinned floor, not zero. Single-KV-group stack assumption,
   same as the engine patch; on a multi-group config the chain walk is
   skipped and only the grip is counted. This is the SAME sampler for every
-  arm: baseline shows the monotone context-growth staircase, conveyor the
-  park sawtooth, from one mechanism.
+  system: baseline shows the monotone context-growth staircase, Conveyor the
+  eviction sawtooth, from one mechanism.
 
 The compact formats are shared with existing evidence; parsing and
 validation live in :mod:`infra.trace.parse`.
@@ -86,8 +86,8 @@ if trace_path or residency_path:
 
         def _resident_blocks(scheduler, request) -> int:
             """Grip if the request holds blocks; else the GPU-cached prefix
-            chain (a parked session's pinned floor). Chain reconstruction
-            mirrors the conveyor engine patch's _gpu_cached_chain."""
+            chain (a partially evicted session's pinned floor). Chain reconstruction
+            matches the Conveyor engine patch's _gpu_cached_chain."""
             kvm = scheduler.kv_cache_manager
             try:
                 held = kvm.get_block_ids(request.request_id)[0]

@@ -1,43 +1,15 @@
-// Conveyor gateway: the Metronome Realtime gateway with STAGGERED PHASE ASSIGNMENT.
+// Conveyor gateway with release-offset scheduling.
 //
-// ORIGIN: copied from third_party/metronome/gateway-go (the pin stays untouched and is
-// still built verbatim as .build/metronome-gateway for the baseline arm) and permanently
-// diverged; upstream updates are not tracked. Behavioral changes vs that origin:
-//  1. The single global ticker is replaced by a slot wheel: the loop wakes every
-//     period/slots and serves only the sessions whose slot matches, so per-session tick
-//     grids are spread uniformly across the period instead of all firing at once. The
-//     wheel runs on an ABSOLUTE grid (firing k is scheduled at t0 + k*slotPeriod): sleep
-//     overshoot and firing overruns are not re-anchored into the grid, so they self-correct
-//     instead of accumulating (the inherited wake-and-re-anchor loop drifted ~0.5ms per
-//     wake — x8 wakes per period made it ~4ms/period here).
-//  2. Sessions are assigned a slot round-robin at admission (slot = arrival order mod
-//     slots). Slicing instants are server-internal: any arrival pattern — including N
-//     simultaneous connects — lands evenly on the wheel, and no user-visible latency
-//     distribution changes (time-to-next-cut is uniform over the period regardless of
-//     slot). The unused transportbench tool was dropped.
-//  3. Full-duplex metrics carry take-from-stock semantics. The worker's Step returns
-//     instantly from inventory, so gpu_ms no longer holds the real-time verdict: per-session
-//     deadline_met is redefined as "delivered >= tpt tokens this tick" (starvation = the
-//     engine fell behind; ticks before the session's first token are exempt), fdStart is set
-//     once at the first staged fire (never reset, so server_ttfa_ms honestly includes the
-//     one-slice pipeline lag), and starved firings are logged as gateway.log '[starve]'
-//     lines for the runner's issue scan. Client-side latency p50/p99 remain meaningless
-//     under this engine — latency distributions come from the trace side (per_request.log).
-//  4. Per-firing trace. GW_TICKLOG=<path> appends one line per slot firing on the epoch
-//     clock (exact alignment with scheduler.log, no clock pairing needed):
-//     <wake_epoch> slot=<s> late_ms=<grid lateness> sample_ms=<walk+stage> grpc_ms=<Step
-//     round-trip> gpu_ms=<worker-reported> n=<sessions served> deliv=<sid>:<tokens>,...
-//     Empty firings log through n=0 (grid evidence); the line is written after fan-out so
-//     delivered token counts are per-session facts measured at the delivery point.
-//  5. Inherited paths unreachable on this repo's stack were pruned (the pin keeps them
-//     for the baseline arm): the turn-based response lifecycle (response.create/cancel),
-//     vision attachments (input_image.append), and the AIMD online-admission controller
-//     with its admit log. This fork serves exactly one shape — full-duplex sessions on
-//     the slot wheel, driven by the pinned sustained_fd client. A worker that never
-//     becomes healthy is now fatal instead of silently served.
+// Each session receives a stable slot within period T. The slot wheel uses an
+// absolute time grid, so a late wake does not re-anchor later releases. The
+// offsets spread offered input and restore demand across the period; they do
+// not create the per-session reuse interval, which follows from periodicity.
 //
-// Everything else is inherited: WebSocket termination, per-session audio buffering,
-// one gRPC Step per firing, token fan-out.
+// Step enqueues current input and returns any already-undelivered output. The
+// inherited deadline_met wire field therefore reports only whether this service
+// RPC completed within the configured period; it is not a statement that a
+// required token amount or an audio playback deadline was met. Per-release
+// output counts are recorded in GW_TICKLOG for later evaluation design.
 package main
 
 import (
@@ -66,7 +38,7 @@ import (
 
 type Session struct {
 	id       uint64
-	slot     int // phase slot on the tick wheel, fixed at admission
+	slot     int // release slot on the periodic wheel, fixed at admission
 	conn     *websocket.Conn
 	writeMu  sync.Mutex // gorilla allows one concurrent writer
 	mu       sync.Mutex // guards the fields below
@@ -75,26 +47,24 @@ type Session struct {
 	fullDup  bool // continuous full-duplex: process every tick from buffered audio, no turns
 	fdStart  time.Time
 	fdFirst  bool // first nonzero delivery seen (TTFA semantics)
-	fdFull   bool // first FULL (>= tpt) delivery seen (starvation counting starts here:
-	//               partial deliveries during pipeline ramp are fill, not falling behind)
-	alive bool
+	alive    bool
 }
 
 var (
 	upgrader = websocket.Upgrader{ReadBufferSize: 1 << 16, WriteBufferSize: 1 << 16,
 		CheckOrigin: func(r *http.Request) bool { return true }}
-	sessions sync.Map
-	nextID   uint64
-	client   pb.InferenceClient
-	periodMS = flag.Int("period-ms", 1000, "tick period")
-	slots    = flag.Int("slots", 8, "phase slots per tick period; sessions are round-robin assigned at admission")
-	tpt      = flag.Int("tpt", 25, "tokens per tick")
-	port     = flag.String("port", "8902", "ws listen port")
-	worker   = flag.String("worker", "127.0.0.1:50051", "vLLM gRPC worker addr")
-	tickLog  *os.File // GW_TICKLOG per-firing trace (header change 4)
+	sessions       sync.Map
+	nextID         uint64
+	client         pb.InferenceClient
+	periodMS       = flag.Int("period-ms", 1000, "tick period")
+	slots          = flag.Int("slots", 8, "release slots per period; sessions are round-robin assigned at admission")
+	outputTokenCap = flag.Int("output-token-cap", 25, "maximum output tokens consumed per session release")
+	port           = flag.String("port", "8902", "ws listen port")
+	worker         = flag.String("worker", "127.0.0.1:50051", "vLLM gRPC worker addr")
+	tickLog        *os.File // GW_TICKLOG per-firing trace (header change 4)
 )
 
-// stepTimeout bounds one gRPC Step. Take-from-stock Steps return in
+// stepTimeout bounds one gRPC Step. Conveyor Steps normally return in
 // milliseconds by design, so a long stall is transport or worker death — fail
 // the firing fast and let the absolute grid resume, instead of freezing the
 // whole wheel behind one call.
@@ -197,7 +167,9 @@ func tickLoop() {
 		tickT0 := time.Now()
 		lateMs := tickT0.Sub(next).Seconds() * 1000
 
-		req := &pb.StepRequest{TokensPerTick: uint32(*tpt)}
+		// TokensPerTick is the inherited protobuf field name. Conveyor treats it
+		// as an output cap, not as a required delivery amount.
+		req := &pb.StepRequest{TokensPerTick: uint32(*outputTokenCap)}
 		var active []*Session
 		sessions.Range(func(_, v any) bool {
 			s := v.(*Session)
@@ -224,7 +196,7 @@ func tickLoop() {
 				SampleRate: uint32(s.sr)}
 			s.audioBuf = nil
 			// Set once, never reset: the first slice legitimately returns no
-			// tokens (take-from-stock), so resetting here every tick would make
+			// tokens from the undelivered-output buffer, so resetting here every tick would make
 			// server_ttfa_ms measure one gRPC round-trip instead of the true
 			// audio-in -> first-token-out latency including the pipeline lag.
 			if !s.fdFirst && s.fdStart.IsZero() {
@@ -257,39 +229,21 @@ func tickLoop() {
 			byID[o.Sid] = o
 		}
 		batch := uint32(len(active))
-		starvedN := 0                           // sessions short-delivered this firing (take-from-stock miss)
 		deliv := make([]string, 0, len(active)) // per-session delivered tokens, measured at the delivery point
 		for _, s := range active {
 			o := byID[s.id]
 			if o == nil {
-				s.mu.Lock()
-				hadFull := s.fdFull
-				s.mu.Unlock()
 				deliv = append(deliv, fmt.Sprintf("%d:0", s.id))
-				if hadFull {
-					starvedN++
-				}
 				continue
 			}
 			deliv = append(deliv, fmt.Sprintf("%d:%d", s.id, len(o.Tokens)))
 			s.mu.Lock()
-			hadFull := s.fdFull // before this tick's update: ramp ticks are exempt below
 			var fdTtfa float64
 			if !s.fdFirst && len(o.Tokens) > 0 {
 				s.fdFirst = true
 				fdTtfa = float64(time.Since(s.fdStart).Milliseconds())
 			}
-			if !s.fdFull && len(o.Tokens) >= *tpt {
-				s.fdFull = true
-			}
 			s.mu.Unlock()
-			// TAKE-FROM-STOCK deadline: Step returns instantly, so gpu_ms carries no
-			// real-time verdict. The property that must hold each tick is "the previous
-			// slice's tokens are in stock" — short delivery means the engine fell behind.
-			starved := hadFull && len(o.Tokens) < *tpt
-			if starved {
-				starvedN++
-			}
 			if o.Text != "" {
 				s.send(map[string]any{"type": "response.text.delta", "delta": o.Text})
 				s.send(map[string]any{"type": "response.audio_transcript.delta", "delta": o.Text})
@@ -299,14 +253,10 @@ func tickLoop() {
 					"audio":       base64.StdEncoding.EncodeToString(o.AudioOut),
 					"sample_rate": o.AudioSr})
 			}
-			s.send(map[string]any{"type": "metronome.tick", "latency_ms": resp.GpuMs,
-				"budget_ms": budgetMs, "deadline_met": !starved, "batch": batch,
+			rpcMet := grpcMs <= budgetMs
+			s.send(map[string]any{"type": "metronome.tick", "latency_ms": grpcMs,
+				"budget_ms": budgetMs, "deadline_met": rpcMet, "batch": batch,
 				"server_ttfa_ms": fdTtfa})
-		}
-		if starvedN > 0 {
-			// One line per starved firing so the runner's issue scan catches a
-			// falling-behind engine even in non-trace runs.
-			log.Printf("[starve] slot=%d starved=%d/%d", slot, starvedN, len(active))
 		}
 		tickTrace(tickT0, slot, lateMs, sampleMs, grpcMs, float64(resp.GpuMs), deliv)
 		if os.Getenv("GW_DEBUG") != "" {
@@ -360,8 +310,8 @@ func main() {
 
 	srv := &http.Server{Addr: ":" + *port, Handler: http.HandlerFunc(handle)}
 	go func() {
-		log.Printf("[conveyor-gateway] WS on :%s  tick=%dms slots=%d tpt=%d -> worker %s",
-			*port, *periodMS, *slots, *tpt, *worker)
+		log.Printf("[conveyor-gateway] WS on :%s period=%dms slots=%d output_cap=%d -> worker %s",
+			*port, *periodMS, *slots, *outputTokenCap, *worker)
 		if e := srv.ListenAndServe(); e != nil && e != http.ErrServerClosed {
 			log.Fatalf("listen: %v", e)
 		}

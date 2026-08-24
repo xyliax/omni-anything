@@ -10,30 +10,23 @@ also imports this file (PYTHONPATH applies to every python child); applying
 the patches there is harmless — only the EngineCore process ever receives
 utility calls or runs the scheduler.
 
-Layout (the materialization pattern — control state / semantic / transport
-/ claim):
+Layout:
 
-- ``omni_state.py``     session KV control registry: lifecycle (resident /
-                        parked / materializing), timing, deferred queue, and
-                        the live block classification — mechanisms report
-                        events here, policies read and subscribe (no gate:
-                        pure data, imported by the others)
-- ``omni_park.py``      the park primitive, auto-park, session-update fixes,
-                        and the park.log evidence writers (gate:
-                        ``OMNI_PARK_PATCH``)
-- ``omni_reload.py``    engine command surface: ``reload_kv`` / ``kv_state``
-                        utilities plus the reload pacing policy (pool-tight
-                        reloads DEFER until a park frees capacity; a chunk
-                        arrival cancels) (gate: ``OMNI_PREFETCH``; requires
-                        park)
-- ``omni_transfer.py``  transport layer: anonymous CPU->GPU block moves that
-                        ride the stock offload load-event machinery (applied
-                        by omni_reload, no gate of its own)
+- ``omni_state.py``     session activity, prefetch control, timestamps, and
+                        live block-coverage queries (no physical-state copy)
+- ``omni_evict.py``     partial KV eviction, session-update fixes, host-backing
+                        instrumentation, and ``kv_events.log`` writers (gate:
+                        ``OMNI_KV_EVICTION``)
+- ``omni_prefetch.py``  ``prefetch_kv`` / ``kv_state`` utilities and the
+                        capacity-aware deferred-prefetch policy
+- ``omni_prefetch_transport.py`` transport adapter that rides vLLM's stock
+                        offload load-event machinery
 
-The claim layer is vLLM's existing resume hash-match — untouched by design.
+The next request uses vLLM's existing prefix-cache match; that path is not
+modified.
 
-A requested mechanism must not silently vanish: a "successful" run that never
-parked or never prefetched would masquerade as evidence, so any apply()
+A requested mechanism must not silently vanish: a "successful" run with no
+KV eviction or no prefetch would masquerade as evidence, so any apply()
 failure exits 78 (EX_CONFIG, matching the trace collector's convention).
 Importing the mechanism modules patches nothing; all patching happens inside
 their ``apply()``.
@@ -55,23 +48,23 @@ def _fail(stage: str, error: Exception) -> None:
 
 # Warmup sentinel contract, re-exported so the cross-process pin (worker /
 # trace collector / engine patch, see tests/test_run_validation.py) keeps one
-# authoritative surface. Importing omni_park has no side effects.
-from omni_park import WARMUP_REQ_PREFIX  # noqa: E402,F401
+# authoritative surface. Importing omni_evict has no side effects.
+from omni_evict import WARMUP_REQ_PREFIX  # noqa: E402,F401
 
-if os.environ.get("OMNI_PARK_PATCH"):
+if os.environ.get("OMNI_KV_EVICTION"):
     try:
-        import omni_park
+        import omni_evict
 
-        omni_park.apply()
+        omni_evict.apply()
     except Exception as error:
-        _fail("park initialization", error)
+        _fail("KV-eviction initialization", error)
         os._exit(78)
 
 if os.environ.get("OMNI_PREFETCH"):
     try:
-        import omni_reload
+        import omni_prefetch
 
-        omni_reload.apply()
+        omni_prefetch.apply()
     except Exception as error:
         _fail("prefetch initialization", error)
         os._exit(78)

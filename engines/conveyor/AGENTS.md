@@ -1,11 +1,13 @@
 # engines/conveyor
 
-新双工推理引擎本体，由 `experiments/conveyor/` 按路径 spawn（argv+env 驱动，无 Python import）。机制语义与周期流程见 `docs/system.md`；当前结论见 `docs/findings.md`；动态绑定见 `docs/agent/dynamic-edges.json`。
+Conveyor 引擎本体，由 `experiments/conveyor/` 按路径 spawn。论文术语和机制语义见 `docs/problem.md#terminology` 与 `docs/system.md`；本文件只说明代码映射。
 
-## Local Mechanisms
+## Local Workflow
 
-- **gateway 槽轮**（`gateway/`，Go，复制自 pin 的 gateway-go 后永久分道）：全局单节拍器换成 slot wheel——每 `period/slots` 在**绝对网格**上醒一次、只服务本槽会话；会话在 admission 时按到达顺序轮转指派槽位。每次发射打一行 `gateway_ticks.log`（网格晚醒量、每会话交付量）。
-- **worker 取现货交付**（`worker/stream_server.py`，复制自 baseline worker 后永久分道）：Step 推入新 chunk 后立即返回该会话的库存 token（上一片的产出），不再等待——阻塞式 Step 会在 Servicer 锁后面把错开的槽重新串行化。交付恰好滞后生成一片，首片返回空。**指标口径随之重建**：`deadline_met` = 本 tick 交付 ≥ tpt（miss = 引擎未跟上）；每段生成配额 = tpt 精确值（任何松弛会累积成库存漂移，`inv_backlog` 监控）。
-- **park 驻留管理**（`worker/engine_patch/sitecustomize.py`，经 PYTHONPATH 注入 EngineCore）：vLLM connector 增量镜像完整块；quota 模式在 decode 结束的 scheduler 状态转移中 auto-park，释放引用并逐出 resident floor 与 tail margin 之外的尾块，再记录 `cpu_covered`。下一 chunk 到达时按 hash 恢复，未覆盖缺口会重算；当前没有 pre-eviction coverage guard。证据写 `park.log`（park/S/L/R 四种行）。
+- `gateway/main.go`：绝对 release grid；会话建立时分配稳定 slot。`--output-token-cap` 是 gateway 最多消费的 token 数，不是最低交付要求。继承的 `deadline_met` wire field 只报告当前 service RPC 是否在 period 内返回。
+- `worker/stream_server.py`：把 input chunk 入队后快照 undelivered-output buffer，不等待本次计算；`output_backlog` 记录缓冲深度。当前路径只输出 Thinker text。
+- `worker/engine_patch/omni_evict.py`：incremental host backing、idle-session partial KV eviction、on-demand reload instrumentation 和 streaming bug fixes。新事件写 `kv_events.log`：`E` eviction、`B` host backing、`L/R` load window。
+- `omni_state.py`：只保存 session activity、prefetch control 和时间戳；GPU/host block coverage 每次查询 pools，不维护伪 lifecycle。
+- `omni_prefetch.py` / `omni_prefetch_transport.py`：KV prefetch command、capacity deferral 和 transport adapter。synthetic ID 与 hash registration 是 implementation choices。
 
-engine_patch 另含预取链路：`omni_state` 保存 control phase 与时序（块级真相仍查 pool）、`omni_reload` 提供指令面、`omni_transfer` 执行匿名搬运；成熟度只看 `FINDING-H7`。补丁加载失败一律 exit 78，防止未生效机制伪装成证据；随后链式加载 `infra/trace` 的 scheduler-trace 采集器。
+partial eviction 当前强制 synchronous scheduling。initial-context preloading 期间 `OMNI_HOLD_KV_EVICTION` 暂停 automatic eviction；`initial_context_finalize` 只解除暂停，不在 barrier 原地逐出。patch 加载失败 exit 78。

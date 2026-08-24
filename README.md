@@ -1,12 +1,14 @@
 # Omni-Anything
 
-在单张 GPU 上同时服务两类负载：具有硬 tick deadline 的全双工语音前台，以及 delay-tolerant 的后台 agent 结果注入。项目研究的核心矛盾是：KV capacity 往往先于计算能力耗尽，而 tick 内仍存在可用于扩展容量的计算与 PCIe 空隙。
+本仓库研究单张 GPU 上的周期性交互模型服务：长生命周期会话持续追加上下文，其 KV cache 工作集可能在每周期计算尚有余量时先耗尽 GPU 容量。当前原型系统暂称 **Conveyor**。
 
 ## Current Status
 
-当前仓库包含 baseline 与 conveyor 两个可运行测量臂。conveyor 用错开相位（phase staggering）分散会话发射，用取现货交付（take-from-stock delivery）即时返回上一周期库存，用 KV 部分释放（park）回收可恢复的闲置尾部，再用 KV 预取（prefetch）提前搬回这些尾部。完整机制见 [`System`](docs/system.md#experimental-arms)，成熟度、量化结论和限制只在 [`Findings`](docs/findings.md#current-state) 维护。
+Conveyor 当前实现三项候选研究机制：释放偏移调度（release-offset scheduling）、带主机后备的 KV 部分逐出（partial KV eviction with host backing）和 KV 预取（KV prefetching）。周期性本身提供相邻两次使用之间的复用间隔；释放偏移只负责把多会话的输入、计算和恢复需求分散到周期内，并不创造该间隔。
 
-项目目标是前台与 injection 后台共存；当前可执行主路径集中在全双工前台、KV 驻留机制和容量测量，injection 的端到端联合对比协议尚未接入。抽象问题与当前实现边界见 [`docs/problem.md`](docs/problem.md)。
+当前测量实例使用 Qwen2.5-Omni 的音频输入路径，但只返回 Thinker 文本输出，不运行 Talker/Code2Wav，也不产生 PCM 音频。它证明的是一个具体原型上的资源现象和机制可行性；对其他交互模型、语音输出和其他硬件的推广仍需资源模型与实验验证。
+
+研究问题与固定术语见 [`Problem`](docs/problem.md)，机制和端到端语义见 [`System`](docs/system.md)，实验协议及当前缺陷见 [`Experiments`](docs/experiments.md)，证据支持的结论与限制见 [`Findings`](docs/findings.md)。
 
 ## Quick Start
 
@@ -17,39 +19,30 @@ python -m experiments.baseline --trace --duration 120 --label first
 python -m infra.trace.perfetto <run-id-or-path>
 ```
 
-一次运行是否成功以 `status.json` 的终态和 validation 为准，不能只看进程 exit code。完整实验协议见 [`docs/experiments.md`](docs/experiments.md)。
+一次运行是否成功以 `status.json` 终态和 validation 为准，不能只看进程 exit code。可执行配置和证据要求以 [`Experiments`](docs/experiments.md) 为准。
 
 ## Documentation Guide
 
-五份人类文档按事实类型分工，不按开发过程堆叠记录：
-
-| 文档 | 回答的问题 |
+| 文档 | 唯一负责的事实 |
 | --- | --- |
-| 本页 | 项目定位、当前边界与阅读入口 |
-| [`Problem`](docs/problem.md) | 研究什么、为什么重要、范围在哪里 |
-| [`System`](docs/system.md) | 机制与端到端系统如何工作 |
-| [`Experiments`](docs/experiments.md) | 配置、指标、比较和证据怎样才有效 |
-| [`Findings`](docs/findings.md) | 当前证据支持哪些结论、成熟度与限制 |
+| 本页 | 项目定位、当前边界和阅读入口 |
+| [`Problem`](docs/problem.md) | 研究问题、范围和 canonical glossary |
+| [`System`](docs/system.md) | 机制、约束和端到端流程 |
+| [`Experiments`](docs/experiments.md) | 配置、比较、指标状态和协议 |
+| [`Findings`](docs/findings.md) | 当前证据支持的结论、成熟度和限制 |
 
-第一次阅读按 `Problem → System → Findings`；审计一个数字按 `Findings → Experiments → Evidence Registry`。代码已经实现不等于机制已验证，机制已验证也不等于具备 formal performance evidence。
+首次阅读使用 `Problem → System → Experiments → Findings`。代码已实现不等于机制已验证；诊断结果也不会自动成为论文叙事。精确 run、hash 与 provenance 通过 [`Evidence Registry`](docs/agent/evidence.json) 解析。
 
-若陈述看似冲突，按事实类型回到唯一 owner：范围看 `Problem`，机制语义看 `System`，实验口径看 `Experiments`，当前结论看 `Findings`，精确 run 与 hash 看 [`Evidence Registry`](docs/agent/evidence.json)。
-
-### Agent Documentation
-
-Agent 文档不是第二套项目事实，而是把上述事实映射到代码和维护动作。Agent 按固定链路工作：
+Agent 文档只把上述事实映射到代码和维护动作：
 
 ```text
 AGENTS.md → task guide → human owner → registry → nearest AGENTS.md → code and tests
 ```
 
-| 层级 | 作用 |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | 按任务找到事实 owner，并声明全仓边界 |
-| [`Task Router`](docs/agent/README.md) | 选择最小 read-set 和交付要求 |
-| `system-map` / `dynamic-edges` | 定位组件、进程、IPC 与 monkeypatch |
-| `contracts` / `change-impact` | 约束不变量，并指出改动必须同步检查什么 |
-| 最近一层 `AGENTS.md` | 说明目标目录的局部边界与验证方法 |
-| `evidence` / `records` | 连接 finding、证据角色、exact run 与历史过程 |
+研究范围回到 `Problem`，机制语义回到 `System`，协议回到 `Experiments`，当前结论回到 `Findings`。Agent registry 不得覆盖这些 owner。
 
-普通读者无需逐项阅读；审计 runtime、修改影响或结论 provenance 时再进入对应 registry。Agent 文档不能覆盖人类事实 owner 中的研究语义、协议或结论。
+若陈述看似冲突，以对应事实域的唯一 owner 为准；历史 results、外部 `.context` 材料和旧讨论稿不能覆盖当前 human docs。
+
+### Agent Documentation
+
+Agent 文档不是第二套项目事实。根 [`Task Router`](AGENTS.md#task-router) 选择最小 read-set；[`system-map`](docs/agent/system-map.json) 定位组件和入口，[`dynamic-edges`](docs/agent/dynamic-edges.json) 记录 subprocess、IPC 与 monkeypatch，[`change-impact`](docs/agent/change-impact.json) 把修改映射到必须复查的 owner 和 tests。
