@@ -10,6 +10,8 @@ Conveyor 当前实现三项候选研究机制：释放偏移调度（release-off
 
 研究问题与固定术语见 [`Problem`](docs/problem.md)，机制和端到端语义见 [`System`](docs/system.md)，实验协议及当前缺陷见 [`Experiments`](docs/experiments.md)，证据支持的结论与限制见 [`Findings`](docs/findings.md)。
 
+EuroSys 2027 论文的独立写作工作区见 [`eurosys2027/`](eurosys2027/README.md)。该目录只保存论文结构、措辞和图表规划；研究事实仍由上述文档及 evidence registry 持有。
+
 ## Quick Start
 
 ```bash

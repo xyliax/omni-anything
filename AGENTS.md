@@ -68,9 +68,10 @@
 | `infra/env/` | 锁定运行环境 | 操作契约见本目录 `AGENTS.md` |
 | `results/` | 不可变运行证据 | 规则见 `results/README.md` |
 | `third_party/` | git-subrepo pin | 只读，除非用户明确授权 pin 操作 |
+| `eurosys2027/` | EuroSys 2027 论文写作工作区 | 不是事实 owner；写作规则和 source-of-truth 边界见本目录 `AGENTS.md` |
 | `.context/` | 讨论、外部整理和表达草稿 | 不是项目事实；被采纳内容单向提升到 owner |
 
-根目录只保留 `README.md`、本文件和兼容 symlink `CLAUDE.md`。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓 worker 从其复制后永久分道，不追随上游文件更新。
+除上述正式顶层目录外，根目录只保留 `README.md`、本文件和兼容 symlink `CLAUDE.md`。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓 worker 从其复制后永久分道，不追随上游文件更新。
 
 ## Change Transactions
 

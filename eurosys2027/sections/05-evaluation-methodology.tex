@@ -1,0 +1,77 @@
+\section{Evaluation Methodology}
+\label{sec:evaluation-methodology}
+
+\subsection{Research Questions}
+
+The evaluation is organized around six questions rather than around source
+modules:
+\begin{enumerate}
+  \item Does GPU KV capacity limit concurrency before per-period computation?
+  \item How much sustainable concurrency can Conveyor recover in that regime?
+  \item What latency and data-movement costs accompany the capacity change?
+  \item Which effect is attributable to release offsets, partial eviction, and
+        prefetching, respectively?
+  \item Does a capacity/compute/restore-bandwidth model predict transitions
+        beyond one configuration?
+  \item What overheads and failure regions bound the design?
+\end{enumerate}
+
+The first question establishes that the evaluated configuration is in the
+regime addressed by the paper.  The second and third jointly test benefit and
+cost.  The remaining questions test causal attribution and the limits of
+generalization.
+
+\subsection{Evaluated Systems and Controls}
+
+We compare \systemname with a matched Metronome baseline.  The baseline keeps
+the same model and input path but retains its KV
+state in the GPU cache; Conveyor adds release offsets, host backing, partial
+eviction, and optional prefetch.  Upstream Metronome is retained as a source
+and behavior reference, not mixed directly into matched performance claims
+when its input processing and observation path differ.
+
+Mechanism ablations add one change at a time: release offsets; release offsets
+plus host backing and partial eviction; and then prefetching.  A retained-
+prefix sweep varies $K$.  Because the current eviction implementation requires
+synchronous scheduling to avoid a block-free race with speculative engine
+iterations, every eviction comparison uses a matched synchronous-scheduling
+control.
+
+\draftplaceholder{Before collecting paper results, equalize the baseline and Conveyor per-segment decode caps and regenerate every compared run. The current executions do not contain matched decode work.}
+
+\subsection{Workloads and Hardware}
+
+The current measured stack is a single RTX~3090 connected through PCIe Gen3,
+running the 7B Qwen2.5-Omni model with vLLM~0.23 and Thinker-only output.  This stack is
+an evaluation instance, not a requirement of the design.  Experiments vary
+session count, initial context length, and retained prefix while holding the
+offered input, model revision, output cap, and scheduler mode fixed across
+compared systems.
+
+Initial-context preloading completes before the measured periodic phase and is
+reported as workload state rather than as a Conveyor mechanism.  The resource
+model separately calibrates usable GPU KV bytes, KV bytes per token, prefill
+and decode cost, HBM demand, and host-device copy throughput.  Any analytical
+hardware profile is labeled as such; a cross-hardware statement requires an
+additional measured profile rather than a linear extrapolation alone.
+
+\subsection{Metrics and Reproducibility}
+
+Capacity results report GPU KV occupancy, resident blocks per session, host
+memory, and transfer volume together with compute utilization and session
+liveness.  Latency is decomposed from input release through feature
+extraction, scheduler admission, restoration, prefill, and decode, with
+per-session distributions and tails.  Service-RPC return time, tokens consumed
+from an undelivered-output buffer, and a worker-local GPU timing field are
+implementation diagnostics; none is used alone as a freshness or
+schedulability criterion.
+
+Each reported point uses a fresh process set, a fixed model revision and
+environment, a steady-state window separated from initialization, repeated
+runs with uncertainty, and a complete manifest and terminal validation.  A
+process exit code alone is insufficient.  Performance claims use only
+reproducible runs with a fixed source revision, complete raw measurements, and
+recorded provenance.  Historical measurements and code inspection may explain
+design decisions but do not supply headline numbers.
+
+\draftplaceholder{Freeze the operational definitions of sustainable concurrency, per-period latency, warmup, repetitions, and uncertainty before filling Section~\ref{sec:evaluation}.}

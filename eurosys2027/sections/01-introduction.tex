@@ -1,0 +1,65 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Consider a single-GPU service that keeps several interaction sessions open
+while new input arrives periodically.  Each update appends a small chunk,
+reuses the session's history, and produces an incremental result; the session
+does not end after one response.  Transformer serving makes this reuse
+efficient by retaining attention key/value (KV) state, but the resulting
+working set grows as each session ages.  When several such sessions share one
+GPU, their aggregate KV working set can exhaust the GPU block pool even when
+the computation required in each update period would leave time for more
+work.  Our measured instance uses audio input to Qwen2.5-Omni and returns only
+Thinker text; speech synthesis and playback are outside this study.
+
+Serving at request granularity exposes arrivals, runnable requests, and cache
+matches, but does not reveal when an idle session will be used again.  Each
+direct policy then pays a different cost.  Keeping every session fully
+resident avoids restoration latency but lets the growing KV working set
+determine admission.  Discarding state avoids long-term residency but repeats
+an increasingly large prefill on the next update.  Reloading state only after
+that update is admitted moves the host-to-device transfer onto its service
+path and can synchronize restoration traffic across sessions.  CPU offload
+alone therefore does not determine which state should remain resident or when
+it should return.
+
+\draftplaceholder{Add named closest-work citations and replace the capability-level comparison above with a verified closest-work boundary before treating it as a novelty argument.}
+
+We define the studied workload as a \emph{periodic interaction session}: a
+long-lived session that appends input at a target period while preserving its
+logical context.  Periodicity supplies an expected next-use time and an
+intrinsic reuse interval between successive updates.  The system goal is to
+use this information to reduce idle-session GPU KV residency while retaining
+complete context and preserving a per-period latency target.  This goal is
+bounded by three physical budgets: GPU KV capacity, computation within a
+period, and host-to-device restoration bandwidth.  No mechanism can admit work
+beyond this feasible region, so the system still requires admission control
+when the total resource demand exceeds those budgets.
+
+This setting creates three systems challenges.  First, \emph{shaping demand}
+must trade lower instantaneous demand against batching efficiency: smaller
+batches can repeat weight reads.  Second, \emph{partial residency must
+be safe}: the system must distinguish session activity, request ownership,
+physical residency, host coverage, and in-flight transfers rather than encode
+them in a single ``offloaded'' bit.  Third, \emph{restoration must be timely
+without becoming a correctness assumption}: capacity can defer a prefetch,
+the next input can overtake it, and cache replacement can evict it before
+reuse.
+
+We present \systemname, a next-use-aware residency policy for periodic
+interaction sessions.  For the same session, the policy coordinates release,
+feature extraction, idle eviction, restoration, and the next admission without
+tying correctness to audio-specific output behavior.  Release-offset
+scheduling assigns sessions stable positions in an absolute period grid,
+spreading their releases without changing their periods (Section~\ref{sec:design}).
+Incremental host backing records recoverable KV coverage as context grows, and
+the idle transition releases request ownership before evicting selected GPU
+tail blocks.  At the next update, retained blocks are matched in the GPU
+prefix cache and missing host-backed blocks are loaded on demand.  KV
+prefetching starts the same restoration path early enough to overlap input
+processing when capacity permits.  A deferred, overtaken, or evicted prefetch
+falls back to on-demand reload, while a gap in host coverage falls back to
+recomputation.  These fallbacks preserve correctness independently of a
+prefetch hit.
+
+\draftplaceholder{Write the three section-mapped contributions only after the closest-work audit, schedulability definition, and matched evaluation are complete. Do not insert preliminary effect sizes here.}

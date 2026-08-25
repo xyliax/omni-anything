@@ -1,0 +1,78 @@
+\section{Implementation}
+\label{sec:implementation}
+
+The prototype builds on vLLM~0.23 and separates load generation, online
+serving, and offline evidence processing.  This section records the details
+needed to understand correctness and reproduce measurements.  They are not
+additional research mechanisms.
+
+\subsection{Online Serving Path}
+
+Client shards maintain long-lived WebSocket sessions with a Go gateway.  The
+gateway implements the absolute release grid and sends input chunks to a
+Python worker through a protobuf gRPC \texttt{Step} call.  The worker performs
+input feature extraction and communicates with the vLLM EngineCore subprocess
+through its msgpack-based transport over ZMQ.  The runner starts and
+monitors these processes, but does not participate in the online data path.
+
+The Conveyor worker currently implements \texttt{Step} as a no-wait
+operation: after submitting the current input, it snapshots the session's
+previously generated but undelivered token buffer and returns without waiting
+for the new GPU work.  This prevents one slow call from blocking later release
+slots, but it also means service-RPC latency is not end-to-end model latency.
+An independent output stream could replace this behavior without changing the
+residency design, so we treat it as an implementation choice and preserve the
+distinction in evaluation metrics.
+
+\subsection{Engine Integration and State Ownership}
+
+Conveyor loads its EngineCore extensions through Python's
+\texttt{sitecustomize} hook.  The extension wraps private vLLM scheduler,
+cache-manager, and CPU-offload connector methods to observe idle transitions,
+advance host-backing coverage, evict cached blocks, and expose restoration
+utilities to the worker.  Patch activation is checked during process startup;
+an initialization failure terminates the run instead of silently executing a
+different system.
+
+Worker-to-engine utility calls request prefetch, controlled tail eviction,
+initialization finalization, or a state query.  These calls carry policy
+intent, not an authoritative block map.  A small registry records session
+activity and pending transfers, while the vLLM GPU cache manager and host
+block pool remain the sources of truth for residency and host coverage.  The
+implementation uses the native remote-KV waiting state for on-demand loads
+and registers completed prefetched blocks under their normal prefix hashes.
+
+\subsection{Host Backing, Eviction, and Restoration}
+
+The implementation extends vLLM's simple CPU-offload connector.  A per-session
+store cursor advances as new complete blocks become available, allowing host
+backing to continue after each streaming re-entry rather than stopping at the
+initial context.  Copy completion advances the recorded coverage frontier.
+Because completion can lag generation, idle eviction also reserves a small
+tail margin in addition to the configured retained prefix $K$.
+
+The main eviction path is attached to the scheduler transition that marks a
+resumable request idle.  A separate fixed-tail utility exists only for
+controlled experiments.  When a later request needs absent blocks, the native
+prefix-match and CPU-load path restores the longest contiguous host-backed
+prefix; the first coverage gap leaves the remaining tokens to ordinary
+prefill.  Prefetch invokes the same copy machinery earlier and inserts the
+result into the prefix cache, avoiding a second restoration implementation.
+
+\subsection{Initialization and Observability}
+
+Experiments can construct a chosen initial context before periodic input
+begins.  The runner creates all sessions, waits for every initial prefill, and
+excludes the initialization token from later delivery.  Automatic eviction is
+paused during this barrier.  Completing the barrier only removes the pause;
+the implementation waits for the first normal segment to finish before using
+its idle transition to establish retained-prefix state.  A barrier timeout is
+a run failure.
+
+Conveyor records partial eviction, host-backing advancement, load issue, and
+load completion as distinct KV events.  Other logs record releases, input
+stages, scheduler iterations, per-session residency, and GPU utilization.
+Offline tooling aligns these producer events into a
+trace; it does not infer precise GPU kernel time from gaps between scheduler
+calls.  A run is accepted only if its terminal status, required artifacts,
+mechanism events, and health checks are complete.

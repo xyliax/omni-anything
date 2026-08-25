@@ -1,0 +1,102 @@
+\section{Conveyor Design}
+\label{sec:design}
+
+\subsection{Overview and State Model}
+
+\systemname uses expected next-use time to decide when a long-lived session
+should occupy scarce GPU KV capacity.  Its online path contains a gateway that
+assigns release offsets, a worker that accepts input and maintains output
+delivery state, and an engine core that owns scheduling and the GPU KV block
+pool.  Host backing, partial eviction, and restoration extend the engine's
+normal prefix-cache path; the control plane does not maintain a second copy of
+physical block truth.
+
+The design separates five state dimensions that a coarse resident/offloaded
+lifecycle would conflate.  A session is \emph{active} while its current input
+is admitted and \emph{idle} while it waits for the next input.  Independently,
+a KV block may be present in the GPU prefix cache, covered by a host copy, or
+both.  A transfer may be absent, prefetched, or issued on demand.  Finally,
+request ownership is distinct from cache residency: after an idle request
+releases ownership, hashed blocks may remain cached and available for prefix
+matching.  The GPU and host block pools answer residency and coverage queries;
+the control registry records only session activity, transfer state, and
+timing needed by the policy.
+
+\subsection{Release-Offset Scheduling}
+
+The gateway assigns each session a stable release offset $\phi_i$ on an
+absolute time grid.  If one release is processed late, the next release is
+still computed from $r_{i,0}+kT$ rather than from the delayed processing time.
+This prevents a transient delay from accumulating as permanent phase drift
+while preserving every session's period.
+
+Offsets shape aggregate demand rather than create per-session idle time.
+Sessions that would otherwise release together can spread input processing,
+engine admission, computation, and potential restoration over the period.
+This can reduce bursts, but may also reduce batching opportunities and repeat
+model-weight traffic.  The evaluation must therefore measure input-side burst
+reduction separately from any restoration-bandwidth benefit and account for
+the compute and HBM trade-off.
+
+\subsection{Host-Backed Partial KV Eviction}
+
+As a session's context grows, \systemname incrementally copies completed KV
+blocks into a host block pool and records the confirmed coverage frontier.
+Copy completion can lag generation, so the newest block need not have a host
+copy.  The eviction policy never infers coverage from context length alone.
+
+When a resumable request finishes its current segment and becomes idle, the
+policy first releases the request's ownership of its GPU blocks.  Blocks with
+stable hashes then become ordinary cached-free entries.  The policy retains
+up to $K$ prefix blocks in the GPU cache, protects a small implementation
+margin for recently produced blocks whose host copy may still be pending, and
+evicts selected tail blocks.  Each transition records the number of blocks
+released and evicted, the change in the GPU pool, and the host coverage of the
+evicted set.
+
+Host backing is incremental rather than an all-or-nothing session property.
+The current policy may evict a block before its host copy is confirmed.  Such
+a block remains recoverable through recomputation, but not through a complete
+reload.  This distinction is why the design tracks host coverage explicitly
+and does not promise that every eviction will later be a transfer hit.
+
+\subsection{KV Restoration and Prefetching}
+
+On the next update, the engine first matches the longest prefix still present
+in the GPU cache.  It then loads a contiguous sequence of missing blocks that
+are available in the host pool.  If it reaches a block that is neither
+GPU-resident nor host-backed, normal prefill recomputes that block and the
+remaining suffix.  On-demand restoration is therefore complete but adds
+transfer or recomputation to the update's service path.
+
+KV prefetching changes the timing of the same recovery process.  When the
+gateway releases a session input, the worker may ask the engine to restore
+host-backed GPU gaps while feature extraction is in progress.  The engine
+queries the current block pools and admits the copy only when its capacity
+gate allows it.  Restored blocks retain their content hashes and enter the
+ordinary GPU prefix cache, so subsequent scheduler admission does not need a
+special prefetch-hit path.
+
+If capacity is temporarily unavailable, the prefetch is deferred until a
+later idle-session eviction releases space.  If the corresponding input
+reaches scheduler admission first, the delayed prefetch is cancelled and the
+normal on-demand path takes over.  A completed prefetch may still be evicted
+by ordinary cache replacement before reuse; the design treats that event as
+a lost timing opportunity rather than corrupted state.
+
+\subsection{Fallbacks and Correctness}
+
+Correctness depends on complete logical context, not on a particular physical
+placement.  A retained GPU block is reused directly, a missing host-backed
+block is reloaded, and a host-coverage gap is recomputed.  Prefetch rejection,
+capacity deferral, input overtaking, and later cache eviction all converge on
+these same on-demand paths.  Consequently, prefetching can reduce critical-
+path work when it succeeds but cannot make a session unrecoverable when it
+fails.
+
+Three ordering rules protect this property.  Partial eviction runs only on an
+idle scheduler transition.  Request ownership is released before selected
+cached blocks are evicted.  The registry never overrides the block pools when
+deciding whether data is resident or host-backed.  These rules are system
+requirements; the particular connector calls and utility interfaces used by
+the prototype are replaceable implementation choices described next.
