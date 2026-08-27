@@ -45,19 +45,9 @@ Conveyor 在普通 continuous-batching 接口之外使用两个工作负载事�
 
 runner 只负责启动、终态判决和 artifact 登记，不进入数据面。全部进程的日志与观测输出写入不可变 run 目录，文件布局与离线解析见 [Observability Model](#observability-model)。机制补丁与 trace 观测都由 worker Python 的 `sitecustomize` 在进程启动时注入。精确组件和动态调用边分别由 [`system-map.json`](agent/system-map.json) 与 [`dynamic-edges.json`](agent/dynamic-edges.json) 持有。
 
-## Evaluated Systems
+## Conveyor Mechanisms
 
-### Upstream Metronome
-
-第三方 pin 中的 Upstream Metronome 保留原始 gateway 和 worker，只作为上游行为参考。它不接受本仓为了公平观测加入的 input-processing 和 trace 修复，因此不能与 Conveyor 的所有数字直接混用。
-
-### Matched Metronome Baseline
-
-正式比较计划使用 matched Metronome baseline：模型、输入、配置的输出上限和 observation producer 与 Conveyor 对齐；`paringest` 修复 host-side input processing，并加入逐会话交付记录。它不改变默认的全 GPU KV 驻留语义。
-
-当前 matched baseline 每段实际最多 decode \(M+8\)，而 Conveyor 配置为最多 \(M\)。两者 offered input 和配置上限来源相同，但 executed decode work 不同；在该缺陷通过独立实验事务修复并重跑前，文档不得称它们执行了完全相同的 workload。
-
-### Conveyor
+evaluated systems 的完整清单、配置与比较资格由 [`Experiments`](experiments.md#evaluated-systems) 持有；本节只定义 Conveyor 的机制语义。matched Metronome baseline 保留默认的全 GPU KV 驻留语义，是机制对照的参照系。
 
 Conveyor 当前研究三项候选机制：
 
@@ -80,7 +70,7 @@ phi(i) = r(i, 0) mod T
 
 gateway 使用绝对时间网格，并在会话建立时分配稳定的 \(\phi_i\)。一次晚醒只影响当前 firing，下一次仍回到原绝对网格，不累积重锚漂移。
 
-每个周期会话在两次使用之间本来就有复用间隔。释放偏移不创造该间隔；它把原本同步的 input processing、engine admission、compute 和潜在 KV restore demand 分散到周期内。当前证据直接验证了 input-processing 惊群的缓解；KV 恢复带宽的平滑效果需要新的 trace 和资源模型验证。
+每个周期会话在两次使用之间本来就有复用间隔。释放偏移不创造该间隔；它把原本同步的 input processing、engine admission、compute 和潜在 KV restore demand 分散到周期内。各项收益的证据状态由 [`FINDING-D3`](findings.md#finding-d3) 与 [`FINDING-H1`](findings.md#finding-h1) 持有。
 
 ## KV State Model
 
@@ -139,17 +129,13 @@ vLLM 的 `SimpleCPUOffloadConnector` 随引擎迭代把已完成 KV blocks 复�
 
 ## Output Delivery
 
-matched baseline 和 Conveyor 都维护每会话未交付输出缓冲 `st.tokens[st.consumed:]`。差异是：matched baseline 在没有可交付 token 时最多等待配置的 RPC budget，Conveyor 当前只做一次快照并立即返回。
-
-protobuf 字段 `tokens_per_tick` 与内部短名 `tpt` 是继承的接口标识；在本项目语义中它们表示每周期最多消费的 output-token cap \(M\)，不是最低交付要求。`delivered < M` 可以作为实现诊断记录，但不能单独判定 workload correctness、音频卡顿或论文级 deadline miss。
-
-如果生成速率长期高于 gateway 消费速率，未交付输出缓冲会持续增长。这个现象必须记录，但最终论文采用何种 freshness 或 QoE metric 由 evaluation 设计决定。
+matched baseline 和 Conveyor 都维护每会话未交付输出缓冲 `st.tokens[st.consumed:]`。差异是：matched baseline 在没有可交付 token 时最多等待配置的 RPC budget，Conveyor 当前只做一次快照并立即返回。如果生成速率长期高于 gateway 消费速率，未交付输出缓冲会持续增长。交付相关字段的诊断语义与禁止解释由 [`Experiments`](experiments.md#measurement-semantics) 持有。
 
 ## Initial-Context Preloading
 
 初始上下文预加载（initial-context preloading）是实验状态构造，不是 Conveyor 机制。runner 在开始周期输入前预建指定会话，完成所有 initial-context prefills，并把初始化产生的单个输出 token 从交付游标中跳过。
 
-Conveyor 在该屏障期间暂停 automatic KV eviction。屏障结束时只解除暂停，不立即逐出，因为 host-backing frontier 可能尚未覆盖整个初始上下文；第一次正常周期计算后，scheduler 的 idle transition 再建立 retained-prefix 状态。`initialization barrier timed out` 必须使 run validation 失败。
+Conveyor 在该屏障期间暂停 automatic KV eviction。屏障结束时只解除暂停，不立即逐出，因为 host-backing frontier 可能尚未覆盖整个初始上下文；第一次正常周期计算后，scheduler 的 idle transition 再建立 retained-prefix 状态。
 
 ## One Session Cycle
 

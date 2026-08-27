@@ -57,7 +57,7 @@ model revision、依赖锁和 GPU index 仍以 executable config 与 run manifes
 
 ### Upstream Metronome
 
-Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配。
+Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配，其数字不能与 Conveyor 的结果直接混用。
 
 ### Matched Metronome Baseline
 
@@ -80,9 +80,7 @@ KV eviction 当前要求 synchronous scheduling，以避免 speculative engine i
 
 ## Initial-Context Preloading
 
-`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。全部 initial-context prefills 完成后 runner 才开始周期输入；初始化产生的单 token 不进入输出交付缓冲。
-
-Conveyor 在 initialization barrier 期间暂停 automatic KV eviction，并在 barrier 结束时只解除暂停。matched baseline 使用独立 engine fix 刷新后续 segment 的 `session.max_tokens`。任何 `initialization barrier timed out` 日志都使 run validation 失败。
+`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。初始化屏障的流程与 Conveyor 在屏障期间的 eviction hold 语义由 [`System`](system.md#initial-context-preloading) 持有；屏障超时由 [Repository Health Gates](#repository-health-gates) 判罚。
 
 这项设置是 workload state construction，不是研究机制。论文实验应报告 initial context length，而不是把它写成系统设计。
 

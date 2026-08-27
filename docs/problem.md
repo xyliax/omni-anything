@@ -63,7 +63,7 @@ r_{i,k} = r_{i,0} + kT,
 0 \le m_{i,k} \le M.
 \]
 
-\(M\) 是抽象模型中的生成上限，不是最低交付量；\(m_{i,k}\) 只表示该次更新的模型生成量，不表示 gateway 在某次 release 实际取出的 token 数。当前 no-wait 实现记录的 `deliv` 是从未交付输出缓冲中消费的数量，取值可以为 0 到 \(M\)，而且缓冲没有 input-output identity，因而不能把 `deliv` 归属于当前输入。当前 runner 也没有证明所有交互模型都以相同方式产生静音或媒体 token。
+\(M\) 是抽象模型中的生成上限，不是最低交付量；\(m_{i,k}\) 只表示该次更新的模型生成量，不表示 gateway 在某次 release 实际取出的 token 数。实现层交付计数的语义与禁止解释由 [`Experiments`](experiments.md#measurement-semantics) 持有。
 
 每个输入块对应一个每周期延迟目标（per-period latency target）\(D\)。这是软实时目标：偶发迟到会增加响应延迟；在包含播放端的完整系统中，连续迟到可能逐步耗尽客户端 jitter buffer 并产生可感知卡顿。当前 Thinker-only runner 没有实现音频播放链，因此不能把 token 数或单次迟到直接宣称为已测的播放故障。
 
@@ -71,7 +71,7 @@ r_{i,k} = r_{i,0} + kT,
 
 若一次会话更新只占周期 \(T\) 的一部分，则该会话在相邻两次使用之间天然存在复用间隔。这个间隔来自周期性工作负载本身，不由释放偏移调度创造。
 
-同步释放会把多会话的输入处理、计算和 KV 恢复需求集中在同一短窗口。为不同会话分配释放偏移，只是把这些需求分散到整个周期，降低瞬时并发和峰值恢复带宽需求。是否真正降低了恢复流量峰值仍需 trace 和资源模型验证；当前证据首先支持它对输入处理惊群的缓解。
+同步释放会把多会话的输入处理、计算和 KV 恢复需求集中在同一短窗口。为不同会话分配释放偏移，只是把这些需求分散到整个周期，降低瞬时并发和峰值恢复带宽需求。各项收益的证据状态由 [`FINDING-D3`](findings.md#finding-d3) 持有。
 
 ### Current Measured Instance
 
@@ -113,7 +113,7 @@ host-side feature extraction 也可能造成拥堵，但它可以通过并行 in
 - 生成量、实际交付量与未交付输出缓冲增长；
 - session death、RPC error 和 artifact 完整性。
 
-论文级 freshness、播放卡顿和最大可调度并发的 operational definition 必须在 evaluation 设计中单独确定，不能从当前诊断字段直接升级。
+论文级 freshness、播放卡顿和最大可调度并发的 operational definition 由 [`Experiments`](experiments.md#measurement-semantics) 在 evaluation 设计中确定。
 
 ## Terminology
 
