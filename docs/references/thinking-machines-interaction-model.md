@@ -1,7 +1,7 @@
 # Thinking Machines 交互模型：公开测试案例与机制分析
 
 外部公开材料整理。Updated: 2026-08-07
-本文不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。正文只分析来源材料；任何内容进入 paper 前必须重新核验原始来源，并按 [`docs/problem.md`](../../docs/problem.md#terminology) 与四份 human owner 重新表述。
+本文不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。正文只分析来源材料；任何内容进入 paper 前必须重新核验原始来源，并按 [`docs/problem.md`](../problem.md#terminology) 与四份 human owner 重新表述。
 
 ## 核心结论
 
