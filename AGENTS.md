@@ -6,7 +6,7 @@
 
 ## Task Router
 
-按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner、写无数字摘要，或包含由测试校验的生成内容，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的所有权全集见 `docs/agent/ownership.json`。
+按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的所有权全集见 `docs/agent/ownership.json`。
 
 ```text
 .
@@ -38,14 +38,14 @@
 │   ├── trace/                       # 观测生产、解析、对齐与 Perfetto；实验不得私建 trace/画图
 │   └── env/                         # 锁定运行环境；操作契约见本目录 AGENTS.md
 ├── results/                         # 不可变运行证据；操作规则见 results/README.md
-├── tests/                           # 契约与布局守卫；提交前从仓库根运行 python -m pytest
+├── tests/                           # 运行、配置与 trace 的单元测试；提交前从仓库根运行 python -m pytest
 ├── third_party/                     # git-subrepo pin；只读，除非用户明确授权 pin 操作
 │   └── metronome/                   # baseline 依赖 pin；复制后永久分道，不追随上游
 ├── eurosys2027/                     # 论文写作工作区；不是事实 owner；写作规则见本目录 AGENTS.md
 └── .github/                         # CI 工作流
 ```
 
-除隐藏配置文件外，根目录只保留 map 所列条目。结构修改必须在同一事务内更新本 map、owner registry 与守卫测试，不能通过放宽断言隐藏不一致。
+除隐藏配置文件外，根目录只保留 map 所列条目。结构修改必须在同一事务内更新本 map 与 owner registry。
 
 ## Research Classification
 
