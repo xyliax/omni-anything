@@ -8,9 +8,7 @@
         "engines/AGENTS.md",
         "docs/agent/system-map.json"
       ],
-      "verification": [
-        "tests/test_repository_layout.py"
-      ]
+      "verification": []
     },
     {
       "id": "CONTRACT-SHARED-OBSERVATION",
@@ -30,10 +28,8 @@
         "experiments/shared/workload.py"
       ],
       "verification": [
-        "tests/test_baseline_config.py",
-        "tests/test_conveyor_config.py",
-        "tests/test_run_validation.py",
-        "tests/test_documentation.py"
+        "tests/test_configs.py",
+        "tests/test_run_validation.py"
       ]
     },
     {
@@ -78,9 +74,7 @@
         "docs/system.md",
         "engines/conveyor/worker/engine_patch/omni_state.py"
       ],
-      "verification": [
-        "tests/test_documentation.py"
-      ]
+      "verification": []
     },
     {
       "id": "CONTRACT-CLIENT-SHARD-HANDOFF",
@@ -90,8 +84,7 @@
         "docs/agent/dynamic-edges.json"
       ],
       "verification": [
-        "tests/test_run_workflow.py",
-        "tests/test_documentation.py"
+        "tests/test_run.py"
       ]
     },
     {
@@ -113,9 +106,7 @@
         "docs/experiments.md",
         "results/README.md"
       ],
-      "verification": [
-        "tests/test_documentation.py"
-      ]
+      "verification": []
     }
   ],
   "experiment_record_v1": {

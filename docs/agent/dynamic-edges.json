@@ -9,7 +9,7 @@
       "source": "infra/run/workflow.py",
       "why_static_tools_miss": ["baseline target path is selected from mode data", "new process"],
       "observe": ["manifest.json process commands", "worker.log"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-RUNNER-GATEWAY",
@@ -19,7 +19,7 @@
       "source": "infra/run/workflow.py",
       "why_static_tools_miss": ["binary path is runner data", "new process"],
       "observe": ["manifest.json process commands", "gateway.log"],
-      "verify": ["tests/test_run_workflow.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-RUNNER-CLIENT-CONTROLLER",
@@ -29,7 +29,7 @@
       "source": "infra/run/workflow.py",
       "why_static_tools_miss": ["script path and argv are runner data", "new process"],
       "observe": ["manifest.json process commands", "client.txt", "client.json"],
-      "verify": ["tests/test_run_workflow.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-CLIENT-CONTROLLER-SHARDS",
@@ -39,7 +39,7 @@
       "source": "third_party/metronome/experiments/sustained_fd.py",
       "why_static_tools_miss": ["self-spawn through __file__", "multiplicity is runtime configuration"],
       "observe": ["manifest.json client_shards", "client.txt"],
-      "verify": ["tests/test_documentation.py"]
+      "verify": []
     },
     {
       "id": "EDGE-CLIENT-SHARD-RESULT",
@@ -51,7 +51,7 @@
       "hazards": ["paths are not namespaced by run id; concurrent repository runs can delete or overwrite each other's shard output", "direct invocation outside the managed workflow can consume stale shard output"],
       "safety": ["RunPlan declares every expected scratch path", "workflow deletes old files before launch", "every shard must recreate its file before the run can pass", "workflow deletes scratch files on every exit path"],
       "observe": ["controller aggregation into client.json"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-CLIENT-CONTROLLER-RESULT",
@@ -62,7 +62,7 @@
       "why_static_tools_miss": ["producer and consumer communicate through a formatted file path", "workflow and pinned client never call each other"],
       "safety": ["workflow deletes any pre-existing aggregate before launch", "missing fresh aggregate is a run issue", "temporary aggregate is deleted on every exit path"],
       "observe": ["client.json", "status.json validation"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-RUNNER-GPU-MONITOR",
@@ -72,7 +72,7 @@
       "source": "infra/trace/collect.py",
       "why_static_tools_miss": ["external executable", "command assembled as data"],
       "observe": ["manifest.json service commands", "gpu.csv"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "EDGE-CLIENT-GATEWAY-WEBSOCKET",
@@ -82,7 +82,7 @@
       "source": "third_party/metronome/bench/realtime_client.py",
       "why_static_tools_miss": ["network process boundary", "protocol messages are JSON strings", "cross-language endpoint"],
       "observe": ["client.txt", "gateway.log", "client.json"],
-      "verify": ["tests/test_documentation.py"]
+      "verify": []
     },
     {
       "id": "EDGE-BASELINE-GATEWAY-WORKER-STEP",
@@ -163,7 +163,7 @@
       "source": "engines/conveyor/worker/engine_patch/sitecustomize.py",
       "why_static_tools_miss": ["implicit sitecustomize entry", "import-time side effect", "apply chain is environment-gated"],
       "observe": ["patch activation log", "exit 78 on initialization failure"],
-      "verify": ["tests/test_conveyor_config.py", "tests/test_run_validation.py"]
+      "verify": ["tests/test_configs.py", "tests/test_run_validation.py"]
     },
     {
       "id": "EDGE-CONVEYOR-PATCH-VLLM",
@@ -228,7 +228,7 @@
       "source": "infra/trace/parse.py",
       "why_static_tools_miss": ["producer and consumer never call each other", "file schema is the interface"],
       "observe": ["manifest.json", "derived timeline metadata source hashes"],
-      "verify": ["tests/test_trace.py", "tests/test_run_artifacts.py"]
+      "verify": ["tests/test_trace.py", "tests/test_run.py"]
     }
   ]
 }
