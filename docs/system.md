@@ -19,52 +19,31 @@ Conveyor 在普通 continuous-batching 接口之外使用两个工作负载事�
 
 ## System Topology
 
-```mermaid
-flowchart TB
-    R["Runner / 编排与验收<br/>配置 · 启动 · 终态判决"]
+```text
+   ┌───────────────────────────────────────────────────────────┐
+   │ Runner: experiments/{baseline|conveyor}/runner.py         │
+   │ config -> RunPlan -> infra/run/workflow.execute()         │
+   │ manifest first, watchdog, process-group cleanup, verdict  │
+   └───┬────────────────┬─────────────────┬────────────────┬───┘
+ spawn │          spawn │           spawn │          spawn │
+       ▼                ▼                 ▼                ▼
+┌──────────────┐ ┌──────────────┐ ┌───────────────┐ ┌─────────────┐
+│ Client       │ │ Gateway (Go) │ │ Worker (Py)   │ │ GPU monitor │
+│ controller   │ │ absolute grid│ │ feature extr. │ │ nvidia-smi  │
+│ + N shards   │ │ T, phi(i)    │ │ output buffer │ │ -> gpu.csv  │
+└──────────────┘ └──────────────┘ └───────┬───────┘ └─────────────┘
+                                          │ spawns (vLLM internal)
+                                          ▼
+                          ┌───────────────────────────────┐
+                          │ EngineCore (vLLM subprocess)  │
+                          │ Scheduler + GPU KV block pool │
+                          │ sitecustomize patches attach  │
+                          └───────────────────────────────┘
 
-    subgraph LOAD["Load Generation / 负载生成"]
-        CC["Client Controller<br/>聚合会话结果"]
-        CS["Client Shards<br/>持续提交输入"]
-        CC -->|spawn| CS
-        CS -->|/tmp shard results| CC
-    end
-
-    subgraph SERVE["Online Serving / 在线服务"]
-        GW["Gateway / 网关<br/>周期与释放偏移"]
-        WK["Worker / 输入与输出<br/>特征提取 · 未交付输出缓冲"]
-        EC["EngineCore / 引擎核心<br/>Scheduler · KV Block Pool"]
-        PATCH["Conveyor Patch / 动态补丁<br/>主机后备 · 部分逐出 · 恢复 · 预取"]
-
-        GW -->|gRPC Step<br/>输入块 / 当前可交付输出| WK
-        WK <-->|msgpack/ZMQ<br/>请求 / utility 指令| EC
-        PATCH -.->|sitecustomize monkeypatch<br/>仅 Conveyor| EC
-    end
-
-    GPU["GPU Monitor<br/>nvidia-smi"]
-
-    subgraph OBS["Observation and Evidence / 观测与证据"]
-        STORE["RunStore<br/>manifest · status · raw artifacts · hashes"]
-        TRACE["Trace Pipeline<br/>解析 · 时钟对齐 · Perfetto"]
-        EVID["Evidence Layer<br/>record · alias · finding"]
-        STORE --> TRACE --> EVID
-    end
-
-    R -->|spawn| CC
-    R -->|spawn| GW
-    R -->|spawn| WK
-    R -->|spawn| GPU
-    CS <-->|WebSocket<br/>周期输入 / 交付事件| GW
-
-    R -->|manifest / validation| STORE
-    CC -->|client.json| STORE
-    GW -->|gateway logs| STORE
-    WK -->|worker / request logs| STORE
-    EC -->|scheduler / residency / KV events| STORE
-    GPU -->|gpu.csv| STORE
+在线请求路径: shards ──WebSocket──► gateway ──gRPC Step──► worker ──msgpack/ZMQ──► EngineCore
 ```
 
-在线请求路径是 `Client Shards → Gateway → Worker → EngineCore`。runner 只负责启动、终态判决和 artifact 登记，不进入数据面。精确组件和动态调用边分别由 [`system-map.json`](agent/system-map.json) 与 [`dynamic-edges.json`](agent/dynamic-edges.json) 持有。
+runner 只负责启动、终态判决和 artifact 登记，不进入数据面。全部进程的日志与观测输出写入不可变 run 目录，文件布局与离线解析见 [Observability Model](#observability-model)。机制补丁与 trace 观测都由 worker Python 的 `sitecustomize` 在进程启动时注入。精确组件和动态调用边分别由 [`system-map.json`](agent/system-map.json) 与 [`dynamic-edges.json`](agent/dynamic-edges.json) 持有。
 
 ## Evaluated Systems
 
@@ -119,6 +98,18 @@ GPU-resident 与 host-backed 不是互斥状态：同一个 block 可以同时�
 
 ## Partial KV Eviction
 
+一个 idle 会话在逐出后的 block 视图（block 从旧到新，`F` 为 host-backing frontier）：
+
+```text
+              0            K                         F            n
+              │            │                         │            │
+GPU pool      │████████████│░░░░░░░░░░░░░░░░░░░░░░░░░│████████████│
+host pool     │████████████│█████████████████████████│░░░░░░░░░░░░│
+next input    │ prefix hit │ prefetch / reload L..R  │ resident   │
+```
+
+`[0, K)` 是保留前缀，下次输入直接由 GPU prefix match 命中；`[K, F)` 在 idle 后被逐出且主机已有副本，可在复用前预取或在 admission 后按需回载；`[F, n]` 是 host copy 尚未确认的最新尾部，逐出时作为 margin 保留在 GPU。以下小节分别定义 host 后备前沿的推进、逐出的选择规则和恢复路径。
+
 ### Incremental Host Backing
 
 vLLM 的 `SimpleCPUOffloadConnector` 随引擎迭代把已完成 KV blocks 复制到 host block pool。Conveyor 修复 streaming re-entry 下的 store cursor，使复制前沿继续覆盖新增的完整 blocks。由于 copy confirmation 滞后于生成，最新 block 可能尚未 host-backed；系统为此记录 host coverage，而不假定后备总是完整。
@@ -162,6 +153,23 @@ Conveyor 在该屏障期间暂停 automatic KV eviction。屏障结束时只解�
 
 ## One Session Cycle
 
+单个会话在一个周期内各阶段的先后与重叠如下（示意，不按比例）；各阶段的 artifact 与健康检查见下表。
+
+```text
+        r(i,k)                                            r(i,k)+T
+          │                                                   │
+gateway   █ release + Step RPC                                █ 下一次释放
+worker    █ 快照未交付输出并返回，交付语义见 Output Delivery
+worker    ├────────┤ feature extraction，线程池跨会话并行
+worker    ├─┤ [Conveyor] 发出 prefetch_kv utility RPC
+engine      ├────┤ [Conveyor] host 到 GPU 的预取拷贝，与特征提取重叠
+engine             ├─┤ scheduler admission + prefix match
+engine                ├────┤ on-demand reload L..R，gap 之后改为重算
+engine                     ├──────────┤ prefill + decode，每段至多 M token
+engine                                ├──┤ host backing B 前沿推进
+engine                                    █ [Conveyor] idle 后 partial eviction E
+```
+
 | 阶段 | 对象与动作 | 新 artifact | 健康检查 |
 | --- | --- | --- | --- |
 | Release | gateway 在绝对网格释放会话输入 | `gateway_ticks.log` | 周期不漂移，offset 稳定 |
@@ -175,15 +183,23 @@ Conveyor 在该屏障期间暂停 automatic KV eviction。屏障结束时只解�
 
 ## Observability Model
 
-新 run 的 KV 事件统一写入 `kv_events.log`：
+新 run 的 artifact 布局与各文件语义如下；解析、时钟对齐与 Perfetto 导出由 `infra/trace/` 离线完成：
 
 ```text
-E  partial KV eviction
-B  host-backing frontier advancement
-L  on-demand reload or prefetch issued
-R  corresponding load completed
+results/<experiment>/<run_id>/           # 不可变 run 目录，绝不复用
+├── manifest.json                        # 先于一切进程落盘：展开配置、进程 argv、provenance
+├── status.json                          # 终态判决：success / failed / interrupted
+├── gateway_ticks.log                    # 绝对释放网格、RPC 延迟与实际交付量
+├── per_request.log                      # 连接 release、feature extraction 与 admission
+├── scheduler.log                        # 引擎调度迭代
+├── residency.log                        # 从 GPU pool 采样的逐会话 block 数
+├── kv_events.log                        # E 逐出 / B 后备前沿推进 / L 加载发起（按需或预取）/ R 加载完成
+├── gpu.csv                              # nvidia-smi 采样
+├── client.json                          # client controller 聚合结果
+├── *.log                                # 各进程 stdout/stderr
+└── derived/timeline.trace.json.gz       # 解析与时钟对齐后导出的 Perfetto timeline
 ```
 
-`residency.log` 从 GPU pool 采样每会话 block 数；`scheduler.log` 记录引擎调度迭代；`per_request.log` 连接 release、feature extraction 与 admission；`gateway_ticks.log` 记录绝对网格、RPC 延迟和实际交付量。Perfetto 只可视化这些已采集事件，不能把相邻 scheduler 调用间隔伪装成精确 GPU kernel 时间。
+Perfetto 只可视化这些已采集事件，不能把相邻 scheduler 调用间隔伪装成精确 GPU kernel 时间。
 
 旧 `results/` 中的历史 artifact 仍由其产生时的 commit 和 schema 解释；新 parser 不用废弃术语为旧日志维持第二套当前语义。
