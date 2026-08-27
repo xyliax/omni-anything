@@ -1,12 +1,12 @@
 # Omni-Anything
 
-本仓库研究单张 GPU 上的周期性交互模型服务：长生命周期会话持续追加上下文，其 KV cache 工作集可能在每周期计算尚有余量时先耗尽 GPU 容量。当前原型系统暂称 **Conveyor**。
+本仓库研究周期性交互模型服务中的长期 KV 状态管理：长生命周期会话持续追加上下文，其 KV working set 可能在周期计算预算用尽之前先耗尽有限的 GPU KV capacity。当前原型系统暂称 **Conveyor**。
 
 ## Current Status
 
 Conveyor 当前实现三项候选研究机制：释放偏移调度（release-offset scheduling）、带主机后备的 KV 部分逐出（partial KV eviction with host backing）和 KV 预取（KV prefetching）。周期性本身提供相邻两次使用之间的复用间隔；释放偏移只负责把多会话的输入、计算和恢复需求分散到周期内，并不创造该间隔。
 
-当前测量实例使用 Qwen2.5-Omni 的音频输入路径，但只返回 Thinker 文本输出，不运行 Talker/Code2Wav，也不产生 PCM 音频。它证明的是一个具体原型上的资源现象和机制可行性；对其他交互模型、语音输出和其他硬件的推广仍需资源模型与实验验证。
+当前证据仍以配置域限定的诊断结果和源码语义审计为主，尚不能直接组成论文的最终 Evaluation。精确模型、输入与输出路径、硬件、比较对象和协议只由 [`Experiments`](docs/experiments.md) 与 evidence registry 解析；当前可执行路径不自动定义最终论文的 workload、modality、output architecture 或 hardware scope。
 
 研究问题与固定术语见 [`Problem`](docs/problem.md)，机制和端到端语义见 [`System`](docs/system.md)，实验协议及当前缺陷见 [`Experiments`](docs/experiments.md)，证据支持的结论与限制见 [`Findings`](docs/findings.md)。
 
@@ -15,19 +15,18 @@ EuroSys 2027 论文的独立写作工作区见 [`eurosys2027/`](eurosys2027/READ
 ## Quick Start
 
 ```bash
-bash infra/env/setup.sh --profile cuda13_vllm023 --download-models
-python3 infra/env/verify.py --worker-python .venv-vllm023/bin/python
-python -m experiments.baseline --trace --duration 120 --label first
-python -m infra.trace.perfetto <run-id-or-path>
+bash infra/env/setup.sh --help
+python -m experiments.baseline --help
+python -m infra.trace.perfetto --help
 ```
 
-一次运行是否成功以 `status.json` 终态和 validation 为准，不能只看进程 exit code。可执行配置和证据要求以 [`Experiments`](docs/experiments.md) 为准。
+先在 [`Experiments`](docs/experiments.md) 中选择当前有效的环境、配置和比较协议；README 不复制这些易变参数。一次运行是否成功以 `status.json` 终态和 validation 为准，不能只看进程 exit code。
 
 ## Documentation Guide
 
 | 文档 | 唯一负责的事实 |
 | --- | --- |
-| 本页 | 项目定位、当前边界和阅读入口 |
+| 本页 | 项目定位和阅读入口 |
 | [`Problem`](docs/problem.md) | 研究问题、范围和 canonical glossary |
 | [`System`](docs/system.md) | 机制、约束和端到端流程 |
 | [`Experiments`](docs/experiments.md) | 配置、比较、指标状态和协议 |

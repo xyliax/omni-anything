@@ -13,11 +13,11 @@
 
 | Candidate | Evidence proximity | Benefit | Risk | Current choice |
 | --- | --- | --- | --- | --- |
-| 单 GPU 上的长期 Qwen2.5-Omni audio-input、Thinker-only sessions | Highest | 与当前 measured stack 一致，不假装完整语音输出 | 需要谨慎解释用户价值与 Thinker-only 边界 | **Provisional default** |
-| Always-on video assistant sessions | Low today | 直观展示长期 streaming context | 当前没有对应真机证据 | Alternative only |
-| Continuous captioning/meeting assistant sessions | Low today | 容易解释周期输入与长期上下文 | 产品 cadence 和模型路径尚未验证 | Alternative only |
+| 长期交互助手 session，具体 input/output modality 与 user-visible delivery path 待定 | Open | 直接展示长期 session、增量更新、上下文复用与 KV 增长 | 必须与最终 end-to-end evaluation 对齐 | Open |
+| Continuous captioning/meeting assistant sessions | Open | 容易解释周期输入、长期上下文与增量交付 | 产品 cadence、输出路径和 QoE 指标尚未冻结 | Open |
+| Interactive multimodal/video assistant sessions | Open | 直观展示长期 streaming context | 必须由最终模型与 workload matrix 支持 | Open |
 
-在 Figure 1 和 formal motivating evidence 准备好之前，default 只用于规划。最终 running example 需要用户确认，并在 Section 2、Design walkthrough 和 Evaluation 中复用。
+当前不设置 provisional default。最终 running example 需要在实验矩阵和 Figure 1 的 formal motivating evidence 冻结后由用户确认，并在 Section 2、Design walkthrough 和 Evaluation 中复用。
 
 ## Paragraph 1 — Background and Motivation
 
@@ -26,15 +26,16 @@
 **Writing points:**
 
 1. 先描述持续追加输入、复用历史状态的交互 workload，不先介绍 Conveyor。
-2. 使用 provisional audio-input/Thinker-only running example：多个长期 session 共享一张 GPU，context 和 KV 随 session age 增长。
+2. 实验矩阵冻结后再选择具体 running example；不得把当前原型的 modality、output path 或 hardware 提前写成论文边界。
 3. 对比每周期计算需求与长期 KV residency，提出 capacity-before-compute 的可能 regime。
-4. 说明系统受益对象是需要在固定 GPU budget 上维持更多长期会话的 serving operator；不宣称已测 audio playback QoE。
+4. 说明系统受益对象是需要在固定资源预算上维持更多长期会话的 serving operator；modality-specific QoE 只在最终 end-to-end path 实测后表述。
 5. 用 Figure 1 的 baseline failure 和 idle interval 结束该段。
 
 **Gaps:**
 
 - MAJOR：需要 3–5 个最新系统、模型或部署来源证明该 workload 的现实性。
 - MAJOR：running example 的正式 motivating point 尚需 clean evidence。
+- MAJOR：running example、output delivery 和 QoE 口径必须与最终实验矩阵共同冻结。
 
 ## Paragraph 2 — Limitations of Existing Work
 
@@ -129,7 +130,7 @@
 
 | Check | Structural status | Readiness note |
 | --- | --- | --- |
-| Running-example loop | Pass provisionally | Default example still needs user confirmation and formal motivating point |
+| Running-example loop | Open | No default is selected before the experimental matrix and formal motivating point are frozen |
 | Limitations → challenges | Pass | Named prior-work citations missing |
 | Goal → contribution 1 | Pass provisionally | New-setting novelty not frozen |
 | Challenges → modules | Pass | One-to-one mapping established |
@@ -143,7 +144,7 @@ The outline is **needs user attention**, not complete. Its causal chain is struc
 ## Severity Summary
 
 - 2 CRITICAL-for-final-paper gaps: metric definition and undelivered empirical contribution.
-- 7 MAJOR gaps: deployment citations, motivating evidence, named closest work, baseline coverage, resource-model validation, mechanism performance evidence, and new-setting novelty.
+- 8 MAJOR gaps: deployment citations, motivating evidence, running-example/evaluation alignment, named closest work, baseline coverage, resource-model validation, mechanism performance evidence, and new-setting novelty.
 - 1 MINOR gap: challenge wording compression.
 
 Top actions before prose expansion:

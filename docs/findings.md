@@ -4,180 +4,165 @@
 
 | 候选机制 | 已实现语义 | 当前证据支持 | 尚未支持 |
 | --- | --- | --- | --- |
-| 释放偏移调度（release-offset scheduling） | 绝对网格与稳定 release offset | 缓解当前栈的 input-processing burst | KV restore bandwidth 平滑、跨硬件收益 |
-| 带主机后备的 KV 部分逐出（partial KV eviction with host backing） | 增量 host backing、idle-transition eviction、on-demand reload/recompute fallback | 当前测量点的 GPU-residency 降低 | 统一 decode work 后的容量 frontier 与正式重复实验 |
-| KV 预取（KV prefetching） | release-time issue、capacity deferral、prefix-cache reuse、on-demand fallback | 源码语义可审计 | 稳定净延迟收益、高压 pacing 和 formal evidence |
+| 释放偏移调度（release-offset scheduling） | 稳定 release offset 与绝对时间网格 | 配置域限定的 offered-arrival burst 缓解 | KV restore demand 的平滑收益与外部有效性 |
+| 带主机后备的 KV 部分逐出（partial KV eviction with host backing） | 增量 host backing、idle eviction、reload/recompute fallback | 诊断证据中的 idle-session GPU residency 降低 | 公平 workload 下的 capacity frontier 与 formal performance evidence |
+| KV 预取（KV prefetching） | capacity deferral、提前恢复、on-demand fallback | 源码语义审计 | 稳定净延迟收益与高压资源协调 |
 
-上表只列可能支撑 paper claim 且可以独立消融的机制。Conveyor 的 no-wait `Step`、合成 transport ID、hash registration、streaming `max_tokens` 修复和 observation patch 都是 implementation choices 或测量修复，不进入机制列表。
+上表只列可能支撑 paper claim 且可以独立消融的机制。output-delivery polling、transport identity、cache-key registration、runtime compatibility fix 和 observation instrumentation 是 implementation choices 或测量修复，不进入机制列表。
 
 ## Evidence Scope
 
-当前保留证据主要来自单张 RTX 3090、Qwen2.5-Omni Thinker-only 路径和历史诊断 run。部分 run 不满足现在的 clean-source formal 标准，registry 已按 `diagnostic` 或 `legacy-unreconstructable` 降级。以下数字只能在各 finding 的配置域内使用；它们不能直接组成论文 Evaluation。
+当前已登记的 paper-relevant evidence 由 `legacy-unreconstructable` 与 `source-audit` 构成，只能承担诊断或语义审计作用；目前没有可直接升级为最终性能主张的 formal evidence。每条 finding 必须通过其 `EVIDENCE-*` alias 解析精确模型、输入与输出路径、平台、参数、source state 和 provenance；本文不手工复制这些易变配置。
 
-正式论文结果仍缺少：
-
-- matched baseline 与 Conveyor 统一的 per-segment decode cap；
-- 面向 \(N\)、context length 和 retained prefix \(K\) 的完整 sweep；
-- 重复运行与统计不确定性；
-- capacity / compute / HBM / PCIe 的多资源 roofline；
-- 至少一个额外 hardware profile 的校准或验证；
-- 论文级 latency、freshness 和 schedulability 定义。
-
-当前 runner 只返回 Thinker 文本 token。任何关于 audio playback、jitter-buffer stall、静音 token 或端到端全双工语音体验的结论都尚未由本仓证据支持。
+这种配置域限定是对结论强度的约束，不是对研究范围的定义。当前 prototype 没有覆盖某个 modality、output architecture、硬件或拓扑，只能说明该维度尚无证据，不能自动把它改写成论文 non-goal。正式实验矩阵、evaluated systems、公平性缺陷和指标协议只由 [`Experiments`](experiments.md) 持有。
 
 ## Paper-Relevant Findings
 
 <a id="finding-a1"></a>
 ### FINDING-A1 — 串行输入处理会遮蔽 KV 容量瓶颈
 
-旧 worker 把每个 audio chunk 的 input processing 串行放在事件循环上，多会话到达时会先形成 host-side queue。这个瓶颈能在 GPU KV capacity 之前限制并发，因此正式容量实验必须使用 matched input-processing path。它是需要排除的工程混淆因素，不是 Conveyor 的容量机制。
+如果不同会话的输入准备被一个串行执行点限制，host-side queue 可能先于 GPU KV capacity 限制 offered load。容量实验必须隔离这一混淆因素；否则测得的是输入管线瓶颈，而不是长期 KV working set 的容量边界。该瓶颈不是 Conveyor 的研究机制。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-a2"></a>
-### FINDING-A2 — 并行输入处理消除了该混淆因素
+### FINDING-A2 — 跨会话并行输入处理可以消除该混淆因素
 
-`paringest` 把不同会话的 input processing 移到线程池，并保持单会话输入顺序。隔离测量表明 feature extraction 可以跨会话并发；共享进程中的 GIL 和 event-loop contention 仍可能扩大 tail。该修复定义 matched Metronome baseline 的公平性前提，不构成研究机制。
+在保持单会话输入顺序的同时并行处理不同会话，可以移除已观察到的串行输入瓶颈。共享 runtime contention 仍可能扩大 tail，因此 matched comparison 必须使用等价的 input-processing semantics。这个公平性修复不构成研究贡献。
 
 证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H1-COMPARISON`。
 
 <a id="finding-b1"></a>
 ### FINDING-B1 — 周期事件正常不等于模型持续推进
 
-周期事件和 service RPC 可以持续正常返回，即使某个 session 已停止产生新 token。client cadence 因而只证明 transport loop 活着；它不能替代 session liveness、token growth 和 scheduler-state 观测。当前 runner 已把 session death、RPC error 和 client artifact failure 作为 repository health gate。
+应用 release 和 frontend 调用可以持续发生，即使某个会话已经停止产生新的模型进度。调用 cadence 只能证明控制或传输路径仍然活着，不能替代逐会话 liveness、model progress 和 scheduler-state 观测。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-b2"></a>
-### FINDING-B2 — Service RPC 延迟不等于输出新鲜度
+### FINDING-B2 — Frontend 调用延迟不等于输出新鲜度
 
-Conveyor 的 no-wait `Step` 在提交当前输入后立即快照未交付输出，因此 RPC latency 不包含该输入对应的 GPU work。未交付输出缓冲也没有显式的 input-output identity。论文若需要 content freshness，必须增加可操作的关联方法，不能从 `deadline_met`、`gpu_ms` 或单次 `deliv` 反推。
+当前 delivery path 的调用延迟在本次输入完成模型工作之前结束，且缓冲输出没有足以把可见结果唯一关联到当前输入的 identity。论文若需要 content freshness，必须定义跨层关联和明确的终点，不能从调用返回、引擎活动或单次消费量反推。
 
 证据：`EVIDENCE-H2-METRICS`。
 
 <a id="finding-c1"></a>
-### FINDING-C1 — 引擎只看到迭代而不知道应用周期
+### FINDING-C1 — 引擎迭代本身不知道应用周期
 
-持续 session 的周期结构由 gateway release 和 streaming input 从引擎外部塑形。EngineCore 只看到 scheduler iterations、prefill 与 decode，不知道应用的 \(T\)、\(\phi_i\) 或 \(D\)。trace 和论文必须区分 application tick、service RPC 与 engine iteration。
+周期结构由引擎外部的 release pattern 塑形。serving engine 看到 scheduler iterations、prefill 与 decode，却不天然知道应用的 \(T\)、\(\phi_i\) 或 \(D\)。trace 和论文必须区分 application tick、frontend invocation 与 engine iteration。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-c2"></a>
-### FINDING-C2 — 当前 matched baseline 执行了更大的 decode 上限
+### FINDING-C2 — 当前跨系统诊断没有执行相同的模型工作
 
-vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数。两个当前 first-party worker 都设置 `ignore_eos=True`；正常 measured path 因而运行到各自 cap，而不是用来观测自然短输出。matched Metronome worker 当前每段设置 \(M+8\)，所以在 \(M=25\) 的默认配置下执行 33 token；Conveyor 每段执行 25。该差异改变实际 decode work，并会让 matched baseline 的未交付输出缓冲以 8 token/period 的差额增长。model-length 边界和异常终止等例外必须另行诊断。
-
-因此，现有跨系统 run 只能用于诊断，不能称作相同 workload 下的最终公平比较。修复必须在新的实验事务中统一 cap 并重跑，不能改写旧证据。
+当前两个 first-party evaluated systems 的每次更新生成上限并不相同，因此实际 decode work 和未交付输出增长也不同。现有跨系统 run 只能用于诊断，不能称作相同 workload 下的公平性能比较；精确差异和修复协议见 [`Experiments`](experiments.md#executed-decode-difference)。旧证据必须保留原语义，不能通过改文档伪装成已经匹配。
 
 证据：`EVIDENCE-LEGACY-BASELINE` 与当前 source audit。
 
 <a id="finding-c3"></a>
-### FINDING-C3 — 调度模式必须显式匹配
+### FINDING-C3 — 调度并发语义必须在比较中匹配
 
-当前 vLLM 版本在未显式设置时可能启用 asynchronous scheduling。Conveyor 的 block eviction 与正在执行的 speculative iteration 存在竞态，因此当前实现强制 synchronous scheduling。任何 eviction ablation 都必须给 control configuration 使用相同 scheduling mode。
+会改变 KV ownership 或 residency 的 policy 可能与并发 scheduler iteration 发生竞态。当前实现需要一种明确的调度语义来保证逐出安全，因此所有 control configuration 必须使用等价 scheduler mode。具体 runtime 设置属于实验协议，而不是机制定义。
 
 证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H3-KV-EVICTION-SEMANTICS`。
 
 <a id="finding-d1"></a>
-### FINDING-D1 — 当前实测栈在计算尚有余量时触达 KV 容量边界
+### FINDING-D1 — 已登记诊断域中出现了容量先于计算的区间
 
-在当前 RTX 3090 与 Qwen2.5-Omni Thinker 配置上，GPU KV pool 接近耗尽时，每周期仍存在明显 compute headroom。该 observation 支持“capacity before compute”作为本硬件上的问题实例，但不能单独证明所有硬件和模型都如此。
+至少一个已登记诊断配置在 GPU KV pool 接近耗尽时仍保留周期计算余量。这支持“capacity before compute”作为一个真实问题实例，但不证明所有模型、工作负载、平台或设备拓扑都会落入同一区间。
 
-跨硬件主张需要把 KV capacity、period compute、HBM traffic 和 PCIe restore bandwidth 放入统一 roofline，并用额外 profile 校准。
+跨配置主张必须同时核算 KV capacity、period compute、HBM traffic 和 host-to-device restore bandwidth。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-d2"></a>
 ### FINDING-D2 — KV 工作集字节数能够解释容量边界
 
-历史测量中，不同 session-count/context-length 组合在接近相同总 KV token 数时触达 GPU pool 边界。这支持以总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。
+历史诊断中，不同 session-count/context-length 组合在接近相同总 KV working-set bytes 时触达 GPU pool 极限。这支持把总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。正式结论仍需要在公平协议下重新测量。
 
-证据：`EVIDENCE-LEGACY-BASELINE`。正式结论需要统一 decode cap 后重新 sweep。
+证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-d3"></a>
 ### FINDING-D3 — Release offsets 以批处理聚合换取更低瞬时需求
 
-将 release 分散到周期内会减小同步 batch，并增加权重重复读取的机会；同时它为降低同时 GPU-resident 的 session 数和分散 restore demand 提供时序条件。这个 trade-off 必须由 compute、HBM 和 PCIe 三类资源共同核算。
+将 release 分散到周期内可能减小同步 batch，并增加权重重复读取的机会；同时它为降低同时 GPU-resident 的 session 数和分散 restore demand 提供时序条件。这个 trade-off 必须由 compute、HBM 和 host-to-device restoration 三类资源共同核算。
 
-当前证据直接支持 input-processing release burst 的降低，不足以单独支持 KV restore bandwidth 已被平滑的性能主张。
+当前证据支持 offered-arrival burst 的降低，尚不足以支持 KV restore bandwidth 已经被平滑的性能主张。
 
 证据：`EVIDENCE-H1-COMPARISON` 与 `EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-d5"></a>
 ### FINDING-D5 — 非 KV 显存占用决定可用 KV 池大小
 
-当前 GPU memory budget 同时包含模型权重、未参与本路径输出的模型组件、activation 和 KV pool。任何 capacity 模型都必须从实测可用 KV pool bytes 出发，不能用物理显存总量直接除以每会话 KV bytes。
+GPU memory budget 同时包含模型权重、activation、runtime reserve 和 KV pool。任何 capacity 模型都必须从实测可用 KV pool bytes 出发，不能用设备标称显存直接除以每会话 KV bytes。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-f7"></a>
-### FINDING-F7 — 生成与消费上限不一致会积累未交付输出
+### FINDING-F7 — 生成与消费不匹配会积累未交付输出
 
-当 worker 每段最多生成 \(M+8\)，gateway 每周期最多消费 \(M\) 时，未交付输出缓冲可以持续增长。该现象说明生成与消费配置必须一起报告，也说明 RPC cadence 不能反映输出对应的输入年龄。
+当模型生成进度长期快于 output path 的消费或交付进度时，未交付结果会持续积累。该现象说明生成与消费配置必须成对报告，也说明 frontend cadence 不能代表输出对应的输入年龄。
 
-`output_backlog` 是实现诊断量；论文最终是否采用 freshness 指标以及如何定义仍由 Evaluation 决定。
+backlog 是实现诊断量；论文是否采用 freshness 指标以及如何定义，仍由 Evaluation 决定。
 
-证据：`EVIDENCE-LEGACY-BASELINE`。
+证据：`EVIDENCE-H2-METRICS`。
 
 <a id="finding-h1"></a>
 ### FINDING-H1 — Release offsets 降低了实测输入处理突发
 
-在历史 \(N=8\)、initial context length=4096、120 s 诊断配置中，绝对 release grid 把同步到达分散到周期内，并降低了 feature-extraction contention。该证据说明 release offsets 能控制 offered-arrival structure；它没有直接测得 KV restore bandwidth 峰值。
+保留的诊断比较显示，绝对 release grid 能把同步到达分散到周期内，并降低 input-processing contention。该证据说明 release offsets 能控制 offered-arrival structure；它没有直接测得 KV restore bandwidth 峰值，也不满足当前 formal provenance 标准。
 
-证据：`EVIDENCE-H1-COMPARISON`。保留 manifest 不满足新的 clean-source formal 标准，需重跑。
+证据：`EVIDENCE-H1-COMPARISON`。
 
 <a id="finding-h2"></a>
-### FINDING-H2 — 无等待交付改变了指标含义
+### FINDING-H2 — 当前交付路径改变了指标含义
 
-Conveyor 的 `Step` latency 测量入队与输出快照，不包含当前 input 的 feature extraction、KV restore、prefill 或 decode。历史 `deadline_met = delivered >= M` 把 output cap 错当成最低 requirement，已经从新 run 的 correctness gate 中删除。
-
-新 gateway 的继承字段 `deadline_met` 只报告 service RPC 是否在 period 内返回；它仍不是论文级 latency 或 QoE 结论。
+当前 frontend latency 只覆盖输入提交与当时可见输出的取得，不覆盖当前输入后续的完整模型工作。继承的成功字段也只能表示调用是否及时返回，不能升级为论文级 latency、freshness 或 QoE 结论。
 
 证据：`EVIDENCE-H2-METRICS`。本条是测量语义发现，不是研究机制。
 
 <a id="finding-h3"></a>
-### FINDING-H3 — 现有 vLLM 原语能够实现部分 KV 逐出与恢复
+### FINDING-H3 — 现有引擎原语能够实现部分 KV 逐出与恢复
 
-当前补丁组合 `free(request)`、`evict_blocks`、GPU prefix match 与 `SimpleCPUOffloadConnector`：先释放 request ownership，再逐出选定 GPU tail，下一输入先复用仍在 GPU 的 prefix，再加载连续 host-backed blocks。首个 host-coverage gap 之后退化为 recomputation。
+源码审计表明，现有 request ownership、GPU prefix reuse 和 host offload 原语足以组合出所需语义：idle 后释放所有权，逐出选定 GPU tail，下一次使用先复用 GPU prefix，再恢复连续 host-backed blocks；coverage gap 之后通过重算恢复。
 
-补丁新增的是 idle-transition policy、streaming cursor 修复、状态观测和配置接口；它不声称发明 prefix caching 或 CPU offload。
+Conveyor 增加的是 idle-transition policy、持续会话下的 host-coverage 维护、状态观测和控制接口；它不声称发明 prefix caching 或 host offload。
 
 证据：`EVIDENCE-H3-KV-EVICTION-SEMANTICS`。
 
 <a id="finding-h4"></a>
-### FINDING-H4 — 保留前缀逐出在实测点限制了闲置会话的 GPU 驻留
+### FINDING-H4 — 保留前缀逐出降低了诊断点的闲置会话 GPU 驻留
 
-在历史 \(N=8\)、initial context length=4096、retained prefix \(K=128\)、120 s 诊断配置中，Conveyor 的 GPU KV occupancy 进入约 0.29 的锯齿稳态；未做 partial eviction 的历史对照末值接近 0.99。该点支持机制能降低 idle-session GPU residency。
-
-这些 run 不满足新的 formal 标准，且当前跨系统 decode work 不同。数字只能作为诊断性 effect-size 线索，不能直接成为论文容量提升主结果。
+保留的诊断 run 中，启用 retained-prefix eviction 后，GPU KV occupancy 从接近 pool 极限的增长转为明显更低的锯齿稳态。这支持机制能够释放 idle-session residency，但现有证据不满足当前 formal 标准，跨系统 model work 也未匹配，因此不能直接作为论文容量提升主结果。
 
 证据：`EVIDENCE-H4-RESIDENCY`。
 
 <a id="finding-h5"></a>
-### FINDING-H5 — 按需回载会增加请求关键路径延迟
+### FINDING-H5 — 按需恢复会进入更新关键路径
 
-当前 on-demand reload 在 input feature extraction 之后由 scheduler admission 触发，因此两段延迟串行。历史诊断点上的 reload window p50 约 70 ms；tail 随 context 增长时，copy cost 也应进入 PCIe roofline。
+on-demand restore 只能在真实 demand 出现之后开始，因此 copy cost 和链路排队会进入该次更新的 admission critical path；任何先于恢复完成的必要输入工作还会与其串行累积。随着需恢复 KV 增加，这些成本必须进入 restore-bandwidth frontier。预取的潜在价值正是改变恢复时序，而不是消除其资源成本。
 
 证据：`EVIDENCE-H5-CRITICAL-PATH`。
 
 <a id="finding-h6"></a>
-### FINDING-H6 — 初始上下文需要初始化屏障而非机制状态转换
+### FINDING-H6 — 测量状态构造必须与稳态机制分离
 
-initial-context preloading 必须在周期输入开始前完成。barrier 结束时 host-backing frontier 可能仍不完整，因此 Conveyor 只解除 automatic-eviction hold，不在 barrier 原地逐出；第一次正常 segment 完成后再建立 retained-prefix 状态。
+为了从指定上下文状态开始测量，状态构造必须在周期输入开始前完成，并与正常 idle eviction 的状态转换分开。构造屏障只建立合法起点，不能被包装成 Conveyor 机制；其精确协议与失败条件由 [`Experiments`](experiments.md#initial-context-preloading) 持有。
 
-证据：`EVIDENCE-H6-INITIAL-CONTEXT`。该设置是 evaluation state construction。
+证据：`EVIDENCE-H6-INITIAL-CONTEXT`。本条属于 evaluation state construction。
 
 <a id="finding-h7"></a>
 ### FINDING-H7 — KV 预取语义已闭合但性能结论仍开放
 
-当前实现能把 host-backed blocks 提前复制到 GPU prefix cache；真正 input 随后通过原生 prefix match 复用。capacity deferral、input overtaking 和 LRU eviction 都安全退化到 on-demand reload/recomputation。合成 ID 和 hash registration 是 transport 实现细节。
+源码审计支持以下正确性语义：host-backed blocks 可以提前进入 GPU cache，并由之后的正常 cache reuse 使用；capacity deferral、input overtaking 和 later eviction 都安全退化为 on-demand restore 或 recomputation。具体 transport 和 cache registration 方式是实现细节。
 
-历史预取 run 的原始 artifacts 未保留，现有 source audit 只能支持语义检查。历史结果还显示 feature-extraction 膨胀可能抵消 copy overlap，净延迟收益没有闭合。
+历史性能 artifacts 不完整，现有证据只能支持语义检查。输入准备、copy overlap、capacity pressure 与 cache reuse 的共同作用尚未形成可复现的净延迟结论。
 
-证据：`EVIDENCE-H7-PREFETCH`，角色为 `legacy-unreconstructable` / source audit。
+证据：`EVIDENCE-H7-PREFETCH`，registry 角色为 `legacy-unreconstructable`；当前源码只能补充 semantic audit，不能补出遗失的性能证据。
 
 ## Diagnostic Boundary
 
-未出现在本文的旧队列故障、单次调试技巧和过时 workload story 只保存在冻结的 [`legacy-experiment-log.md`](agent/legacy-experiment-log.md) 或不可变 `results/` 中。它们不能作为当前 paper prose source，也不能用于证明研究问题的重要性。
+旧队列故障、一次性调试参数和过时 workload story 只保存在冻结的 [`legacy-experiment-log.md`](agent/legacy-experiment-log.md) 或不可变 `results/` 中。它们不能作为当前 paper prose source，也不能用于定义研究范围。
 
-Agent 引用 finding 时必须保留完整 `FINDING-*` ID、证据角色、配置域和限制。若一个 finding 与新的 clean run 冲突，应更新本 owner 和 evidence registry，而不是在其他文档复制第二个版本。
+Agent 引用 finding 时必须保留完整 `FINDING-*` ID、证据角色、配置域和限制，并通过 evidence registry 解析精确配置。若 finding 与新的 clean run 冲突，应更新本 owner 和 registry，而不是在 README、Problem 或 System 中复制第二个版本。

@@ -1,10 +1,12 @@
 \section{Implementation}
 \label{sec:implementation}
 
-The prototype builds on vLLM~0.23 and separates load generation, online
-serving, and offline evidence processing.  This section records the details
-needed to understand correctness and reproduce measurements.  They are not
-additional research mechanisms.
+\draftplaceholder{Freeze and report the serving-engine revision, patch baseline, and output-delivery implementation only after the system entering formal evaluation is selected. Re-audit every interface detail in this section at that point.}
+
+The prototype extends vLLM and separates load generation, online serving, and
+offline evidence processing.  This section records the details needed to
+understand correctness and reproduce measurements.  They are not additional
+research mechanisms.
 
 \subsection{Online Serving Path}
 
@@ -15,14 +17,10 @@ input feature extraction and communicates with the vLLM EngineCore subprocess
 through its msgpack-based transport over ZMQ.  The runner starts and
 monitors these processes, but does not participate in the online data path.
 
-The Conveyor worker currently implements \texttt{Step} as a no-wait
-operation: after submitting the current input, it snapshots the session's
-previously generated but undelivered token buffer and returns without waiting
-for the new GPU work.  This prevents one slow call from blocking later release
-slots, but it also means service-RPC latency is not end-to-end model latency.
-An independent output stream could replace this behavior without changing the
-residency design, so we treat it as an implementation choice and preserve the
-distinction in evaluation metrics.
+KV residency does not require a particular output-delivery architecture.
+Input submission may wait for new model output or use an independent output
+stream; this choice affects latency, freshness, and user-visible delivery
+semantics, but not the release, eviction, restoration, or prefetch mechanisms.
 
 \subsection{Engine Integration and State Ownership}
 

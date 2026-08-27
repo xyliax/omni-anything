@@ -22,6 +22,14 @@ matching.  The GPU and host block pools answer residency and coverage queries;
 the control registry records only session activity, transfer state, and
 timing needed by the policy.
 
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/conveyor-mechanism-overview}
+  \caption{Conveyor turns predictable next use into a safe KV-residency schedule.  Release offsets spread aggregate demand; an idle transition releases request ownership while retaining a GPU prefix and tracking host coverage; prefetching moves the same restoration work earlier when capacity permits.  If prefetch is deferred, overtaken, or unavailable because of a coverage gap, on-demand restoration or suffix recomputation converges to the same complete logical context.}
+  \Description{A three-panel system overview.  The left panel shows periodic sessions with staggered release positions and idle intervals.  The middle panel shows release-offset scheduling above a GPU KV pool with a retained prefix and evictable tail, paired with host coverage that may contain a gap.  The right panel shows host-backed blocks prefetched into the GPU cache, with on-demand restoration and suffix recomputation as safe fallback paths.  All paths produce the same complete logical context.}
+  \label{fig:mechanism-overview}
+\end{figure*}
+
 \subsection{Release-Offset Scheduling}
 
 The gateway assigns each session a stable release offset $\phi_i$ on an

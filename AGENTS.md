@@ -4,7 +4,7 @@
 
 ## Project Scope
 
-项目研究单张 GPU 上的周期性交互模型服务：持续增长的 KV 工作集可能在每周期计算饱和前先耗尽 GPU KV capacity。当前实测 runner 是 Qwen2.5-Omni audio-input、Thinker-only 路径；研究范围、术语、实现边界和证据成熟度分别以 [`docs/problem.md`](docs/problem.md) 与 [`docs/findings.md`](docs/findings.md) 为准。
+项目研究周期性交互模型服务中的长期 KV 状态管理：持续增长的 KV working set 可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准；prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope。
 
 每次开始实质任务时先检查远端是否更新；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重新读取本文件和任务路径上的局部 `AGENTS.md`。
 

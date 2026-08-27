@@ -52,8 +52,8 @@
       "id": "CONTRACT-INITIAL-CONTEXT",
       "rule": "initial-context evidence requires every requested prefill to complete before periodic releases, excludes initialization output from later delivery, releases the automatic-eviction hold without evicting at the barrier, and rejects initialization timeout logs",
       "owners": [
-        "docs/system.md",
-        "docs/experiments.md"
+        "docs/experiments.md",
+        "engines/conveyor/AGENTS.md"
       ],
       "verification": [
         "tests/test_run_validation.py"

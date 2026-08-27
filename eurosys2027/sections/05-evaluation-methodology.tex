@@ -23,37 +23,39 @@ generalization.
 
 \subsection{Evaluated Systems and Controls}
 
-We compare \systemname with a matched Metronome baseline.  The baseline keeps
-the same model and input path but retains its KV
-state in the GPU cache; Conveyor adds release offsets, host backing, partial
-eviction, and optional prefetch.  Upstream Metronome is retained as a source
-and behavior reference, not mixed directly into matched performance claims
-when its input processing and observation path differ.
+\draftplaceholder{Freeze the named evaluated systems only after the closest-work audit and final implementation selection. Include a matched control that differs only in the mechanisms under test, plus any external baselines required to substantiate the final novelty claim.}
+
+The primary control keeps the same model, modality path, offered and executed
+work, scheduler behavior, and observation semantics while retaining its KV
+state in the GPU cache.  Conveyor adds release offsets, host backing, partial
+eviction, and optional prefetch.  An upstream or external implementation whose
+work or observation path differs may serve as a behavior reference, but its
+measurements are not mixed into matched performance claims.
 
 Mechanism ablations add one change at a time: release offsets; release offsets
 plus host backing and partial eviction; and then prefetching.  A retained-
-prefix sweep varies $K$.  Because the current eviction implementation requires
-synchronous scheduling to avoid a block-free race with speculative engine
-iterations, every eviction comparison uses a matched synchronous-scheduling
-control.
+prefix sweep varies $K$.  Each comparison must use matched scheduler and
+work-defining controls; their concrete settings are frozen only after the
+implementation entering formal evaluation is selected.
 
-\draftplaceholder{Before collecting paper results, equalize the baseline and Conveyor per-segment decode caps and regenerate every compared run. The current executions do not contain matched decode work.}
+\draftplaceholder{Before collecting paper results, freeze and equalize every work-defining control across compared systems, including offered input, generated work, scheduler behavior, initialization, and output-delivery semantics.}
 
 \subsection{Workloads and Hardware}
 
-The current measured stack is a single RTX~3090 connected through PCIe Gen3,
-running the 7B Qwen2.5-Omni model with vLLM~0.23 and Thinker-only output.  This stack is
-an evaluation instance, not a requirement of the design.  Experiments vary
-session count, initial context length, and retained prefix while holding the
-offered input, model revision, output cap, and scheduler mode fixed across
-compared systems.
+\draftplaceholder{Freeze and report the evaluated model set, input and output modalities, user-visible delivery path, hardware profiles, interconnects, and serving-engine revision only after the experimental matrix is finalized. The current prototype path is not a paper-scope constraint.}
 
-Initial-context preloading completes before the measured periodic phase and is
-reported as workload state rather than as a Conveyor mechanism.  The resource
-model separately calibrates usable GPU KV bytes, KV bytes per token, prefill
-and decode cost, HBM demand, and host-device copy throughput.  Any analytical
-hardware profile is labeled as such; a cross-hardware statement requires an
-additional measured profile rather than a linear extrapolation alone.
+The experimental matrix must cross the capacity, compute, and restoration-
+bandwidth regimes claimed by the paper.  At every comparison point, the
+systems use the same model revision, modality path, offered work, output-work
+definition, scheduler behavior, and other work-defining controls.
+
+If initial-context preloading is used, it completes before the measured
+periodic phase and is reported as workload state rather than as a Conveyor
+mechanism.  The resource model separately calibrates usable GPU KV bytes, KV
+bytes per token, prefill and decode cost, HBM demand, and host-device copy
+throughput.  Any analytical hardware profile is labeled as such; a
+cross-hardware statement requires measured validation rather than a linear
+extrapolation alone.
 
 \subsection{Metrics and Reproducibility}
 
@@ -61,10 +63,10 @@ Capacity results report GPU KV occupancy, resident blocks per session, host
 memory, and transfer volume together with compute utilization and session
 liveness.  Latency is decomposed from input release through feature
 extraction, scheduler admission, restoration, prefill, and decode, with
-per-session distributions and tails.  Service-RPC return time, tokens consumed
-from an undelivered-output buffer, and a worker-local GPU timing field are
-implementation diagnostics; none is used alone as a freshness or
-schedulability criterion.
+per-session distributions and tails.  An implementation-level timer, buffer
+counter, or transport return event becomes a paper metric only after its
+relationship to end-to-end latency, freshness, or user-visible delivery has
+been defined and validated.
 
 Each reported point uses a fresh process set, a fixed model revision and
 environment, a steady-state window separated from initialization, repeated

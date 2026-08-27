@@ -1,16 +1,15 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Consider a single-GPU service that keeps several interaction sessions open
-while new input arrives periodically.  Each update appends a small chunk,
-reuses the session's history, and produces an incremental result; the session
-does not end after one response.  Transformer serving makes this reuse
-efficient by retaining attention key/value (KV) state, but the resulting
-working set grows as each session ages.  When several such sessions share one
-GPU, their aggregate KV working set can exhaust the GPU block pool even when
-the computation required in each update period would leave time for more
-work.  Our measured instance uses audio input to Qwen2.5-Omni and returns only
-Thinker text; speech synthesis and playback are outside this study.
+Long-lived interaction sessions expose a serving problem that short-lived
+requests hide.  Each update appends a small input chunk, reuses the session's
+logical context, and leaves the session open for the next update.
+Transformer serving avoids recomputing that history by retaining attention
+key/value (KV) state, but every update also extends the state that must be
+stored.  When multiple sessions draw from a finite GPU KV pool, their aggregate
+working set can exhaust that pool before the computation required in a period
+saturates the device.  The resulting challenge is to manage a growing state
+working set while preserving complete context and timely service.
 
 Serving at request granularity exposes arrivals, runnable requests, and cache
 matches, but does not reveal when an idle session will be used again.  Each
@@ -49,7 +48,7 @@ reuse.
 We present \systemname, a next-use-aware residency policy for periodic
 interaction sessions.  For the same session, the policy coordinates release,
 feature extraction, idle eviction, restoration, and the next admission without
-tying correctness to audio-specific output behavior.  Release-offset
+tying correctness to a particular output-delivery path.  Release-offset
 scheduling assigns sessions stable positions in an absolute period grid,
 spreading their releases without changing their periods (Section~\ref{sec:design}).
 Incremental host backing records recoverable KV coverage as context grows, and

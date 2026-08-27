@@ -64,6 +64,7 @@
       "id": "EVIDENCE-H2-METRICS",
       "role": "legacy-unreconstructable",
       "supports": [
+        "FINDING-B2",
         "FINDING-H2",
         "FINDING-F7"
       ],

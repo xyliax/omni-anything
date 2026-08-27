@@ -15,10 +15,10 @@ Last updated: 2026-08-25.
 | Claims/evidence ledger | Scaffolded | No paper claim promoted; formal evidence remains governed by project owners |
 | Related-work matrix | Scaffolded | Literature rows not yet populated |
 | Figure plan | Scaffolded | Figure contracts exist; no assets created |
-| Paper sections | Partially drafted | High-confidence Introduction, Background, Design, Implementation, and Evaluation Methodology content is filled from canonical owners; results remain empty |
+| Paper sections | Partially drafted | Idea-level Introduction, Background, Design, Implementation, and Evaluation Methodology content is filled; final modality, output path, model/hardware matrix, metrics, and results remain explicitly unfrozen |
 | Evaluation content | Blocked by project readiness | Do not add final claims until matched formal evidence exists |
 | Final submission audit | Not started | Recheck official rules and HotCRP immediately before submission |
 
 ## Next Milestone
 
-Audit the owner-backed prose, complete the closest-work matrix, freeze schedulability and latency definitions, and equalize the evaluated systems before formal runs. Do not write the Abstract, final Contributions, or Evaluation results before those gates pass.
+Audit the owner-backed prose, complete the closest-work matrix, jointly freeze the running example and experimental matrix, define schedulability/latency/user-visible delivery, and equalize the evaluated systems before formal runs. Do not write the Abstract, final Contributions, or Evaluation results before those gates pass.

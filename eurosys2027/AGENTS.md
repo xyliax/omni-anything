@@ -16,6 +16,7 @@
 ## Writing Rules
 
 - 草稿不得覆盖 owner；发生冲突时先更新或澄清 owner，再改论文。
+- `docs/problem.md` 与 `docs/findings.md` 中的 current prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output path、hardware 或 external-validity scope。实验矩阵冻结前，正文只写 idea-level assumptions 或显式 placeholder，不得把当前缺失的路径宣布为 paper non-goal。
 - 只把根 `AGENTS.md` 定义的 research mechanism 写成贡献；system requirement 和 implementation choice 分别进入设计约束或实现章节。
 - 论文核心术语必须来自 `docs/problem.md#terminology`。若需新术语，先完成 canonical glossary transaction。
 - 任何数字都必须标明实测、模拟器标定、推导或冻结先验，并绑定配置域和 `EVIDENCE-*`。

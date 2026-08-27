@@ -27,7 +27,7 @@
 ## Rejection-Risk Test
 
 - [ ] Closest-work novelty is not merely a feature difference.
-- [ ] The paper does not overclaim full-duplex audio behavior from a Thinker-only path.
+- [ ] Every modality and QoE claim matches the final end-to-end evaluated path; an intermediate output path is not used to infer user-visible delivery behavior.
 - [ ] Implementation fixes and measurement instrumentation are not presented as mechanisms.
 - [ ] The resource model is calibrated and validated before being used for extrapolation.
 - [ ] Optional prefetch benefits do not carry the entire paper unless formal evidence supports them.

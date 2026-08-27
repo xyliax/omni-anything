@@ -1,0 +1,163 @@
+\documentclass[tikz,border=2pt]{standalone}
+
+\usepackage[T1]{fontenc}
+\usepackage{libertine}
+\usepackage{newtxmath}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta}
+
+% Okabe--Ito-inspired palette.  Shape, position, and line style also encode
+% the semantics so that the figure remains legible in grayscale.
+\definecolor{ink}{HTML}{263238}
+\definecolor{gpuBlue}{HTML}{0072B2}
+\definecolor{hostTeal}{HTML}{009E73}
+\definecolor{policyOrange}{HTML}{E69F00}
+\definecolor{recomputeRed}{HTML}{D55E00}
+\definecolor{quietGray}{HTML}{D8DDE3}
+\definecolor{panelGray}{HTML}{F7F8FA}
+\definecolor{mutedText}{HTML}{52606D}
+
+\tikzset{
+  >=Latex,
+  panel/.style={draw=ink!70, line width=0.65pt, rounded corners=2pt, fill=panelGray},
+  outer/.style={draw=ink!80, line width=0.8pt, rounded corners=3pt, fill=white},
+  title/.style={font=\bfseries\fontsize{9.4}{11}\selectfont, text=ink, align=center},
+  body/.style={font=\fontsize{8.3}{10}\selectfont, text=ink, align=center},
+  tiny/.style={font=\fontsize{8}{9.5}\selectfont, text=mutedText, align=center},
+  label/.style={font=\fontsize{8.3}{10}\selectfont, text=ink},
+  state/.style={draw=ink!70, line width=0.55pt, rounded corners=1.5pt,
+                minimum height=0.25in, inner xsep=3pt, inner ysep=2pt,
+                font=\fontsize{8}{9.5}\selectfont, text=ink, align=center},
+  policy/.style={state, draw=policyOrange!90!black, fill=policyOrange!13},
+  gpu/.style={state, draw=gpuBlue!90!black, fill=gpuBlue!11},
+  host/.style={state, draw=hostTeal!90!black, fill=hostTeal!11},
+  fallback/.style={state, draw=recomputeRed!90!black, fill=recomputeRed!10},
+  flow/.style={->, line width=0.7pt, draw=ink!85},
+  policyflow/.style={->, line width=0.8pt, draw=policyOrange!90!black},
+  hostflow/.style={->, line width=0.8pt, draw=hostTeal!90!black},
+  fallbackflow/.style={->, line width=0.7pt, dashed, draw=recomputeRed!90!black},
+  softflow/.style={->, line width=0.65pt, dashed, draw=mutedText},
+}
+
+\begin{document}
+\begin{tikzpicture}[x=1in,y=1in]
+  % Compact full-width overview intended for a two-column paper.
+  \draw[outer] (0.05,0.05) rectangle (7.15,3.42);
+  \node[title, anchor=west, text width=3.15in] at (0.22,3.23)
+    {Conveyor: next-use-aware KV state management};
+  \node[tiny, anchor=east, text width=2.75in] at (6.98,3.23)
+    {timing changes; logical context remains complete};
+
+  % Three mechanism panels.
+  \draw[panel] (0.18,0.52) rectangle (2.16,2.99);
+  \draw[panel] (2.29,0.52) rectangle (4.47,2.99);
+  \draw[panel] (4.60,0.52) rectangle (7.02,2.99);
+
+  % Panel 1: predictable next use and release offsets.
+  \node[title, text width=1.70in] at (1.17,2.80)
+    {Periodic Interaction\\Session};
+  \node[tiny, text width=1.70in] at (1.17,2.48)
+    {predictable next use while idle};
+
+  \node[label, anchor=east] at (0.55,2.08) {$S_1$};
+  \node[label, anchor=east] at (0.55,1.70) {$S_2$};
+  \node[label, anchor=east] at (0.55,1.32) {$S_3$};
+  \draw[ink!55, line width=0.55pt] (0.64,2.08) -- (1.99,2.08);
+  \draw[ink!55, line width=0.55pt] (0.64,1.70) -- (1.99,1.70);
+  \draw[ink!55, line width=0.55pt] (0.64,1.32) -- (1.99,1.32);
+  \foreach \x in {0.78,1.31,1.84} {
+    \fill[gpuBlue] (\x,2.08) circle (0.045);
+  }
+  \foreach \x in {0.94,1.47,2.00} {
+    \fill[policyOrange] (\x,1.70) circle (0.045);
+  }
+  \foreach \x in {1.10,1.63,2.16} {
+    \fill[hostTeal] (\x,1.32) circle (0.045);
+  }
+  \node[tiny, anchor=west] at (0.65,2.25) {release};
+  \draw[softflow] (0.65,0.99) -- (1.98,0.99);
+  \node[tiny] at (1.31,0.99) {idle interval};
+  \node[tiny, text width=1.50in] at (1.16,0.67)
+    {offsets spread demand};
+  \node[tiny, anchor=west, text width=1.35in] at (0.65,2.33)
+    {$\phi_i$: stable release offset};
+
+  % Panel 2: demand shaping and partial residency.
+  \node[title, text width=1.72in] at (3.38,2.80)
+    {Release-Offset\\Scheduling};
+  \node[tiny, text width=1.85in] at (3.38,2.48)
+    {shape demand before it reaches the engine};
+  \draw[policyflow] (2.62,2.22) -- (4.05,2.22);
+  \draw[policyflow] (2.62,2.00) -- (4.05,2.00);
+  \draw[policyflow] (2.62,1.78) -- (4.05,1.78);
+  \fill[policyOrange] (2.76,2.22) circle (0.04);
+  \fill[policyOrange] (3.07,2.00) circle (0.04);
+  \fill[policyOrange] (3.38,1.78) circle (0.04);
+  \node[tiny, text width=1.55in] at (3.38,1.57)
+    {spread release positions};
+
+  \draw[ink!35, line width=0.55pt] (2.45,1.40) -- (4.31,1.40);
+  \node[body, text width=1.85in] at (3.38,1.30)
+    {Host-Backed Partial KV Eviction};
+  \node[tiny, text width=2.00in] at (3.38,1.11)
+    {idle: release ownership; evict tail};
+
+  \node[tiny, anchor=east] at (2.79,0.90) {GPU KV};
+  \draw[gpuBlue!90!black, line width=0.55pt] (2.87,0.81) rectangle (4.14,1.01);
+  \fill[gpuBlue!25] (2.87,0.81) rectangle (3.51,1.01);
+  \fill[quietGray] (3.51,0.81) rectangle (4.14,1.01);
+  \draw[ink!55, line width=0.45pt] (3.51,0.81) -- (3.51,1.01);
+  \node[tiny] at (3.19,0.91) {prefix};
+  \node[tiny] at (3.83,0.91) {tail};
+
+  \node[tiny, anchor=east] at (2.79,0.64) {host};
+  \draw[hostTeal!90!black, line width=0.55pt] (2.87,0.55) rectangle (4.14,0.75);
+  \fill[hostTeal!24] (2.87,0.55) rectangle (3.72,0.75);
+  \fill[quietGray] (3.72,0.55) rectangle (4.14,0.75);
+  \draw[ink!55, line width=0.45pt] (3.72,0.55) -- (3.72,0.75);
+  \node[tiny] at (3.30,0.65) {covered};
+  \node[tiny] at (3.93,0.65) {gap};
+  \draw[hostflow] (3.51,0.80) -- (3.72,0.76);
+
+  % Panel 3: restoration, prefetch, and safe fallback.
+  \node[title, text width=1.95in] at (5.81,2.80)
+    {KV Restoration\\and Prefetching};
+  \node[tiny, text width=2.00in] at (5.81,2.48)
+    {restore early when capacity permits};
+
+  \node[host, text width=0.64in] (hblocks) at (4.99,2.13)
+    {host-backed\\blocks};
+  \node[policy, text width=0.72in] (prefetch) at (5.81,2.13)
+    {prefetch\\before demand};
+  \node[gpu, text width=0.62in] (gcache) at (6.64,2.13)
+    {GPU\\cache};
+  \draw[hostflow] (hblocks.east) -- (prefetch.west);
+  \draw[hostflow] (prefetch.east) -- (gcache.west);
+
+  \node[tiny, text width=2.06in] at (5.81,1.75)
+    {capacity unavailable or input overtakes};
+  \node[policy, text width=0.90in] (ondemand) at (5.36,1.42)
+    {on-demand\\restore};
+  \draw[softflow] (5.81,1.92) -- (5.36,1.61);
+  \node[fallback, text width=0.80in] (recompute) at (6.52,1.42)
+    {recompute\\suffix};
+  \draw[fallbackflow] (5.80,1.22) -- (6.10,1.22);
+
+  \node[host, text width=1.62in] (complete) at (5.81,0.87)
+    {complete logical context};
+  \draw[flow] (5.36,1.22) |- (5.36,1.02);
+  \draw[flow] (6.52,1.22) |- (6.27,1.02);
+  \draw[flow] (6.64,1.92) |- (6.30,1.02);
+
+  % Cross-panel arrows keep the causal story explicit without crossing text.
+  \draw[policyflow] (2.16,1.88) -- (2.29,1.88);
+  \node[tiny, fill=white, inner sep=1pt] at (2.23,2.06) {next-use signal};
+  \draw[hostflow] (4.47,0.86) -- (4.60,0.86);
+
+  % A single bottom invariant makes the fallback story self-contained.
+  \draw[ink!70, line width=0.55pt] (0.18,0.15) rectangle (7.02,0.38);
+  \node[body, text width=6.60in] at (3.60,0.265)
+    {Prefetch is optional for correctness: every path preserves the same logical context.};
+\end{tikzpicture}
+\end{document}

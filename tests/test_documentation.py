@@ -341,9 +341,10 @@ class DocumentationTests(unittest.TestCase):
         )
 
         for fact in (
-            "只表示该次更新的模型生成量",
-            "不表示 gateway 在某次 release 实际取出的 token 数",
-            "不能把 `deliv` 归属于当前输入",
+            "是抽象模型中的生成上限，不是最低交付量",
+            "模型生成进度与用户可见交付是两个不同对象",
+            "问题定义不选择其中一种 output architecture",
+            "精确生成与交付口径由 [`Experiments`](experiments.md) 定义",
         ):
             self.assertIn(fact, problem)
         for fact in (
@@ -398,8 +399,10 @@ class DocumentationTests(unittest.TestCase):
 
     def test_system_separates_research_mechanisms_from_delivery_implementation(self) -> None:
         text = (ROOT / "docs" / "system.md").read_text(encoding="utf-8")
-        conveyor = text.split("### Conveyor", 1)[1].split("## Release-Offset Scheduling", 1)[0]
-        table = conveyor.split("| 机制 |", 1)[1].split("\n\n", 1)[0]
+        mechanisms = text.split("## Research Mechanisms", 1)[1].split(
+            "## Release-Offset Scheduling", 1
+        )[0]
+        table = mechanisms.split("| 机制 |", 1)[1].split("\n\n", 1)[0]
         mechanism_rows = [
             line
             for line in table.splitlines()
@@ -412,30 +415,87 @@ class DocumentationTests(unittest.TestCase):
             "KV 预取（KV prefetching）",
         ):
             self.assertTrue(any(mechanism in row for row in mechanism_rows), mechanism)
-        self.assertNotIn("无等待", table)
+        for implementation_detail in (
+            "output delivery",
+            "transport",
+            "cache-key 注册",
+        ):
+            self.assertIn(implementation_detail, mechanisms)
+            self.assertNotIn(implementation_detail, table)
 
-        delivery = text.split("## Output Delivery", 1)[1].split("## Initial-Context Preloading", 1)[0]
+        delivery = text.split("## Output Delivery", 1)[1].split("## One Session Cycle", 1)[0]
         for fact in (
-            "st.tokens[st.consumed:]",
-            "最多等待配置的 RPC budget",
-            "Conveyor 当前只做一次快照并立即返回",
-            "不是最低交付要求",
-            "不能单独判定 workload correctness",
+            "同步返回、异步流、缓冲消费或额外媒体处理",
+            "不改变释放偏移、部分逐出和 KV 预取的定义",
+            "模型生成推进和用户可见结果推进必须分别观察",
+            "不能把“调用仍在返回”直接当成",
         ):
             self.assertIn(fact, delivery)
         self.assertIn(
-            "首个既不 GPU-resident 也不 host-backed 的 gap 之后只能重算",
+            "首个既不 GPU-resident 也不 host-backed 的 coverage gap",
             text,
         )
-        for topology_edge in (
-            "CS <-->|WebSocket<br/>周期输入 / 交付事件| GW",
-            "GW -->|gRPC Step<br/>输入块 / 当前可交付输出| WK",
-            "WK <-->|msgpack/ZMQ<br/>请求 / utility 指令| EC",
-            "PATCH -.->|sitecustomize monkeypatch<br/>仅 Conveyor| EC",
-            "STORE --> TRACE --> EVID",
-            "R -->|manifest / validation| STORE",
+        for logical_component in (
+            "Session Controller",
+            "Serving Frontend",
+            "Scheduler and KV Residency Manager",
+            "GPU KV Pool",
+            "Host KV Backing",
+            "User-Visible Output Path",
         ):
-            self.assertIn(topology_edge, text)
+            self.assertIn(logical_component, text)
+        self.assertIn("这个逻辑分层不要求特定进程边界或 IPC", text)
+
+    def test_mutable_experiment_details_stay_in_experiments_owner(self) -> None:
+        narrative_docs = (
+            ROOT / "README.md",
+            ROOT / "docs/problem.md",
+            ROOT / "docs/system.md",
+            ROOT / "docs/findings.md",
+        )
+        forbidden = {
+            "single-device scope": r"单张\s*GPU|single[- ]GPU",
+            "current model or output stack": (
+                r"Qwen2\.5-Omni|Thinker|Talker|Code2Wav|RTX\s*3090"
+            ),
+            "mutable environment profile": r"cuda13_vllm023|\.venv-vllm023|PCIe(?:\s+Gen3)?",
+            "current comparator identity": r"Metronome|paringest",
+            "runner or interface field": (
+                r"\bStep\b|M\+8|max_tokens|ignore_eos|deadline_met|tokens_per_tick|"
+                r"st\.tokens|prefetch_kv|free\(request\)|evict_blocks|"
+                r"SimpleCPUOffloadConnector|WAITING_FOR_REMOTE_KVS"
+            ),
+            "implementation wiring or log": (
+                r"gRPC|msgpack|ZMQ|sitecustomize|nvidia-smi|"
+                r"gateway_ticks\.log|scheduler\.log|residency\.log|"
+                r"kv_events\.log|per_request\.log"
+            ),
+            "single diagnostic point": (
+                r"N\s*=\s*8|K\s*=\s*128|4096|120\s*s|0\.29|0\.99|70\s*ms"
+            ),
+        }
+        failures: list[str] = []
+        for path in narrative_docs:
+            text = path.read_text(encoding="utf-8")
+            for description, pattern in forbidden.items():
+                match = re.search(pattern, text, flags=re.IGNORECASE)
+                if match:
+                    failures.append(
+                        f"{path.relative_to(ROOT)}: {description}: {match.group(0)!r}"
+                    )
+        root_agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        scope_match = re.search(
+            forbidden["single-device scope"]
+            + "|"
+            + forbidden["current model or output stack"],
+            root_agents,
+            flags=re.IGNORECASE,
+        )
+        if scope_match:
+            failures.append(
+                f"AGENTS.md: current prototype narrowed project scope: {scope_match.group(0)!r}"
+            )
+        self.assertEqual(failures, [], "\n".join(failures))
 
     def test_research_classification_has_one_owner_and_is_not_regressed(self) -> None:
         root_agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
