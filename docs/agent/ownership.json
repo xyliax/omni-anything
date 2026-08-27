@@ -29,7 +29,7 @@
     "experiment_protocol_values": ["docs/experiments.md", "experiments/shared/", "experiments/*/config.py"]
   },
   "projections": {
-    "README.md": "non-numeric summary only",
+    "README.md": "landing page with environment setup only",
     "AGENTS.md": "routing, constraints and research-classification discipline only",
     "docs/system.md": "semantic explanation without result measurements",
     "docs/agent/*.json": "paths, ids, bindings and verification without independent research claims"
