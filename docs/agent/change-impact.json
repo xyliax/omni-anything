@@ -5,37 +5,65 @@
       "id": "IMPACT-MECHANISM-SEMANTICS",
       "when": ["engines/conveyor/worker/engine_patch/**", "engines/conveyor/gateway/**"],
       "inspect": ["docs/system.md", "docs/agent/contracts.json", "docs/agent/dynamic-edges.json", "engines/conveyor/AGENTS.md"],
-      "verify": ["tests/test_conveyor_config.py", "tests/test_run_validation.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_configs.py", "tests/test_run_validation.py"]
     },
     {
       "id": "IMPACT-PROCESS-TOPOLOGY",
       "when": ["experiments/*/runner.py", "experiments/*/config.py", "infra/run/**", "engines/**", "third_party/metronome/experiments/sustained_fd.py", "third_party/metronome/worker/stream_server.py"],
       "inspect": ["docs/agent/system-map.json", "docs/agent/dynamic-edges.json", "docs/system.md"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_repository_layout.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py"]
     },
     {
       "id": "IMPACT-EXPERIMENT-PROTOCOL",
       "when": ["experiments/shared/**", "experiments/*/config.py"],
       "inspect": ["docs/experiments.md", "docs/agent/contracts.json"],
-      "verify": ["tests/test_baseline_config.py", "tests/test_conveyor_config.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_configs.py"]
     },
     {
       "id": "IMPACT-RUN-VALIDATION",
       "when": ["experiments/*/runner.py", "infra/run/artifacts.py", "infra/run/workflow.py", "engines/*/worker/stream_server.py", "engines/conveyor/gateway/**", "third_party/metronome/experiments/sustained_fd.py"],
       "inspect": ["docs/experiments.md", "docs/agent/contracts.json", "experiments/baseline/AGENTS.md", "experiments/conveyor/AGENTS.md", "infra/run/AGENTS.md"],
-      "verify": ["tests/test_run_workflow.py", "tests/test_run_validation.py", "tests/test_run_artifacts.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_run.py", "tests/test_run_validation.py"]
     },
     {
       "id": "IMPACT-METRIC-SEMANTICS",
       "when": ["infra/trace/**", "engines/*/worker/stream_server.py"],
       "inspect": ["docs/experiments.md", "docs/findings.md", "infra/trace/AGENTS.md"],
-      "verify": ["tests/test_trace.py", "tests/test_run_validation.py", "tests/test_documentation.py"]
+      "verify": ["tests/test_trace.py", "tests/test_run_validation.py"]
     },
     {
       "id": "IMPACT-NEW-FINDING",
       "when": ["accepted experiment record"],
       "inspect": ["docs/findings.md", "docs/agent/evidence.json"],
-      "verify": ["tests/test_documentation.py"]
+      "verify": []
+    },
+    {
+      "id": "IMPACT-NARRATIVE-SCOPE",
+      "when": [
+        "AGENTS.md",
+        "README.md",
+        "docs/problem.md",
+        "docs/system.md",
+        "docs/findings.md",
+        "docs/papers/**",
+        "docs/references/**",
+        "eurosys2027/AGENTS.md",
+        "eurosys2027/planning/**",
+        "eurosys2027/sections/01-introduction.tex",
+        "eurosys2027/sections/02-background-motivation.tex",
+        "eurosys2027/sections/03-design.tex",
+        "eurosys2027/sections/04-implementation.tex",
+        "eurosys2027/sections/08-discussion.tex"
+      ],
+      "inspect": [
+        "AGENTS.md",
+        "docs/problem.md",
+        "docs/experiments.md",
+        "docs/findings.md",
+        "eurosys2027/AGENTS.md",
+        "eurosys2027/planning/introduction-outline.md"
+      ],
+      "verify": ["tests/test_narrative_scope.py"]
     }
   ]
 }

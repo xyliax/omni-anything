@@ -21,7 +21,6 @@ raw run
 - measurement 带配置域和来源类别；
 - limitation 与 remaining uncertainty 不得省略；
 - superseded 结论从 current finding 移除，但历史 record 保留；
-- 更新 `docs/agent/evidence.json` 后运行 `tests/test_documentation.py`。
 
 ## Experiment Record
 

@@ -1,44 +1,55 @@
 # Agent Entry Point
 
-本文件是 Agent 的唯一根入口。先判断任务类型，再打开对应的权威文档和最近一层 `AGENTS.md`；不要默认读完整个仓库。
+本文件是 Agent 的唯一根入口，`CLAUDE.md` 是它的兼容 symlink。
 
 ## Project Scope
 
-项目研究周期性交互模型服务中的长期 KV 状态管理：持续增长的 KV working set 可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准；prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope。
+项目研究周期性交互模型服务中的长期 KV 状态管理：持续增长的 KV working set 可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准。prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope；除非实验矩阵和 paper contract 明确冻结，否则不得把它们写成论文边界。
 
-每次开始实质任务时先检查远端是否更新；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重新读取本文件和任务路径上的局部 `AGENTS.md`。
+会话开始或用户提示远端有更新时检查远端；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重读本文件和任务路径上的局部 `AGENTS.md`。
 
 ## Task Router
 
-| 任务 | 必读入口 |
-| --- | --- |
-| 理解研究问题 | [`docs/problem.md`](docs/problem.md) |
-| 理解机制与端到端流程 | [`docs/system.md`](docs/system.md) |
-| 设计、运行或比较实验 | [`docs/experiments.md`](docs/experiments.md) + `experiments/AGENTS.md` |
-| 引用当前状态、数字或结论 | [`docs/findings.md`](docs/findings.md) + [`docs/agent/evidence.json`](docs/agent/evidence.json) |
-| 理解 IPC、subprocess、monkeypatch | [`docs/agent/dynamic-edges.json`](docs/agent/dynamic-edges.json) |
-| 修改代码 | [`docs/agent/README.md`](docs/agent/README.md) + 最近一层 `AGENTS.md` |
-| 分析历史实验过程 | [`docs/agent/legacy-experiment-log.md`](docs/agent/legacy-experiment-log.md) |
-| 操作运行证据 | `results/README.md`（Agent/维护者契约） |
-| 修改第三方 pin | `third_party/AGENTS.md`；仅限用户明确要求 |
+按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的所有权全集见 `docs/agent/ownership.json`。
 
-更细的任务 read-set 和交付要求由 [`docs/agent/README.md`](docs/agent/README.md) 持有。
+```text
+.
+├── README.md                        # 最小落地页；只保留 Getting Started 环境搭建
+├── AGENTS.md                        # 本文件；owner: 任务路由、跨目录约束、Research Classification
+├── CLAUDE.md -> AGENTS.md           # 兼容 symlink
+├── pyproject.toml                   # 包与 pytest 配置
+├── docs/                            # 人类事实层与 Agent 索引；人类核心文档仅此四份
+│   ├── problem.md                   # owner: 问题定义、研究范围、术语词表
+│   ├── system.md                    # owner: 机制语义、状态机、端到端流程；不保存结果数字
+│   ├── experiments.md               # owner: 实验配置域、evaluated systems、指标与协议；不保存结论
+│   ├── findings.md                  # owner: 当前状态、结论、数字与限制；不重复完整协议
+│   ├── papers/                      # 论文摘要与阅读笔记；不是项目事实
+│   ├── references/                  # 外部规格整理与版图调研；不是项目事实
+│   └── agent/                       # Agent 导航层，不是第二套项目事实
+│       ├── README.md                # 任务 read-set 与交付要求；修改代码前必读
+│       ├── ownership.json           # 机器可检验的所有权声明
+│       ├── system-map.json          # owner: 组件与代码入口
+│       ├── dynamic-edges.json       # owner: subprocess、IPC 与 monkeypatch 动态调用边
+│       ├── contracts.json           # owner: 不变量与 verification
+│       ├── change-impact.json       # owner: 修改到必查文档与测试的映射
+│       ├── evidence.json            # owner: EVIDENCE-* 到精确 run、hash 与 provenance 的解析
+│       ├── records/                 # 结构化实验过程记录（experiment_record_v1）
+│       └── legacy-experiment-log.md # owner: 历史实验过程；已冻结，只读
+├── engines/                         # baseline 与 conveyor 引擎本体；被 runner 按路径 spawn，禁止 import experiments
+├── experiments/                     # 实验配置与 runner；负载/模型/平台公平性常量单份在 shared/
+├── infra/                           # 与具体实验解耦的运行与观测设施
+│   ├── run/                         # 运行工作流、进程与 artifact；不认识具体实验名
+│   ├── trace/                       # 观测生产、解析、对齐与 Perfetto；实验不得私建 trace/画图
+│   └── env/                         # 锁定运行环境；操作契约见本目录 AGENTS.md
+├── results/                         # 不可变运行证据；操作规则见 results/README.md
+├── tests/                           # 运行、配置与 trace 的单元测试；提交前从仓库根运行 python -m pytest
+├── third_party/                     # git-subrepo pin；只读，除非用户明确授权 pin 操作
+│   └── metronome/                   # baseline 依赖 pin；复制后永久分道，不追随上游
+├── eurosys2027/                     # 论文写作工作区；不是事实 owner；写作规则见本目录 AGENTS.md
+└── .github/                         # CI 工作流
+```
 
-## Single-Owner Rule
-
-| 事实域 | 唯一 owner |
-| --- | --- |
-| 问题定义、研究范围、术语 | [`docs/problem.md`](docs/problem.md) |
-| 机制语义、状态机、端到端流程 | [`docs/system.md`](docs/system.md) |
-| 实验配置域、evaluated systems、指标与协议 | [`docs/experiments.md`](docs/experiments.md) |
-| 当前状态、结论、数字与限制 | [`docs/findings.md`](docs/findings.md) |
-| research mechanism / system requirement / implementation choice 的分类纪律 | 本文件「Research Classification」 |
-| 组件、代码入口与动态调用边 | `docs/agent/*.json` |
-| 历史实验过程 | `docs/agent/legacy-experiment-log.md` 与后续结构化 record |
-| 精确 run、hash 与 provenance | `docs/agent/evidence.json` + `results/` |
-| 目录操作约束 | 最近一层 `AGENTS.md`；`results/README.md` 是证据操作的显式例外 |
-
-完整且机器可检验的所有权声明见 [`docs/agent/ownership.json`](docs/agent/ownership.json)。概念解释可以自洽；易变的数字、状态、协议和路径不得手工复制。其他文档只能链接 owner、写无数字摘要，或包含由测试校验的生成内容。
+除隐藏配置文件外，根目录只保留 map 所列条目。结构修改必须在同一事务内更新本 map 与 owner registry。
 
 ## Research Classification
 
@@ -46,69 +57,33 @@
 
 | 层级 | 判定标准 | 文档位置 |
 | --- | --- | --- |
-| Research mechanism | 直接支撑 paper claim，具有明确因果假设，可独立 ablation，并有证据或明确的待验证状态 | 可进入 README、`docs/system.md` 的机制表和 `docs/findings.md` 的机制状态表 |
+| Research mechanism | 直接支撑 paper claim，具有明确因果假设，可独立 ablation，并有证据或明确的待验证状态 | 可进入 `docs/system.md` 的机制表和 `docs/findings.md` 的机制状态表 |
 | System requirement | 研究设计成立所需的不变量或约束；规定系统必须满足什么，但不声称创新 | 写入 `docs/system.md` 的设计不变量或约束 |
 | Implementation choice | 当前代码对 requirement 的一种可替换实现；用于 workflow、维护和诊断 | 写入实现流程、局部 `AGENTS.md` 或 registry，不进入贡献或机制列表 |
 
 代码差异、独有开关或 matched baseline/Conveyor configuration 差异本身不构成 research mechanism。若替换某项接口、缓冲或同步实现而不改变 paper claim 与对应 ablation，该项应归为 implementation choice；由实现变化引出的测量口径可以形成 finding，但不能反向包装为机制创新。
 
-## Terminology Discipline
+## Narrative Scope Guard
 
-[`docs/problem.md`](docs/problem.md#terminology) 是论文核心术语的唯一 canonical glossary。新增 paper-facing 核心词前必须先更新词表，声明对象、定义与类别，迁移旧同义词，并通过 terminology guard。实现 identifier 和 repository-governance vocabulary 不得进入 contribution 或 mechanism narrative。
-
-## Repository Boundaries
-
-| 路径 | 角色 | 约束 |
-| --- | --- | --- |
-| `docs/` | 人类事实层与 Agent 索引 | 人类核心文档只保留 problem/system/experiments/findings |
-| `engines/` | baseline/conveyor 引擎本体 | 被 runner 按路径 spawn；不 import `experiments` |
-| `experiments/` | 配置、runner 与公平性常量 | 负载/模型/平台常量在 `shared/` 单份持有 |
-| `infra/run/` | 运行工作流、进程与 artifact | 不认识具体实验名 |
-| `infra/trace/` | 观测生产、解析、对齐与 Perfetto | 实验不得私建 trace/画图实现 |
-| `infra/env/` | 锁定运行环境 | 操作契约见本目录 `AGENTS.md` |
-| `results/` | 不可变运行证据 | 规则见 `results/README.md` |
-| `third_party/` | git-subrepo pin | 只读，除非用户明确授权 pin 操作 |
-| `eurosys2027/` | EuroSys 2027 论文写作工作区 | 不是事实 owner；写作规则和 source-of-truth 边界见本目录 `AGENTS.md` |
-| `.context/` | 讨论、外部整理和表达草稿 | 不是项目事实；被采纳内容单向提升到 owner |
-
-除上述正式顶层目录外，根目录只保留 `README.md`、本文件和兼容 symlink `CLAUDE.md`。`third_party/metronome/` 是 baseline 直接依赖的 pin；本仓 worker 从其复制后永久分道，不追随上游文件更新。
+根入口、README、核心 human docs 和论文 planning 必须保持同一条 scope 纪律：当前 prototype、measured path、模型/模态、输出链、硬件、设备拓扑和实验 profile 都是可变配置或证据边界，除非 paper contract 与实验矩阵已明确冻结，否则不得把它们写成研究问题、论文 workload 或 non-goal。`docs/experiments.md`、`docs/agent/evidence.json`、`results/` 以及标明 external reference 的资料目录可以记录这些细节，但其他文档只能链接其 owner 或使用不绑定实例的抽象表述。任何改变 scope 的文档重组都必须同时更新 [`docs/problem.md`](docs/problem.md)、`eurosys2027/` 的写作规则和 narrative-scope guard；不能只通过移动、压缩或删除文字来改变 scope。
 
 ## Change Transactions
 
-| 改动类型 | 同一事务内必须检查 |
-| --- | --- |
-| 机制语义或状态机 | 代码、`docs/system.md`、contracts、dynamic edges、对应测试 |
-| 进程拓扑或 IPC | runner/engine、system map、dynamic edges、manifest/trace 覆盖 |
-| 实验协议或配置 | `docs/experiments.md`、可执行 config、manifest、协议测试 |
-| 新诊断 run | raw artifacts、结构化 record；有保留价值时登记 evidence |
-| 接受新结论 | evidence alias、record、finding card、current-state table |
-| 仅实现尚未验证的优化 | 不得提前修改 findings 的性能状态 |
-
-修改影响的机器可读版本见 [`docs/agent/change-impact.json`](docs/agent/change-impact.json)。
+机制语义、状态机、进程拓扑、IPC、实验协议或指标口径的改动，必须在同一事务内同步对应 owner 文档、registry 与测试；路径级映射见 [`docs/agent/change-impact.json`](docs/agent/change-impact.json)。新诊断 run 保留 raw artifacts 和结构化 record，有保留价值时登记 evidence；接受新结论同步 evidence alias、record、finding card 与 current-state table；仅实现尚未验证的优化不得提前修改 findings 的性能状态。
 
 ## Evidence Discipline
 
 - 文档引用 `FINDING-*`、`CLAIM-*`、`EXP-*` 和 `EVIDENCE-*` 的完整命名空间，不使用裸 `C1`、`E1` 或 `H7`。
-- 人类文档和结构化 record 不写具体时间戳 run ID；record 只引用 `EVIDENCE-*`，精确 ID 由 `docs/agent/evidence.json` 解析到 run manifest、provenance 和 aggregates。
-- 每个数字标明实测、模拟器标定、线性外推或冻结先验，并带模型/配置域限定。
-- formal evidence 要求 clean source；diagnostic evidence 可以 dirty，但必须保留可重建的 patch artifact。旧证据若不满足新纪律，必须在 registry 中显式降级，不能伪装成可复现 formal evidence。
+- 人类文档和结构化 record 不写具体时间戳 run ID；record 只引用 `EVIDENCE-*`，精确 ID 由 `docs/agent/evidence.json` 解析。
+- 结论性数字标明实测、模拟器标定、线性外推或冻结先验，并带模型/配置域限定。
+- formal evidence 要求 clean source；diagnostic evidence 可以 dirty，但必须保留可重建的 patch artifact；不满足新纪律的旧证据必须在 registry 中显式降级。
 - 成功以 `status.json` 终态和 validation 为准，exit 0 本身不构成成功。
 
 ## Documentation Style
 
-- 人类核心文档的论文式章节标题使用英文，正文使用中文；稳定 heading 用于 deep link。`docs/findings.md` 的 `FINDING-*` claim card 保留稳定 ID，标题说明使用中文。
-- 专有机制首次出现时使用“中文名称（英文术语）+ 简短定义”，后文优先使用中文；通用系统术语可以保留英文。
-- `README.md` 只做落地页，不保存实验数字。
-- `docs/system.md` 不保存结果数字；`docs/experiments.md` 不保存结论；`docs/findings.md` 不重复完整协议。
+- [`docs/problem.md`](docs/problem.md#terminology) 是论文核心术语的唯一 canonical glossary：新增 paper-facing 核心词先更新词表、迁移旧同义词；实现 identifier 和 repository-governance vocabulary 不得进入 contribution 或 mechanism narrative。
 - Agent JSON 使用稳定 ID、repo-relative path、symbol、owner 和 verification；不要使用易漂移的行号。
-- 新的实验过程记录使用结构化 schema；`legacy-experiment-log.md` 已冻结，只读。
 
 ## Required Checks
 
-从仓库根运行：
-
-```bash
-python -m pytest
-```
-
-文档契约、路径、链接、ID、Agent registry 和 evidence 关系由 `tests/test_documentation.py` 与 `tests/test_repository_layout.py` 守卫。修改结构时必须同步更新 owner 和测试，不能通过放宽断言隐藏不一致。
+从仓库根运行 `python -m pytest`。其中 `tests/test_narrative_scope.py` 是 scope anti-narrowing 的必要回归检查；修改根入口、核心 human docs、论文 planning 或外部资料目录边界时，不得删除或绕过它。

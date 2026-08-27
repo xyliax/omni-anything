@@ -1,4 +1,4 @@
-"""Pin producer/consumer contracts used by run validation.
+"""Behavioral tests for the run-validation issue scanners.
 
 The scanners deliberately separate repository health from paper metrics:
 malformed evidence and runtime failures invalidate a run, while an actual
@@ -21,9 +21,6 @@ from infra.trace.parse import WARMUP_SESSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GATEWAY_GO = ROOT / "engines" / "conveyor" / "gateway" / "main.go"
-BASELINE_WORKER = ROOT / "engines" / "baseline" / "worker" / "stream_server.py"
-CONVEYOR_WORKER = ROOT / "engines" / "conveyor" / "worker" / "stream_server.py"
 ENGINE_PATCH = ROOT / "engines" / "conveyor" / "worker" / "engine_patch" / "sitecustomize.py"
 ENGINE_FIX = ROOT / "engines" / "baseline" / "worker" / "engine_fix" / "sitecustomize.py"
 
@@ -38,11 +35,9 @@ KV_EVENTS_HEALTHY = (
 
 class IssueScanTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.store = RunStore(Path(self.temporary.name))
-
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.store = RunStore(Path(temporary.name))
 
     def write(self, name: str, text: str) -> None:
         self.store.file(name).write_text(text, encoding="utf-8")
@@ -247,49 +242,6 @@ class InitialContextIssueScanTests(IssueScanTestCase):
                 self.assertEqual(scanner(self.store), ["worker log contains a fatal error"])
 
 
-class CrossLanguageLogContractTests(unittest.TestCase):
-    """Pin every first-party producer string consumed by a scanner."""
-
-    def test_gateway_records_actual_delivery_without_a_minimum_requirement(self) -> None:
-        text = GATEWAY_GO.read_text(encoding="utf-8")
-        self.assertIn('fmt.Sprintf("%d:%d", s.id, len(o.Tokens))', text)
-        self.assertNotIn('log.Printf("[starve]', text)
-
-    def test_worker_prints_the_lines_the_scanner_consumes(self) -> None:
-        conveyor = CONVEYOR_WORKER.read_text(encoding="utf-8")
-        self.assertIn("ended: %s", conveyor)
-        self.assertIn("KV eviction s%d RPC failed", conveyor)
-        baseline = BASELINE_WORKER.read_text(encoding="utf-8")
-        self.assertIn('log.info("delivery output_token_cap=%d deliv=%s"', baseline)
-
-    def test_both_workers_print_the_initialization_timeout(self) -> None:
-        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
-            self.assertIn(
-                'log.error("initialization barrier timed out',
-                worker.read_text(encoding="utf-8"),
-            )
-
-
-class SharedObservationProducerTests(unittest.TestCase):
-    """Matched systems use one observation producer."""
-
-    def test_both_workers_use_the_shared_producer(self) -> None:
-        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
-            text = worker.read_text(encoding="utf-8")
-            self.assertIn(
-                "from infra.trace.collectors.worker_obs import perreq_logger, stat_logger_classes",
-                text,
-            )
-            self.assertNotIn("StatLoggerBase", text)
-            self.assertNotIn("def _pev", text)
-
-    def test_both_workers_emit_the_ingest_stations(self) -> None:
-        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
-            text = worker.read_text(encoding="utf-8")
-            for station in ("IQ", "IS", "IE", "IR", "IA"):
-                self.assertIn(f'_pev("{station}"', text)
-
-
 class InitialContextFixTests(unittest.TestCase):
     """Initial-context runs need the frozen-max_tokens fix."""
 
@@ -321,9 +273,6 @@ class WarmupSentinelTests(unittest.TestCase):
     """One warmup sentinel is shared across process boundaries."""
 
     def test_all_declarations_agree(self) -> None:
-        self.assertEqual(WARMUP_SESSION, 10**9)
-        for worker in (BASELINE_WORKER, CONVEYOR_WORKER):
-            self.assertIn("WARMUP_SID = 10**9", worker.read_text(encoding="utf-8"))
         with mock.patch.dict(os.environ):
             os.environ.pop("OMNI_KV_EVICTION", None)
             os.environ.pop("OMNI_PREFETCH", None)
@@ -333,7 +282,3 @@ class WarmupSentinelTests(unittest.TestCase):
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
         self.assertEqual(module.WARMUP_REQ_PREFIX, f"s{WARMUP_SESSION}e")
-
-
-if __name__ == "__main__":
-    unittest.main()

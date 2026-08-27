@@ -1,18 +1,8 @@
 # Omni-Anything
 
-本仓库研究周期性交互模型服务中的长期 KV 状态管理：长生命周期会话持续追加上下文，其 KV working set 可能在周期计算预算用尽之前先耗尽有限的 GPU KV capacity。当前原型系统暂称 **Conveyor**。
+## Getting Started
 
-## Current Status
-
-Conveyor 当前实现三项候选研究机制：释放偏移调度（release-offset scheduling）、带主机后备的 KV 部分逐出（partial KV eviction with host backing）和 KV 预取（KV prefetching）。周期性本身提供相邻两次使用之间的复用间隔；释放偏移只负责把多会话的输入、计算和恢复需求分散到周期内，并不创造该间隔。
-
-当前证据仍以配置域限定的诊断结果和源码语义审计为主，尚不能直接组成论文的最终 Evaluation。精确模型、输入与输出路径、硬件、比较对象和协议只由 [`Experiments`](docs/experiments.md) 与 evidence registry 解析；当前可执行路径不自动定义最终论文的 workload、modality、output architecture 或 hardware scope。
-
-研究问题与固定术语见 [`Problem`](docs/problem.md)，机制和端到端语义见 [`System`](docs/system.md)，实验协议及当前缺陷见 [`Experiments`](docs/experiments.md)，证据支持的结论与限制见 [`Findings`](docs/findings.md)。
-
-EuroSys 2027 论文的独立写作工作区见 [`eurosys2027/`](eurosys2027/README.md)。该目录只保存论文结构、措辞和图表规划；研究事实仍由上述文档及 evidence registry 持有。
-
-## Quick Start
+这是环境安装与命令发现入口；研究问题、机制语义、实验协议和证据状态分别回到 [`docs/problem.md`](docs/problem.md)、[`docs/system.md`](docs/system.md)、[`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md)。本页不固定当前模型、硬件、profile 或运行时长。
 
 ```bash
 bash infra/env/setup.sh --help
@@ -20,30 +10,4 @@ python -m experiments.baseline --help
 python -m infra.trace.perfetto --help
 ```
 
-先在 [`Experiments`](docs/experiments.md) 中选择当前有效的环境、配置和比较协议；README 不复制这些易变参数。一次运行是否成功以 `status.json` 终态和 validation 为准，不能只看进程 exit code。
-
-## Documentation Guide
-
-| 文档 | 唯一负责的事实 |
-| --- | --- |
-| 本页 | 项目定位和阅读入口 |
-| [`Problem`](docs/problem.md) | 研究问题、范围和 canonical glossary |
-| [`System`](docs/system.md) | 机制、约束和端到端流程 |
-| [`Experiments`](docs/experiments.md) | 配置、比较、指标状态和协议 |
-| [`Findings`](docs/findings.md) | 当前证据支持的结论、成熟度和限制 |
-
-首次阅读使用 `Problem → System → Experiments → Findings`。代码已实现不等于机制已验证；诊断结果也不会自动成为论文叙事。精确 run、hash 与 provenance 通过 [`Evidence Registry`](docs/agent/evidence.json) 解析。
-
-Agent 文档只把上述事实映射到代码和维护动作：
-
-```text
-AGENTS.md → task guide → human owner → registry → nearest AGENTS.md → code and tests
-```
-
-研究范围回到 `Problem`，机制语义回到 `System`，协议回到 `Experiments`，当前结论回到 `Findings`。Agent registry 不得覆盖这些 owner。
-
-若陈述看似冲突，以对应事实域的唯一 owner 为准；历史 results、外部 `.context` 材料和旧讨论稿不能覆盖当前 human docs。
-
-### Agent Documentation
-
-Agent 文档不是第二套项目事实。根 [`Task Router`](AGENTS.md#task-router) 选择最小 read-set；[`system-map`](docs/agent/system-map.json) 定位组件和入口，[`dynamic-edges`](docs/agent/dynamic-edges.json) 记录 subprocess、IPC 与 monkeypatch，[`change-impact`](docs/agent/change-impact.json) 把修改映射到必须复查的 owner 和 tests。
+具体环境、配置和比较协议以 [`docs/experiments.md`](docs/experiments.md) 为准；当前可执行配置不自动成为最终论文的 workload、modality、output architecture、hardware 或 topology scope。

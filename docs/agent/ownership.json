@@ -13,6 +13,7 @@
     "experiment_protocol": "docs/experiments.md",
     "current_findings": "docs/findings.md",
     "research_classification": "AGENTS.md",
+    "narrative_scope": "AGENTS.md#narrative-scope-guard",
     "code_topology": "docs/agent/system-map.json",
     "dynamic_bindings": "docs/agent/dynamic-edges.json",
     "operational_contracts": "docs/agent/contracts.json",
@@ -29,7 +30,7 @@
     "experiment_protocol_values": ["docs/experiments.md", "experiments/shared/", "experiments/*/config.py"]
   },
   "projections": {
-    "README.md": "non-numeric summary only",
+    "README.md": "landing page with environment setup only",
     "AGENTS.md": "routing, constraints and research-classification discipline only",
     "docs/system.md": "semantic explanation without result measurements",
     "docs/agent/*.json": "paths, ids, bindings and verification without independent research claims"
