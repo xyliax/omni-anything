@@ -41,7 +41,7 @@ model revision、依赖锁和 GPU index 仍以 executable config 与 run manifes
 | measured context growth | 78 token/period | 当前栈标定值，用于容量模型，不驱动 client |
 | 单 token KV bytes | 56 KiB | 当前模型和精度下的几何 |
 
-这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。文档测试校验表格与代码一致。
+这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。context growth 是输入与输出之和：当前栈每周期新增输入实测为 53 token（2 s 音频经 feature extraction 与模板），输出在实测路径跑满 decode cap 25，合计 78。启用 KV eviction 的 run 里 scheduler 单步还可能包含恢复缺口的重算 token，不改变逻辑上下文的增长率。
 
 ### Executed Decode Difference
 
@@ -159,6 +159,7 @@ release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要
 - 标定 KV bytes/token、decode/prefill compute、HBM traffic 和 PCIe copy throughput；
 - 用这些 primitive 构建 capacity / compute / restore-bandwidth roofline；
 - 在至少一个额外 GPU 或不同互连 profile 上验证预测误差；
+- 对输出 token 率做敏感性配置：当前 \(M\) 是 harness 常数，而全双工音频输出形态的输出率由 codec 播放率决定；sweep 应包含以播放率为参照的输出率配置点（可用 Thinker 文本模拟该 token 率），使容量结论可外推到音频输出形态；
 - 清楚区分实测点、模拟器标定和 analytical scenario。
 
 ### Q6: What Are the Overheads and Failure Boundaries?

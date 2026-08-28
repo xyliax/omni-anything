@@ -45,6 +45,8 @@ Conveyor 在普通 continuous-batching 接口之外使用两个工作负载事�
 
 runner 只负责启动、终态判决和 artifact 登记，不进入数据面。全部进程的日志与观测输出写入不可变 run 目录，文件布局与离线解析见 [Observability Model](#observability-model)。机制补丁与 trace 观测都由 worker Python 的 `sitecustomize` 在进程启动时注入。精确组件和动态调用边分别由 [`system-map.json`](agent/system-map.json) 与 [`dynamic-edges.json`](agent/dynamic-edges.json) 持有。
 
+组件来源：client（controller 按 `--shards` 把会话分摊到的负载子进程，实现名 shard）、WebSocket 与 gRPC `Step` 协议、以及 baseline 的原版 gateway 和 worker 都来自 `third_party/metronome/` 只读 pin，两个 evaluated systems 共用同一 pinned client；Conveyor 的 gateway、worker 与 engine 补丁是本仓实现；EngineCore 是未修改源码的 vLLM 0.23。
+
 ## Conveyor Mechanisms
 
 evaluated systems 的完整清单、配置与比较资格由 [`Experiments`](experiments.md#evaluated-systems) 持有；本节只定义 Conveyor 的机制语义。matched Metronome baseline 保留默认的全 GPU KV 驻留语义，是机制对照的参照系。

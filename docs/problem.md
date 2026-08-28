@@ -17,7 +17,7 @@
 
 ### Why KV Cache Becomes a Capacity Constraint
 
-Transformer 的增量执行依赖此前上下文的 attention key/value。prefill 为已经到达的上下文计算这些中间状态，后续 decode 或新的输入更新可以直接复用 KV cache，而不必每次重新计算完整历史。对一次性短请求而言，这份 cache 的生命周期通常与请求相近；对持续交互会话而言，每次新增输入经过模型的 feature extraction 和 prefill 后，都会使逻辑上下文以及对应的 KV working set 继续增长。
+Transformer 的增量执行依赖此前上下文的 attention key/value。prefill 为已经到达的上下文计算这些中间状态，后续 decode 或新的输入更新可以直接复用 KV cache，而不必每次重新计算完整历史。对一次性短请求而言，这份 cache 的生命周期通常与请求相近；对持续交互会话而言，每次新增输入经过模型的 feature extraction 和 prefill 后，都会使逻辑上下文以及对应的 KV working set 继续增长；decode 生成的输出 token 同样追加进同一上下文并占用 KV。
 
 GPU 上的 KV block pool 是有限资源，而且多个会话要与模型权重、activation 和其他运行时状态共同使用同一张卡。把每个会话的完整 KV 都保留在 GPU 上可以避免恢复开销，却会让总驻留量随会话数和上下文长度增长。相反，释放历史状态也不是免费的：丢弃后重新计算会把更大的 prefill 放回下一次更新的关键路径，主机回载会消耗 host-to-device 带宽和传输时间，截断上下文则改变了模型可见的交互历史。
 
