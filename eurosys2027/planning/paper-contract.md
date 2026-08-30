@@ -13,9 +13,9 @@
 
 ## One-Sentence Story
 
-> Provisional: expose predicted next-use time for long-lived interaction sessions and use it to schedule GPU/host KV residency around actual reuse.
+> Provisional: commit each periodic session's next release time on an absolute grid and drive KV eviction, restore and prefetch against it, so the next use of a session's KV is a scheduled deadline rather than a predicted event.
 
-Rewrite this sentence only after checking it against `docs/problem.md`, `docs/system.md` and the closest prior work.
+Rewrite this sentence only after checking it against `docs/problem.md`, `docs/system.md`, `docs/PAPER.md` and the closest prior work.
 
 ## Main Claim
 
