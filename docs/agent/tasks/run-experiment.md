@@ -19,4 +19,4 @@
 
 ## Acceptance
 
-以 `status.json` 终态和 validation 为准，不以 exit 0 为准。session death、RPC/client failure、初始化超时、artifact 缺失、manifest 损坏或已启用机制无事件都使 run 不可接受。实际输出小于 \(M\) 是诊断信号，不自动构成 correctness failure。
+以 `status.json` 终态和 validation 为准，不以 exit 0 为准。出现 session death、RPC/client failure、初始化超时、artifact 缺失、manifest 损坏，或已启用的机制没有产生事件，run 都不可接受。实际输出小于 \(M\) 是诊断信号，本身不构成 correctness failure。

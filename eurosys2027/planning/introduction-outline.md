@@ -7,13 +7,13 @@
 - Candidate type: **New Problem/Setting Paper**，以 systems technique 作为构造性解决方案。
 - Rationale: 最强主线是长期周期性交互会话形成新的 KV capacity regime；Conveyor 证明 next-use information 可以被系统利用。
 - Condition: closest-work matrix 完成后才能冻结。若已有工作覆盖同一 setting，应改为 Technique Paper。
-- Paragraph implication: Paragraph 3 是承重段，必须清楚定义 setting、hard constraints 和 goal，不能只作为引入 Conveyor 的过渡句。
+- Paragraph implication: Paragraph 3 承担核心论证，必须清楚定义 setting、hard constraints 和 goal，不能只作为引入 Conveyor 的过渡句。
 
 ## Running Example Candidates
 
 | Candidate | Evidence proximity | Benefit | Risk | Current choice |
 | --- | --- | --- | --- | --- |
-| 单 GPU 上的长期 Qwen2.5-Omni audio-input、Thinker-only sessions | Highest | 与当前 measured stack 一致，不假装完整语音输出 | 需要谨慎解释用户价值与 Thinker-only 边界 | **Provisional default** |
+| 单 GPU 上的长期 Qwen2.5-Omni audio-input、Thinker-only sessions | Highest | 与当前 measured stack 一致，不宣称支持完整语音输出 | 需要谨慎解释用户价值与 Thinker-only 边界 | **Provisional default** |
 | Always-on video assistant sessions | Low today | 直观展示长期 streaming context | 当前没有对应真机证据 | Alternative only |
 | Continuous captioning/meeting assistant sessions | Low today | 容易解释周期输入与长期上下文 | 产品 cadence 和模型路径尚未验证 | Alternative only |
 
@@ -21,7 +21,7 @@
 
 ## Paragraph 1 — Background and Motivation
 
-**Purpose:** 从有限 request/response 转向长期 streaming interaction session，并用一个具体失败展示 growing KV working set 为什么成为 serving 问题。
+**Purpose:** 从有限 request/response 转向长期 streaming interaction session，并用一个具体的失败场景说明 growing KV working set 为什么成为 serving 问题。
 
 **Writing points:**
 
@@ -83,9 +83,9 @@
 
 **Writing points:**
 
-1. **Demand shaping:** 分散 releases 可能缓解瞬时 demand，但也可能削弱 batching、增加权重读取；不能假设 staggering 免费。
+1. **Demand shaping:** 分散 releases 可能缓解瞬时 demand，但也可能削弱 batching、增加权重读取；不能假设 staggering 没有代价。
 2. **Safe partial residency:** session activity、request ownership、GPU residency、host coverage 和 in-flight transfer 是不同状态；粗粒度 free/offload 不能保证可恢复性。
-3. **Timely restoration:** prefetch 可能因 capacity 被推迟、因 input overtaking 变迟或在复用前被 LRU 逐出；正确性不能依赖 prefetch 必定命中。
+3. **Timely restoration:** prefetch 可能因 capacity 被推迟、因 input overtaking 来不及完成，或在复用前被 LRU 逐出；正确性不能依赖 prefetch 必定命中。
 
 **Gaps:**
 
@@ -105,7 +105,7 @@
 
 1. Topic sentence 必须先写统一设计原则，再列机制。
 2. 在 provisional running example 中复用同一 session timeline：release、compute、idle eviction、restore、next reuse。
-3. 明确 release offsets 不创造 idle interval，prefetch 也不承担 correctness。
+3. 明确 release offsets 不创造 idle interval，正确性也不依赖 prefetch。
 4. Forward-reference Section 3 的模块和 Section 4 的实现边界。
 
 **Gaps:**

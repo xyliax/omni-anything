@@ -29,11 +29,11 @@ python -m infra.trace.perfetto <run-id-or-path>
 ## Retention Rules
 
 - runner 创建唯一目录，从不复用既有路径，也不自动删除 run。
-- 一次 run 的执行状态成功要求 `status.json` 为 `state=success` 且 validation 通过；exit 0 本身不构成成功。升级为 formal evidence 还要满足 clean source、比较协议和重复次数要求。
-- 终态有三种：`success` / `failed` / `interrupted`。操作者 SIGINT/SIGTERM 由 runner 自动落成 `interrupted`；SIGKILL 遗留的 `running` 不得手工覆盖原状态，恢复工具应追加带 operator、reason、timestamp 和原状态 hash 的 `recovery.json`。
+- 一次 run 只有 `status.json` 为 `state=success` 且 validation 通过才算执行成功；exit 0 本身不构成成功。升级为 formal evidence 还要满足 clean source、比较协议和重复次数要求。
+- 终态有三种：`success` / `failed` / `interrupted`。操作者 SIGINT/SIGTERM 由 runner 自动记为 `interrupted`；SIGKILL 遗留的 `running` 不得手工覆盖原状态，恢复工具应追加带 operator、reason、timestamp 和原状态 hash 的 `recovery.json`。
 - run 不做自动清理，版本库允许每个实验同时保留多个 run。删除旧 run 只发生在讨论定案之后：确认产生该 run 的实现 bug 已修复、且新证据已验收，才删除对应 bug 版本的 run；删除动作由人执行，历史需要时从 git 恢复。
 - 人类核心文档和 Agent record 只引用 `EVIDENCE-*` alias，不引用实验级目录或时间戳 run ID；exact run 只由 evidence registry 与本证据层持有。
-- 跨 run 分析只住 `aggregates/`，且记录全部输入 run ID 与 hash；若输入 run 被清理，聚合也必须一并清理或重建，不能留下悬空来源。
+- 跨 run 分析只放在 `aggregates/`，且记录全部输入 run ID 与 hash；若输入 run 被清理，聚合也必须一并清理或重建，不能留下悬空来源。
 
 ## Evidence Registry
 

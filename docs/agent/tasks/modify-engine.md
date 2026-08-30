@@ -13,9 +13,9 @@
 - 先判定改动是 research mechanism、system requirement 还是 implementation choice。
 - 若修改 KV 管理，分别说明 session activity、request ownership、GPU block placement、host backing coverage 与 transfer state 如何变化。
 - 若修改进程、IPC、utility command 或 monkeypatch，必须同步更新 system map、dynamic edges 和 producer/consumer contract tests。
-- 不得因存在一个新开关、补丁或代码差异就把它提升为 paper mechanism。
+- 不得仅因为多了一个新开关、补丁或代码差异，就把它归为 paper mechanism。
 - 未经新 run 验证的实现优化不得提前改变 `docs/findings.md` 中的性能状态。
 
 ## Verification
 
-执行 `change-impact.json` 指向的定向测试，随后从根目录运行 `python -m pytest`。若变更影响 artifact schema，必须同时更新 parser、Perfetto exporter、runner required artifacts 和 tests。
+执行 `change-impact.json` 指向的测试，随后从根目录运行 `python -m pytest`。若变更影响 artifact schema，必须同时更新 parser、Perfetto exporter、runner required artifacts 和 tests。

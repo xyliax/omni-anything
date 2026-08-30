@@ -1,6 +1,6 @@
 # Agent Task Router
 
-本目录不是第二套项目事实，而是面向 Agent 的导航和操作层。研究语义必须回到 `docs/problem.md`、`docs/system.md`、`docs/experiments.md` 和 `docs/findings.md`；本目录只拥有组件定位、动态边、修改影响、验证方法和 evidence alias。
+本目录不是第二套项目事实，而是面向 Agent 的导航和操作层。研究语义必须回到 `docs/problem.md`、`docs/system.md`、`docs/experiments.md` 和 `docs/findings.md`；本目录只持有组件定位、动态边、修改影响、验证方法和 evidence alias。
 
 ## Read Policy
 
@@ -36,4 +36,4 @@
 
 ## Historical Records
 
-[`legacy-experiment-log.md`](legacy-experiment-log.md) 是旧 append-only 日志的冻结迁移件，不是 current-state owner，也不是 paper prose source。它保留历史术语和过时研究故事；只有用户明确要求分析历史实验时才读取。后续 experiment record 按 [`records/README.md`](records/README.md) 创建，使用 `contracts.json` 中的 `experiment_record_v1` 字段；只有被接受的结论才进入 findings。
+[`legacy-experiment-log.md`](legacy-experiment-log.md) 由旧 append-only 日志迁移而来并已冻结，不是 current-state owner，也不是 paper prose source。它保留历史术语和过时的研究表述；只有用户明确要求分析历史实验时才读取。后续 experiment record 按 [`records/README.md`](records/README.md) 创建，使用 `contracts.json` 中的 `experiment_record_v1` 字段；只有被接受的结论才进入 findings。

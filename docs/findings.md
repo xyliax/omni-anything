@@ -23,12 +23,12 @@
 - 至少一个额外 hardware profile 的校准或验证；
 - 论文级 latency、freshness 和 schedulability 定义。
 
-当前 runner 只返回 Thinker 文本 token。任何关于 audio playback、jitter-buffer stall、静音 token 或端到端全双工语音体验的结论都尚未由本仓证据支持。
+当前 runner 只返回 Thinker 文本 token。本仓证据还不支持任何关于 audio playback、jitter-buffer stall、静音 token 或端到端全双工语音体验的结论。
 
 ## Paper-Relevant Findings
 
 <a id="finding-a1"></a>
-### FINDING-A1 — 串行输入处理会遮蔽 KV 容量瓶颈
+### FINDING-A1 — 串行输入处理会掩盖 KV 容量瓶颈
 
 旧 worker 把每个 audio chunk 的 input processing 串行放在事件循环上，多会话到达时会先形成 host-side queue。这个瓶颈能在 GPU KV capacity 之前限制并发，因此正式容量实验必须使用 matched input-processing path。它是需要排除的工程混淆因素，不是 Conveyor 的容量机制。
 
@@ -42,9 +42,9 @@
 证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H1-COMPARISON`。
 
 <a id="finding-b1"></a>
-### FINDING-B1 — 周期事件正常不等于模型持续推进
+### FINDING-B1 — 周期事件正常不等于模型仍在产生新 token
 
-周期事件和 service RPC 可以持续正常返回，即使某个 session 已停止产生新 token。client cadence 因而只证明 transport loop 活着；它不能替代 session liveness、token growth 和 scheduler-state 观测。当前 runner 已把 session death、RPC error 和 client artifact failure 作为 repository health gate。
+周期事件和 service RPC 可以持续正常返回，即使某个 session 已停止产生新 token。client cadence 因而只证明 transport loop 仍在运转；它不能替代 session liveness、token growth 和 scheduler-state 观测。当前 runner 已把 session death、RPC error 和 client artifact failure 作为 repository health gate。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
@@ -58,14 +58,14 @@ Conveyor 的 no-wait `Step` 在提交当前输入后立即快照未交付输出�
 <a id="finding-c1"></a>
 ### FINDING-C1 — 引擎只看到迭代而不知道应用周期
 
-持续 session 的周期结构由 gateway release 和 streaming input 从引擎外部塑形。EngineCore 只看到 scheduler iterations、prefill 与 decode，不知道应用的 \(T\)、\(\phi_i\) 或 \(D\)。trace 和论文必须区分 application tick、service RPC 与 engine iteration。
+持续 session 的周期结构由引擎外部的 gateway release 和 streaming input 决定。EngineCore 只看到 scheduler iterations、prefill 与 decode，不知道应用的 \(T\)、\(\phi_i\) 或 \(D\)。trace 和论文必须区分 application tick、service RPC 与 engine iteration。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
 <a id="finding-c2"></a>
 ### FINDING-C2 — 当前 matched baseline 执行了更大的 decode 上限
 
-vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数。两个当前 first-party worker 都设置 `ignore_eos=True`；正常 measured path 因而运行到各自 cap，而不是用来观测自然短输出。matched Metronome worker 当前每段设置 \(M+8\)，所以在 \(M=25\) 的默认配置下执行 33 token；Conveyor 每段执行 25。该差异改变实际 decode work，并会让 matched baseline 的未交付输出缓冲以 8 token/period 的差额增长。model-length 边界和异常终止等例外必须另行诊断。
+vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数。两个当前 first-party worker 都设置 `ignore_eos=True`，正常 measured path 因而运行到各自每段 cap，而不是用来观测自然短输出；两个 evaluated systems 的 cap 当前不同，具体数值与比较资格由 [`Experiments`](experiments.md#executed-decode-difference) 持有。该差异改变实际 decode work，并使 matched baseline 的未交付输出缓冲以固定差额增长。model-length 边界和异常终止等例外必须另行诊断。
 
 因此，现有跨系统 run 只能用于诊断，不能称作相同 workload 下的最终公平比较。修复必须在新的实验事务中统一 cap 并重跑，不能改写旧证据。
 
@@ -79,7 +79,7 @@ vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数
 证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H3-KV-EVICTION-SEMANTICS`。
 
 <a id="finding-d1"></a>
-### FINDING-D1 — 当前实测栈在计算尚有余量时触达 KV 容量边界
+### FINDING-D1 — 当前实测栈在计算尚有余量时触及 KV 容量边界
 
 在当前 RTX 3090 与 Qwen2.5-Omni Thinker 配置上，GPU KV pool 接近耗尽时，每周期仍存在明显 compute headroom。该 observation 支持“capacity before compute”作为本硬件上的问题实例，但不能单独证明所有硬件和模型都如此。
 
@@ -90,7 +90,7 @@ vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数
 <a id="finding-d2"></a>
 ### FINDING-D2 — KV 工作集字节数能够解释容量边界
 
-历史测量中，不同 session-count/context-length 组合在接近相同总 KV token 数时触达 GPU pool 边界。这支持以总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。
+历史测量中，不同 session-count/context-length 组合在接近相同总 KV token 数时触及 GPU pool 边界。这支持以总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。正式结论需要统一 decode cap 后重新 sweep。
 
@@ -99,7 +99,7 @@ vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数
 
 将 release 分散到周期内会减小同步 batch，并增加权重重复读取的机会；同时它为降低同时 GPU-resident 的 session 数和分散 restore demand 提供时序条件。这个 trade-off 必须由 compute、HBM 和 PCIe 三类资源共同核算。
 
-当前证据直接支持 input-processing release burst 的降低，不足以单独支持 KV restore bandwidth 已被平滑的性能主张。
+当前证据直接支持 input-processing release burst 的降低，不足以单独支持“KV restore bandwidth 已被平滑”这一性能主张。
 
 证据：`EVIDENCE-H1-COMPARISON` 与 `EVIDENCE-LEGACY-BASELINE`。
 
@@ -113,7 +113,7 @@ vLLM resumable request 的 `max_tokens` 在每个 streaming segment 重新计数
 <a id="finding-f7"></a>
 ### FINDING-F7 — 生成与消费上限不一致会积累未交付输出
 
-当 worker 每段最多生成 \(M+8\)，gateway 每周期最多消费 \(M\) 时，未交付输出缓冲可以持续增长。该现象说明生成与消费配置必须一起报告，也说明 RPC cadence 不能反映输出对应的输入年龄。
+当 worker 的每段生成上限高于 gateway 的每周期消费上限时，未交付输出缓冲可以持续增长；当前配置差异由 [`Experiments`](experiments.md#executed-decode-difference) 持有。该现象说明生成与消费配置必须一起报告，也说明 RPC cadence 不能反映输出对应的输入已经过去多久。
 
 `output_backlog` 是实现诊断量；论文最终是否采用 freshness 指标以及如何定义仍由 Evaluation 决定。
 
@@ -147,7 +147,7 @@ Conveyor 的 `Step` latency 测量入队与输出快照，不包含当前 input 
 <a id="finding-h4"></a>
 ### FINDING-H4 — 保留前缀逐出在实测点限制了闲置会话的 GPU 驻留
 
-在历史 \(N=8\)、initial context length=4096、retained prefix \(K=128\)、120 s 诊断配置中，Conveyor 的 GPU KV occupancy 进入约 0.29 的锯齿稳态；未做 partial eviction 的历史对照末值接近 0.99。该点支持机制能降低 idle-session GPU residency。
+在历史 \(N=8\)、initial context length=4096、retained prefix \(K=128\)、120 s 诊断配置中，Conveyor 的 GPU KV occupancy 进入约 0.29 的锯齿稳态；未做 partial eviction 的历史对照末值接近 0.99。该数据点支持“该机制能降低 idle-session GPU residency”的判断。
 
 这些 run 不满足新的 formal 标准，且当前跨系统 decode work 不同。数字只能作为诊断性 effect-size 线索，不能直接成为论文容量提升主结果。
 
@@ -168,11 +168,11 @@ initial-context preloading 必须在周期输入开始前完成。barrier 结束
 证据：`EVIDENCE-H6-INITIAL-CONTEXT`。该设置是 evaluation state construction。
 
 <a id="finding-h7"></a>
-### FINDING-H7 — KV 预取语义已闭合但性能结论仍开放
+### FINDING-H7 — KV 预取语义已完整但性能结论未定
 
 当前实现能把 host-backed blocks 提前复制到 GPU prefix cache；真正 input 随后通过原生 prefix match 复用。capacity deferral、input overtaking 和 LRU eviction 都安全退化到 on-demand reload/recomputation。合成 ID 和 hash registration 是 transport 实现细节。
 
-历史预取 run 的原始 artifacts 未保留，现有 source audit 只能支持语义检查。历史结果还显示 feature-extraction 膨胀可能抵消 copy overlap，净延迟收益没有闭合。
+历史预取 run 的原始 artifacts 未保留，现有 source audit 只能支持语义检查。历史结果还显示 feature-extraction 膨胀可能抵消 copy overlap，净延迟收益尚未确认。
 
 证据：`EVIDENCE-H7-PREFETCH`，角色为 `legacy-unreconstructable` / source audit。
 

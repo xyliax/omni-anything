@@ -5,7 +5,7 @@ Updated: 2026-08-03
 
 ## 划界
 
-本文是有日期的外部公开规格整理，不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。任何内容进入 paper 前都必须重新核验原始来源，并按 [`docs/problem.md`](../problem.md#terminology) 与四份 human owner 重新表述；不得从本文件把外部系统的后台任务、音频播放链或指标定义投射到当前原型。
+本文是有日期的外部公开规格整理，不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。任何内容进入 paper 前都必须重新核验原始来源，并按 [`docs/problem.md`](../problem.md#terminology) 与四份 human owner 重新表述；不得从本文件把外部系统的后台任务、音频播放链或指标定义套用到当前原型。
 
 只把下面这种系统算作**模型级全双工（model-level full-duplex）**：模型在输出期间继续吸收输入，并把 silence、overlap、backchannel、打断或主动开口当作模型时间上下文或学到的动作。以下两类不自动算：
 
@@ -14,8 +14,8 @@ Updated: 2026-08-03
 
 **约定**
 
-- **tick**：模型或调度器完成一次交互决策的原生时间量子，不是网络包长、首包延迟或评测 deadline。
-- 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。**N\*** 只沿用被整理来源的 schedulable-concurrency 口径，不为本项目冻结验收阈值。
+- **tick**：模型或调度器完成一次交互决策的原生最小时间单位，不是网络包长、首包延迟或评测 deadline。
+- 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。**N\*** 只沿用本文所整理来源的 schedulable-concurrency 口径，不为本项目冻结验收阈值。
 - 90 s 新会话数字属**短爆发口径**，不能替代长时稳态容量。
 - config cap（如 Raon `FD_MAX_SESSIONS_PER_GPU=2`）**≠ 实测最大值**。
 - 训练 GPU 配置**不计入** serving 配置。
@@ -25,14 +25,14 @@ Updated: 2026-08-03
 
 1. 能同时证明「模型级全双工 + 大规模生产上线」的只有 **GPT-Live** 和 **Seeduplex**；两家都不公开参数、tick、上下文和单 GPU 容量。MiniCPM-o 4.5 已有官方托管 Realtime API，但没有公开流量或 SLA。
 2. 开源侧给出多会话服务端较完整的是 **Raon-SpeechChat**，但其 `2 sessions/GPU` 只是 config cap。多数论文只有单会话演示或离线推理。
-3. 系统性公开「单 GPU 能撑多少路、短测与长会话为何不同」的只有 **Metronome**（serving 系统，不是模型）。无界常驻 KV 在短测里延迟健康，随后所有 session 一起停滞；失效是 memory cliff 而非 compute drift，且崩溃是静默的。
+3. 系统性公开「单 GPU 能撑多少路、短测与长会话为何不同」的只有 **Metronome**（serving 系统，不是模型）。无界常驻 KV 在短测里延迟正常，随后所有 session 一起停滞；失效是 memory cliff 而非 compute drift，且崩溃是静默的。
 
 ## 1. 已上线或前沿闭源模型
 
 | 工作 | 首次公开 | 上线状态 | 原生 tick | 参数 | 单会话上下文 | 单 GPU 容量 | 量化 / 硬件 / 效率 |
 | --- | --- | --- | ---: | ---: | --- | --- | --- |
-| [GPT-Live][gpt-live] | **2026-07-08** | **生产**。ChatGPT Voice Go/Plus/Pro 默认（Live-1），Free 默认（mini）；API 未开放；周用户超 1.5 亿（非并发） | 未披露；官方 "continuously processes input while generating output"，每秒多次决定 `speak/listen/pause/interrupt/tool`；复杂问题委托 GPT-5.5 后台 | 未披露 | 未披露；社区实测 ≥1 h（Simon Willison，轶事级）。[系统卡][gpt-live-card]无架构数字 | 未披露 | 未披露 |
-| [Seeduplex][seeduplex] | **2026-04-09** | **生产**。fully rolled out 到豆包 App，称服务数亿用户 | 未披露；"listen while speaking"，逐步决策 start replying / continue listening / respond to interruptions | 未披露 | 未披露 | 未披露 | speculative decoding + 量化；精度/GPU 未披露。公开数字均为相对上一代 A/B：endpoint latency −250ms、打断 −300ms、误响应与误打断减半、抢话 −40%、MOS +12%。自述克服高并发延迟尖刺与稳定性问题，解法未公开 |
+| [GPT-Live][gpt-live] | **2026-07-08** | **生产**。ChatGPT Voice Go/Plus/Pro 默认（Live-1），Free 默认（mini）；API 未开放；周用户超 1.5 亿（非并发） | 未披露；官方 "continuously processes input while generating output"，每秒多次决定 `speak/listen/pause/interrupt/tool`；复杂问题委托 GPT-5.5 后台 | 未披露 | 未披露；社区实测 ≥1 h（Simon Willison 个例报告，非系统测量）。[系统卡][gpt-live-card]无架构数字 | 未披露 | 未披露 |
+| [Seeduplex][seeduplex] | **2026-04-09** | **生产**。fully rolled out 到豆包 App，称服务数亿用户 | 未披露；"listen while speaking"，逐步决策 start replying / continue listening / respond to interruptions | 未披露 | 未披露 | 未披露 | speculative decoding + 量化；精度/GPU 未披露。公开数字均为相对上一代 A/B：endpoint latency −250ms、打断 −300ms、误响应与误打断减半、抢话 −40%、MOS +12%。自述克服高并发延迟尖峰与稳定性问题，解法未公开 |
 | [TML-Interaction-Small][tml] | **2026-05-11** | 研究预览，未来 limited preview | **200 ms** micro-turn | **276B MoE / 12B active** | 未披露；官方明确超长 session 仍是问题 | 未披露 | Blackwell + NVLS；自定义 MoE gather+GEMV + batch-invariant kernels（额外开销 <5%，非 utilization）；持久化 SGLang streaming session；GPU 数/量化未披露 |
 
 GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 节边界表。
@@ -70,7 +70,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 
 | 工作 | 公开 serving 拓扑 | 单 GPU 容量 | 量化 / 硬件 | 证据性质 |
 | --- | --- | --- | --- | --- |
-| Moshi | Python 服务端 `batch_size=1` + `streaming_forever(1)` + 全局锁；Rust `moshi-server` 可配置 batch 只覆盖 ASR/TTS，FD LM `LmConfig` 无 `batch_size` 字段，每会话独立 B=1 | 官方未披露；Metronome 第三方 **≥32**@80ms（90 s 下界） | BF16A8 16.74GB / W8A8 9.20GB / W4A8 5.18GB；在线演示用 8-bit，W4 质量下降明显 | 官方代码 B=1 + 第三方短测下界。社区博客 4–10 路/H100 无方法学（轶事级） |
+| Moshi | Python 服务端 `batch_size=1` + `streaming_forever(1)` + 全局锁；Rust `moshi-server` 可配置 batch 只覆盖 ASR/TTS，FD LM `LmConfig` 无 `batch_size` 字段，每会话独立 B=1 | 官方未披露；Metronome 第三方 **≥32**@80ms（90 s 下界） | BF16A8 16.74GB / W8A8 9.20GB / W4A8 5.18GB；在线演示用 8-bit，W4 质量下降明显 | 官方代码 B=1 + 第三方短测下界。社区博客 4–10 路/H100 无方法学，仅为个例报告 |
 | PersonaPlex | 同 Moshi `streaming_forever(1)` + 全局锁；**1 活跃 session/进程的代码上限**，不能解释成模型最大并发 1 | 未做容量压测 | BF16；可 CPU offload | 官方代码 |
 | MoshiRAG | 前台 Moshi + 流式 ASR 在 1×H100；本地 Gemma-3 27B 后端另占 1 GPU | 未披露（2 GPU 单流评测拓扑） | 量化未披露。本地检索多在 1.5s 内，超过后准确率明显下降 | 官方论文单流配置 |
 | MiniCPM-o 4.5 | 官方托管 Realtime WebSocket；本地推荐 `llama.cpp-omni`；另支持 PyTorch/vLLM/SGLang | Metronome 单 Blackwell 90 s 新会话 **≈96**；windowed KV 在 N=96 完整维持 10 min（中位数 ms 级），unbounded KV 不足 2 min 完全停滞 | 见效率子表 | 官方单流效率 + 第三方容量 |
@@ -98,7 +98,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 | PyTorch / DGX Spark | BF16 / INT4 | RTF 2.43、26GB / RTF 1.27、14GB | full-duplex 流式单流 |
 | vLLM / RTX 4090 | BF16 / INT4 | 154.3 / 212.3 tokens/s；TTFT 0.59/0.58s；19/11GB | **仅文本**；不能当双工容量 |
 
-**Kyutai 两条线**。[kyutai.org/unmute][unmute] 官方自证全双工 + 工具调用是缺口：Moshi 覆盖低延迟全双工但无 function-calling；Unmute 走级联 STT→任意 LLM→TTS（MIT 开源），工具调用在文本 LLM 侧。Unmute 的 STT/TTS 均为 DSM 12.5Hz 锁步（[arXiv:2509.08753][dsm]），每流每步工作恒定因此可 batch：ASR H100 batch 256 RTF 1.49 / 吞吐 380×；TTS H100 batch 64 RTF 2.1 / 首音频 403ms（B=1 时 150ms）；TTS 文本流设计延迟 16 步 = 1.28s。每片输出 token 数不定的全双工主干路径在 Kyutai 官方栈里没有 batch 实现。
+**Kyutai 两条线**。[kyutai.org/unmute][unmute] 官方材料承认全双工与工具调用还不能兼得：Moshi 覆盖低延迟全双工但无 function-calling；Unmute 走级联 STT→任意 LLM→TTS（MIT 开源），工具调用在文本 LLM 侧。Unmute 的 STT/TTS 均为 DSM 12.5Hz 锁步（[arXiv:2509.08753][dsm]），每流每步的计算量恒定，因此可以 batch：ASR H100 batch 256 RTF 1.49 / 吞吐 380×；TTS H100 batch 64 RTF 2.1 / 首音频 403ms（B=1 时 150ms）；TTS 文本流设计延迟 16 步 = 1.28s。每片输出 token 数不定的全双工主干路径在 Kyutai 官方栈里没有 batch 实现。
 
 ## 3. 每个工作解决什么问题
 
@@ -107,7 +107,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 | GPT-Live | 旧 Advanced Voice Mode 虽端到端，交互仍按离散轮次；解决停顿误判、自然 overlap/backchannel、边聊边等待后台任务。**生产问题，证据最强** | 官方仅称公开、授权、人工提供/生成等多源数据；未披露语料规模。系统卡含生产分布评测 |
 | Seeduplex | 高并发延迟尖峰与稳定性、背景人声/噪声误触发、犹豫被误判为 EOT。**真实生产问题**，有豆包 A/B 证据 | 只披露 speech-data 预训练 + 多能力/多任务后训练；来源与小时数未披露 |
 | TML Interaction | 强智能与低延迟交互难以由一个模型同时满足；前台交互 + 异步后台分工。**真实需求，非生产验证** | 从零预训练数据未披露；部分 TTS 合成安全数据与自动 red-team 数据；评测含 FD-Bench/Audio MultiChallenge |
-| Moshi | 把语音输入、输出和 inner monologue 放进同一时钟，去掉 turn-taking gate。真实自然会话问题；有真实电话数据 | Helium 2.1T 公开英文文本；≈700 万 h unlabeled audio；Fisher ≈2000h 双声道电话；>20K h 合成指令语音 + 交互脚本 |
+| Moshi | 把语音输入、输出和 inner monologue 对齐到同一条时间轴上，去掉 turn-taking gate。真实自然会话问题；有真实电话数据 | Helium 2.1T 公开英文文本；≈700 万 h unlabeled audio；Fisher ≈2000h 双声道电话；>20K h 合成指令语音 + 交互脚本 |
 | PersonaPlex | Moshi 固定角色/声音，不适合可控服务角色。主要角色数据合成，时序部分有真实 Fisher | 105,410 客服/1840h + 39,322 QA/410h 合成；26,296 声音样本；Fisher 7303 conversations/1217h |
 | Human-1 | 英语 Moshi 的 tokenizer/交互习惯不适合 Hindi。**数据真实性强，无 live serving** | 26,000h 真实双声道 Hindi 对话，14,695 speakers；≈990h 子集 fine-tune；130 位母语者 2,125 次人评 |
 | MoshiRAG | 小型全双工前台事实性弱，检索/强 LLM 延迟不能阻塞交互。主要合成 speech-QA | 474K QA topics + 5.5K expert topics；≈1.9M conversation instances ≈47,770 合成 h |
@@ -130,7 +130,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 
 | 产品 | 已知上线/上下文 | 为什么不放进严格主表 |
 | --- | --- | --- |
-| [GPT-Realtime-2.1][gpt-realtime] | Realtime API；128K context、32K max output、session 最长 60 min；原生音频、barge-in；`turn_detection` 配合 truncate 对账 | 官方未说明 overlap/silence 是否像 GPT-Live 一样进入持续模型时间上下文 |
+| [GPT-Realtime-2.1][gpt-realtime] | Realtime API；128K context、32K max output、session 最长 60 min；原生音频、barge-in；`turn_detection` 配合 truncate 对齐上下文 | 官方未说明 overlap/silence 是否像 GPT-Live 一样进入持续模型时间上下文 |
 | [Gemini 3.1 Flash Live][gemini-live] | Live API；input 131,072、output 65,536；audio-only 无压缩 15 min，+video 2 min；sliding window 压缩 + 续传 | 有 barge-in，但模型内部是否持续建模 overlap/silence 未公开；不支持 proactive audio、affective dialogue、async tool |
 | [Amazon Nova 2 Sonic][nova-sonic] | Bedrock 生产；双向 speech-to-speech、interrupt、async tool；最高 1M tokens；单连接 8 min 可续 | 官方仍强调 "intelligent turn-taking detects when user finishes speaking" |
 | [Qwen3.5-Omni-Plus-Realtime][qwen-realtime] | Model Studio API；session 最长 120 min；history 100 audio turns / 累计 ≈600s，drop-oldest；语义打断；思考模式与音频输出互斥 | 模型内部时序与原生 tick 未公开 |
@@ -155,7 +155,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 - 重点开源/serving 入口：[Moshi][moshi-repo]、[Unmute][unmute]、[PersonaPlex][personaplex-repo]、[MiniCPM-o][minicpmo-repo] / [Realtime API][minicpmo-realtime-api]、[Raon model][raon-repo] / [multi-session server][raon-server]。
 - 其余开源入口：[Fun-Audio-Chat][funaudiochat-repo]、[Covo-Audio][covo-repo]、[DuplexSLA][duplexsla-repo]、[DuplexOmni][duplexomni-repo]、[BayLing-Duplex][bayling-repo]、[SALMONN][salmonn-repo]、[Voila][voila-repo]、[Nemotron 3 VoiceChat][nemotron-voicechat]。
 - 各论文入口已链接在主表工作名上。
-- 检索面：[Awesome-Full-Duplex-SDM][awesome-fd]。
+- 检索入口：[Awesome-Full-Duplex-SDM][awesome-fd]。
 
 [gpt-live]: https://openai.com/index/introducing-gpt-live/
 [gpt-live-card]: https://deploymentsafety.openai.com/gpt-live
