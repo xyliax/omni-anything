@@ -10,4 +10,4 @@ Conveyor 引擎本体，由 `experiments/conveyor/` 按路径 spawn。论文术�
 - `omni_state.py`：只保存 session activity、prefetch control 和时间戳；GPU/host block coverage 每次查询 pools，不维护伪 lifecycle。
 - `omni_prefetch.py` / `omni_prefetch_transport.py`：KV prefetch command、capacity deferral 和 transport adapter。synthetic ID 与 hash registration 是 implementation choices。
 
-partial eviction 当前强制 synchronous scheduling。initial-context preloading 期间 `OMNI_HOLD_KV_EVICTION` 暂停 automatic eviction；`initial_context_finalize` 只解除暂停，不在 barrier 原地逐出。patch 加载失败 exit 78。
+partial eviction 当前强制 synchronous scheduling。initial-context preloading 期间 `OMNI_HOLD_KV_EVICTION` 暂停 automatic eviction；`initial_context_finalize` 只解除暂停，不在 barrier 处立即逐出。patch 加载失败 exit 78。

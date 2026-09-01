@@ -10,7 +10,7 @@
 
 ## Task Router
 
-按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的所有权全集见 `docs/agent/ownership.json`。
+按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的完整所有权声明见 `docs/agent/ownership.json`。
 
 ```text
 .
@@ -18,11 +18,12 @@
 ├── AGENTS.md                        # 本文件；owner: 任务路由、跨目录约束、Research Classification
 ├── CLAUDE.md -> AGENTS.md           # 兼容 symlink
 ├── pyproject.toml                   # 包与 pytest 配置
-├── docs/                            # 人类事实层与 Agent 索引；人类核心文档仅此四份
+├── docs/                            # 人类事实层与 Agent 索引；人类核心事实文档仅下列四份 owner
 │   ├── problem.md                   # owner: 问题定义、研究范围、术语词表
 │   ├── system.md                    # owner: 机制语义、状态机、端到端流程；不保存结果数字
 │   ├── experiments.md               # owner: 实验配置域、evaluated systems、指标与协议；不保存结论
 │   ├── findings.md                  # owner: 当前状态、结论、数字与限制；不重复完整协议
+│   ├── PAPER.md                     # 论文叙事工作大纲：定位、论证与写作计划；不是事实 owner
 │   ├── papers/                      # 论文摘要与阅读笔记；不是项目事实
 │   ├── references/                  # 外部规格整理与版图调研；不是项目事实
 │   └── agent/                       # Agent 导航层，不是第二套项目事实

@@ -2,7 +2,7 @@
 
 ## Evaluation Readiness
 
-当前仓库可以运行 Upstream Metronome、matched Metronome baseline 和 Conveyor，但还不能直接写论文 Evaluation。最重要的阻塞项是 matched baseline 每段配置的 decode cap 为 \(M+8\)，而 Conveyor 为 \(M\)。两者接收相同 offered input，当前却不执行相同 decode work。正式比较必须在独立实验事务中统一该行为、保留新 manifest，并重新运行全部论文数据；本次术语清理不静默改变已有执行结果。
+当前仓库可以运行 Upstream Metronome、matched Metronome baseline 和 Conveyor，但还不能直接写论文 Evaluation。最重要的阻塞项是两个 first-party evaluated systems 的每段 decode cap 不同（见 [Executed Decode Difference](#executed-decode-difference)）：两者接收相同 offered input，当前却不执行相同 decode work。正式比较必须在独立实验事务中统一该行为、保留新 manifest，并重新运行全部论文数据。
 
 当前 Qwen2.5-Omni runner 只产生 Thinker 文本 token，不含 Talker、Code2Wav 或 PCM 输出。因此以下 output cap 与交付计数都是 serving-harness 变量，不能解释为音频播放率或最低媒体交付要求。
 
@@ -39,9 +39,9 @@ model revision、依赖锁和 GPU index 仍以 executable config 与 run manifes
 | 输入块 | 20 ms PCM chunks，由 client 在一个周期内累计 | offered input |
 | 每周期输出 token 上限 \(M\) | 25 | harness cap 和 gateway consumption limit，不是最低交付量 |
 | measured context growth | 78 token/period | 当前栈标定值，用于容量模型，不驱动 client |
-| 单 token KV bytes | 56 KiB | 当前模型和精度下的几何 |
+| 单 token KV bytes | 56 KiB | 由当前模型结构和精度决定 |
 
-这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。文档测试校验表格与代码一致。
+这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。context growth 是输入与输出之和：当前栈每周期新增输入实测为 53 token（2 s 音频经 feature extraction 与模板），输出在实测路径跑满 decode cap 25，合计 78。启用 KV eviction 的 run 里 scheduler 单步还可能包含恢复缺口的重算 token，不改变逻辑上下文的增长率。
 
 ### Executed Decode Difference
 
@@ -51,13 +51,13 @@ model revision、依赖锁和 GPU index 仍以 executable config 与 run manifes
 | matched Metronome baseline | 与 Conveyor 同源 | \(M\) | \(M+8\) | 不合格；需修复并重跑 |
 | Conveyor | 与 matched baseline 同源 | \(M\) | \(M\) | 可做机制诊断，暂不可作最终跨系统结论 |
 
-两个当前 first-party worker 都设置 `ignore_eos=True`。因此在正常 measured path 上，生成不会因 EOS 提前结束：matched Metronome baseline 运行到每段 \(M+8\) 的 cap，Conveyor 运行到每段 \(M\) 的 cap；只有 model-length 边界或异常终止等例外会提前结束。33-vs-25 的差异会改变 decode work，并可能造成未交付输出 backlog，不能只把它描述为交付层的小误差。这个 harness 不提供模型自然短输出或 learned silent-token behavior 的证据。
+两个当前 first-party worker 都设置 `ignore_eos=True`。因此在正常 measured path 上，生成不会因 EOS 提前结束：matched Metronome baseline 运行到每段 \(M+8\) 的 cap，Conveyor 运行到每段 \(M\) 的 cap；只有 model-length 边界或异常终止等例外会提前结束。33-vs-25 的差异会改变 decode work，并可能造成未交付输出 backlog，不能只把它描述为交付层的小误差。
 
 ## Evaluated Systems
 
 ### Upstream Metronome
 
-Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配。
+Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配，其数字不能与 Conveyor 的结果直接混用。
 
 ### Matched Metronome Baseline
 
@@ -76,13 +76,11 @@ Conveyor 的可执行配置包含以下研究开关和实现控制：
 | synchronous scheduling | matched-control requirement for current eviction implementation | `sync_scheduling` |
 | no-wait `Step` | implementation choice | Conveyor worker behavior |
 
-KV eviction 当前要求 synchronous scheduling，以避免 speculative engine iteration 与 block free 竞态。评估逐出机制时，control configuration 必须钉住相同 scheduling mode；否则一次比较同时改变两项因素。
+KV eviction 当前要求 synchronous scheduling，以避免 speculative engine iteration 与 block free 竞态。评估逐出机制时，control configuration 必须固定使用相同 scheduling mode；否则一次比较同时改变两项因素。
 
 ## Initial-Context Preloading
 
-`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。全部 initial-context prefills 完成后 runner 才开始周期输入；初始化产生的单 token 不进入输出交付缓冲。
-
-Conveyor 在 initialization barrier 期间暂停 automatic KV eviction，并在 barrier 结束时只解除暂停。matched baseline 使用独立 engine fix 刷新后续 segment 的 `session.max_tokens`。任何 `initialization barrier timed out` 日志都使 run validation 失败。
+`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。初始化屏障的流程与 Conveyor 在屏障期间的 eviction hold 语义由 [`System`](system.md#initial-context-preloading) 持有；屏障超时按 [Repository Health Gates](#repository-health-gates) 判定。
 
 这项设置是 workload state construction，不是研究机制。论文实验应报告 initial context length，而不是把它写成系统设计。
 
@@ -110,9 +108,9 @@ Conveyor 在 initialization barrier 期间暂停 automatic KV eviction，并在 
 | `deliv` | 某次 release 实际从未交付输出缓冲取出的 token 数；可以为 0 到 \(M\)，且不等于 \(m_{i,k}\) | 单独等于 content freshness，或归属于当前输入 |
 | `output_backlog` | 已生成未交付 token 数 | 固定阈值即论文 SLO |
 | `gpu_ms` | worker 返回的实现字段；无等待 Conveyor 路径不包含本次 GPU 工作 | 统一的端到端 latency |
-| large prefill | 可能发生重算的诊断指纹 | 未结合 host coverage 就证明 reload 失败 |
+| large prefill | 可能发生重算的诊断特征 | 未结合 host coverage 就证明 reload 失败 |
 
-单次 `deliv` 少于 \(M\) 不再使 run 自动失败。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务落后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
+单次 `deliv` 少于 \(M\) 不再使 run 自动失败。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务滞后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
 
 ## Planned EuroSys Evaluation
 
@@ -154,13 +152,14 @@ Conveyor 在 initialization barrier 期间暂停 automatic KV eviction，并在 
 5. retained-prefix \(K\) sweep；
 6. matched synchronous-scheduling control。
 
-release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要分别测量；后者不能只由机制直觉推断。
+release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要分别测量；后者不能只凭对机制的直觉推断。
 
 ### Q5: Does the Resource Model Generalize?
 
 - 标定 KV bytes/token、decode/prefill compute、HBM traffic 和 PCIe copy throughput；
 - 用这些 primitive 构建 capacity / compute / restore-bandwidth roofline；
 - 在至少一个额外 GPU 或不同互连 profile 上验证预测误差；
+- 对输出 token 率做敏感性配置：当前 \(M\) 是 harness 常数，而全双工音频输出形态的输出率由 codec 播放率决定；sweep 应包含以播放率为参照的输出率配置点（可用 Thinker 文本模拟该 token 率），使容量结论可外推到音频输出形态；
 - 清楚区分实测点、模拟器标定和 analytical scenario。
 
 ### Q6: What Are the Overheads and Failure Boundaries?
@@ -187,6 +186,6 @@ release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要
 
 ## Evidence Acceptance
 
-论文主结果只能使用 clean-source formal evidence。dirty run 可用于诊断，但必须保留可重建 patch artifact；缺少原始 artifact 的历史数字只能标为 legacy-unreconstructable，不能在新图中伪装为可复算结果。
+论文主结果只能使用 clean-source formal evidence。dirty run 可用于诊断，但必须保留可重建 patch artifact；缺少原始 artifact 的历史数字只能标为 legacy-unreconstructable，不能在新图中当作可复算结果呈现。
 
 旧 `results/` 与旧 manifest 使用产生它们时的 schema，不改写。新 run 使用 `kv_events.log`、`initial_context_tokens`、`output_token_cap`、`retained_prefix_blocks` 等当前接口。

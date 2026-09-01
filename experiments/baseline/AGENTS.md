@@ -1,6 +1,6 @@
-# baseline（测量装置）
+# baseline（测量入口）
 
-`paringest` 是 matched Metronome baseline 的 implementation identifier；`vanilla` 直接指向第三方 pin，只作 upstream reference。两者每个点都启动 fresh worker，并把证据写入不可变 run 目录。
+`paringest` 是 matched Metronome baseline 的 implementation identifier；`vanilla` 直接指向第三方 pin，只作 upstream reference。两者的每个数据点都启动 fresh worker，并把证据写入不可变 run 目录。
 
 ## Invariants
 
@@ -17,4 +17,4 @@ python -m experiments.baseline --mode vanilla
 python -m experiments.baseline --trace --sessions 16 --duration 120 --initial-context-tokens 4000
 ```
 
-容量判读必须联合 `kv.log`、scheduler、session liveness 与 GPU utilization；client cadence 正常不证明模型持续进展。
+容量判读必须综合 `kv.log`、scheduler、session liveness 与 GPU utilization；client cadence 正常不证明模型仍在推进计算。

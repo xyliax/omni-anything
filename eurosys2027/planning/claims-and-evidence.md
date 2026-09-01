@@ -1,6 +1,6 @@
 # Claims and Evidence Ledger
 
-本表只规划论文 claim；接受新结论仍需走仓库的 evidence transaction。不要在这里发明第二套 current state。
+本表只规划论文 claim；接受新结论仍需走仓库的 evidence transaction。不要在这里另建第二套 current state。
 
 | Paper claim | Claim class | Canonical owner | Required evidence | Current readiness | Paper destination |
 | --- | --- | --- | --- | --- | --- |

@@ -13,11 +13,11 @@
 1. 先验证 terminal state、required artifact hashes、git provenance 与 evidence role。
 2. 检查 workload、model、GPU、initial context、scheduling mode、output cap 和 observation 配置。
 3. 检查 session death、RPC/client error、初始化超时、缺失或畸形 delivery records，以及已启用 KV 机制是否真正产生事件。
-4. 对齐 one-session cycle：gateway release、input processing、scheduler admission、KV reload/prefetch、prefill、decode、partial eviction。
+4. 把观察到的事件对齐到 one-session cycle 的各阶段：gateway release、input processing、scheduler admission、KV reload/prefetch、prefill、decode、partial eviction。
 5. 分开解释 application release latency、service-RPC latency、engine iteration time、实际输出量和 output backlog；它们不可相互替代。
 6. 使用 `kv_events.log` 的 `E/B/L/R` 事件解释 eviction、host-backing frontier、load issue 与 completion；host coverage gap 后的部分必须按 recomputation 处理。
 7. 标记数字是实测、模拟器标定、线性外推还是冻结先验，并写清配置域。
 
 ## Output Discipline
 
-单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要从 cadence green、单次 `deadline_met`、输出达到上限或 short output 单独推断 correctness、freshness 或 playback QoE。
+单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要仅凭 cadence green、单次 `deadline_met`、输出达到上限或 short output 就推断 correctness、freshness 或 playback QoE。

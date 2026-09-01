@@ -14,7 +14,7 @@
 
 ## Authoritative Project Sources
 
-写作前按事实域回到以下 owner，不从本目录反向覆盖它们：
+写作前按事实域查阅以下 owner，不从本目录反向覆盖它们：
 
 - 研究问题、范围和术语：[`../docs/problem.md`](../docs/problem.md)
 - 机制、状态机和端到端流程：[`../docs/system.md`](../docs/system.md)
@@ -33,7 +33,7 @@ make supplement
 make check
 ```
 
-输出位于 `build/`。`make check` 会执行基本的 PDF、页型、双栏入口、匿名选项和禁用格式修改检查；它不能替代提交前人工审计。
+输出位于 `build/`。`make check` 会做几项基本检查：PDF 是否生成、页面尺寸、文档类的双栏与匿名选项，以及源文件里是否出现被禁止的格式改动；它不能替代提交前人工审计。
 
 ## Writing Workflow
 
@@ -64,4 +64,4 @@ eurosys2027/
 
 ## Important Boundary
 
-本目录可以包含措辞、标题、图设计和未完成的论证，但不能成为数字、状态或机制语义的新 owner。草稿与 owner 冲突时，以 owner 为准；被论文写作发现的新事实要先通过项目的 evidence transaction 接受，再回填正文。
+本目录可以包含措辞、标题、图设计和未完成的论证，但不能成为数字、状态或机制语义的新 owner。草稿与 owner 冲突时，以 owner 为准；写作过程中发现的新事实要先通过项目的 evidence transaction 接受，再回填正文。

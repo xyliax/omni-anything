@@ -8,7 +8,7 @@
 
 越来越多的交互式模型却不再以“一次输入、一次完整回答”为边界。典型场景包括持续聆听的语音助手、实时视频理解与辅助、在线字幕或其他连续多模态交互：输入在新内容产生时以小块到达，系统可以在输入流结束前开始处理并返回增量结果，而不必等待一个完整 turn。对这些应用而言，输出是一系列面向用户的增量结果，而不是等到输入结束后才生成的单个 completion；会话必须保留先前上下文，才能在下一次更新中继续理解同一段交互。
 
-这不是说所有语音、视频或多模态产品都使用相同的模型、采样率或输出协议；它们只是共享一个对 serving system 重要的形状：请求长期保持打开，输入以小块增量到达，模型状态跨更新复用。本文把这种服务形状称为流式交互会话（streaming interaction session），并在需要刻画释放节奏时进一步抽象为周期性交互会话（periodic interaction session）。
+这不是说所有语音、视频或多模态产品都使用相同的模型、采样率或输出协议；它们只是共享一个对 serving system 重要的形态：请求长期保持打开，输入以小块增量到达，模型状态跨更新复用。本文把这种服务形态称为流式交互会话（streaming interaction session），并在需要刻画释放节奏时进一步抽象为周期性交互会话（periodic interaction session）。
 
 | 服务形态 | 输入与输出边界 | 状态生命周期 | 主要 serving 关注点 |
 | --- | --- | --- | --- |
@@ -17,9 +17,9 @@
 
 ### Why KV Cache Becomes a Capacity Constraint
 
-Transformer 的增量执行依赖此前上下文的 attention key/value。prefill 为已经到达的上下文计算这些中间状态，后续 decode 或新的输入更新可以直接复用 KV cache，而不必每次重新计算完整历史。对一次性短请求而言，这份 cache 的生命周期通常与请求相近；对持续交互会话而言，每次新增输入经过模型的 feature extraction 和 prefill 后，都会使逻辑上下文以及对应的 KV working set 继续增长。
+Transformer 的增量执行依赖此前上下文的 attention key/value。prefill 为已经到达的上下文计算这些中间状态，后续 decode 或新的输入更新可以直接复用 KV cache，而不必每次重新计算完整历史。对一次性短请求而言，这份 cache 的生命周期通常与请求相近；对持续交互会话而言，每次新增输入经过模型的 feature extraction 和 prefill 后，都会使逻辑上下文以及对应的 KV working set 继续增长；decode 生成的输出 token 同样追加进同一上下文并占用 KV。
 
-GPU 上可分配给 KV blocks 的资源是有限的，而且会话还要与模型权重、activation 和其他运行时状态共享 GPU memory。把每个会话的完整 KV 都保留在 GPU 上可以避免恢复开销，却会让总驻留量随会话数和上下文长度增长。相反，释放历史状态也不是免费的：丢弃后重新计算会把更大的 prefill 放回下一次更新的关键路径，主机回载会消耗 host-to-device 带宽和传输时间，截断上下文则改变了模型可见的交互历史。
+GPU 上可分配给 KV blocks 的资源是有限的，而且会话还要与模型权重、activation 和其他运行时状态共享 GPU memory。把每个会话的完整 KV 都保留在 GPU 上可以避免恢复开销，却会让总驻留量随会话数和上下文长度增长。相反，释放历史状态同样有代价：丢弃后重新计算会把更大的 prefill 放回下一次更新的关键路径，主机回载会消耗 host-to-device 带宽和传输时间，截断上下文则改变了模型可见的交互历史。
 
 因此，持续交互引出了一个普通短请求中不明显的资源矛盾：系统需要在“保留足够状态以便低延迟继续服务”和“有限 GPU KV capacity 能承受多少长期会话”之间做选择。这个矛盾是内存容量问题，不等同于算子是否 memory-bandwidth-bound；在某些配置下，GPU KV capacity 可能先于每周期计算预算成为并发上限。
 
@@ -27,7 +27,7 @@ GPU 上可分配给 KV blocks 的资源是有限的，而且会话还要与模�
 
 通用 serving engine 能够根据当前到达的请求做 batching、KV block allocation 和 prefix matching，但通常不知道一个长期会话下一次何时会再次提交输入。对 streaming session 来说，这个 next-use information 很重要：会话暂时没有输入时，部分 KV 可以成为可回收空间；但如果恢复动作只能等到输入已经到达才开始，回载或重算就会直接进入该次更新的服务路径。
 
-三个直观选择都暴露了代价：
+三个直观选择各有代价：
 
 1. **Keep everything resident.** 不增加恢复延迟，但总 KV working set 最终受 GPU capacity 限制。
 2. **Recompute the history.** 不需要长期保存完整 GPU 状态，但下一次更新必须重新执行更大的 prefill，并可能超过软实时 latency target。
@@ -63,25 +63,47 @@ r_{i,k} = r_{i,0} + kT,
 0 \le m_{i,k} \le M.
 \]
 
-\(M\) 是抽象模型中的生成上限，不是最低交付量；\(m_{i,k}\) 只表示模型为该次更新生成的 token 数。模型生成进度与用户可见交付是两个不同对象：输出可以同步返回、异步推送、缓冲后消费，或经过额外的媒体处理。问题定义不选择其中一种 output architecture，也不能把一次传输或消费事件直接归属于当前输入。精确生成与交付口径由 [`Experiments`](experiments.md) 定义。
+\(M\) 是抽象模型中的生成上限，不是最低交付量；\(m_{i,k}\) 只表示模型为该次更新生成的 token 数。模型生成进度与用户可见交付是两个不同对象：输出可以同步返回、异步推送、缓冲后消费，或经过额外的媒体处理。问题定义不选择其中一种 output architecture，也不能把一次传输或消费事件直接归属于当前输入。精确生成与交付口径由 [`Experiments`](experiments.md#measurement-semantics) 定义。
 
 每个输入块对应一个每周期延迟目标（per-period latency target）\(D\)。这是软实时目标：偶发迟到会增加响应延迟，持续迟到会使增量结果落后于输入流。不同 output architecture 如何把这种滞后映射为 freshness、播放连续性或其他用户可见指标，属于 evaluation 定义，而不是 workload 的先验假设。
 
 ### Intrinsic Reuse Interval
 
-若一次会话更新只占周期 \(T\) 的一部分，则该会话在相邻两次使用之间天然存在复用间隔。这个间隔来自周期性工作负载本身，不由释放偏移调度创造。
+若一次会话更新只占周期 \(T\) 的一部分，则该会话在相邻两次使用之间天然存在复用间隔。这个间隔来自周期性工作负载本身，不由释放偏移调度产生。单个会话在一个周期内的时间结构（示意，不按比例）：
 
-同步释放会把多会话的输入准备、计算和 KV 恢复需求集中在同一短窗口。为不同会话分配释放偏移，只是把这些需求分散到整个周期，从而提供降低瞬时并发和峰值恢复带宽的机会。它带来的实际资源收益与批处理代价都必须通过资源模型和实验验证。
+```text
+t0: input k arrives                                t0+T: input k+1 arrives
+▼                                                                        ▼
+├─ busy ─┤├────────────────── idle: most of the period ──────────────────┤
+
+busy:  prefill + decode for input k
+idle:  this session needs no GPU work, and the time of its next use
+       (t0+T) is known in advance
+```
+
+同步释放会把多会话的输入准备、计算和 KV 恢复需求集中在同一短窗口。为不同会话分配释放偏移，只是把这些需求分散到整个周期，从而提供降低瞬时并发和峰值恢复带宽的机会。它带来的实际资源收益与批处理代价都必须通过资源模型和实验验证；各项收益的当前证据状态由 [`FINDING-D3`](findings.md#finding-d3) 持有。
 
 ## Empirical Motivation
 
 ### Capacity Before Compute
 
-本文关注的资源区间是：持续增长的 KV working set 先逼近可用 GPU KV pool，而周期计算预算仍有余量。完整驻留在该区间中受到容量约束；整段重算或按需回载又会把恢复成本放到更新关键路径上。这个因果假设及其当前证据见 [`Findings`](findings.md#paper-relevant-findings)；其他工程瓶颈必须在实验中隔离，不能用来替代或反向定义 KV 容量主张。
+本文关注的资源区间是：持续增长的 KV working set 先逼近可用 GPU KV pool，而周期计算预算仍有余量。两类资源占用随周期推进的示意（不按比例，不代表任何具体测量）：
+
+```text
+             GPU KV pool (memory)      per-period compute (time)
+period   1   ████░░░░░░░░░░░░░░░░      █████░░░░░░░░░░░░░░░
+period  60   ████████████░░░░░░░░      █████░░░░░░░░░░░░░░░
+period 120   ████████████████████      ██████░░░░░░░░░░░░░░
+             ▲ pool exhausted          ▲ ample headroom remains
+
+█ = used   ░ = free
+```
+
+完整驻留在该区间中受到容量约束；整段重算或按需回载又会把恢复成本放到更新关键路径上。这个因果假设及其当前证据见 [`Findings`](findings.md#paper-relevant-findings)；其他工程瓶颈必须在实验中隔离，不能用来替代或反向定义 KV 容量主张。
 
 ### Predictable Next Use
 
-周期 \(T\) 和释放偏移 \(\phi_i\) 让系统知道一个空闲会话预计何时再次使用 KV cache。这个信息允许系统在会话空闲时逐出部分 GPU KV，并在下次释放前或请求到达后恢复。传统请求接口只暴露当前到达和缓存命中，不直接表达应用周期及预计下次使用时刻。
+周期 \(T\) 和释放偏移 \(\phi_i\) 让系统知道一个空闲会话预计何时再次使用 KV cache。系统据此可以在会话空闲时逐出部分 GPU KV，并在下次释放前或请求到达后恢复。传统请求接口只暴露当前到达和缓存命中，不直接表达应用周期及预计下次使用时刻。
 
 ## Resource Frontier
 
@@ -104,7 +126,7 @@ r_{i,k} = r_{i,0} + kT,
 - GPU KV 驻留、主机后备覆盖、逐出、预取、恢复与重算；
 - 会话活性、失败和观测完整性。
 
-论文级 latency、freshness 和最大可调度并发的 operational definition 必须在 evaluation 设计中单独确定，不能从某个实现字段直接升级。
+论文级 latency、freshness 和最大可调度并发的 operational definition 由 [`Experiments`](experiments.md#measurement-semantics) 在 evaluation 设计中单独确定，不能从某个实现字段直接升级。
 
 ## Terminology
 

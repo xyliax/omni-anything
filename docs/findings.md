@@ -19,7 +19,7 @@
 ## Paper-Relevant Findings
 
 <a id="finding-a1"></a>
-### FINDING-A1 — 串行输入处理会遮蔽 KV 容量瓶颈
+### FINDING-A1 — 串行输入处理会掩盖 KV 容量瓶颈
 
 如果不同会话的输入准备被一个串行执行点限制，host-side queue 可能先于 GPU KV capacity 限制 offered load。容量实验必须隔离这一混淆因素；否则测得的是输入管线瓶颈，而不是长期 KV working set 的容量边界。该瓶颈不是 Conveyor 的研究机制。
 
@@ -33,7 +33,7 @@
 证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H1-COMPARISON`。
 
 <a id="finding-b1"></a>
-### FINDING-B1 — 周期事件正常不等于模型持续推进
+### FINDING-B1 — 周期事件正常不等于模型仍在产生新 token
 
 应用 release 和 frontend 调用可以持续发生，即使某个会话已经停止产生新的模型进度。调用 cadence 只能证明控制或传输路径仍然活着，不能替代逐会话 liveness、model progress 和 scheduler-state 观测。
 
@@ -79,7 +79,7 @@
 <a id="finding-d2"></a>
 ### FINDING-D2 — KV 工作集字节数能够解释容量边界
 
-历史诊断中，不同 session-count/context-length 组合在接近相同总 KV working-set bytes 时触达 GPU pool 极限。这支持把总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。正式结论仍需要在公平协议下重新测量。
+历史测量中，不同 session-count/context-length 组合在接近相同总 KV token 数时触及 GPU pool 边界。这支持以总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。正式结论仍需要在公平协议下重新测量。
 
 证据：`EVIDENCE-LEGACY-BASELINE`。
 
@@ -88,7 +88,7 @@
 
 将 release 分散到周期内可能减小同步 batch，并增加权重重复读取的机会；同时它为降低同时 GPU-resident 的 session 数和分散 restore demand 提供时序条件。这个 trade-off 必须由 compute、HBM 和 host-to-device restoration 三类资源共同核算。
 
-当前证据支持 offered-arrival burst 的降低，尚不足以支持 KV restore bandwidth 已经被平滑的性能主张。
+当前证据支持 offered-arrival burst 的降低，尚不足以单独支持 KV restore bandwidth 已经被平滑的性能主张。
 
 证据：`EVIDENCE-H1-COMPARISON` 与 `EVIDENCE-LEGACY-BASELINE`。
 
@@ -102,7 +102,7 @@ GPU memory budget 同时包含模型权重、activation、runtime reserve 和 KV
 <a id="finding-f7"></a>
 ### FINDING-F7 — 生成与消费不匹配会积累未交付输出
 
-当模型生成进度长期快于 output path 的消费或交付进度时，未交付结果会持续积累。该现象说明生成与消费配置必须成对报告，也说明 frontend cadence 不能代表输出对应的输入年龄。
+当模型生成进度长期快于 output path 的消费或交付进度时，未交付结果会持续积累。该现象说明生成与消费配置必须成对报告，也说明 frontend cadence 不能代表输出对应的输入年龄。当前生成与消费配置的具体差异由 [`Experiments`](experiments.md#executed-decode-difference) 持有。
 
 backlog 是实现诊断量；论文是否采用 freshness 指标以及如何定义，仍由 Evaluation 决定。
 
@@ -134,7 +134,7 @@ Conveyor 增加的是 idle-transition policy、持续会话下的 host-coverage 
 <a id="finding-h4"></a>
 ### FINDING-H4 — 保留前缀逐出降低了诊断点的闲置会话 GPU 驻留
 
-保留的诊断 run 中，启用 retained-prefix eviction 后，GPU KV occupancy 从接近 pool 极限的增长转为明显更低的锯齿稳态。这支持机制能够释放 idle-session residency，但现有证据不满足当前 formal 标准，跨系统 model work 也未匹配，因此不能直接作为论文容量提升主结果。
+保留的诊断 run 中，启用 retained-prefix eviction 后，GPU KV occupancy 从接近 pool 极限的增长转为明显更低的锯齿稳态。这支持机制能够释放 idle-session residency，但现有证据不满足当前 formal 标准，跨系统 model work 也未匹配，因此不能直接作为论文容量提升主结果；精确配置与数值由 `EVIDENCE-H4-RESIDENCY` 解析。
 
 证据：`EVIDENCE-H4-RESIDENCY`。
 
@@ -153,7 +153,7 @@ on-demand restore 只能在真实 demand 出现之后开始，因此 copy cost �
 证据：`EVIDENCE-H6-INITIAL-CONTEXT`。本条属于 evaluation state construction。
 
 <a id="finding-h7"></a>
-### FINDING-H7 — KV 预取语义已闭合但性能结论仍开放
+### FINDING-H7 — KV 预取语义已完整但性能结论未定
 
 源码审计支持以下正确性语义：host-backed blocks 可以提前进入 GPU cache，并由之后的正常 cache reuse 使用；capacity deferral、input overtaking 和 later eviction 都安全退化为 on-demand restore 或 recomputation。具体 transport 和 cache registration 方式是实现细节。
 

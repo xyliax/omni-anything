@@ -12,7 +12,9 @@ Conveyor 使用周期性交互会话提供的两个工作负载事实：会话�
 4. 物理 KV allocator 是 GPU 驻留状态的唯一真相，控制面不维护可能漂移的影子副本；
 5. 主机后备覆盖必须显式可知；缺少主机副本的状态在再次使用时通过重算恢复；
 6. KV 预取只改变恢复时序，不改变正确性；拒绝、迟到或预取状态再次被逐出时，系统安全退化为按需恢复或重算；
-7. 模型执行进度和用户可见交付进度是不同对象，KV residency policy 不依赖某一种 output-delivery interface。
+7. 模型执行进度和用户可见交付进度是不同对象，KV residency policy 不依赖某一种 output-delivery interface；
+8. 测量状态构造（如初始上下文预加载）在周期输入开始前完成，不与正常周期更新交错；
+9. 每个已启用机制必须产生可区分的观测事件。
 
 实验配置和当前结果分别由 [`Experiments`](experiments.md) 与 [`Findings`](findings.md) 持有；本文只定义机制语义、状态关系和正确性边界，不复制平台、runner、比较对象或性能数字。
 
@@ -39,7 +41,7 @@ flowchart LR
 
 ## Research Mechanisms
 
-Conveyor 研究三项可独立消融的候选机制：
+Conveyor 研究三项可独立消融的候选机制。evaluated systems 的完整清单、配置与比较资格由 [`Experiments`](experiments.md#evaluated-systems) 持有；本节只定义机制语义。
 
 | 机制 | 使用的信息 | 改变的系统行为 |
 | --- | --- | --- |
@@ -59,7 +61,27 @@ r_{i,k} = r_{i,0} + kT, \qquad \phi_i = r_{i,0} \bmod T.
 
 系统为会话保持稳定的 \(\phi_i\)，并以绝对时间网格解释后续释放；一次迟到不应把之后所有释放永久重锚到新的相对时间。每个周期会话在相邻两次使用之间本来就有复用间隔，释放偏移不创造该间隔，只改变多个会话在周期内的重叠结构。
 
-分散释放可能降低瞬时输入、执行和恢复需求，也可能减小可供引擎聚合的同步 batch。机制主张因此不是“offset 总能提速”，而是利用稳定 release structure 在 capacity、compute 和 restore bandwidth 之间选择更合适的工作点；实际收益及代价必须分别测量。
+同步释放与偏移释放的对比（示意）：
+
+```text
+all sessions fire at the same instant:
+  s1  ██████........................
+  s2  ██████........................
+  s3  ██████........................
+  s4  ██████........................
+      ▲ burst: input processing, compute and KV restores collide
+
+release offsets phi(i) spread the firings:
+  s1  ██████........................
+  s2  ........██████................
+  s3  ................██████........
+  s4  ........................██████
+      same total work, lower peak demand at every instant
+```
+
+该示意画的是服务窗口互不重叠的低并发情形。当 \(N\) 超过 \(T\) 与单会话服务时长之比时，相邻窗口自然重叠，continuous batching 会把重叠的服务合并成批；偏移改变的是峰值结构与各会话切分输入的时刻；每周期的恢复字节数与生成 token 数不变，但错开降低瞬时批量，权重在一个周期内被读取的次数随之增加。
+
+机制主张因此不是“offset 总能提速”，而是利用稳定 release structure 在 capacity、compute 和 restore bandwidth 之间选择更合适的工作点；实际收益及代价必须分别测量，各项收益的当前证据状态由 [`FINDING-D3`](findings.md#finding-d3) 与 [`FINDING-H1`](findings.md#finding-h1) 持有。
 
 ## KV State Model
 
@@ -76,6 +98,22 @@ r_{i,k} = r_{i,0} + kT, \qquad \phi_i = r_{i,0} \bmod T.
 GPU-resident 与 host-backed 不是互斥状态，同一个 block 可以同时存在于两处。`active` 也不意味着全部历史 KV 已经在 GPU 上；准入仍可能等待恢复，或者对没有后备覆盖的部分执行重算。控制面可以记录策略状态和时间，但物理 block 状态必须从相应 allocator 实时取得。
 
 ## Partial KV Eviction
+
+一个 idle 会话在逐出后的 block 视图（block 从旧到新）：
+
+```text
+                 0            K                            F               n
+                 ├── prefix ──┼────────── middle ──────────┼─ fresh tail ──┤
+kept on GPU      │ yes        │ no, evicted                │ yes           │
+host copy        │ yes        │ yes                        │ not yet       │
+at next input    │ prefix hit,│ copied back: early         │ used in       │
+                 │ free       │ (prefetch) or on demand    │ place         │
+
+K: retained GPU prefix   F: host-backing frontier   n: newest block
+the tail stays on GPU as margin until its host copy is confirmed
+```
+
+以下小节分别定义 host-backing frontier 的推进、逐出的选择规则和恢复路径。
 
 ### Incremental Host Backing
 
@@ -109,6 +147,12 @@ KV 预取利用预计 next use，在输入真正进入模型执行前发起 host
 KV residency policy 管理模型继续执行所需的历史状态；output-delivery architecture 管理已产生结果何时、以何种形式对用户可见。这两个问题相互影响端到端 latency，却没有机制上的从属关系。系统可以使用同步返回、异步流、缓冲消费或额外媒体处理，而不改变释放偏移、部分逐出和 KV 预取的定义。
 
 因此，frontend 调用返回、模型生成推进和用户可见结果推进必须分别观察。任何 latency 或 freshness 指标都要明确起点、终点和跨层关联，不能把“调用仍在返回”直接当成“当前输入已经产生并交付了新结果”。当前实现采用的 delivery path 及其指标口径只在 [`Experiments`](experiments.md) 中定义。
+
+## Initial-Context Preloading
+
+初始上下文预加载（initial-context preloading）是实验状态构造，不是研究机制。系统在开始周期输入前预建指定会话的上下文状态，完成全部 initial-context prefills；状态构造期间产生的输出不计入正常周期交付。配置入口与超时判定由 [`Experiments`](experiments.md#initial-context-preloading) 持有。
+
+Conveyor 在该构造屏障期间暂停 automatic KV eviction。屏障结束时只解除暂停，不立即逐出，因为 host-backing frontier 可能尚未覆盖整个初始上下文；第一次正常周期计算后的 idle transition 再建立 retained-prefix 状态。
 
 ## One Session Cycle
 
