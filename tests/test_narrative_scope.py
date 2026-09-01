@@ -24,6 +24,7 @@ SCOPE_DOCS = (
     ROOT / "docs" / "problem.md",
     ROOT / "docs" / "system.md",
     ROOT / "docs" / "findings.md",
+    ROOT / "docs" / "PAPER.md",
     ROOT / "eurosys2027" / "AGENTS.md",
     ROOT / "eurosys2027" / "planning" / "introduction-outline.md",
     ROOT / "eurosys2027" / "planning" / "paper-contract.md",
