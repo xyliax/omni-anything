@@ -1,0 +1,22 @@
+# Figure 2 Evidence Map
+
+This file audits every semantic element in `figures/conveyor-mechanism-overview.tex` against a canonical project owner. It is a writing aid, not a project fact owner. If an owner changes, the figure and this map must be reviewed together.
+
+| Visible figure element | Canonical evidence | Permitted meaning | Excluded inference |
+| --- | --- | --- | --- |
+| “logical context stays complete; physical placement changes” | `docs/system.md#design-goals`, invariants 1 and 6 | Conveyor preserves logical history while changing KV placement and restoration timing | No quality or performance result is implied |
+| Stable per-session offsets $\phi_i$ and unchanged period $T$ | `docs/system.md#release-offset-scheduling`; `docs/problem.md#periodic-interaction-session` | Releases remain on an absolute period grid; an offset changes position within the period | Offsets do not create the reuse interval or guarantee a speedup |
+| Spread release, execution, and possible restoration demand | `docs/system.md#research-mechanisms`; `docs/system.md#release-offset-scheduling` | Offsets change multi-session overlap structure | The figure does not claim measured restore-bandwidth smoothing |
+| Next-use planning → release → admission → KV preparation → active execution → host backing → idle → partial eviction | `docs/system.md#one-session-cycle`; `docs/system.md#kv-state-model` | Owner-defined logical order for one repeated session; active and idle are scheduler states | No process, RPC, media, or runner topology is implied |
+| “coverage may lag execution” | `docs/system.md#incremental-host-backing` | Newly produced KV need not already have a confirmed host copy | The figure does not assume write-through or complete mirroring |
+| Release ownership before retaining a prefix and evicting a selected tail | `docs/system.md#idle-session-eviction` | Idle eviction separates active-request ownership from cache residency | No particular cache-registration API is implied |
+| Retain at most $K$ GPU prefix blocks | `docs/system.md#idle-session-eviction`; `docs/problem.md#terminology` | $K$ is a policy parameter controlling retained GPU prefix | No numerical value or optimality is implied |
+| Complete logical row, GPU-residency row, and host-coverage row, marked schematic | `docs/system.md#design-goals`, invariant 1; `docs/system.md#kv-state-model` | Logical identity, physical GPU placement, and host coverage are distinct; GPU-resident and host-backed can coexist | Segment lengths are illustrative, not block counts or measured proportions; a session is not reduced to one resident/offloaded bit |
+| GPU-resident prefix → direct reuse | `docs/system.md#on-demand-restoration` | The next update first reuses the continuous prefix still in GPU cache | No cache-hit rate is implied |
+| Missing and host-backed → prefetch or on-demand restore | `docs/system.md#on-demand-restoration`; `docs/system.md#kv-prefetching` | Host-backed missing blocks can be restored before use or after admission | No fixed lead time, transfer API, or overlap benefit is implied |
+| Dashed prefetch → on-demand edge; caption names capacity deferral, input overtaking, and later cache eviction | `docs/system.md#kv-prefetching`; `docs/system.md#design-goals`, invariant 6 | A missed early restoration opportunity returns to ordinary recovery and changes timing only | Prefetch is not required for correctness |
+| First uncovered gap → recompute gap and dependent suffix | `docs/system.md#on-demand-restoration`; `docs/system.md#design-goals`, invariant 5 | Missing state without host coverage is reconstructed by normal computation | The figure does not claim that every evicted block has a host copy |
+| All preparation paths → complete history before execution | `docs/system.md#on-demand-restoration`; `docs/system.md#kv-prefetching`; `docs/system.md#one-session-cycle`; `docs/system.md#design-goals`, invariants 1, 5, and 6 | Every path reconstructs the correct logical history before model execution continues | No equality of latency or resource cost is implied |
+| Output delivery omitted from the cycle | `docs/system.md#output-delivery`; `docs/system.md#design-goals`, invariant 7 | User-visible output can advance asynchronously and is not phase-locked to KV residency | Omission does not mean the system lacks an output path |
+
+The figure intentionally contains no model name, modality, hardware, engine, runner, transport, experiment parameter, effect size, or capacity result.

@@ -13,5 +13,5 @@
 
 ## Current Assets
 
-- `conveyor-mechanism-overview.tex`: Figure 2 的 TikZ source，展示 predictable next use、release offsets、idle-session partial eviction、host coverage、prefetch 和 safe fallback。
+- `conveyor-mechanism-overview.tex`: Figure 2 的 TikZ source，按三层展开 multi-session release offsets、完整 one-session cycle，以及 idle eviction 后 GPU/host 物理状态到 reuse、prefetch、on-demand restoration 和 recomputation 的恢复映射；每个语义元素的 owner 见 `planning/figure-2-evidence-map.md`。
 - `conveyor-mechanism-overview.pdf`: 从上述 source 导出的 vector asset；不包含当前模型、硬件、runner、baseline 或实验参数。
