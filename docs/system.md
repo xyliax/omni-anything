@@ -59,7 +59,7 @@ Conveyor 当前研究三项候选机制：
 | 带主机后备的 KV 部分逐出（partial KV eviction with host backing） | 增量复制完成块，并在会话 idle 后逐出选定 GPU KV 尾块 | EngineCore |
 | KV 预取（KV prefetching） | 在预计复用前把 host-backed blocks 放入 GPU prefix cache | Worker + EngineCore |
 
-worker 的无等待 `Step` 是当前实现选择：它提交当前输入后对未交付输出缓冲取一次快照，不等待本次计算。该选择避免一个慢 RPC 阻塞之后的释放槽，但可以被独立输出流等实现替代，因此不进入机制或贡献列表。
+worker 的 no-wait `Step` 是当前实现选择：它提交当前输入后对未交付输出缓冲取一次快照，不等待本次计算。该选择避免一个慢 RPC 阻塞之后的释放槽，但可以被独立输出流等实现替代，因此不进入机制或贡献列表。
 
 ## Release-Offset Scheduling
 
@@ -96,7 +96,7 @@ release offsets phi(i) spread the firings:
 
 ## KV State Model
 
-系统不把多个对象合并到同一个 lifecycle 中。一次会话的状态由以下正交事实描述：
+每个对象各有独立的 lifecycle。一次会话的状态由以下正交事实描述：
 
 | 对象 | 状态或属性 | 判定依据 |
 | --- | --- | --- |
@@ -135,11 +135,11 @@ vLLM 的 `SimpleCPUOffloadConnector` 随引擎迭代把已完成 KV blocks 复�
 当 resumable request 完成本段生成并进入 idle 时，主路径执行：
 
 1. `free(request)` 释放 request 对所有 GPU blocks 的所有权，使仍有 hash 的 blocks 成为 cached-free；
-2. 保留最多 \(K\) 个 GPU prefix blocks，并为尚未发出 host copy 的最新尾部保留实现级 margin；
+2. 保留最多 \(K\) 个 GPU prefix blocks，并为尚未发出 host copy 的最新尾部保留由实现决定的余量；
 3. 对选定尾块调用 `evict_blocks`，移除其 GPU cache entry；
 4. 记录逐出数量、逐出前所有权、GPU pool 变化和其中已有主机副本的数量。
 
-逐出操作当前不会先把目标集合裁剪到 host-backed blocks。若某个逐出块尚无主机副本，下一次恢复在该缺口处退化为重算。这是已知实现限制，不能把“with host backing”读成所有逐出块都已得到恢复保证。
+逐出操作当前不会先把目标集合裁剪到 host-backed blocks。若某个逐出块尚无主机副本，下一次恢复在该缺口处退化为重算。这是已知实现限制，不能把“with host backing”读成所有逐出块都已得到恢复保证。缺口有两个固定来源：未写满的尾 block 无法注册或备份，`free` 后即销毁；恰好在段末写满的 block 因主机备份滞后一个迭代而错过存储。二者使每次恢复至多带一个 block 的重算量，其精确算术由 [`FINDING-E4`](findings.md#finding-e4) 持有。
 
 固定尾块模式通过延迟 utility RPC 逐出指定数量，只用于受控实验。retained-prefix 主路径直接由 scheduler 的 idle transition 触发，不依赖 worker timer。
 

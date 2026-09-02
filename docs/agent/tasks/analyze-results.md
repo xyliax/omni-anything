@@ -20,4 +20,4 @@
 
 ## Output Discipline
 
-单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要仅凭 cadence green、单次 `deadline_met`、输出达到上限或 short output 就推断 correctness、freshness 或 playback QoE。
+单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要仅凭 cadence 检查通过、单次 `deadline_met`、输出达到上限或 short output 就推断 correctness、freshness 或 playback QoE。

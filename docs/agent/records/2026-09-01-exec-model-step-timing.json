@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-01-EXEC-MODEL-STEP-TIMING",
+  "date": "2026-09-01",
+  "question": "How do prefill and decode batch and execute under CUDA graphs in the measured stack; what does per-period wall time decompose into; and why do conveyor resume prefills vary between 54 and 69 tokens",
+  "configuration_profile": "Offline analysis of the two retained N=8 runs (RUN-BASELINE-RETAINED, async scheduling; RUN-CONVEYOR-RETAINED, synchronous retained-prefix eviction) on RTX 3090 with Qwen2.5-Omni Thinker-only, plus a source audit of the pinned vllm==0.23.0 wheel; no new run",
+  "change": "None; read-only analysis of retained artifacts (scheduler.log, per_iteration.log, worker.log) and pinned engine source",
+  "result": "Decode steps run under FULL CUDA graphs at a 23.6-23.8 ms per-step floor consistent with reading the full bf16 weights each step, +0.66 ms per additional sequence. 200 of 202 (baseline) and 499 of 507 (conveyor) prefill-containing steps exceed the 32-token capture cap and run eager-compiled; a single 53-token audio chunk already exceeds the cap. Prefill steps carry roughly 18-20 ms fixed cost above the graphed decode floor and a +10.67 ms shape step above 64 total scheduled tokens (43% of conveyor resume steps cross it). Per period, the conveyor run decomposes to 1480 ms decode (62.1 steps) + 520 ms prefill (8 steps) + 0 ms idle; the baseline run to ~1024 ms active + ~970 ms idle. Conveyor resume prefill equals chunk + 1 + ((C-1) mod 16), matching 58 of 62 steady periods exactly; the discarded end-of-segment sampled token implies net context growth of 77 tokens per period versus the workload constant 78. Source audit also narrows the async-scheduling hazard: retained-prefix eviction runs on the scheduler thread, and the vLLM AsyncScheduler fences max-tokens stops, the only stop kind the measured path uses.",
+  "verdict": "diagnostic",
+  "evidence": ["EVIDENCE-EXEC-MODEL-AUDIT", "EVIDENCE-STEP-TIMING-RETAINED"],
+  "affects_findings": ["FINDING-C3", "FINDING-E1", "FINDING-E2", "FINDING-E3", "FINDING-E4"],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Baseline step timings are throughput-attributed under async scheduling and lower-bound true step latency",
+    "One retained run per system; both fail current formal acceptance (dirty manifests, no patch artifacts)",
+    "The async-scheduling fence coverage for the retained-prefix eviction path is a source-audit conclusion, not validated by a run",
+    "Correcting CONTEXT_GROWTH_TOKENS_PER_PERIOD from 78 to 77 is an experiment-protocol change pending its own transaction",
+    "Capture-list tuning, output-cap alignment to the KV block size, and async-scheduling restoration are unimplemented follow-ups; none may enter findings as performance status before a verifying run"
+  ]
+}

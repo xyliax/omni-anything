@@ -97,6 +97,10 @@ KV eviction 当前要求 synchronous scheduling，以避免 speculative engine i
 - 启用 KV eviction 或 prefetch 却没有对应 `E` 或 `L trigger=prefetch` 事件；
 - 日志语法损坏，无法解析实际交付量或时序。
 
+### Profiling
+
+每周期墙钟时间分解到 scheduler 逻辑耗时与 GPU kernel 耗时两层，只有调度器视角的 phase 计时不足以解释 phase 内部的空闲。开销可忽略的探针常开；kernel 级 capture 等有明显开销的探针由环境变量开关控制，正式数据点须记录开关状态。
+
 ### Implementation Diagnostics
 
 以下字段只用于诊断，不能单独充当论文 correctness 或 QoE gate：
@@ -110,11 +114,13 @@ KV eviction 当前要求 synchronous scheduling，以避免 speculative engine i
 | `gpu_ms` | worker 返回的实现字段；无等待 Conveyor 路径不包含本次 GPU 工作 | 统一的端到端 latency |
 | large prefill | 可能发生重算的诊断特征 | 未结合 host coverage 就证明 reload 失败 |
 
-单次 `deliv` 少于 \(M\) 不再使 run 自动失败。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务滞后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
+单次 `deliv` 少于 \(M\) 本身不构成 run failure。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务滞后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
 
 ## Planned EuroSys Evaluation
 
 正式 Evaluation 建议围绕六个 reviewer question 组织；每个问题对应一个主图或表，而不是按代码模块罗列 microbenchmark。
+
+覆盖面要求：至少两到三个周期不同的双工模型（例如 2 s、1 s、0.5 s 量级；Metronome 评测所用模型均可选），结论不能只建立在一个模型上；负载须有可辩护的会话时长分布，同时包含短会话与长会话（平均会话时长 30 s 与 60 s 对调度是不同的 case），来源是公开双工语音数据集或写明生成规则的合成分布；结果按会话长短分别报告，并说明长短会话之间机制如何过渡。
 
 ### Q1: Does KV Capacity Limit Concurrency Before Compute?
 
@@ -159,6 +165,7 @@ release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要
 - 标定 KV bytes/token、decode/prefill compute、HBM traffic 和 PCIe copy throughput；
 - 用这些 primitive 构建 capacity / compute / restore-bandwidth roofline；
 - 在至少一个额外 GPU 或不同互连 profile 上验证预测误差；
+- 在至少一个周期不同的第二个双工模型上验证容量与恢复轴的预测；
 - 对输出 token 率做敏感性配置：当前 \(M\) 是 harness 常数，而全双工音频输出形态的输出率由 codec 播放率决定；sweep 应包含以播放率为参照的输出率配置点（可用 Thinker 文本模拟该 token 率），使容量结论可外推到音频输出形态；
 - 清楚区分实测点、模拟器标定和 analytical scenario。
 
@@ -168,7 +175,8 @@ release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要
 - partial eviction 和 prefix-match bookkeeping overhead；
 - prefetch 的命中、迟到、capacity deferral 和 LRU eviction；
 - host coverage 缺口引发的 recomputation；
-- 长时间稳定性、context-length limit、session churn 和异常路径。
+- 长时间稳定性、context-length limit、session churn 和异常路径；
+- 区间边界：机制覆盖的是 KV 开始不足到恢复流量仍能在 deadline 内完成之间的区间；报告恢复需求超过带宽后的行为（回退到重算或拒绝并发），并说明 KV 充裕时的准入策略（先接纳多少会话）如何影响到达该边界的时间；多 GPU 下同主机多卡争抢 PCIe 的情形记为本文范围之外。
 
 ## Run Protocol
 

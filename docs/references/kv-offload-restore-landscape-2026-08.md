@@ -2,7 +2,7 @@
 
 外部文献整理。Updated: 2026-08-29
 
-本文是截至标注日期的外部系统机制与出版态势整理，不是项目事实源，不定义本项目的 workload、机制或术语；任何内容进入 paper 前必须重新核验原始论文。图内文字沿用各论文自身口径，未映射到本项目词表。
+本文是截至标注日期的外部系统机制与出版态势整理，不是项目事实源，不定义本项目的 workload、机制或术语；任何内容进入 paper 前必须重新核验原始论文。图内文字沿用各论文自身的表述，未映射到本项目词表。
 
 ## 出版态势（截至 2026-08-28）
 
@@ -34,7 +34,7 @@ Concurrent-work 惯例：OSDI/SOSP/EuroSys 的 CFP 都允许 arXiv 先发（Euro
 
 ## 逐系统机制
 
-各系统的核心差别是"提前多久、凭什么信号知道某份 KV 将被使用"，以及逐出/恢复的粒度与失败路径。
+各系统的核心差别是“提前多久、凭什么信号知道某份 KV 将被使用”，以及逐出/恢复的粒度与失败路径。
 
 ### CachedAttention（ATC'24）
 
@@ -89,7 +89,7 @@ note    attention runs on a predicted subset: not lossless retention
 
 ### InferCept（ICML'24）
 
-暂停请求的驻留决策；"知道确切恢复时刻能带来多大收益"的关键对照：用已流逝时间估计暂停时长即可达到精确时长 oracle 的 93%。
+暂停请求的驻留决策；“知道确切恢复时刻能带来多大收益”的关键对照：用已流逝时间估计暂停时长即可达到精确时长 oracle 的 93%。
 
 ```text
 event   a request emits an external call (tool, API) -> paused at the
@@ -108,7 +108,7 @@ resume  external result arrives -> swap back or chunked recompute;
 
 ### SYMPHONY（NSDI'26）
 
-计算-内存分离的多级 KV 存放（五层），提前量来自应用层行为提示（如"用户开始打字"，实测平均提前 5.8-11.3 s），提示可能出错；层优先级清除，无重算路径。
+计算-内存分离的多级 KV 存放（五层），提前量来自应用层行为提示（如“用户开始打字”，实测平均提前 5.8-11.3 s），提示可能出错；层优先级清除，无重算路径。
 
 ### KVFlow（NeurIPS'25）
 
@@ -148,7 +148,7 @@ why     early chunks are cheap to recompute (short attention), late chunks
         are cheap to load (constant bytes); the pointers meet at the cross
 ```
 
-分割点是发现出来的而非预测的；其缺口是从头开始的整段前缀，与"前缀与新尾在卡上、缺中段"的情形不同。
+分割点是发现出来的而非预测的；其缺口是从头开始的整段前缀，与“前缀与新尾在卡上、缺中段”的情形不同。
 
 ### CacheFlow（arXiv 2604.25080）
 
