@@ -1,6 +1,6 @@
 # Agent Task Router
 
-本目录不是第二套项目事实，而是面向 Agent 的导航和操作层。研究语义必须回到 `docs/problem.md`、`docs/system.md`、`docs/experiments.md` 和 `docs/findings.md`；本目录只持有组件定位、动态边、修改影响、验证方法和 evidence alias。
+本目录是面向 Agent 的导航和操作层，不构成第二套项目事实。研究语义必须回到 `docs/problem.md`、`docs/system.md`、`docs/experiments.md` 和 `docs/findings.md`；本目录只持有组件定位、动态边、修改影响、验证方法和 evidence alias。
 
 ## Read Policy
 

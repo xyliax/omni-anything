@@ -165,6 +165,63 @@
       "reproducibility": "current source retains the semantics; the retained run predates the current formal provenance rule"
     },
     {
+      "id": "EVIDENCE-EXEC-MODEL-AUDIT",
+      "role": "external-source-audit",
+      "supports": [
+        "FINDING-C3",
+        "FINDING-E1",
+        "FINDING-E4"
+      ],
+      "sources": [
+        {
+          "kind": "external-source",
+          "ref": "vllm==0.23.0 wheel pinned by infra/env/profiles/cuda13_vllm023/requirements.lock"
+        },
+        {
+          "kind": "source",
+          "path": "engines/baseline/worker/stream_server.py"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_evict.py"
+        },
+        {
+          "kind": "reference",
+          "path": "docs/references/vllm-023-execution-and-capture.md"
+        }
+      ],
+      "reproducibility": "engine semantics readable from the pinned wheel and current worker source; supports semantic claims only, not measured performance; recheck after any vLLM upgrade"
+    },
+    {
+      "id": "EVIDENCE-STEP-TIMING-RETAINED",
+      "role": "legacy-unreconstructable",
+      "supports": [
+        "FINDING-E1",
+        "FINDING-E2",
+        "FINDING-E3",
+        "FINDING-E4"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-BASELINE-RETAINED"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONVEYOR-RETAINED"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
+        }
+      ],
+      "reproducibility": "numbers recomputable from retained scheduler.log and per_iteration.log; both runs are dirty and fail current formal acceptance; baseline timings are throughput-attributed under async scheduling and lower-bound true step latency"
+    },
+    {
       "id": "EVIDENCE-H7-PREFETCH",
       "role": "legacy-unreconstructable",
       "supports": [

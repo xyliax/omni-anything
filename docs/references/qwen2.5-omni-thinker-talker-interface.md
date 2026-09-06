@@ -82,7 +82,7 @@ v4.57.6 的三个实现细节：
 
 ## 首个语音 token 与流式对齐
 
-`c[1]` 从 prefill 最后一个位置采样，输入是 `v(reply 1) + embed(codec_bos)`：`codec_bos` 相当于"第 0 个 codec token"。因此 Thinker 出第一个回复 token 后 Talker 即具备开始采样语音的全部输入，首音延迟约等于 prompt prefill 加一个文本 token 的生成时间。
+`c[1]` 从 prefill 最后一个位置采样，输入是 `v(reply 1) + embed(codec_bos)`：`codec_bos` 相当于“第 0 个 codec token”。因此 Thinker 出第一个回复 token 后 Talker 即具备开始采样语音的全部输入，首音延迟约等于 prompt prefill 加一个文本 token 的生成时间。
 
 之后保持一格错位：产出 `c[k]` 的输入是 `embed(c[k-1]) + v(reply k)`。codec 帧率远高于文本 token 速率，文本队列耗尽后每步反复加同一个 `text_pad` embedding，直到 Talker 采样出结束符。
 

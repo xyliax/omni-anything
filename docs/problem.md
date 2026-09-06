@@ -4,11 +4,11 @@
 
 ### From Turn-Based Requests to Streaming Interaction
 
-大多数语言模型服务系统首先面对的是一次性的 request/response 工作流：客户端提交一段 prompt，服务端执行 prefill 和 autoregressive decode，返回一个完成结果，然后释放或复用这次请求的运行状态。continuous batching、prefix caching 和 paged KV allocation 都是在这类请求流上提高 GPU 利用率的关键基础设施。它们通常把请求到达、批处理和缓存块分配作为主要调度信息；请求何时结束，往往也决定了这份状态何时可以回收。
+大多数语言模型服务系统首先面对的是一次性的 request/response 工作流：客户端提交一段 prompt，服务端执行 prefill 和 autoregressive decode，返回一个完成结果，然后释放或复用这次请求的运行状态。continuous batching、prefix caching 和 paged KV allocation 都是在这类请求流上提高 GPU 利用率的基础设施。它们通常把请求到达、批处理和缓存块分配作为主要调度信息；请求何时结束，往往也决定了这份状态何时可以回收。
 
 越来越多的交互式模型却不再以“一次输入、一次完整回答”为边界。典型场景包括持续聆听的语音助手、实时视频理解与辅助、在线字幕或其他连续多模态交互：输入在新内容产生时以小块到达，系统可以在输入流结束前开始处理并返回增量结果，而不必等待一个完整 turn。对这些应用而言，输出是一系列面向用户的增量结果，而不是等到输入结束后才生成的单个 completion；会话必须保留先前上下文，才能在下一次更新中继续理解同一段交互。
 
-这不是说所有语音、视频或多模态产品都使用相同的模型、采样率或输出协议；它们只是共享一个对 serving system 重要的形态：请求长期保持打开，输入以小块增量到达，模型状态跨更新复用。本文把这种服务形态称为流式交互会话（streaming interaction session），并在需要刻画释放节奏时进一步抽象为周期性交互会话（periodic interaction session）。
+各类语音、视频或多模态产品的模型、采样率和输出协议并不相同，但它们共享一个对 serving system 重要的形态：请求长期保持打开，输入以小块增量到达，模型状态跨更新复用。本文把这种服务形态称为流式交互会话（streaming interaction session），并在需要刻画释放节奏时进一步抽象为周期性交互会话（periodic interaction session）。
 
 | 服务形态 | 输入与输出边界 | 状态生命周期 | 主要 serving 关注点 |
 | --- | --- | --- | --- |

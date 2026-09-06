@@ -132,6 +132,8 @@ the tail stays on GPU as margin until its host copy is confirmed
 
 \(K\) 是容量与恢复成本之间的策略参数，不是硬件常数。为了正确性，逐出只发生在 idle 状态；为了证据可解释性，逐出量、主机覆盖和物理 residency change 必须能够分别观察。
 
+逐出当前不会先把目标集合裁剪到已 host-backed 的 blocks。若某个逐出块尚无主机副本，下一次恢复在该缺口处退化为重算；这是已知实现限制，不能把“with host backing”读成所有逐出块都已得到恢复保证。缺口有两个固定来源：未写满的尾 block 无法注册或备份，所有权释放后即销毁；恰好在段末写满的 block 因主机备份滞后一个迭代而错过存储。二者使每次恢复至多带一个 block 的重算量，其精确算术由 [`FINDING-E4`](findings.md#finding-e4) 持有。
+
 ### On-Demand Restoration
 
 下一次输入准入时，引擎先复用仍然 GPU-resident 的连续前缀，再恢复连续 host-backed 的缺失 blocks。首个既不 GPU-resident 也不 host-backed 的 coverage gap 及其后续依赖状态通过重算恢复。这样，主机覆盖不完整会增加执行成本，但不会让系统错误地宣称完整 reload 已经发生，也不会改变模型可见的逻辑上下文。

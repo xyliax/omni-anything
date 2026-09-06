@@ -15,8 +15,8 @@ Updated: 2026-08-03
 **约定**
 
 - **tick**：模型或调度器完成一次交互决策的原生最小时间单位，不是网络包长、首包延迟或评测 deadline。
-- 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。**N\*** 只沿用本文所整理来源的 schedulable-concurrency 口径，不为本项目冻结验收阈值。
-- 90 s 新会话数字属**短爆发口径**，不能替代长时稳态容量。
+- 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。**N\*** 只沿用本文所整理来源对 schedulable concurrency 的定义，不为本项目冻结验收阈值。
+- 90 s 新会话数字只反映短时突发下的容量，不能替代长时稳态容量。
 - config cap（如 Raon `FD_MAX_SESSIONS_PER_GPU=2`）**≠ 实测最大值**。
 - 训练 GPU 配置**不计入** serving 配置。
 - GPU memory utilization 配置（如 vLLM `gpu_memory_utilization=0.8`）、RTF、显存占用、tokens/s 和 frame latency 均**不是 GPU/SM utilization 或 MFU**。公开材料中没有找到任何严格全双工工作给出端到端 GPU/SM util 或 MFU。
@@ -81,7 +81,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 
 **Metronome 容量结果**（[Metronome][metronome]，**2026-07-02** 论文）
 
-| 被 serve 的模型 | frame budget | 90 s 新会话 | 长会话证据 |
+| 所服务的模型 | frame budget | 90 s 新会话 | 长会话证据 |
 | --- | ---: | ---: | --- |
 | Qwen3-Omni-30B-A3B FP8 | 2 s | **≥160**（下界） | W=1024 ≈40s + sinks；开放系统 AIMD 稳定 ≈**209 live sessions**，稳态 p99 每帧 ≈12ms。≈500 是 KV 线性外推，非实测 |
 | MiniCPM-o 4.5 | 1 s | **≈96** | windowed KV 完整维持 10 min；unbounded KV 不足 2 min 停滞 |

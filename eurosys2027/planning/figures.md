@@ -12,6 +12,7 @@
 ## Figure Quality Gate
 
 - [ ] Every figure has a one-sentence takeaway that can become its caption lead.
+- [ ] Every figure has an editable draw.io source kept beside the render; AI-rendered images serve only as composition drafts.
 - [ ] Axes state units, evidence class and configuration domain.
 - [ ] Error bars or uncertainty are shown where applicable.
 - [ ] Legends remain distinguishable in grayscale.
