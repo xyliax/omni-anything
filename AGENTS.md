@@ -4,13 +4,13 @@
 
 ## Project Scope
 
-项目研究周期性交互模型服务中的长期 KV 状态管理：持续增长的 KV working set 可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准。prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope；除非实验矩阵和 paper contract 明确冻结，否则不得把它们写成论文边界。
+项目研究周期性交互模型服务中的长期 KV 状态管理：随上下文增长的历史 KV 状态可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准。prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope；除非实验矩阵和 paper contract 明确冻结，否则不得把它们写成论文边界。
 
 会话开始或用户提示远端有更新时检查远端；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重读本文件和任务路径上的局部 `AGENTS.md`。
 
 ## Task Router
 
-按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的完整所有权声明见 `docs/agent/ownership.json`。
+按下方 map 的注释选择最小 read-set，不要默认读完整个仓库。`owner:` 标记该路径唯一持有的事实域：其余文档只能链接 owner 或写无数字摘要，易变的数字、状态、协议和路径不得手工复制。owner 表示维护职责，不代表内容已经验证；假设、设计要求、实现事实与实验结果必须区分。目录操作约束由最近一层 `AGENTS.md` 持有；`results/README.md` 是证据操作的显式例外。机器可检验的完整所有权声明见 `docs/agent/ownership.json`。
 
 ```text
 .
@@ -18,12 +18,12 @@
 ├── AGENTS.md                        # 本文件；owner: 任务路由、跨目录约束、Research Classification
 ├── CLAUDE.md -> AGENTS.md           # 兼容 symlink
 ├── pyproject.toml                   # 包与 pytest 配置
-├── docs/                            # 人类事实层与 Agent 索引；人类核心事实文档仅下列四份 owner
+├── docs/                            # 投稿研究底稿与 Agent 索引；四份核心文档分域维护
 │   ├── problem.md                   # owner: 问题定义、研究范围、术语词表
 │   ├── system.md                    # owner: 机制语义、状态机、端到端流程；不保存结果数字
 │   ├── experiments.md               # owner: 实验配置域、evaluated systems、指标与协议；不保存结论
 │   ├── findings.md                  # owner: 当前状态、结论、数字与限制；不重复完整协议
-│   ├── PAPER.md                     # 论文叙事工作大纲：定位、论证与写作计划；不是事实 owner
+│   ├── PAPER.md                     # 论文叙事工作大纲：定位、叙事骨架、取材与转写纪律；不是事实 owner
 │   ├── papers/                      # 论文摘要与阅读笔记；不是项目事实
 │   ├── references/                  # 外部规格整理与版图调研；不是项目事实
 │   └── agent/                       # Agent 导航层，不是第二套项目事实
@@ -81,6 +81,10 @@
 - 成功以 `status.json` 终态和 validation 为准，exit 0 本身不构成成功。
 
 ## Documentation Style
+
+- 核心文档服务于投稿：解释问题、论证设计、定义评估、呈现有依据的结果。缺少内容可保留具体待补提纲，不用无依据的结论填满章节。
+- 命令、接口、兼容修补与仓库治理集中在复现附录或 Agent 层；只有影响正确性、公平性或结果解释时才进入研究正文。历史证据不因正文清理而改写或删除。
+- 外部原始文献可在背景与相关工作中按需引用；明确其支持的属性，不将文献实例或当前原型转为未经冻结的论文边界。
 
 - [`docs/problem.md`](docs/problem.md#terminology) 是论文核心术语的唯一 canonical glossary：新增 paper-facing 核心词先更新词表、迁移旧同义词；实现 identifier 和 repository-governance vocabulary 不得进入 contribution 或 mechanism narrative。
 - Agent JSON 使用稳定 ID、repo-relative path、symbol、owner 和 verification；不要使用易漂移的行号。

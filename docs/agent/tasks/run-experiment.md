@@ -12,11 +12,11 @@
 ## Before Launch
 
 - 固定 model revision、environment profile、GPU、session count、period、output cap、initial context length 与 scheduling mode。
-- 正式跨系统比较必须统一 offered input 和 executed decode cap；当前 matched baseline 的 \(M+8\) 与 Conveyor 的 \(M\) 差异尚未修复，因此旧比较只能作诊断。
+- 对照需遵循 experiments.md 的公平性表，核对实际生成/保留历史、调度、connector、副本预算、输出与观测路径；当前差异只链接 owner，不在此复制配置值。
 - initial-context preloading 是 state construction，必须在 initialization barrier 完成后再开始周期输入。
-- 若启用 partial KV eviction 或 KV prefetching，确认 required artifacts 包含 `kv_events.log`，并分别要求 `E` 或 `L trigger=prefetch` 事件。
+- 若启用 partial KV eviction 或 KV prefetching，确认观测路径和 `kv_events.log`；当前机制诊断验收要求对应事件，零事件需解释是否存在需求或容量门控。
 - formal evidence 要求 clean source；dirty diagnostic run 必须保存可重建 patch artifact。
 
 ## Acceptance
 
-以 `status.json` 终态和 validation 为准，不以 exit 0 为准。出现 session death、RPC/client failure、初始化超时、artifact 缺失、manifest 损坏，或已启用的机制没有产生事件，run 都不可接受。实际输出小于 \(M\) 是诊断信号，本身不构成 correctness failure。
+成功执行以 `status.json` 终态和 validation 为准，不以 exit 0 为准；同时核对 runner 未完整覆盖的 manifest 语义和跨系统工作量。观测有效、机制被实际使用、服务目标达标分别判断。失败或零事件运行可以保留为边界分析，但不能计入成功性能点；实际交付低于 cap 本身不构成 correctness failure。

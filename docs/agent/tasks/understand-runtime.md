@@ -12,12 +12,12 @@
 ## Questions to Answer
 
 - 一个 session 的周期、release time、release offset 与 latency target 分别是什么？
-- 周期本身如何形成相邻两次 session use 之间的 reuse interval？
+- 相邻两次 KV 使用之间在什么条件下存在空闲区间？规律释放与实际执行如何区分？
 - release-offset scheduling 分散了哪些 demand，又没有创造什么资源？
 - matched Metronome baseline 与 Conveyor 分别执行哪些路径？
-- session activity、GPU block residency、host backing coverage、transfer state 与 request ownership 如何正交描述 KV 状态？
+- 会话活动、物理分配、有效内容、主机覆盖、双向传输和共享引用如何共同描述 KV 状态？
 - partial KV eviction 后，GPU prefix reuse、host-backed reload 与 recomputation 分别在什么条件下发生？
-- output cap \(M\)、实际输出量 \(m_{i,k}\)、未交付输出缓冲与 service-RPC latency 各表示什么？
+- output cap `M`、模型生成量 `m(i,k)`、未交付输出缓冲与 service-RPC latency 各表示什么？
 - 当前 runner 为什么只能报告 Thinker text，不能声称测得 PCM playback stall？
 
 ## Stop Conditions

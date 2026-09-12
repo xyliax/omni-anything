@@ -14,9 +14,10 @@
 2. 检查 workload、model、GPU、initial context、scheduling mode、output cap 和 observation 配置。
 3. 检查 session death、RPC/client error、初始化超时、缺失或畸形 delivery records，以及已启用 KV 机制是否真正产生事件。
 4. 把观察到的事件对齐到 one-session cycle 的各阶段：gateway release、input processing、scheduler admission、KV reload/prefetch、prefill、decode、partial eviction。
-5. 分开解释 application release latency、service-RPC latency、engine iteration time、实际输出量和 output backlog；它们不可相互替代。
-6. 使用 `kv_events.log` 的 `E/B/L/R` 事件解释 eviction、host-backing frontier、load issue 与 completion；host coverage gap 后的部分必须按 recomputation 处理。
-7. 标记数字是实测、模拟器标定、线性外推还是冻结先验，并写清配置域。
+5. 分开解释 application release latency、service-RPC latency、engine iteration time、模型生成量、保留历史量、交付量和 output backlog；它们不可相互替代。
+6. 使用 `kv_events.log` 的 `E/B/L/R` 事件解释逐出、存储 cursor 推进、装载发起与完成上报。B 可含跳过存储的块，不是已确认 D2H 字节；L–R 可含调度等待，不是纯 DMA 时长。结合 producer、有效主机覆盖与实际调度识别缺口后的重算。
+7. 分别判断执行状态、观测有效性、机制是否实际被使用和服务目标；失败 run 可以支持失效边界，零预取须区分无需求、门控和故障。
+8. 标记数字是实测、模拟器标定、线性外推还是冻结先验，并写清配置域。
 
 ## Output Discipline
 

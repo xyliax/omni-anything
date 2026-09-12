@@ -17,9 +17,9 @@ raw run
 - evidence 使用 `EVIDENCE-*`；
 - evidence role 只能使用 `docs/agent/evidence.json.role_definitions` 中的枚举；
 - prose 不写 exact timestamp run ID；
-- status 区分 implemented、semantics-validated、performance-open、validated、superseded、rejected；
+- `record.verdict` 遵循 records/README.md；`evidence.role` 遵循 registry 枚举；finding 正文分别解释观察、推论与待验证项，不混用三者状态；
 - measurement 带配置域和来源类别；
-- limitation 与 remaining uncertainty 不得省略；
+- limitation 与 remaining uncertainty 不得省略；源码可重建、原始数据可用、统计可复算及公平比较资格分别判断；
 - superseded 结论从 current finding 移除，但历史 record 保留；
 
 ## Experiment Record

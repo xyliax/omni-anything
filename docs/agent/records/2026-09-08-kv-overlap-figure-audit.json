@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-08-KV-OVERLAP-FIGURE-AUDIT",
+  "date": "2026-09-08",
+  "question": "Does staggered release imply one active/full-resident session per phase in the retained trace?",
+  "configuration_profile": "Read-only analysis of the Conveyor source resolved by EVIDENCE-STEP-TIMING-RETAINED and EVIDENCE-H5-CRITICAL-PATH; selected original sessions S3-S6 from the retained eight-session diagnostic run, not a new four-session run.",
+  "change": "Replaced conceptual nonoverlapping figures with existing Perfetto-export-backed views; verified terminal success, recorded validation, raw artifact hashes, export hash and export source hashes. No evidence artifacts changed.",
+  "result": "In the selected window, S3-S6 releases/push proxies are separated by about 250 ms. Their first scheduled step to idle eviction windows are respectively 695, 691, 702 and 705 ms, spanning multiple offsets. At 990 ms after the selected S3 push, S3/S4/S5 remain active; at 1040 ms S3 has evicted, S4/S5 remain active and S6 is reloading. The figures use the retained exporter residency estimates, not a continuous physical sampler. The actual retained run contains demand reloads; proposed prefetch is isolated in a schematic inset.",
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-STEP-TIMING-RETAINED",
+    "EVIDENCE-H4-RESIDENCY",
+    "EVIDENCE-H5-CRITICAL-PATH"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Dirty historical source lacks reconstructable patch; not formal evidence or fair cross-system comparison.",
+    "Scheduler-step intervals are not exact GPU kernel duration; active segment includes interleaving and waits.",
+    "Residency counters use held at eviction, held-minus-evicted after eviction, and previous held as reload estimate; no continuous per-session physical residency log is available for Conveyor.",
+    "Selected four sessions remain part of the eight-session run and cannot represent its whole-pool occupancy.",
+    "Host strips in the figure are schematic; no complete host-coverage or no-recompute guarantee.",
+    "No retained raw prefetch performance run; schematic prefetch timing does not measure net benefit."
+  ]
+}

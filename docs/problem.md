@@ -1,172 +1,275 @@
-# Problem
+# 问题定义：周期交互中的长期 KV 状态
 
-## Background
+<a id="background"></a>
+## 背景
 
-### From Turn-Based Requests to Streaming Interaction
+<a id="interaction-sessions-and-their-timing"></a>
+### 交互会话及其时间结构
 
-大多数语言模型服务系统首先面对的是一次性的 request/response 工作流：客户端提交一段 prompt，服务端执行 prefill 和 autoregressive decode，返回一个完成结果，然后释放或复用这次请求的运行状态。continuous batching、prefix caching 和 paged KV allocation 都是在这类请求流上提高 GPU 利用率的基础设施。它们通常把请求到达、批处理和缓存块分配作为主要调度信息；请求何时结束，往往也决定了这份状态何时可以回收。
+交互式 AI 应用的会话可以跨越多轮请求、多次工具执行甚至多个传输连接，围绕同一段持续增长的历史推进。新兴的模型级双工交互把这种推进方式又向前一步：会话保持打开，输入与输出重叠，模型按媒体时钟持续吸收新输入并推进状态，以支持自然话轮转换、重叠输入和及时打断（模型与产品实例见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)；其交互契约与级联流式方案的差异见[模型级全双工与级联流式的比较](#why-model-level-full-duplex-is-worth-studying)）。
 
-越来越多的交互式模型却不再以“一次输入、一次完整回答”为边界。典型场景包括持续聆听的语音助手、实时视频理解与辅助、在线字幕或其他连续多模态交互：输入在新内容产生时以小块到达，系统可以在输入流结束前开始处理并返回增量结果，而不必等待一个完整 turn。对这些应用而言，输出是一系列面向用户的增量结果，而不是等到输入结束后才生成的单个 completion；会话必须保留先前上下文，才能在下一次更新中继续理解同一段交互。
+对服务系统而言，这些负载的本质区别不在应用形态，而在系统何时知道下一次更新：事件触发的轮次型请求在用户消息到达前对下一次更新一无所知；端点触发的级联流式请求的释放由语音内容决定，端到端并不规律；只有按媒体时钟推进的持续双工会话，下一次更新时间和状态需求可以提前估计。下表比较三种工作负载画像的资源形状。第二类更准确的名称是 `endpoint-triggered cascaded speech pipeline`（端点触发的级联语音管线）；“VAD cascade”只是便于交流的简称，不是业界或学术界唯一固定的类别名。画像不是互斥的应用分类，流式输出、工具调用等行为可以作为附加属性出现在任何画像中。
 
-各类语音、视频或多模态产品的模型、采样率和输出协议并不相同，但它们共享一个对 serving system 重要的形态：请求长期保持打开，输入以小块增量到达，模型状态跨更新复用。本文把这种服务形态称为流式交互会话（streaming interaction session），并在需要刻画释放节奏时进一步抽象为周期性交互会话（periodic interaction session）。
+| 工作负载画像 | 更新如何触发 | 单次或单周期的计算形状 | KV 状态增长 | 时间信息 |
+| --- | --- | --- | --- | --- |
+| 事件触发的轮次型请求 | 用户消息或外部事件触发一次有限响应 | 到达时形成计算 burst；用户思考时间造成的空闲不可预知 | 按轮次追加输入和输出，增量通常不规则 | 下一次到达时间和工作量通常未知 |
+| 端点触发的级联流式请求 | 音频可持续采集，但通常在 VAD 或其他 endpointing 规则判定后形成下游阶段请求 | 各阶段可以流式运行，但端点、分段长度和阶段间等待受内容影响 | 通常按语音段或轮次增长，而非按统一时钟稳定增长 | 前端采集可规律，端到端请求释放通常不规律 |
+| 按媒体时钟推进的持续双工会话 | 会话保持打开，输入和输出重叠并按周期更新 | 输出工作受实时播放和有限缓冲约束；满足实时目标时，单周期计算通常只占其中一段 | 在完整历史保留时，每周期近似追加该周期的输入和输出状态 | 下一次更新时间和状态需求可提前估计 |
 
-| 服务形态 | 输入与输出边界 | 状态生命周期 | 主要 serving 关注点 |
+前两类也可能产生流式输出，也可能出现很长的空闲；区别在于下一次模型更新由用户或端点事件触发，空闲不构成服务端可以稳定利用的周期窗口。时钟画像则同时具有两个资源特征。
+
+其一，单会话每周期的有效计算受墙钟双侧约束，余下的空闲不能由该会话自身填充。输入侧，更新计算依赖按真实时间产生的输入：本次更新处理完毕后，下一次更新的输入要到下一释放时刻才齐备，会话无法对尚不存在的输入预支计算（对已到达部分输入做增量处理属于切块契约的选择，不改变这一结论）；输出侧，实时播放与有限缓冲使提前生成没有服务价值——超出消费进度的输出只积累 backlog（见[服务目标](#service-objective)）。这与轮次型请求形成结构性对照：文本请求是计算门控的，decode 未完成就始终有工作可做，完成之后其状态又可以整体让位于其他请求；周期双工会话是输入门控的，每周期计算有界、空闲必然出现，而会话并未结束——下一周期必然回归，其历史状态必须跨过每一段空闲。余量的实际大小需要测量，且多会话叠加后 GPU 仍可能处于高利用率：这里说的是单会话更新的时间结构，而非整机空闲。
+
+其二，在完整历史保留时，会话状态每周期近似追加该周期的输入与输出，增长规律而单调。
+
+一边是按时钟规律增长、必须跨周期保留的历史状态，一边是有限的 GPU 内存——这两件事迟早相撞。
+
+<a id="why-model-level-full-duplex-is-worth-studying"></a>
+### 模型级全双工与级联流式的比较
+
+背景中的时钟画像依赖一个判断：模型级全双工在不把时间状态拆散到多个端点和阶段控制器的情况下，提供了端点触发级联难以直接提供的交互契约，而这个契约造成不同的 serving 资源形状。以下比较支撑该判断。
+
+读者可能会问：既然 `VAD → ASR → 文本 LLM → TTS` 的级联方案也可以做成 streaming，为什么还要研究更复杂的模型级全双工？两者都能持续接收数据并增量输出，但交互边界和时间状态放置在不同位置。级联方案把话轮切分、阶段调用和输出播放交给多个组件协调；模型级全双工则让同一个持续交互过程同时包含输入、输出、沉默、重叠和打断等事件。
+
+这里的“理解不了”不是说级联系统没有语音理解能力，而是说 **VAD 的信号本身不足以决定交互语义**。VAD 通常只回答“这一小段音频里有没有语音”；它不能单独判断用户是在思考、换气、犹豫、准备让出话轮，还是还没有说完。级联系统可以另外加入语义 VAD、端点预测器、增量 ASR、打断控制器和对话状态机来补足这些信息，但判断会分散在多个模块之间，未提交的部分输入、已经生成的输出以及取消和回滚状态需要额外协调。
+
+| 交互需求 | 端点触发的级联流式 | 模型级全双工 | 对服务系统的含义 |
 | --- | --- | --- | --- |
-| turn-based request | 一次输入对应一次完整响应 | 响应结束后通常可以回收请求状态 | 单次 latency、batching 和吞吐 |
-| streaming interaction session | 输入和输出都由连续的小块组成 | 会话保持打开，历史状态跨更新复用 | 增量处理、连续服务和长期状态容量 |
+| 用户尚未说完时的响应 | 通常要等 VAD 端点或中间阶段结果，再由下游阶段生成 | 模型可以在部分输入上决定等待、附和或开始回应 | 端点等待变成模型更新时序的一部分，而不是一次性前置门控 |
+| 沉默、重叠和附和 | 主要由 VAD、打断规则和外部状态机解释 | 可以作为持续时间上下文中的输入或动作 | 时机线索不必在 ASR、LLM、TTS 之间重新拼接 |
+| 用户插话或打断 | 往往需要取消未播放输出、协调各阶段缓冲并恢复上下文 | 输出期间继续听，并可停止、改写或切换当前输出 | 不把一次打断退化成下一轮请求，状态生命周期也更长 |
+| 工具与后台工作 | 模块化、易于接入任意文本 LLM 和独立工具链 | 可以在交互继续时异步触发工具，但需要模型或交互层定义结果注入 | 全双工带来更好的交互连续性，同时增加状态和调度协调成本 |
 
-### Why KV Cache Becomes a Capacity Constraint
-
-Transformer 的增量执行依赖此前上下文的 attention key/value。prefill 为已经到达的上下文计算这些中间状态，后续 decode 或新的输入更新可以直接复用 KV cache，而不必每次重新计算完整历史。对一次性短请求而言，这份 cache 的生命周期通常与请求相近；对持续交互会话而言，每次新增输入经过模型的 feature extraction 和 prefill 后，都会使逻辑上下文以及对应的 KV working set 继续增长；decode 生成的输出 token 同样追加进同一上下文并占用 KV。
-
-GPU 上可分配给 KV blocks 的资源是有限的，而且会话还要与模型权重、activation 和其他运行时状态共享 GPU memory。把每个会话的完整 KV 都保留在 GPU 上可以避免恢复开销，却会让总驻留量随会话数和上下文长度增长。相反，释放历史状态同样有代价：丢弃后重新计算会把更大的 prefill 放回下一次更新的关键路径，主机回载会消耗 host-to-device 带宽和传输时间，截断上下文则改变了模型可见的交互历史。
-
-因此，持续交互引出了一个普通短请求中不明显的资源矛盾：系统需要在“保留足够状态以便低延迟继续服务”和“有限 GPU KV capacity 能承受多少长期会话”之间做选择。这个矛盾是内存容量问题，不等同于算子是否 memory-bandwidth-bound；在某些配置下，GPU KV capacity 可能先于每周期计算预算成为并发上限。
-
-### Why Request-Level Serving Control Is Insufficient
-
-通用 serving engine 能够根据当前到达的请求做 batching、KV block allocation 和 prefix matching，但通常不知道一个长期会话下一次何时会再次提交输入。对 streaming session 来说，这个 next-use information 很重要：会话暂时没有输入时，部分 KV 可以成为可回收空间；但如果恢复动作只能等到输入已经到达才开始，回载或重算就会直接进入该次更新的服务路径。
-
-三个直观选择各有代价：
-
-1. **Keep everything resident.** 不增加恢复延迟，但总 KV working set 最终受 GPU capacity 限制。
-2. **Recompute the history.** 不需要长期保存完整 GPU 状态，但下一次更新必须重新执行更大的 prefill，并可能超过软实时 latency target。
-3. **Reload on demand.** 可以把部分状态移出 GPU，但 host-to-device transfer 发生在请求已经到达之后；多个会话同时恢复时，还可能形成瞬时链路压力。
-
-这说明问题不只是“是否支持 KV offload”。系统还需要利用应用层已经存在的 recurrence：识别会话何时暂时空闲、为下一次使用保留哪些 GPU 状态、何时建立主机后备，以及能否在真正的输入到达之前安排恢复。本文研究的是这个 serving-systems 问题，而不是重新定义具体模型的语音、视频或对话协议。
-
-## Problem Statement
-
-周期性交互会话（periodic interaction session）是持续存在并按目标周期追加输入的长生命周期请求。它是上一节 streaming interaction session 在 serving 研究中的一个可分析实例：第 (k) 次更新在预定的 release time 到达，更新完成后会话不会结束，而是等待下一次输入。周期是对 workload release pattern 的抽象，不要求所有真实产品都具有完全相同的计时器或媒体协议。
-
-随着上下文增长，每个会话的 KV cache 工作集也持续增长。当有限的 GPU KV pool 在周期计算预算之前耗尽时，系统进入 KV 容量受限区间：系统仍可能有计算余量，却无法让更多完整工作集同时驻留。该区间是否出现以及边界在哪里取决于模型、工作负载和平台；当前证据只负责证明已登记配置域中的问题实例，而不把某个实例写成问题定义。
-
-本项目研究如何利用周期性提供的可预测下次使用时刻，在不截断上下文的前提下减少空闲会话的 GPU KV 驻留，并将释放和恢复流量安排到可用的主机链路窗口。当前原型系统暂称 **Conveyor**。已测结论、证据强度和外推边界只由 [`Findings`](findings.md) 持有。
-
-本文中的 KV 容量受限（KV-capacity-bound）专指可分配的 GPU KV-cache 容量先耗尽，不等同于通常描述算子数据搬运强度的 memory-bound，也不等同于已经证明了跨硬件的普遍规律。
-
-## Workload Model
-
-### Periodic Interaction Session
-
-会话 \(i\) 的周期为 \(T\)。第 \(k\) 次应用级更新称为 tick，其释放时刻为
-
-\[
-r_{i,k} = r_{i,0} + kT,
-\]
-
-释放偏移为 \(\phi_i = r_{i,0} \bmod T\)。一次 tick 只表示一个输入块（input chunk）在应用层变为可提交；它不规定 serving frontend 的调用方式，也不等同于引擎的一次调度迭代。
-
-在抽象负载中，模型为更新 \((i,k)\) 生成的 token 数为 \(m_{i,k}\)，并受每周期生成上限 \(M\) 约束：
-
-\[
-0 \le m_{i,k} \le M.
-\]
-
-\(M\) 是抽象模型中的生成上限，不是最低交付量；\(m_{i,k}\) 只表示模型为该次更新生成的 token 数。模型生成进度与用户可见交付是两个不同对象：输出可以同步返回、异步推送、缓冲后消费，或经过额外的媒体处理。问题定义不选择其中一种 output architecture，也不能把一次传输或消费事件直接归属于当前输入。精确生成与交付口径由 [`Experiments`](experiments.md#measurement-semantics) 定义。
-
-每个输入块对应一个每周期延迟目标（per-period latency target）\(D\)。这是软实时目标：偶发迟到会增加响应延迟，持续迟到会使增量结果落后于输入流。不同 output architecture 如何把这种滞后映射为 freshness、播放连续性或其他用户可见指标，属于 evaluation 定义，而不是 workload 的先验假设。
-
-### Intrinsic Reuse Interval
-
-若一次会话更新只占周期 \(T\) 的一部分，则该会话在相邻两次使用之间天然存在复用间隔。这个间隔来自周期性工作负载本身，不由释放偏移调度产生。单个会话在一个周期内的时间结构（示意，不按比例）：
+可以用一个短句看出这个差别。用户说：“帮我查一下明天北京的天气，顺便——”然后停顿 300 ms，接着说：“如果下雨提醒我带伞。”
 
 ```text
-t0: input k arrives                                t0+T: input k+1 arrives
-▼                                                                        ▼
-├─ busy ─┤├────────────────── idle: most of the period ──────────────────┤
+用户音频:       帮我查一下明天北京的天气，顺便 —— [停顿] 如果下雨提醒我带伞
+                 └──────────── 尚未完成的意图 ────────────┘
 
-busy:  prefill + decode for input k
-idle:  this session needs no GPU work, and the time of its next use
-       (t0+T) is known in advance
+端点触发级联:
+                 VAD/endpointing ──┬─ 未到端点：继续等，不能稳定决定是否回应
+                                   └─ 判为端点：提交 ASR/LLM/TTS；用户续说时要取消、合并或重跑
+
+模型级全双工:
+                 每个时间片都读取新输入和当前输出，预测 wait / backchannel /
+                 speak / interrupt，并在同一持续历史上更新状态
 ```
 
-同步释放会把多会话的输入准备、计算和 KV 恢复需求集中在同一短窗口。为不同会话分配释放偏移，只是把这些需求分散到整个周期，从而提供降低瞬时并发和峰值恢复带宽的机会。它带来的实际资源收益与批处理代价都必须通过资源模型和实验验证；各项收益的当前证据状态由 [`FINDING-D3`](findings.md#finding-d3) 持有。
+停顿短于端点阈值时，级联系统通常只能继续等待；停顿超过阈值时，它可能过早提交一个不完整的意图。用户在系统播放期间插话也会产生同样的分支：级联方案需要让 ASR 接收新音频、控制器停止或截断 TTS、撤销已经排队的文本结果，再决定是否重新调用文本 LLM；模型级全双工把“继续听、停止说、改写当前回应”作为同一时间线上的动作。前者并非做不到，而是必须通过额外模块把本来分散的证据重新拼起来，且每次拼接都可能引入延迟、陈旧输出或状态不一致。
 
-## Empirical Motivation
+因此，级联与全双工不能直接当成同一条轴上的两个端点：
 
-### Capacity Before Compute
+| 维度 | 一个常见取值 | 它回答的问题 |
+| --- | --- | --- |
+| 架构 | cascaded ASR–LLM–TTS / unified interaction model | 语音识别、语言决策和语音合成由哪些模块完成？ |
+| 端点控制 | VAD/endpointing-gated / continuous micro-turn | 什么时候把输入提交为下一次模型决策？ |
+| 交互方向 | half-duplex / full-duplex | 模型输出时是否仍持续接收并处理用户输入？ |
 
-本文关注的资源区间是：持续增长的 KV working set 先逼近可用 GPU KV pool，而周期计算预算仍有余量。两类资源占用随周期推进的示意（不按比例，不代表任何具体测量）：
+常见的 `VAD → ASR → LLM → TTS` 同时落在“级联、端点控制、半双工”三列，但这不是逻辑必然。DuplexCascade 的公开论文明确把自己称为 **VAD-free cascaded ASR–LLM–TTS pipeline**：它用固定 micro-turn 和控制 token 让级联架构实现全双工。这个反例说明本文真正要比较的是“端点触发的级联工作负载”和“按媒体时钟持续推进的模型级双工工作负载”，而不是把所有级联系统都归为半双工。
+
+已有模型和系统的公开材料把这种差异落在具体行为上：模型级全双工希望在输出期间继续吸收输入，并把沉默、重叠、附和、打断或主动开口作为模型时间上下文或动作；端点触发的级联即使各阶段都支持 streaming，也不自动具备这些语义。Thinking Machines 的交互模型演示了在同一时间线上等待、插话、同时说话、搜索和界面更新；Moshi 与 SyncLLM 则把双方的语音块和同步信息纳入持续的模型序列。相关定义和实例见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)与[交互模型分析](references/thinking-machines-interaction-model.md#交互模型机制)。
+
+到 2026 年，这一形态的主要证据已经从研究模型的评测对比转为生产部署本身。GPT-Live 于 2026-07 成为 ChatGPT Voice 的默认语音交互，官方描述为输出期间持续处理输入、每秒多次决定说话/倾听/暂停/打断/调用工具；Seeduplex 于 2026-04 全量上线豆包，并报告相对上一代半双工的 A/B 改善（端点延迟 −250 ms、打断响应 −300 ms、误响应与误打断减半、MOS +12%——厂商自报，方法未完全公开）；Thinking Machines 的交互模型以 200 ms micro-turn 进入研究预览。开源侧 2026 年出现了密集的一批模型级双工工作（PersonaPlex、MiniCPM-o 4.5、Raon-SpeechChat、DuplexSLA、DuplexOmni、BayLing-Duplex 等），交互基准（Full-Duplex-Bench 族）上的打断成功率与话轮延迟对比也主要在这批模型之间进行；具体数字多为自报或模拟评测，引用前须按原文核验。
+
+这些工作的原生决策周期横跨一个数量级以上，并与模型定位相关：音频帧级模型使用 80 ms（Moshi 及其派生）到 160–200 ms（DuplexSLA、TML micro-turn）；更大的 omni 类模型把语义级决策放在更长的周期上——DuplexOmni 每 tick 480 ms，BayLing-Duplex 用 800 ms 决策块，MiniCPM-o 4.5 的主干更新为 1.0 s；serving 侧对 omni 模型的每帧预算实测达 1–2 s（Metronome）；连级联结构上的全双工方案（DuplexCascade）的 micro-turn 扫描也报告 0.6–1.2 s 区间的话轮质量最好。周期因此是模型与部署的设计参数，而非某个固定的亚秒常数；当前可见的结构是音频 I/O 保持细粒度、语义级决策走向数百毫秒到秒级。各模型的精确 tick、来源与证据性质见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#2-公开模型与研究原型)。
+
+这并不意味着模型级全双工已经取代级联。2026 年的产业实践仍以级联为企业部署的默认选择：其优势在模块可替换、逐阶段可观测与审计、任意文本 LLM 与成熟工具生态、阶段级 batching；Kyutai 官方也承认其全双工模型与工具调用尚不能兼得，由级联线承担工具路径。级联与全双工也不是互斥类别：DuplexCascade 用无 VAD 的固定 micro-turn 在级联结构上实现了全双工交互。[双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md#liveserve)还显示，级联系统可以通过播放感知的节流、阶段间协调和下一次使用感知的 KV 管理改善服务。
+
+本文关心的不是宣称全双工普遍更快或更便宜，而是它在需要自然话轮转换、重叠输入、及时打断或持续后台工作的场景中提供了不同的交互契约。这个契约也造成不同的 serving 资源形状：级联请求通常在 VAD 端点和阶段边界形成不规则 burst；模型级全双工在会话保持期间按媒体时钟更新，单会话每周期的输出工作受实时播放约束，历史 KV 却继续跨周期增长。正是“可预测的周期性计算余量”和“长期增长的状态”同时出现，使这种新兴交互形态值得单独作为 workload 研究。
+
+<a id="why-historical-kv-state-can-limit-capacity"></a>
+### 历史状态的容量张力
+
+自回归 Transformer 可以缓存历史位置的 attention key/value，以避免在后续执行中重复计算。在使用完整保留历史进行注意力计算的模型中，追加上下文位置通常会增加相应的 KV 状态。增长关系受模型结构、状态精度、上下文长度上限和历史保留策略影响；固定窗口或其他有界状态结构需要分别分析。
+
+以全驻留为参照策略：完整历史的 KV 全部保留在 GPU，历史语义零损失、下次更新零准备延迟——它只可能在容量轴上失败。在该参照下，累计驻留需求随会话数与上下文长度单调增长，而可用 GPU KV 容量受模型权重、activation 和运行时保留空间约束。当单会话每周期的计算尚未饱和其周期时，驻留需求就可能先于计算需求触及资源上限。
+
+> **【关键 · 待验证命题】** 在全驻留参照下，历史 KV 的驻留需求可能先于更新计算需求触及 GPU 资源上限（诊断线索：[FINDING-D1](findings.md#finding-d1)；裁决实验：[Q1](experiments.md#evaluation-questions)）。
+
+这一矛盾依赖三个负载性质同时成立：历史必须跨更新复用；更新按周期推进、相邻使用之间留有空闲区间；单周期计算不饱和。任一性质缺失，问题都退化为已有工作覆盖的形态——无跨更新复用则无驻留问题，无节奏则是一般缓存管理，计算先饱和则是算力问题。
+
+> **【关键 · 定义】** 本文的容量矛盾以三个负载性质同时成立为前提：历史跨更新复用、更新按可描述周期推进且留有空闲区间、单周期计算不饱和。
+
+其中第一个性质本身也需要证据：保持完整历史是否有应用价值，仍需通过包含历史依赖的代表性任务和质量评估建立。参照策略在容量轴上撞墙后，自然的问题是：改动参照的哪一部分可以化解矛盾，代价是什么。
+
+<a id="the-gap-in-existing-approaches"></a>
+### 现有路线的交换代价
+
+化解上述矛盾的已知路线，按各自放弃的性质分为三类；对周期会话，每一类都放弃了负载需要保住的东西。
+
+**放弃完整历史。** 窗口化、压缩或摘要把状态增长封顶，直接消除容量矛盾，但改变后续计算可见的历史，参考执行的语义不再保持。对能接受历史损失的应用这是合理选择，应在质量与资源代价上作为替代方案比较（→ Q6）；本文研究的是历史必须保持的情形。
+
+**保住历史、放弃常驻，但被动恢复。** offload 把空闲状态移出 GPU，需求出现后再回载或重算：引擎内建 swap 在分配失败时整段换出换回；分层方案在请求已入批后才开始回载与重建（Pensieve, EuroSys'25；HCache, EuroSys'25）；恢复与重算的混合调度（Cake, ICML'25；CacheFlow, arXiv:2604.25080）缩短这段等待，但不改变它在关键路径上的位置。历史保住了，及时性丢了。
+
+**提前准备，但信号与周期节奏错配。** 利用未来信息的工作证明了提前量的价值，但各自绑定不同的信号来源与动作域：队列深度（CachedAttention, ATC'24）的提前量由负载决定，系统无法指定；最近使用类启发在"会话空闲但即将回归"时恰好误判——这正是周期会话空闲区间的常态；应用行为提示可能出错、提前量为秒级（SYMPHONY, NSDI'26）；暂停时长估计针对不规则的外部调用事件（InferCept, ICML'24）；模型内部结构的预测提前量在单步的层内（InfiniGen, OSDI'24；ECHO, OSDI'26）；工作流图给出的是步数距离而非时刻，保护的是静态共享前缀（KVFlow, NeurIPS'25）。这些信号都不是周期负载承诺的、跨更新反复出现的释放时刻。
+
+上述三条路线各自付出历史、及时性或信号适配的代价；外部系统的机制细节与出版态势见 [KV offload 版图](references/kv-offload-restore-landscape-2026-08.md) 与 [双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md)。
+
+> **【关键 · 待核验定位】** 尚无已知工作同时保住完整历史与及时就绪，并利用周期负载承诺的下一次使用时刻驱动驻留与恢复决策。
+
+<a id="why-timing-information-matters"></a>
+### 时间信息的机会与代价
+
+周期会话恰好拥有上述路线所缺的资产。轮次型请求的下一次到达无从预知，级联请求的释放由内容决定，而周期会话的下一次使用时刻由负载节奏本身给出：它在需求出现之前就可获得，并随每次更新反复出现。若更新间存在可用空闲区间，系统就有机会把状态准备移出关键路径——空闲期建立副本并回收驻留，下次使用前恢复状态。
+
+> **【关键 · 核心洞察】** 周期负载把下一次使用时刻作为负载性质承诺给系统：该信息先于需求出现、跨可描述周期反复出现，因而可以驱动空闲期的驻留回收与使用前的状态恢复。
+
+这份资产分三级，各自解锁不同的动作，也对应强度递增的假设：知道节奏存在，系统可以估计后续的状态需求；获得具体释放时刻，可以在需求进入关键路径前准备状态；拥有释放偏移的控制权，才可以重排多会话需求的重叠。偏移控制权不能从节奏可见性推出，时间信息的价值也不能由最强一级代表。
+
+这一机会不等于预取必然有益。提前恢复占用 GPU 空间，多个会话可能竞争同一传输路径；分散更新还可能削弱批处理效率。需要研究的是状态容量、计算效率和及时恢复之间的共同约束，而不是仅证明系统具备 offload 接口。
+
+<a id="problem-statement"></a>
+## 问题陈述
+
+给定持续保留历史、按规律更新并具有软实时服务目标的会话集合，如何利用可预测的更新节奏，降低空闲期间的 GPU KV 驻留，并在后续计算需要之前准备正确的历史状态？
+
+> **【关键 · 定义】** 研究问题：在保持参考历史语义与软实时服务目标的前提下，利用可描述的更新节奏调度 KV 驻留与恢复，以提高满足服务目标的承载能力。
+
+优化目标是在明确的上下文范围、会话时长分布和观测期限内，提高满足服务目标的承载能力。约束包括 GPU KV 容量、模型计算、主机后备容量、传输资源和应用允许的时序变化。当前系统暂称 **Conveyor**。
+
+本文将 GPU KV 容量限制可服务负载的情形称为 KV 容量受限（KV-capacity-bound）。它不同于算子的 memory-bandwidth-bound 属性。容量是否先成为瓶颈是需要验证的命题，不是对所有交互模型的预设结论。
+
+<a id="workload-model"></a>
+## 工作负载模型
+
+<a id="from-model-timing-to-periodic-updates"></a>本文将上述负载建模为周期性交互会话（periodic interaction session）：更新按可描述的周期获得执行资格，相邻更新依赖同一段持续增长的历史。该节奏有真实来源——具有固定速率时间步或固定时长同步块的模型每隔固定时长消费新输入并推进状态（模型实例见[文末来源](#sources-and-remaining-background-work)）——但它是工作负载模型的假设而非普遍事实：流式或双工本身不构成周期性，节奏必须来自负载本身，服务端自行施加的计时器不构成该信息。输入迟到、传输抖动和执行排队是这一抽象必须容忍的偏差。
+
+<a id="periodic-interaction-session"></a>
+### 周期性交互会话
+
+先考虑共同周期为 `T` 的会话。相对于共同参考时刻 `t0`，会话 `i` 的第 `k` 次更新具有释放时刻
 
 ```text
-             GPU KV pool (memory)      per-period compute (time)
-period   1   ████░░░░░░░░░░░░░░░░      █████░░░░░░░░░░░░░░░
-period  60   ████████████░░░░░░░░      █████░░░░░░░░░░░░░░░
-period 120   ████████████████████      ██████░░░░░░░░░░░░░░
-             ▲ pool exhausted          ▲ ample headroom remains
-
-█ = used   ░ = free
+r(i,k) = t0 + phi_i + k*T
+0 <= phi_i < T
 ```
 
-完整驻留在该区间中受到容量约束；整段重算或按需回载又会把恢复成本放到更新关键路径上。这个因果假设及其当前证据见 [`Findings`](findings.md#paper-relevant-findings)；其他工程瓶颈必须在实验中隔离，不能用来替代或反向定义 KV 容量主张。
+释放时刻（release time）沿用实时调度中的含义：该更新具备执行资格的时刻。它要求相应输入已经可用，而不意味着请求已进入引擎或模型已开始执行。`phi_i` 是会话的释放偏移。共同周期是起始分析模型；不同周期及其抖动由评估矩阵检验。
 
-### Predictable Next Use
+需要区分以下事件：
 
-周期 \(T\) 和释放偏移 \(\phi_i\) 让系统知道一个空闲会话预计何时再次使用 KV cache。系统据此可以在会话空闲时逐出部分 GPU KV，并在下次释放前或请求到达后恢复。传统请求接口只暴露当前到达和缓存命中，不直接表达应用周期及预计下次使用时刻。
+| 记号 | 事件 |
+| --- | --- |
+| `r(i,k)` | 更新具备执行资格 |
+| `a(i,k)` | 更新实际提交给服务系统 |
+| `s(i,k)` | 依赖相关历史 KV 的计算开始 |
+| `c(i,k)` | 该更新所选服务目标对应的完成事件 |
 
-## Resource Frontier
+若应用允许延迟提交已就绪输入，这段等待计入从 `r(i,k)` 起算的响应延迟。若应用允许调整切块边界，则必须另用原始输入时间衡量新增缓冲等待。仅比较 `c(i,k) - r(i,k)` 不能证明切块变化没有用户代价。
 
-问题需要用多资源 frontier 来解释适用区间，而不是把任一测量点线性外推为普遍规律。该模型至少同时表达：
+<a id="service-objective"></a>
+### 服务目标
 
-- GPU KV 容量上限；
-- 周期 \(T\) 内的 prefill/decode 计算预算；
-- 权重与 KV 访问造成的 HBM 带宽需求；
-- host-to-device KV 恢复的链路带宽与时延包络；
-- 会话数 \(N\)、上下文长度、保留 GPU 前缀 \(K\) 与释放偏移。
+以更新释放为起点的服务目标可以写为 `c(i,k) - r(i,k) <= D_i`。其中完成事件必须对应明确对象，例如目标模型阶段完成或一个可关联结果交付。软实时评估还需规定允许的违约比例、统计窗口及持续落后的判据。
 
-该模型的目标是划定 capacity、compute 和 restore-bandwidth 三类边界。如何选择平台、参数范围和校准方法由 [`Experiments`](experiments.md) 持有；[`Findings`](findings.md) 只报告已经得到证据支持的范围。
+异步输出未必与输入块一一对应。此时应以可验证的输入处理进度或输出关联定义 `c(i,k)`，并另外报告用户可见延迟；服务调用返回本身不能代替上述完成事件。最终事件与指标定义见 [测量语义](experiments.md#measurement-semantics)。
 
-## Observability
+在适合按更新归因生成量的模型中，可令 `m(i,k)` 为本次生成 token 数、`M` 为上限，满足 `0 <= m(i,k) <= M`。该参数化描述生成工作，不规定最低交付量，也不要求所有输出架构共享相同 token 单位。
 
-长期会话没有可直接代表整段交互完成的单一 request-completion 事件，frontend 调用正常也不能证明模型持续推进。问题定义只固定必须可区分的语义对象，不提前冻结论文最终采用的 QoE 指标：
+对具有实时输出消费的会话，设输出播放或消费速率为 `R_play`。在满足实时播放、有限输出缓冲和结果新鲜度的服务契约下，每周期的有效输出单位受到 `N_out(k) <= R_play * T` 的约束。这里的 `<=` 是服务契约下的近似上界；它来自应用时钟，不意味着模型物理上不能提前生成更多内容。若生成量超过消费进度，输出 backlog 和用户可见延迟会随之增加。模型执行时间 `C_k` 仍取决于模型、平台、批形状和上下文长度；当 `C_k < T` 时，单会话周期具有 `T - C_k` 的可用时间余量，其实际大小需要测量。在语音输出场景，只要解码速度显著高于播放速度，余量的存在及其主要来源由播放时钟决定；不同模型会改变余量的具体数值，但通常不会改变这种结构。若完整历史持续保留，逻辑历史的周期增量可近似写为 `Delta_H(k) ~= N_in(k) + N_out(k)`；在输入速率和输出预算稳定时，这一增长也具有规律性，而对应的 KV 字节还取决于模型的状态几何、分帧和输出单位。
 
-- 应用级输入释放与引擎准入；
-- 模型执行进度与用户可见交付进度；
-- GPU KV 驻留、主机后备覆盖、逐出、预取、恢复与重算；
-- 会话活性、失败和观测完整性。
+<a id="intrinsic-reuse-interval"></a>
+### KV 空闲区间
 
-论文级 latency、freshness 和最大可调度并发的 operational definition 由 [`Experiments`](experiments.md#measurement-semantics) 在 evaluation 设计中单独确定，不能从某个实现字段直接升级。
+令 `q(i,k)` 为当前更新最后一次使用目标 KV 的时刻。若下一次使用 `s(i,k+1) > q(i,k)`，且没有其他执行仍在访问该状态，则两者之间存在 KV 空闲区间。对输入门控的周期会话，该区间每周期结构性地出现（成因见[交互会话及其时间结构](#interaction-sessions-and-their-timing)）；周期性提供预测依据，但排队、长计算或重叠执行可能缩短甚至消除区间。
 
-## Terminology
+```text
+本次 KV 使用结束                  下次依赖 KV 的计算开始
+q(i,k)                            s(i,k+1)
+  |---- 可用空闲区间（若存在） ----|
+       建立副本、逐出、准备恢复
+```
 
-本节是论文核心术语的唯一词表。标准领域术语可直接使用；项目自定义术语必须在首次出现处给出对象和定义。实现标识符只用于复现与代码映射，repository-governance 词只用于证据维护，两者都不得被包装成论文贡献。
+释放偏移改变多会话需求的重叠结构，不创造单会话的空闲时间或物理带宽。系统还需考虑副本何时就绪、传输持有引用的时间，以及预取后状态再次被替换的风险。
 
-| Preferred term | 对象与精确定义 | 符号或类别 | Deprecated aliases in this project |
-| --- | --- | --- | --- |
-| Conveyor | 当前原型系统的暂定 proper noun，正文首字母大写 | proper noun | `conveyor` 仅限目录、配置和进程标识；`Conveyer` 拼写错误 |
-| streaming interaction session | 输入和输出以连续小块到达、会话跨更新保持打开的广义服务形态；不是本文的形式化 workload | standard descriptive term | streaming request（作为一次性 request 的同义词） |
-| periodic interaction session | 按目标周期持续追加输入并保留上下文、可用固定 release cadence 分析的会话 | paper-defined workload | duplex request、hard-tick foreground |
-| period | 同一会话相邻两次逻辑释放之间的时间 | \(T\) | frame interval、engine tick |
-| tick | 一次应用级周期更新；不指 frontend 调用或引擎调度 | application event | engine tick、RPC tick |
-| release time | 会话一次输入可被提交的逻辑时刻 | \(r_{i,k}\) | phase firing time |
-| release offset | 会话在周期内的稳定释放位置 | \(\phi_i\) | phase as a resource |
-| release-offset scheduling | 为会话分配不同释放偏移以分散多会话需求 | research mechanism | phase staggering、phase-offset scheduling |
-| input chunk | 一次应用级更新携带的新增输入 | standard term | frame（除非确为 codec frame） |
-| per-period output token cap | 抽象负载中模型为一次 update 最多生成的 token 数；不定义用户可见交付量 | \(M\) | delivery quota、tokens required per tick |
-| actual model output amount | 模型为会话 \(i\) 的第 \(k\) 次 update 实际生成的 token 数 | \(m_{i,k}\) | actual delivery、quota met |
-| per-period latency target | 一次周期更新期望满足的软实时延迟目标 | \(D\) | hard tick deadline、inelastic deadline frame |
-| engine iteration | 引擎一次 scheduler/execution 迭代 | standard implementation term | engine tick |
-| GPU-resident KV blocks | 当前可在 GPU block pool 中解析和复用的 KV blocks | block coverage | resident session |
-| host-backed KV blocks | 已有主机内存副本的 KV blocks；可同时仍在 GPU | block coverage | mirror、mirrored blocks |
-| incremental host backing | 随上下文增长逐步把完成的 KV blocks 复制到主机 | system operation | write-through mirror |
-| partial KV eviction | 释放请求所有权并逐出所选 GPU KV 尾块 | research mechanism | park、partial release、KV rotation |
-| KV-cache capacity limit | GPU KV block pool 可分配容量的物理上限 | resource bound | capacity wall、capacity boundary、capacity saturation、memory cliff |
-| retained GPU prefix | 空闲会话仍保留或可由 GPU prefix cache 命中的前缀 | \(K\) | resident floor、keep-K quota |
-| on-demand KV reload | 输入到达后从主机恢复缺失的 KV blocks | fallback operation | wake、unpark |
-| KV prefetching | 在预计复用前把 host-backed blocks 放入 GPU prefix cache | research mechanism | anonymous materialization、anonymous preload |
-| evaluated system | 一个具有完整可执行语义的端到端系统身份 | evaluation term | arm（论文叙事） |
-| configuration / variant | 同一系统的参数点或消融变体 | evaluation term | arm（论文叙事） |
-| analytical reference scenario | 仅用于模型分析且尚未实测的参数场景 | evidence class | Paper Configuration |
+<a id="resource-frontier"></a>
+## 资源边界
 
-`formal evidence`、`diagnostic evidence`、dirty source 和 run alias 等是 repository-governance 或 artifact 标识，不属于论文术语。具体接口、配置字段和环境变量是实现标识，论文只在复现说明中映射一次。
+设 `G_KV` 为可用 GPU KV 容量，`P(t)` 为时刻 `t` 已分配的物理 KV 块集合，`b_p` 为块大小。物理容量约束为
 
-新增论文核心术语必须先修改本表：给出对象、定义和类别，迁移已有同义词，并通过术语防回归测试。不得先在其他文档发明新叫法，再让词表追认。
+```text
+sum_{p in P(t)} b_p <= G_KV
+```
 
-## Scope
+共享块按物理分配计数，预取目标即使尚未完成传输也占空间。历史 KV 总大小、下一次计算需要的状态集合和当前 GPU 分配量因此应分别建模。
 
-研究聚焦周期性交互会话的 KV 驻留与恢复调度，以及可预测 next use 如何改变容量—计算—恢复带宽之间的边界。问题定义不绑定特定 modality、模型家族、output architecture、GPU 数量或设备拓扑；这些维度可以改变资源 frontier 和外部有效性，但当前 prototype 是否覆盖某一维度，不自动把它变成论文 non-goal。
+该约束将完整历史、驻留策略与恢复时序连接起来：将空闲内容逐出能够回收其中一部分空间，而预取会在相关计算开始之前重新占用目标空间，因此峰值分配取决于逐出与恢复的时间安排。即使峰值未超过容量，恢复仍可能因传输竞争或调度等待而迟到。资源分析需要同时检查空间是否可分配，以及所需内容是否能在使用前就绪。
 
-机制不能消除系统总产能边界：当 offered load 超过计算、KV capacity、主机后备或恢复链路的可承载范围时，系统仍需要 admission control 或更高层的负载管理。本文不把这个物理边界包装成 KV 管理能够解决的问题。
+完整资源模型还需要表达计算与 HBM 访问成本、主机副本容量、双向传输、并发传输干扰以及释放到完成的时序约束。平均流量低于链路平均带宽只是必要的容量检查，不能单独证明每次恢复及时完成。批处理会改变计算成本，故 `T` 除以某次单会话服务时长也不是一般的最优并发或偏移数公式。
 
-任何模拟器、分析场景或线性外推只能帮助解释资源边界。论文主张必须回到明确配置域的真机证据，并在 [`Findings`](findings.md) 中标出实测、推导和未验证部分。
+释放偏移为上述及时性分析提供一个候选的形式化途径。将传输链路视为速率为 `B` 的可再生时间资源，则会话 `i` 每周期的状态恢复构成一个周期性传输需求：服务时间约为该周期缺失字节除以 `B`，期限为下一次使用时刻 `s(i,k)`。在此视角下，释放偏移的指派决定各会话恢复期限在时间轴上的分布，等价于将链路的时间容量在会话间进行分配——相邻释放之间的间隔与 `B` 的乘积给出该区间在无竞争条件下可用的恢复字节预算。据此可在总量检查之外陈述一个更强的候选可行性条件：每个会话的周期恢复需求应在其期限之前获得足够的链路时间。该条件是待验证的建模假设，其精确形式依赖实测的传输服务曲线：链路时间并非排他分配，主机备份、缺口重算与跨会话竞争共享同一资源，发起到完成的窗口还包含调度等待（诊断限制见 [FINDING-H5](findings.md#finding-h5)）；提前恢复又以目标空间的提前占用为代价。因此，同一偏移选择实际上同时影响链路时间、GPU 空间的占用时长与批组成三类相互耦合的资源。
+
+GPU 空间维度存在对偶的论证。在部分逐出与定时恢复生效的前提下，单个会话的 GPU 驻留在周期内呈时变曲线：空闲段回落至保留前缀，恢复与计算段回升至完整状态。据此，任意时刻的总分配可近似分解为
+
+```text
+U(t) ~= N_act(t) * S_full + (N - N_act(t)) * S_ret
+```
+
+其中 `N_act(t)` 为该时刻处于活跃占用窗口（从恢复发起到逐出完成）的会话数，`S_full` 为会话当前的完整状态尺寸，`S_ret` 为空闲驻留尺寸（保留前缀与未逐出余量）；会话间尺寸异构或逐周期增长时，按各会话当前值分别求和。释放对齐使所有会话的活跃窗口重叠，`N_act` 在使用窗口内达到 `N`，总分配峰值趋于各会话完整状态之和；偏移均匀错开时 `N_act(t)` 有界于约 `N * rho`——`rho` 为单会话活跃占用窗口占周期的比例，含恢复提前量与计算时长——总分配峰值趋近各会话时间均值之和。二者之差即偏移可释放的容量余量，其比例由单会话驻留曲线的峰均比（曲线峰值与其时间均值之比，在上述两级近似下等于 `S_full / (rho*S_full + (1-rho)*S_ret)`）决定。峰均比由驻留策略塑造：逐出越深（`S_ret` 越小）、空闲段越长（`rho` 越小），峰均比越高，错开可得的收益越大；提前恢复延长活跃占用窗口、抬高 `rho`，相应削减该收益。该论证依赖两个前提——逐出确实发生、空闲区间确实存在；在全驻留下偏移不改变任何会话的驻留，二者不可混同。此为待消融的假设，对应的历史观察见 [FINDING-D3](findings.md#finding-d3)。
+
+<a id="observability"></a>验证上述约束需要关联应用输入、实际提交、模型执行、状态传输与输出进度：至少区分物理分配与有效内容、主机确认覆盖与存储进度、传输执行与完成上报等待、模型生成与用户交付。这些观测用于解释容量收益及延迟代价，具体采集协议放在评估文档中。
+
+**待补：** 批处理相关成本函数、传输服务模型、可行性条件，以及在独立工作负载上的预测误差。标定协议见 [Experiments](experiments.md)，已有观察见 [Findings](findings.md#paper-relevant-findings)。
+
+<a id="terminology"></a>
+## 术语表
+
+本节定义研究对象；策略是否构成贡献由设计论证和消融决定。描述性组合词在本文中明确定义，不宣称其具有唯一通用含义。
+
+| 术语 | 本文定义 |
+| --- | --- |
+| interaction session | 围绕共同历史持续推进的应用交互过程，可包含多个 request、turn 和连接 |
+| request / turn | 分别指一次指定接口层的请求、应用交互的一轮；使用时交代层级 |
+| workload profile | 按更新触发、实时输出契约和状态增长描述资源形状的分析类别；不等同于互斥的应用分类 |
+| event-triggered turn-based request | 由用户消息或外部事件触发一次有限响应的请求；下一次到达时间通常不由服务端提前知道 |
+| endpoint-triggered cascaded speech pipeline | 更准确的架构与控制描述：音频持续采集，通常由 VAD 或其他 endpointing 规则形成下游 ASR/LLM/TTS 阶段请求；“VAD cascade”只是本文此前使用的简称，不是唯一固定的类别名 |
+| clocked full-duplex session | 会话持续打开，输入与输出重叠并按媒体时钟更新的双工会话；周期性和输出预算需由应用契约给出 |
+| model-level full duplex | 模型在输出期间继续接收输入，并把沉默、重叠、附和、打断或主动开口纳入持续时间上下文或动作；仅有双向传输或外部取消不自动满足 |
+| cascaded speech pipeline | 模块化架构轴：把 ASR、文本 LLM 或对话管理器、TTS 等组件串联起来；它可以是半双工，也可以通过微分块和外部协调实现部分或全部双工 |
+| VAD / endpointing / turn detection | VAD 只检测音频中是否有语音；endpointing 或 turn detection 根据 VAD、静默时长、语义和策略决定何时提交或结束一段输入；这些控制信号不等同于模型级全双工 |
+| half-duplex interaction | 交互时序轴：一方基本说完、另一方再回应，或系统等待端点后才回应；它与是否采用级联架构是两个正交问题 |
+| streaming / full duplex | 分别指增量处理、输入与输出能够重叠；均不隐含周期性 |
+| periodic interaction session | 更新资格具有可描述周期规律、历史跨更新延续的会话 |
+| update | 一次应用级更新；实现中的 tick 与 engine iteration 需映射到此对象，不能直接等同 |
+| period / release time / release offset | 分别为 `T`、`r(i,k)`、相对共同时间原点的 `phi_i` |
+| input chunk | 更新携带的新增输入块；切分单位由应用定义，不一定是媒体帧 |
+| update latency target | 从指定起点到指定完成事件的软实时目标 `D_i` |
+| generated-token count / output token cap | 在生成可按更新归因时的 `m(i,k)` 与上限 `M`，与消费量分开 |
+| logical context | 参考执行中保留、可影响后续模型计算的历史；具体输入与生成保留语义须固定 |
+| historical KV state | 与该上下文对应的可复用 attention key/value 状态 |
+| KV working set | 对指定计算或访问窗口所需的 KV 集合；使用时必须给出窗口，不作为全部历史或驻留量的别名 |
+| GPU-resident KV / allocated KV space | 分别为 GPU 中有效的 KV 内容、已分配的物理空间；分配不等于内容就绪 |
+| host-backed KV / confirmed host coverage | 存在有效且完成主机副本的状态及其覆盖集合；可以与 GPU 副本并存 |
+| KV-idle interval | 给定状态两次使用之间不被执行访问的区间 |
+| partial KV eviction | 移除选定 GPU KV 内容以回收空间的操作；请求引用与共享引用需分别处理 |
+| retained GPU prefix | 策略尝试保留的 GPU 前缀，`K` 以 block 计；不隐含整个会话的驻留上限或永久保护 |
+| incremental host backing | 随状态产生逐步建立主机副本的操作 |
+| on-demand KV reload / recomputation | 分别指需求出现后的主机回载、根据保留历史重新计算缺失状态 |
+| KV prefetching | 在预计使用前发起 KV 恢复；是否早于输入释放需单独说明 |
+| release-offset scheduling | 在应用允许的范围内选择各会话释放位置的策略 |
+| KV-cache capacity limit / KV-capacity-bound | 分别为 KV 物理容量上限、该容量限制满足服务目标的负载区间 |
+| Conveyor | 当前系统的暂定专名 |
+
+<a id="scope"></a>
+## 研究范围
+
+研究对象是规律更新、跨更新保留历史的交互会话，以及可预测需求下的 KV 驻留与恢复调度。模型、模态、输出架构、硬件和设备拓扑通过状态大小、计算成本与传输条件影响结论；当前原型覆盖的实例不确定最终论文边界。
+
+系统无法消除计算、存储或链路的总产能限制；超出可行区间时仍需准入或负载管理。对于可以接受上下文压缩、截断或其他模型结构的应用，应在质量与资源代价上比较相应替代方案，而不能预先宣称它们无效。
+
+<a id="sources-and-remaining-background-work"></a>
+## 来源与待补背景
+
+以下为外部背景来源，不是项目测量结果：
+
+- Défossez et al., *Moshi*：[原文](https://arxiv.org/abs/2410.00037)，音频表示与时间对齐部分。
+- Veluri et al., *SyncLLM*：[原文](https://arxiv.org/abs/2409.15594)，同步分块与真实时间建模部分。
+- Lin et al., *Full-Duplex-Bench*：[论文摘要与全文笔记](papers/Full-Duplex-Bench-%20A%20Benchmark%20to%20Evaluate%20Full-Duplex%20Spoken%20Dialogue%20Models%20on%20Turn-taking%20Capabilities/overview_cn.md)，将 `cascaded models` 用作 ASR、LLM、TTS 模块化管线的架构名称，并把它与 half/full-duplex 的交互时序分开讨论。
+- Yang et al., *DuplexCascade*：[原文](https://arxiv.org/abs/2603.09180)，说明级联 ASR–LLM–TTS 架构可以去除 VAD 端点门控并通过 micro-turn 实现全双工；它是架构轴与交互轴正交的反例。
+- [全双工模型、产品与 serving 版图](references/full-duplex-model-product-serving-landscape-2026-08.md)：整理模型级全双工的划界、公开实例，以及与级联流式方案的能力取舍；具体产品属性仍需回到原始来源核验。
+- [Thinking Machines 交互模型分析](references/thinking-machines-interaction-model.md)：整理共享时间线、沉默、重叠、插话、搜索和界面更新等交互事件；公开视频分析不等同于生产流量证据。
+- [全双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md)：整理级联语音 serving 中的播放进度、barge-in、阶段协调与 KV 管理；其合成或模拟 workload 不能直接替代真实会话证据。
+- Denning, *The Working Set Model for Program Behavior*, 1968：[原文 DOI](https://doi.org/10.1145/363095.363141)。工作集需要明确访问窗口。
+- Linux *Deadline Task Scheduling*：[定义](https://docs.kernel.org/scheduler/sched-deadline.html)。周期任务、释放与相对 deadline 的术语参照。
+
+**待补：** 选定代表应用的更新契约；VAD 端点触发与持续双工输出时钟的一手来源；长期历史依赖的任务证据；真实会话时长与迟到分布；最接近的持续会话服务和 KV 管理工作。以上文献用于支持具体属性，不足以单独证明行业普遍共识或本系统新颖性。

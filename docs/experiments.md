@@ -1,199 +1,211 @@
-# Experiments
+# 评估计划与复现
 
-## Evaluation Readiness
+<a id="evaluation-questions"></a>
+## 评估问题
 
-当前仓库可以运行 Upstream Metronome、matched Metronome baseline 和 Conveyor，但还不能直接写论文 Evaluation。最重要的阻塞项是两个 first-party evaluated systems 的每段 decode cap 不同（见 [Executed Decode Difference](#executed-decode-difference)）：两者接收相同 offered input，当前却不执行相同 decode work。正式比较必须在独立实验事务中统一该行为、保留新 manifest，并重新运行全部论文数据。
+评估围绕承载能力、服务代价与机制因果关系组织。表中是待执行的研究计划，不预设任何系统获胜。
 
-当前 Qwen2.5-Omni runner 只产生 Thinker 文本 token，不含 Talker、Code2Wav 或 PCM 输出。因此以下 output cap 与交付计数都是 serving-harness 变量，不能解释为音频播放率或最低媒体交付要求。
+| 问题 | 比较与观测 | 可支持的主张 | 否定或收缩主张的结果 |
+| --- | --- | --- | --- |
+| Q1：KV 容量何时先限制服务？ | 扫描并发与上下文，同时测容量、模型进度、排队和计算 | 存在明确的 KV 容量受限区间 | 输入处理或计算始终先饱和，容量动机未在该域成立 |
+| Q2：能承载多少满足目标的会话？ | 同输入、参考语义和服务目标下比较全驻留与 Conveyor | 给定期限和负载分布下的容量收益 | 降低驻留却没有增加达标承载能力 |
+| Q3：减少驻留付出什么延迟代价？ | 输入到结果的分布及恢复关键路径分解 | 收益与响应代价的可量化关系 | 延迟/落后违约抵消容量收益 |
+| Q4：每项机制分别贡献什么？ | 偏移、主机副本、逐出、预取与组合对照 | 机制的独立作用及相互影响 | 收益来自未匹配的生成量或执行模式 |
+| Q5：资源模型能否预测新工作点？ | 独立标定、留出配置验证瓶颈与预测误差 | 对容量、计算和恢复边界的解释 | 依赖逐点回拟合，无法预测瓶颈变化 |
+| Q6：历史语义与应用质量是否保持？ | 相同输入参考执行、状态往返、历史依赖任务 | 搬运正确性及保留历史的应用价值 | 状态不一致、输入丢失，或质量收益仅来自偏置任务 |
+| Q7：何时无益或失效？ | 短会话、低负载、迟到、覆盖缺口、带宽/主机容量压力 | 开销与适用边界 | 应如实报告，不从主图删除失败区域 |
 
-## Configuration Domains
+这些问题按可依赖关系推进。评估首先联合改变会话规模与上下文条件（Q1），检查 KV 分配是否在计算和输入处理之前限制服务，以建立问题实例；随后在相同参考历史与服务标准下比较不同驻留和恢复方案（Q2、Q3），确定资源节省是否转化为达标承载能力及其延迟代价；机制分析（Q4）进一步固定非目标条件，分别检查主机复制、逐出和不同预取触发的作用；资源模型（Q5）与正确性、质量协议（Q6）解释结果并检验其外推能力；扰动与压力条件（Q7）划定适用边界。对于没有获得服务收益的配置，保留其恢复、计算与等待分解，用于解释边界而非从结果中删除。
 
-项目区分三个配置域：
+<a id="workload-and-platform-matrix"></a>
+## 工作负载与平台矩阵
 
-| 配置域 | 用途 | 证据地位 |
+代表性工作负载与受控压力负载承担不同作用：前者评估实际服务价值，后者定位资源边界。两者都需给出生成过程和适用范围。
+
+| 维度 | 应覆盖的变化 | 待补材料 |
 | --- | --- | --- |
-| Abstract Model | 使用 \(T,D,M,N,K\) 表达周期、延迟目标、输出上限、会话数和保留前缀 | 问题与资源模型 |
-| Measured Stack | 本仓锁定模型、runtime、device 和 client 的真机实例 | 当前可运行、结论必须带域限定 |
-| Analytical Reference Scenario | 用于多资源 roofline 或外部硬件 profile 的参数场景 | 只有校准与验证后才能支持外推 |
+| 应用时间契约 | 固定更新、可容许抖动、不同周期；偏移是否可控 | 选定应用原始论文或协议，以及时间事件映射 |
+| 会话生命周期 | 短/长会话、混合长度、加入退出、持续增长 | 数据来源、分布、种子、初始上下文和观测期限 |
+| 输入与输出工作 | 输入内容/速率、生成量及保留历史、输出阶段 | 精确单位和各阶段工作量，避免只匹配 token/s |
+| 历史依赖 | 常规任务与显式长历史压力任务 | 任务来源、评分规则和质量对照 |
+| 状态几何 | 不同模型、上下文范围、KV 精度与共享比例 | 每种模型状态字节及计算成本映射 |
+| 资源条件 | GPU 可用 KV 容量、主机容量、双向链路、拓扑 | 设备/互连清单、NUMA 与并发传输标定 |
 
-Analytical Reference Scenario 不因计划写入论文就自动成为实测配置。线性外推必须明确标为推导，不能称作已经验证的 roofline。
+优先选择能够改变关键资源比例的配置，而不以模型数量本身代替外部有效性。额外模型、输出路径或设备拓扑尚未覆盖时标明未测；最终矩阵冻结前不据当前原型删减研究范围。
 
-### Measured Stack
+<a id="evaluated-systems"></a>
+## 被评估系统
 
-| 参数 | 当前值 |
+<a id="comparison-families"></a>
+### 比较族与公平性
+
+| 比较对象 | 目的 | 公平性要求 |
+| --- | --- | --- |
+| 完整历史、GPU 全驻留 | 容量与延迟参照（[问题定义的参照策略](problem.md#why-historical-kv-state-can-limit-capacity)） | 相同参考执行和输入管线；报告准入上限与失败 |
+| 完整历史、缺失状态重算 | 衡量恢复所需计算代价 | 相同历史与目标工作，不把缩短生成当作优化 |
+| 完整历史、按需主机回载 | 隔离提前恢复的价值 | 匹配副本策略、缓存预算与传输实现 |
+| Conveyor 及其消融 | 验证时序与驻留策略 | 除目标变量外逐项对齐实现和工作量 |
+| 最接近的持续会话/KV 管理系统 | 验证相对已有工作的增量 | **待选：** 原始论文、可执行实现、版本、适配与缺失能力 |
+| 窗口、压缩或检索等替代策略 | 比较资源与应用质量的取舍 | 单列语义差异，使用相同任务与明确质量标准 |
+
+不可获得或无法适配的系统应说明原因，并区分重实现、分析参照和实测基线。窗口化方案可以在长历史压力任务上表现较差，但实验不能写成“基线必败”；常规任务与压力任务都应保留。
+
+<a id="fairness-checklist-for-the-protocol"></a>正式比较应固定模型与精度、输入内容及处理语义、实际生成工作、参考历史、调度模式、批处理预算、缓存与主机副本预算、输出交付口径和观测开关。若某项机制必须改变其中一项，增加对应控制组并单列代价。
+
+端到端系统比较可以包含整体设计差异；声称某项机制造成收益时则需要控制变量。相同配置名称、offload 开关关闭或相同默认值均不能代替实际路径核对。
+
+> **【关键 · 定义】** 正式比较的资格：端到端比较须匹配工作量与统一服务判定，机制收益主张须控制变量；配置名称与默认开关不能代替实际路径核对。
+
+<a id="ablation-matrix"></a>
+### 消融矩阵
+
+下列配置是目标实验矩阵，尚不能从现有开关直接推定已具备全部控制组。
+
+| 配置 | 释放策略 | 主机副本 | idle 逐出 | 恢复触发 |
+| --- | --- | --- | --- | --- |
+| 全驻留控制 | 同步/均匀偏移成对 | 无 | 无 | 无 |
+| 副本开销控制 | 固定释放策略 | 有 | 无 | 无 |
+| 按需恢复控制 | 同上 | 有 | 有 | 当前需求 |
+| 提交后预取 | 同上 | 有 | 有 | 输入提交后、模型使用前 |
+| 基于节奏预取 | 同上 | 有 | 有 | 预计未来需求 |
+
+逐出组再配同步与偏移对照；扫描保留前缀、偏移分组、提前量和资源压力，覆盖机制之间的交互。
+
+恢复触发对照用于区分提前信息与搬运实现的作用，并对应[问题定义的三级时间信息](problem.md#why-timing-information-matters)：按需恢复与提交后预取不使用未来时间信息，基于节奏预取使用节奏与释放时刻（前两级），释放策略列中的偏移对照检验第三级的控制权。比较时固定参考历史、主机副本和传输路径，并记录触发信号实际产生的时刻及相关计算开始时刻。基于节奏的组还需说明时间信息是否在输入提交之前可获得；提交后预取则仅使用当时可见的需求。另设精确未来信息的分析/oracle 参照时，单独标明其不可部署的信息优势，使算法效果与额外先验能够区分。各触发对应的具体事件和实施资格需在实现后核验，不能仅按配置名称断言已完成正交消融。
+
+<a id="measurement-semantics"></a>
+## 测量语义
+
+<a id="service-and-capacity-metrics"></a>
+### 服务与容量指标
+
+| 指标 | 定义要求 |
+| --- | --- |
+| 更新服务延迟 | 明确释放/提交起点与模型阶段/交付终点，记录输入和结果关联 |
+| 用户可见延迟 | 从原始输入内容的时间基准到相关结果；包含切块、缓冲与后处理 |
+| 更新落后 | 根据已处理输入进度与已到达输入进度定义；不能从 RPC cadence 推断 |
+| 违约率与尾延迟 | 给出目标、允许比例、分位数和窗口；失败/超时样本单独计数，不丢弃 |
+| 达标承载能力 | 在指定期限、上下文/会话分布与服务标准下可接纳的负载；同时报告 offered、admitted 与 completed |
+| KV 占用 | GPU 已分配空间、有效内容、可复用缓存和主机副本分别计数；共享块不重复计算 |
+| 恢复开销 | 字节、发起排队、实际传输、完成上报及等待再次调度分别测量 |
+| 计算开销 | 模型步数、批形状、有效生成与重算工作、kernel 活跃时间及 CPU 开销 |
+
+**待作者决策：** 正式方法必须先确定四项定义：主完成事件及其可观测映射；延迟采用的输入时间基准；目标值与允许违约比例；观察期限、持续落后与会话失败规则。若各输出架构无法使用同一完成事件，应说明公共要求与各自映射，而不为统一表格强行等同。定义落实后，独立读者应能依据同一事件记录得到相同的达标判断；落实前只报告已定义的诊断量，不写“系统满足 SLO”或“已增加最大并发”。
+
+持续增长的完整历史通常使总体负载非平稳。必须报告随时间和上下文变化的轨迹；局部近稳态窗口需要说明选择规则，不能用其证明无限时长稳定。比较不同系统时使用相同的输入时间基准和观测期限。
+
+<a id="profiling"></a>
+### 关键路径分析
+
+先分解关键路径，再解释资源瓶颈。scheduler 墙钟计时可以包含等待，不能等同 GPU kernel 忙时。H2D 发起至完成上报的窗口可以包含调度延迟，不能直接当作 DMA 时长或据此推导物理带宽。
+
+**待补采集：** 跨层事件关联、传输 CUDA event、kernel 活跃区间、HBM 流量和探针开销。每项探针记录生产位置、时钟、开关与开销；带重型 profiling 的诊断 run 与主要性能采集分开，并验证扰动。
+
+<a id="correctness-and-quality-protocol"></a>
+## 正确性与质量协议
+
+1. 固定参考输入、模型配置和生成历史保留语义，比较有无状态搬运时的块内容与模型结果；非确定性路径报告容差及控制方法。
+2. 覆盖共享前缀、未满块、主机覆盖缺口、在途传输、容量拒绝、会话停止/取消及输入失败。
+3. 在代表性任务中评估保留历史的价值，再用不同历史距离的受控任务解释边界。为窗口、压缩或检索方案提供合理参数和相同质量标准。
+4. 将语义一致、应用质量和时限达标分开报告；运行未崩溃不能替代其中任何一项。
+
+**待补：** 数据集与许可、任务评分、重复种子、非确定性容差、故障注入与判定规则。
+
+<a id="resource-model-validation"></a>
+## 资源模型验证
+
+独立测量 KV 几何、批处理相关计算成本、有效 GPU KV 池、主机副本容量、双向及并发传输服务曲线。在部分配置上标定，用留出配置验证预测误差和瓶颈分类，并报告模型失效处。
+
+多设备条件下依据实际互连、NUMA、主存和通信竞争建模；不能预设只有恢复带宽非线性，或增加设备必然不增加恢复能力。相同输出 token 率也不能自动跨模型/多阶段输出换算容量：需要状态字节和计算路径的明确映射。
+
+**待补：** 参数表、标定/验证划分、误差指标、误差接受标准，以及不确定性传播。
+
+<a id="run-protocol"></a>
+## 运行协议
+
+每个正式数据点使用固定版本和展开后的配置，记录实际初始状态、输入生成过程、随机种子、预热和观测区间。重复运行并报告运行级变异；同一 run 内多个会话不能自动当作独立重复。预先定义超时、失败、异常值和终止条件，并保留全部试验的归属。
+
+主结果应同时给出承载能力、尾延迟、质量及资源代价。容量提升没有通过服务目标时，仍报告驻留变化与失效原因，但不计为达标容量收益。
+
+**待补：** 运行次数、置信区间方法、扫描粒度、并发边界搜索算法、总时程及停止规则。
+
+<a id="reproducibility-appendix-current-prototype"></a>
+## 复现附录：当前原型
+
+以下是当前可执行实例的复现信息，不是最终论文配置或实验完成声明。证据与比较资格见 [Findings](findings.md#evidence-scope)。
+
+<a id="configuration-domains"></a><a id="measured-stack"></a>
+### 当前配置
+
+分析使用抽象资源与时间参数；当前运行使用锁定的软件/硬件实例；外部参数场景仅作分析参照。配置真值来自 executable config 与每次 run manifest。
+
+| 参数 | 当前配置 |
 | --- | --- |
 | 模型 | Qwen2.5-Omni-7B |
-| 执行路径 | Thinker text only |
+| 执行路径 | Thinker text only，无 Talker、Code2Wav 或 PCM 输出 |
 | 运行时 | vLLM 0.23 |
-| 设备 | RTX 3090, 24 GiB, PCIe Gen3 |
+| 设备实例 | RTX 3090，24 GiB，PCIe Gen3 |
 
-model revision、依赖锁和 GPU index 仍以 executable config 与 run manifest 为准；表中设备是当前证据域，不是系统成立的硬件要求。
+<a id="measured-workload"></a>
 
-### Measured Workload
-
-| 参数 | 当前值 | 语义 |
+| 参数 | 当前配置 | 解释 |
 | --- | --- | --- |
-| 周期 \(T\) | 2000 ms | 同一会话相邻两次应用级 release 的间隔 |
-| 默认会话数 | 8 | 单个 run 的默认并发点，不是容量结论 |
-| run horizon | 600 s | 默认持续时间 |
-| 输入块 | 20 ms PCM chunks，由 client 在一个周期内累计 | offered input |
-| 每周期输出 token 上限 \(M\) | 25 | harness cap 和 gateway consumption limit，不是最低交付量 |
-| measured context growth | 78 token/period | 当前栈标定值，用于容量模型，不驱动 client |
-| 单 token KV bytes | 56 KiB | 由当前模型结构和精度决定 |
+| 周期 | 2000 ms | 应用更新目标间隔 |
+| 默认会话数 | 8 | 默认配置点 |
+| 默认运行时长 | 600 s | 有限观测期限 |
+| 输入 | 20 ms PCM chunks 按周期累计 | offered input |
+| 输出上限 M | 25 | harness 与消费上限；worker 差异见下表 |
+| `CONTEXT_GROWTH_TOKENS_PER_PERIOD` | 78 | 当前容量分析配置常数，非已确认净保留增长；差异见 FINDING-E4 |
+| 每 token KV 大小 | 56 KiB | 当前模型与精度的状态几何 |
 
-这些值由 `experiments/shared/workload.py`、`model.py` 与 `platform.py` 单份持有。context growth 是输入与输出之和：当前栈每周期新增输入实测为 53 token（2 s 音频经 feature extraction 与模板），输出在实测路径跑满 decode cap 25，合计 78。启用 KV eviction 的 run 里 scheduler 单步还可能包含恢复缺口的重算 token，不改变逻辑上下文的增长率。
+可执行常量位于 `experiments/shared/workload.py`、`model.py` 与 `platform.py`。实际分词、生成和保留历史需要分别记录；恢复重算工作也另计。
 
-### Executed Decode Difference
+<a id="executed-decode-difference"></a>
+### 生成工作量差异
 
-| Evaluated system | offered input | gateway consumption cap | worker per-segment decode cap | 当前比较资格 |
-| --- | --- | --- | --- | --- |
-| Upstream Metronome | 当前音频输入 | \(M\) | 上游行为 | 参考，不作主要公平对比 |
-| matched Metronome baseline | 与 Conveyor 同源 | \(M\) | \(M+8\) | 不合格；需修复并重跑 |
-| Conveyor | 与 matched baseline 同源 | \(M\) | \(M\) | 可做机制诊断，暂不可作最终跨系统结论 |
+| 当前系统 | 代码来源/用途 | worker 生成上限 | 其他需匹配的差异 |
+| --- | --- | --- | --- |
+| Upstream Metronome | 只读上游 pin，来源参照 | 上游行为 | 输入处理、runtime 与观测不同 |
+| matched Metronome baseline | 默认 paringest，对比候选 | M+8 | 默认调度、输出等待与 connector 行为 |
+| Conveyor | 机制原型 | M | 同步调度、无等待 Step、主机 connector |
 
-两个当前 first-party worker 都设置 `ignore_eos=True`。因此在正常 measured path 上，生成不会因 EOS 提前结束：matched Metronome baseline 运行到每段 \(M+8\) 的 cap，Conveyor 运行到每段 \(M\) 的 cap；只有 model-length 边界或异常终止等例外会提前结束。33-vs-25 的差异会改变 decode work，并可能造成未交付输出 backlog，不能只把它描述为交付层的小误差。
+两个 first-party worker 当前均使用 `ignore_eos=True`，正常路径运行到不同 cap；模型长度边界和异常仍可能提前停止。Conveyor 即使关闭逐出也建立主机 offload connector；baseline 目前没有同等同步调度配置接口。这些差异影响结果解释的三个环节：生成与保留规则差异改变每周期的状态增长，从而改变容量压力；调度与输出等待差异改变批形状与步时长，从而改变计算成本归因；失败与拒绝规则决定哪些样本进入主指标。修复这些差异后需要重新采集公平对照，不能重新解释旧数据使之看似匹配。
 
-## Evaluated Systems
+Conveyor 现有接口包括 gateway `--slots`、`--retained-prefix-blocks`、诊断用 `--evict-tail-blocks`、`--prefetch push` 和 `sync_scheduling`。它们不直接等于上文全部消融组；实际路径见 [System](system.md#implementation-boundary)。
 
-### Upstream Metronome
+<a id="initial-context-preloading"></a>
+### 初始上下文预加载
 
-Upstream Metronome 是 `third_party/metronome/` 的只读 pin，保留其原始 gateway 与 worker。它提供方法和代码来源映射，但 host-side input processing、观测字段和 runtime 行为与 Conveyor 不完全匹配，其数字不能与 Conveyor 的结果直接混用。
+`--initial-context-tokens` 当前通过近似随机词构造和模板控制初始上下文，不能保证目标值等于实际分词长度。正式实验应记录每会话实际长度和所有预加载完成事件，并排除初始化输出。构造与逐出屏障语义见 [System](system.md#initial-context-preloading)。
 
-### Matched Metronome Baseline
+初始化超时目前可以记录后继续执行，但验收会拒绝该 run 作为成功测量；不能把继续运行解释为状态构造已完成。
 
-`experiments/baseline` 的默认 `paringest` 配置是正式对比候选。它保留 Metronome 的 resumable request 和默认 GPU KV residency，只修复 host-side input processing、initial-context 场景下冻结的 `session.max_tokens`，并接入共同 observation producer。`vanilla` 和 `paringest` 是 artifact/implementation identifiers，不是论文中的两个系统贡献。
+<a id="implementation-diagnostics"></a>
+### 实现诊断字段
 
-### Conveyor
+| 字段 | 当前解释及限制 |
+| --- | --- |
+| `tokens_per_tick` / `tpt` | 继承接口字段，解释为 cap，不是每周期最低交付量 |
+| `deadline_met` | 系统间含义不同；Conveyor 表示 RPC 是否在周期内返回，不是模型完成 |
+| `deliv` | 当次从缓冲取出的 token 数，不等于本次输入生成量或新鲜度 |
+| `output_backlog` | 已生成未交付量，不能自行充当论文 SLO |
+| `gpu_ms` | 路径相关字段；Conveyor 无等待返回不包含本次完整 GPU 工作 |
+| `E/B/L/R` | 逐出、存储 cursor 推进、装载发起和完成上报；B 不等于确认副本字节，L–R 不等于纯传输时间 |
 
-Conveyor 的可执行配置包含以下研究开关和实现控制：
+低于 cap 的交付量可以来自缓冲时序或服务落后，单独不构成失败，也不证明当前模型学会自然短输出或沉默。
 
-| 配置 | 类型 | 当前接口 |
-| --- | --- | --- |
-| release-offset scheduling | research mechanism | gateway `--slots` |
-| partial KV eviction, fixed-tail mode | mechanism experiment | `--evict-tail-blocks` |
-| partial KV eviction, retained-prefix mode | main mechanism configuration | `--retained-prefix-blocks` |
-| KV prefetching | research mechanism candidate | `--prefetch push` |
-| synchronous scheduling | matched-control requirement for current eviction implementation | `sync_scheduling` |
-| no-wait `Step` | implementation choice | Conveyor worker behavior |
+<a id="repository-health-gates"></a>
+### 运行门槛与证据资格
 
-KV eviction 当前要求 synchronous scheduling，以避免 speculative engine iteration 与 block free 竞态。评估逐出机制时，control configuration 必须固定使用相同 scheduling mode；否则一次比较同时改变两项因素。
+运行检查与科学判定分开：
 
-## Initial-Context Preloading
+- **执行状态：** 进程、RPC、会话和初始化是否正常，终态是否成功。
+- **观测有效性：** 必要 artifact、可解析日志、hash 与来源是否完整。
+- **机制是否被实际使用：** 逐出/预取事件是否出现；零事件还需判断没有需求、容量门控或实现异常。
+- **研究目标：** 服务时限、质量和承载能力是否满足预定标准。
 
-`--initial-context-tokens` 在测量前为每个 session 构造指定长度的 context，用于把 context length 变成可控实验变量。初始化屏障的流程与 Conveyor 在屏障期间的 eviction hold 语义由 [`System`](system.md#initial-context-preloading) 持有；屏障超时按 [Repository Health Gates](#repository-health-gates) 判定。
+当前 runner 对部分错误、缺失日志和启用机制无事件进行拒绝；这描述运行器规则，不是所有科学问题的通用验收。两个 scanner 的 cap 检查并不完全相同，通用 finalize 也不等价于完整 manifest 语义检查。失败 run 可以支持失效边界分析，但不能记为成功性能点。
 
-这项设置是 workload state construction，不是研究机制。论文实验应报告 initial context length，而不是把它写成系统设计。
+<a id="evidence-acceptance"></a>正式性能比较使用可重建的 clean-source 运行、完整配置与有效观测；dirty 诊断需保留 patch。精确 run、hash 和来源由 [evidence registry](agent/evidence.json) 解析，artifact 操作遵守 [results 规则](../results/README.md)。
 
-## Measurement Semantics
-
-### Repository Health Gates
-
-以下条件可以直接判定 run 无法作为证据：
-
-- process、worker session 或 service RPC 出错；
-- client 没有收到周期事件，或 client artifact 报错；
-- initialization barrier 超时；
-- manifest、required artifact、hash 或 terminal status 不完整；
-- 启用 KV eviction 或 prefetch 却没有对应 `E` 或 `L trigger=prefetch` 事件；
-- 日志语法损坏，无法解析实际交付量或时序。
-
-### Profiling
-
-每周期墙钟时间分解到 scheduler 逻辑耗时与 GPU kernel 耗时两层，只有调度器视角的 phase 计时不足以解释 phase 内部的空闲。开销可忽略的探针常开；kernel 级 capture 等有明显开销的探针由环境变量开关控制，正式数据点须记录开关状态。
-
-### Implementation Diagnostics
-
-以下字段只用于诊断，不能单独充当论文 correctness 或 QoE gate：
-
-| 字段 | 当前含义 | 禁止解释 |
-| --- | --- | --- |
-| protobuf `tokens_per_tick` / internal `tpt` | 继承的 wire identifier，项目把它解释为 output cap \(M\) | 每周期必须交付的 token 数 |
-| `deadline_met` | Upstream Metronome 与 Conveyor 当前含义不同；Conveyor 仅表示 service RPC 是否在 period 内返回 | 模型响应完成、音频未卡顿 |
-| `deliv` | 某次 release 实际从未交付输出缓冲取出的 token 数；可以为 0 到 \(M\)，且不等于 \(m_{i,k}\) | 单独等于 content freshness，或归属于当前输入 |
-| `output_backlog` | 已生成未交付 token 数 | 固定阈值即论文 SLO |
-| `gpu_ms` | worker 返回的实现字段；无等待 Conveyor 路径不包含本次 GPU 工作 | 统一的端到端 latency |
-| large prefill | 可能发生重算的诊断特征 | 未结合 host coverage 就证明 reload 失败 |
-
-单次 `deliv` 少于 \(M\) 本身不构成 run failure。当前实现中的低交付可能来自启动期尚无可消费输出、缓冲时序、服务滞后、异常终止或 malformed execution；它不能作为当前 harness 已观察到自然短输出或 learned silence 的证据。论文级 latency、freshness、jitter-buffer stall 与最大可调度并发的 operational definitions 仍待 evaluation design 确定。
-
-## Planned EuroSys Evaluation
-
-正式 Evaluation 建议围绕六个 reviewer question 组织；每个问题对应一个主图或表，而不是按代码模块罗列 microbenchmark。
-
-覆盖面要求：至少两到三个周期不同的双工模型（例如 2 s、1 s、0.5 s 量级；Metronome 评测所用模型均可选），结论不能只建立在一个模型上；负载须有可辩护的会话时长分布，同时包含短会话与长会话（平均会话时长 30 s 与 60 s 对调度是不同的 case），来源是公开双工语音数据集或写明生成规则的合成分布；结果按会话长短分别报告，并说明长短会话之间机制如何过渡。
-
-### Q1: Does KV Capacity Limit Concurrency Before Compute?
-
-- 在统一 decode cap 后，对 matched baseline 扫描 \(N\) 与 context length；
-- 同时报告 GPU KV occupancy、每周期 busy time、SM utilization、HBM bandwidth、queue state 和 session liveness；
-- 展示容量边界出现时仍有多少 compute headroom；
-- 将 host-side feature extraction 隔离，避免把工程拥堵误归因于 KV capacity。
-
-主结果应是 capacity frontier，而不是某个 baseline 队列故障的复现。
-
-### Q2: How Much Concurrency Does Conveyor Recover?
-
-- 在同模型、输入、decode cap、scheduler mode 和 observation 下扫描 \(N\)；
-- 报告 matched baseline 与 Conveyor 的可持续区间、GPU KV occupancy 和每会话 GPU-resident blocks；
-- 同时报告 host memory footprint、H2D/D2H bytes 和 context-length sensitivity；
-- 分开给出测量区间与资源模型预测，不用短 run 线性外推代替稳定性实验。
-
-最大可调度并发的正式 gate 必须在 latency/QoE 指标确定后再冻结。
-
-### Q3: What Is the Latency Cost of Capacity Expansion?
-
-- 从 input release 分解 feature extraction、scheduler admission、on-demand reload、prefill 和 decode；
-- 报告每会话分布和 tail，而不仅是聚合均值；
-- 对 context length、retained prefix \(K\) 和 session count 做敏感性分析；
-- 若加入完整音频输出链，再报告 jitter-buffer consumption 或 playback stall；当前 Thinker-only 路径不得代报。
-
-### Q4: Which Mechanism Provides Which Benefit?
-
-采用正交消融：
-
-1. matched baseline；
-2. 仅 release offsets；
-3. release offsets + host backing + partial eviction；
-4. 加 KV prefetch；
-5. retained-prefix \(K\) sweep；
-6. matched synchronous-scheduling control。
-
-release offsets 的 input-processing 收益与 restore-bandwidth 平滑收益要分别测量；后者不能只凭对机制的直觉推断。
-
-### Q5: Does the Resource Model Generalize?
-
-- 标定 KV bytes/token、decode/prefill compute、HBM traffic 和 PCIe copy throughput；
-- 用这些 primitive 构建 capacity / compute / restore-bandwidth roofline；
-- 在至少一个额外 GPU 或不同互连 profile 上验证预测误差；
-- 在至少一个周期不同的第二个双工模型上验证容量与恢复轴的预测；
-- 对输出 token 率做敏感性配置：当前 \(M\) 是 harness 常数，而全双工音频输出形态的输出率由 codec 播放率决定；sweep 应包含以播放率为参照的输出率配置点（可用 Thinker 文本模拟该 token 率），使容量结论可外推到音频输出形态；
-- 清楚区分实测点、模拟器标定和 analytical scenario。
-
-### Q6: What Are the Overheads and Failure Boundaries?
-
-- host-backing CPU memory 与 D2H overhead；
-- partial eviction 和 prefix-match bookkeeping overhead；
-- prefetch 的命中、迟到、capacity deferral 和 LRU eviction；
-- host coverage 缺口引发的 recomputation；
-- 长时间稳定性、context-length limit、session churn 和异常路径；
-- 区间边界：机制覆盖的是 KV 开始不足到恢复流量仍能在 deadline 内完成之间的区间；报告恢复需求超过带宽后的行为（回退到重算或拒绝并发），并说明 KV 充裕时的准入策略（先接纳多少会话）如何影响到达该边界的时间；多 GPU 下同主机多卡争抢 PCIe 的情形记为本文范围之外。
-
-## Run Protocol
-
-每个正式数据点至少要求：
-
-1. clean source 和唯一 commit；
-2. fresh worker、固定 model revision 和环境 profile；
-3. 完整 manifest，记录 expanded config；
-4. 足够长的 steady-state window，排除 warmup 与 initialization；
-5. 重复运行、方差或置信区间；
-6. 成功的 terminal `status.json` 和全部 required artifact hashes；
-7. finding card 明确配置域、指标定义、样本数和限制。
-
-成功进程退出不等于成功 run；验证规则由 runner 和 `results/README.md` 执行。
-
-## Evidence Acceptance
-
-论文主结果只能使用 clean-source formal evidence。dirty run 可用于诊断，但必须保留可重建 patch artifact；缺少原始 artifact 的历史数字只能标为 legacy-unreconstructable，不能在新图中当作可复算结果呈现。
-
-旧 `results/` 与旧 manifest 使用产生它们时的 schema，不改写。新 run 使用 `kv_events.log`、`initial_context_tokens`、`output_token_cap`、`retained_prefix_blocks` 等当前接口。
+源码无法重建与统计无法复算是不同缺陷。保留日志仍可支持有明确限制的复算，不能据此获得公平或正式证据资格；缺少原始日志则不能重新画成实测结果。历史 artifact 和已引用记录保留原状，纠正通过后续记录表达。

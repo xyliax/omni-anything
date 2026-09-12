@@ -34,7 +34,7 @@
     },
     {
       "id": "CONTRACT-RUN-HEALTH",
-      "rule": "first-party validation rejects service RPC errors, session death, client-health failure, malformed delivery records, and output-cap mismatch; output below the cap remains a diagnostic observation rather than an automatic correctness failure",
+      "rule": "runner-specific validation checks service/client/session health, initialization, required observations and delivery syntax; output-cap checks differ between runners, and generic artifact finalization is not full manifest semantic validation; output below the cap is diagnostic; successful execution, exercised mechanisms and paper SLO acceptance are separate judgments",
       "owners": [
         "docs/experiments.md",
         "experiments/baseline/runner.py",
@@ -57,7 +57,7 @@
     },
     {
       "id": "CONTRACT-KV-EVICTION-SAFETY",
-      "rule": "partial KV eviction runs on an idle scheduler transition, releases request ownership before evicting selected GPU tail blocks, records host-backing coverage, and treats coverage gaps as recomputation rather than complete reload",
+      "rule": "eviction requires an idle session and safe execution/transfer references; the retained-prefix path runs at an idle scheduler transition, while fixed-tail diagnostics use a utility request with an idle check; current selection releases request references and uses a fixed tail margin, not intersection with confirmed host coverage; gaps may require recomputing a dependent suffix",
       "owners": [
         "docs/system.md",
         "engines/conveyor/AGENTS.md"
@@ -69,7 +69,7 @@
     },
     {
       "id": "CONTRACT-KV-STATE-AUTHORITY",
-      "rule": "session activity, block residency, host-backing coverage, transfer state, and request ownership are separate dimensions; block pools and runtime request state own physical truth",
+      "rule": "activity, physical allocation, valid content, confirmed host coverage, bidirectional transfer state and shared references are separate dimensions; allocation or a store cursor does not establish copy completion; block pools, transfer events and runtime references determine state",
       "owners": [
         "docs/system.md",
         "engines/conveyor/worker/engine_patch/omni_state.py"
@@ -89,7 +89,7 @@
     },
     {
       "id": "CONTRACT-PREFETCH-FALLBACK",
-      "rule": "KV prefetching changes timing only; capacity deferral, lateness, input overtaking, or later cache eviction falls back to on-demand reload or recomputation",
+      "rule": "design requirement: prefetch failure, capacity deferral, demand overtaking and later eviction must preserve a valid demand-recovery path; current code provides such paths but source review is not exhaustive concurrency validation; completed-cache publication and reference lifetimes require separate checks",
       "owners": [
         "docs/system.md",
         "engines/conveyor/AGENTS.md"

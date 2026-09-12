@@ -2,6 +2,7 @@
 
 Updated: 2026-08-03
 2026-08-07 快照：并入产品与文献查证的证据层；术语统一为全双工。
+2026-09-13 快照：增补级联与模型级全双工的 2026 比较口径（第 6 节）；复核主表 tick 数据无需修正。
 
 ## 划界
 
@@ -135,7 +136,7 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 | [Amazon Nova 2 Sonic][nova-sonic] | Bedrock 生产；双向 speech-to-speech、interrupt、async tool；最高 1M tokens；单连接 8 min 可续 | 官方仍强调 "intelligent turn-taking detects when user finishes speaking" |
 | [Qwen3.5-Omni-Plus-Realtime][qwen-realtime] | Model Studio API；session 最长 120 min；history 100 audio turns / 累计 ≈600s，drop-oldest；语义打断；思考模式与音频输出互斥 | 模型内部时序与原生 tick 未公开 |
 
-其他常被称为 full-duplex 的 FireRedChat、FlexDuo、DuplexCascade、Unmute 等，若核心仍是外部 VAD/ASR/LLM/TTS/controller 或两套不能同时听说的 LLM 进程，属于系统级双向/级联方案，不纳入本表。Qwen2.5/3.x-Omni、GLM-4-Voice、Step-Audio 等普通流式语音模型也不能仅凭 streaming output 推断为模型级全双工。
+其他常被称为 full-duplex 的 FireRedChat、FlexDuo、DuplexCascade、Unmute 等，需要按其实际控制路径区分。若核心仍是外部 VAD/ASR/LLM/TTS/controller 或两套不能同时听说的 LLM 进程，属于系统级双向/级联方案，不应仅凭双向传输归入模型级全双工；但 DuplexCascade 明确提出了 **VAD-free cascaded ASR–LLM–TTS pipeline**，用固定 micro-turn 和控制 token 实现全双工，是“级联架构”和“全双工交互”可以组合的直接反例。Qwen2.5/3.x-Omni、GLM-4-Voice、Step-Audio 等普通流式语音模型也不能仅凭 streaming output 推断为模型级全双工。
 
 明确剔除：dGSLM 是双路对话生成先驱但不是在线 agent；Mini-Omni2 的 duplex 主要是关键词打断；DuplexMamba 并行生成的是文本非 assistant speech；VITA/Freeze-Omni/MinMo/Nemotron VoiceChat 依赖双模型或外部控制。它们可作组件 baseline，但不应与模型级全双工混在同一规格表里。
 
@@ -148,12 +149,19 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 
 检索记录（2026-08-01）：除 Metronome 外未核验到全双工 GPU serving 论文；[Awesome-Full-Duplex-SDM][awesome-fd] 无 serving 条目。[Nemotron 3 VoiceChat][nemotron-voicechat]（2026-03，12B 开源）模型卡无并发或批量规格。
 
+## 6. 级联与模型级全双工的 2026 比较口径（2026-09-13 增补）
+
+- **产业分析的共识框架已从"谁更快"转为取舍**：级联胜在模块可替换、逐阶段可观测与审计、任意文本 LLM 与工具生态（[Coval 2026 指南][coval-2026]、[Gradium 对比][gradium-2026]，均为厂商/产业分析内容）；模型级全双工胜在重叠语音、backchannel、及时打断等双工行为与副语言信息（[2026 S2S 架构综述][ksopyla-2026]，个人技术博客）。"级联必然更慢"被明确否定：流式 TTS 首音频已降至 ~100 ms TTFB，级联端到端延迟主要由 LLM TTFT 决定（[Inworld 架构对比][inworld-arch]，厂商内容）。Gradium（Moshi 作者创业公司）自述当前研究问题是"把级联的模块化带进全双工架构"。
+- **级联结构上的全双工决策粒度是秒级**：[DuplexCascade][duplexcascade]（arXiv:2603.09180）无任何 VAD——流式 ASR 的部分结果每 `Δt` 被 flush 成一个文本 micro-turn 送入 LLM，用户静音也照常运行（以 `<no voice>` token 表示），话轮决策由 LLM 通过控制 token（`<user is speaking>`/`<user finish speaking>`/`<user is interrupting>`/`<user backchannel>` 等）在每个 tick 作出；对话历史跨 micro-turn 持续增长（训练上限 4096 token），推理侧 KV 缓存实现未披露。`Δt` 消融（0.3–1.8 s，Full-Duplex-Bench）：话轮准确率在 1.2 s 最高后回落，延迟随 `Δt` 单调上升，作者取 0.6 s 为折中（模拟评测）。
+- **交互基准对照**（自报，无独立复现）：PersonaPlex 自报 FullDuplexBench 用户打断成功率 100%（对照 Gemini Live 43.9%、Moshi 60.6%）、平均响应延迟 205 ms（[综述转述][ksopyla-2026]）。
+- 检索复核（2026-09-13）：主表 2026-08 前的模型与 tick 数据无需修正；未发现 2026-08 之后新的模型级全双工生产上线声明。
+
 ## Sources
 
 - 官方产品/系统说明：[GPT-Live 发布][gpt-live]、[system card][gpt-live-card]、[Seeduplex 页面][seeduplex]、[技术博客][seeduplex-blog]、[TML Interaction Models][tml]。
 - 官方 API 文档：[GPT Realtime][gpt-realtime]、[Realtime guide][gpt-realtime-guide]、[Gemini Live][gemini-live]、[Live session guide][gemini-live-guide]、[Nova 2 Sonic][nova-sonic]、[Qwen Realtime][qwen-realtime]。
 - 重点开源/serving 入口：[Moshi][moshi-repo]、[Unmute][unmute]、[PersonaPlex][personaplex-repo]、[MiniCPM-o][minicpmo-repo] / [Realtime API][minicpmo-realtime-api]、[Raon model][raon-repo] / [multi-session server][raon-server]。
-- 其余开源入口：[Fun-Audio-Chat][funaudiochat-repo]、[Covo-Audio][covo-repo]、[DuplexSLA][duplexsla-repo]、[DuplexOmni][duplexomni-repo]、[BayLing-Duplex][bayling-repo]、[SALMONN][salmonn-repo]、[Voila][voila-repo]、[Nemotron 3 VoiceChat][nemotron-voicechat]。
+- 其余开源入口：[Fun-Audio-Chat][funaudiochat-repo]、[Covo-Audio][covo-repo]、[DuplexSLA][duplexsla-repo]、[DuplexOmni][duplexomni-repo]、[BayLing-Duplex][bayling-repo]、[SALMONN][salmonn-repo]、[Voila][voila-repo]、[Nemotron 3 VoiceChat][nemotron-voicechat]；级联全双工反例见 [DuplexCascade][duplexcascade]。
 - 各论文入口已链接在主表工作名上。
 - 检索入口：[Awesome-Full-Duplex-SDM][awesome-fd]。
 
@@ -199,9 +207,14 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 [metronome]: https://arxiv.org/abs/2607.02640
 [awesome-fd]: https://github.com/Ruiqi-Yan/Awesome-Full-Duplex-SDM
 [nemotron-voicechat]: https://build.nvidia.com/nvidia/nemotron-voicechat/modelcard
+[duplexcascade]: https://arxiv.org/abs/2603.09180
 [gpt-realtime]: https://developers.openai.com/api/docs/models/gpt-realtime-2.1
 [gpt-realtime-guide]: https://developers.openai.com/api/docs/guides/realtime-conversations
 [gemini-live]: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-live-preview
 [gemini-live-guide]: https://ai.google.dev/gemini-api/docs/live-session
 [nova-sonic]: https://docs.aws.amazon.com/nova/latest/nova2-userguide/
 [qwen-realtime]: https://www.alibabacloud.com/help/en/model-studio/realtime
+[coval-2026]: https://www.coval.ai/blog/voice-ai-models-2026
+[gradium-2026]: https://gradium.ai/content/cascaded-voice-agent-vs-speech-to-speech-2026
+[ksopyla-2026]: https://ai.ksopyla.com/posts/voice-to-voice-models-2026-review
+[inworld-arch]: https://inworld.ai/resources/cascaded-vs-speech-to-speech-voice-architecture

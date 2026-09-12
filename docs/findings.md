@@ -1,198 +1,213 @@
-# Findings
+# 发现与证据缺口
 
-## Current State
+<a id="current-state"></a>
+## 当前状态与证据范围
 
-| 候选机制 | 已实现语义 | 当前证据支持 | 尚未支持 |
-| --- | --- | --- | --- |
-| 释放偏移调度（release-offset scheduling） | 稳定 release offset 与绝对时间网格 | 配置域限定的 offered-arrival burst 缓解 | KV restore demand 的平滑收益与外部有效性 |
-| 带主机后备的 KV 部分逐出（partial KV eviction with host backing） | 增量 host backing、idle eviction、reload/recompute fallback | 诊断证据中的 idle-session GPU residency 降低 | 公平 workload 下的 capacity frontier 与 formal performance evidence |
-| KV 预取（KV prefetching） | capacity deferral、提前恢复、on-demand fallback | 源码语义审计 | 稳定净延迟收益与高压资源协调 |
+当前观察为问题与设计提供诊断线索，尚未形成满足正式协议的公平性能比较。下表区分机制已有依据和缺失证据。
 
-上表只列可能支撑 paper claim 且可以独立消融的机制。output-delivery polling、transport identity、cache-key registration、runtime compatibility fix 和 observation instrumentation 是 implementation choices 或测量修复，不进入机制列表。
+| 候选机制 | 已有依据 | 仍需完成的证据 |
+| --- | --- | --- |
+| 释放偏移调度 | 原型具有绝对目标网格；历史诊断记录输入处理突发减弱 | 统一时间基准下的用户代价、批处理代价和恢复峰值测量 |
+| 带主机后备的部分 KV 逐出 | 源码路径及有限时程诊断支持减少 idle 驻留 | 匹配工作量下的达标承载能力；覆盖缺口与并发正确性 |
+| KV 预取 | 当前源码具有提交后预取、延后和回退路径 | 基于未来节奏的策略、并发路径验证及可复现净延迟收益 |
 
-## Evidence Scope
+> **【关键 · 定义】** 当前全部依据均为诊断线索或源码审计；尚不存在满足匹配工作量与统一服务判定的正式性能主结果。
 
-当前已登记的 paper-relevant evidence 由 `legacy-unreconstructable` 与 `source-audit` 构成，只能承担诊断或语义审计作用；目前没有可直接升级为最终性能主张的 formal evidence。每条 finding 必须通过其 `EVIDENCE-*` alias 解析精确模型、输入与输出路径、平台、参数、source state 和 provenance；本文不手工复制这些易变配置。
+<a id="evidence-scope"></a>目前登记的相关依据主要是来源不完整的历史诊断与源码审计，没有满足当前标准的正式性能主结果。每个 `EVIDENCE-*` 的模型、平台、配置与可重建程度由 [registry](agent/evidence.json) 解析。源码审计能够解释所审路径，不能代替并发正确性验证或性能测量；历史日志可复算也不自动意味着运行可重建。
 
-这种配置域限定是对结论强度的约束，不是对研究范围的定义。当前 prototype 没有覆盖某个 modality、output architecture、硬件或拓扑，只能说明该维度尚无证据，不能自动把它改写成论文 non-goal。正式实验矩阵、evaluated systems、公平性缺陷和指标协议只由 [`Experiments`](experiments.md) 持有。
+本文按来源和可验证程度解释已有观察：诊断材料用于形成待检验假设，正式性能主张须依据匹配协议下的有效测量；各条目分别列出其可支持的解释与验证缺口。最终实验配置与指标见 [Experiments](experiments.md)，当前未测维度仍是证据空缺。
 
-## Paper-Relevant Findings
+<a id="paper-relevant-findings"></a>
+## 论文相关发现
 
-<a id="finding-a1"></a>
-### FINDING-A1：串行输入处理会掩盖 KV 容量瓶颈
+以下观察按其共同回答的研究问题分组；它们可用于规划论证，形成正式主张仍需相应证据。
 
-如果不同会话的输入准备被一个串行执行点限制，host-side queue 可能先于 GPU KV capacity 限制 offered load。容量实验必须隔离这一混淆因素；否则测得的是输入管线瓶颈，而不是长期 KV working set 的容量边界。该瓶颈不是 Conveyor 的研究机制。
+### 容量动机与资源记账
 
-证据：`EVIDENCE-LEGACY-BASELINE`。
-
-<a id="finding-a2"></a>
-### FINDING-A2 — 跨会话并行输入处理可以消除该混淆因素
-
-在保持单会话输入顺序的同时并行处理不同会话，可以移除已观察到的串行输入瓶颈。共享 runtime contention 仍可能扩大 tail，因此 matched comparison 必须使用等价的 input-processing semantics。这个公平性修复不构成研究贡献。
-
-证据：`EVIDENCE-LEGACY-BASELINE` 与 `EVIDENCE-H1-COMPARISON`。
-
-<a id="finding-b1"></a>
-### FINDING-B1：周期事件正常不等于模型仍在产生新 token
-
-应用 release 和 frontend 调用可以持续发生，即使某个会话已经停止产生新的模型进度。调用 cadence 只能证明控制或传输路径仍然活着，不能替代逐会话 liveness、model progress 和 scheduler-state 观测。
-
-证据：`EVIDENCE-LEGACY-BASELINE`。
-
-<a id="finding-b2"></a>
-### FINDING-B2 — Frontend 调用延迟不等于输出新鲜度
-
-当前 delivery path 的调用延迟在本次输入完成模型工作之前结束，且缓冲输出没有足以把可见结果唯一关联到当前输入的 identity。论文若需要 content freshness，必须定义跨层关联和明确的终点，不能从调用返回、引擎活动或单次消费量反推。
-
-证据：`EVIDENCE-H2-METRICS`。
-
-<a id="finding-c1"></a>
-### FINDING-C1 — 引擎迭代本身不知道应用周期
-
-周期结构由引擎外部的 release pattern 塑形。serving engine 看到 scheduler iterations、prefill 与 decode，却不天然知道应用的 \(T\)、\(\phi_i\) 或 \(D\)。trace 和论文必须区分 application tick、frontend invocation 与 engine iteration。
-
-证据：`EVIDENCE-LEGACY-BASELINE`。
-
-<a id="finding-c2"></a>
-### FINDING-C2 — 当前跨系统诊断没有执行相同的模型工作
-
-当前两个 first-party evaluated systems 的每次更新生成上限并不相同，因此实际 decode work 和未交付输出增长也不同。现有跨系统 run 只能用于诊断，不能称作相同 workload 下的公平性能比较；精确差异和修复协议见 [`Experiments`](experiments.md#executed-decode-difference)。旧证据必须保留原语义，不能通过改文档伪装成已经匹配。
-
-证据：`EVIDENCE-LEGACY-BASELINE` 与当前 source audit。
-
-<a id="finding-c3"></a>
-### FINDING-C3 — 调度并发语义必须在比较中匹配
-
-会改变 KV ownership 或 residency 的 policy 可能与并发 scheduler iteration 发生竞态。当前实现需要一种明确的调度语义来保证逐出安全，因此所有 control configuration 必须使用等价 scheduler mode。具体 runtime 设置属于实验协议，而不是机制定义。
-
-source audit 对风险面的细化：retained-prefix 主路径的逐出在 scheduler 线程内执行，不经过 worker utility RPC；vLLM 0.23 的异步调度对 max-tokens 停止自带保护检查（基础调度器按输出占位计数拒绝多调度一步），而 measured path 只使用 max-tokens 停止。该检查未覆盖 EOS/stop-string 停止、fixed-tail utility RPC 模式与在途 host store 拷贝。异步调度对主路径的安全性因此是待 clean run 验证的命题，而不是已排除的选项；验证之前同步强制与匹配要求不变。
-
-证据：`EVIDENCE-LEGACY-BASELINE`、`EVIDENCE-H3-KV-EVICTION-SEMANTICS` 与 `EVIDENCE-EXEC-MODEL-AUDIT`。
+这一组回答容量问题是否值得继续检验。历史诊断提示存在计算仍有余量而 KV 池先接近耗尽的配置点，字节需求比会话数更接近容量的解释量，而可用池本身取决于运行配置而非标称显存。它们共同支持把 KV 容量受限作为待验证命题（即[全驻留参照下的张力命题](problem.md#why-historical-kv-state-can-limit-capacity)），同时要求正式实验排除输入管线、失活会话与记账口径的混淆。
 
 <a id="finding-d1"></a>
-### FINDING-D1 — 已登记诊断域中出现了容量先于计算的区间
+#### FINDING-D1 — 历史诊断提示容量可能先于计算限制服务
 
-至少一个已登记诊断配置在 GPU KV pool 接近耗尽时仍保留周期计算余量。这支持“capacity before compute”作为一个真实问题实例，但不证明所有模型、工作负载、平台或设备拓扑都会落入同一区间。
+历史记录报告了 GPU KV 池接近耗尽而周期计算仍有余量的配置点。这支持进一步检验容量动机，尚不足以给出公平协议下的可行区间或普遍结论。需同步观测实际 KV 分配、模型进度、排队与计算资源，排除输入管线和失活会话的混淆。
 
-跨配置主张必须同时核算 KV capacity、period compute、HBM traffic 和 host-to-device restore bandwidth。
-
-证据：`EVIDENCE-LEGACY-BASELINE`。
+依据：`EVIDENCE-LEGACY-BASELINE`；历史诊断，原始来源与复现资格受限。待补：Q1 的受控容量扫描。
 
 <a id="finding-d2"></a>
-### FINDING-D2：KV 工作集字节数能够解释容量边界
+#### FINDING-D2 — 历史 KV 字节数是容量建模的候选解释量
 
-历史测量中，不同 session-count/context-length 组合在接近相同总 KV token 数时触及 GPU pool 边界。这支持以总 KV working-set bytes 作为 capacity axis，而不是把 session count 本身当作物理资源。正式结论仍需要在公平协议下重新测量。
+历史记录中，不同会话数与上下文长度组合在接近相同总 KV token 数时触及池边界。这提示在固定模型几何下以字节需求解释容量，而非只比较会话数。共享、碎片、目标预分配和实际历史长度仍需单独记账。
 
-证据：`EVIDENCE-LEGACY-BASELINE`。
-
-<a id="finding-d3"></a>
-### FINDING-D3：Release offsets 以批处理聚合换取更低瞬时需求
-
-将 release 分散到周期内可能减小同步 batch，并增加权重重复读取的机会；同时它为降低同时 GPU-resident 的 session 数和分散 restore demand 提供时序条件。这个 trade-off 必须由 compute、HBM 和 host-to-device restoration 三类资源共同核算。
-
-当前证据支持 offered-arrival burst 的降低，尚不足以单独支持 KV restore bandwidth 已经被平滑的性能主张。
-
-证据：`EVIDENCE-H1-COMPARISON` 与 `EVIDENCE-LEGACY-BASELINE`。
+依据：`EVIDENCE-LEGACY-BASELINE`；历史诊断。待补：实际物理分配与状态字节的对应及预测误差。
 
 <a id="finding-d5"></a>
-### FINDING-D5：非 KV 显存占用决定可用 KV 池大小
+#### FINDING-D5 — 可用 KV 池需要实测或由运行配置核定
 
-GPU memory budget 同时包含模型权重、activation、runtime reserve 和 KV pool。任何 capacity 模型都必须从实测可用 KV pool bytes 出发，不能用设备标称显存直接除以每会话 KV bytes。
+模型权重、activation 和运行时保留空间会影响可用于 KV 的 GPU 容量。容量分析应使用实际池预算和分配轨迹，而不是设备标称显存。其数值依赖运行配置。
 
-证据：`EVIDENCE-LEGACY-BASELINE`。
+依据：`EVIDENCE-LEGACY-BASELINE`；资源记账解释。待补：正式配置下的内存分解。
 
-<a id="finding-e1"></a>
-### FINDING-E1：decode 步在 CUDA graph 内执行，含 prefill 的步实际全部图外执行
+### 需求分散与计算取舍
 
-baseline worker 在引擎几何参数之外只设置 `enforce_eager=False`；Conveyor worker 另外启用 prefix caching、CPU offload connector，并强制同步调度（[`FINDING-C3`](#finding-c3)）。两者的组批与 CUDA graph 行为一致，来自 vLLM 0.23 默认值：调度器把 prefill 与 decode 聚合进同一 token 预算，CUDA graph 捕获上限按 `min(2*max_num_seqs, 512)` 推导，本配置为 32。uniform decode 步回放 FULL graph；单个 2 s 输入 chunk 的增量 prefill 为 53 token，已超过捕获上限，因此含 prefill 的步以 torch.compile eager 方式按精确形状执行。含 prefill 的步指存在单请求调度量大于 1 token 的步，包括启动期的 initial-context 文本块。retained 的两个 run 中，超过上限的这类步分别为 200/202（baseline）与 499/507（Conveyor）。两系统行为一致，图覆盖差异不构成跨系统混淆因素。引擎默认行为的完整整理见 [`vLLM 0.23 执行与捕获行为`](references/vllm-023-execution-and-capture.md)。
+这一组涉及释放偏移的资源取舍。输入侧诊断记录了偏移释放分散输入处理需求，但偏移同时可能改变批形状与计算成本；驻留与恢复侧的收益尚无对应证据。缺口是固定工作量下的批形状、GPU 工作与双向传输对照，以及端到端的用户代价测量。
 
-证据：`EVIDENCE-EXEC-MODEL-AUDIT` 与 `EVIDENCE-STEP-TIMING-RETAINED`。
+<a id="finding-d3"></a>
+#### FINDING-D3 — 偏移改变需求重叠，也可能改变计算成本
 
-<a id="finding-e2"></a>
-### FINDING-E2：decode 步时长被每步全量权重读取决定，对 batch size 几乎不敏感
+分散释放可能减小批量并增加模型迭代或权重访问；它也可能减少同时驻留的状态与恢复突发。输入侧观察见 [FINDING-H1](#finding-h1)，不能据此推断恢复带宽已被平滑。上述资源取舍仍是需要消融的解释，而非已建立的一般定律。
 
-retained 诊断 run 中，decode-only 步 p50 约 23.5-23.7 ms（Conveyor 同步调度下测得的是步延迟；baseline 异步调度下测得的是吞吐归因下界），每增加一个并发 decode 序列仅 +0.66 ms。该形状与每步完整读取一遍 bf16 权重（约 15 GB）的带宽下限一致；decode 步已在 FULL graph 内，该下限不是 launch 开销，图类优化无法降低它。它同时量化了 [`FINDING-D3`](#finding-d3) 中“错开释放增加权重重复读取次数”的单步代价：Conveyor retained run 每周期 62.1 个 decode 步，baseline 为 32.3 个。配置域限定于 retained 诊断 run，精确模型、平台与参数由 `EVIDENCE-STEP-TIMING-RETAINED` 解析；跨系统 decode cap 不同（[`FINDING-C2`](#finding-c2)），不构成公平比较。
-
-证据：`EVIDENCE-STEP-TIMING-RETAINED`。
-
-<a id="finding-e3"></a>
-### FINDING-E3：含 prefill 的步带有固定成本与 64-token 形状台阶；Conveyor retained 点每周期无空闲
-
-Conveyor 同步调度测量（n=487）：不超过 64 总 token 的单 chunk 恢复步 p50 约 60 ms，总 token 跨过 64 后每步再 +10.67 ms（形状台阶，分解拟合 R²=0.944），每 chunk 边际计算 10-12 ms，超出已入图 decode 下限的固定成本约 18-20 ms/步。每周期占用分解：Conveyor 为 1480 ms decode 加 520 ms prefill，空闲为 0（占用 100%）；baseline 约 1024 ms 活跃加 970 ms 空闲。Conveyor 每周期支付 8 次 prefill 步固定成本（错开释放使每 chunk 单独成步），baseline 约 3 次（同步到达聚合成 burst）。限制：单 run；跨系统 cap 与调度模式不同（C2/C3），该占用分解是各自的诊断性成本结构，不能读作容量或公平比较结论。
-
-证据：`EVIDENCE-STEP-TIMING-RETAINED`。
-
-<a id="finding-e4"></a>
-### FINDING-E4：Conveyor 恢复 prefill 的可变余量有精确算术，实测每周期净增长与 workload 常数差 1
-
-Conveyor 每次恢复的增量 prefill 等于 chunk 长度 + 1 + ((C−1) mod 16)，C 为该段停止时的 computed token 数；余量取值 [1,16]，retained run 62 个稳态周期中 58 个严格命中该式。机制来源是 vLLM 0.23 的三条语义（见 [`vLLM 0.23 执行与捕获行为`](references/vllm-023-execution-and-capture.md)）：未写满的尾 block 无 hash、不可注册或 host 备份，`free` 后销毁；恰好写满的末 block 因 eager store 滞后一步错过备份；段末已采样未回喂的 token 在流式折叠时被引擎丢弃，因此 baseline 恢复恰为 chunk 长度、无余量。丢弃语义还意味着每周期净上下文增长为 53+(M−1)=77 token，而 `experiments/shared/workload.py` 的 `CONTEXT_GROWTH_TOKENS_PER_PERIOD=78` 按 53+M 记，二者差 1；余量在 16 个取值上均匀轮转（77 与 16 互素）与实测分布一致，且逐会话相邻恢复尺寸之差恒 ≡ 13 (mod 16)（8 会话共 465 组间隔中 464 组吻合）。修正该常数属于实验协议变更，须另行事务。余量叠加同批 decode 后使 43% 的恢复步跨过 [`FINDING-E3`](#finding-e3) 的 64-token 台阶。
-
-证据：`EVIDENCE-EXEC-MODEL-AUDIT` 与 `EVIDENCE-STEP-TIMING-RETAINED`。
-
-<a id="finding-f7"></a>
-### FINDING-F7 — 生成与消费不匹配会积累未交付输出
-
-当模型生成进度长期快于 output path 的消费或交付进度时，未交付结果会持续积累。该现象说明生成与消费配置必须成对报告，也说明 frontend cadence 不能代表输出对应的输入年龄。当前生成与消费配置的具体差异由 [`Experiments`](experiments.md#executed-decode-difference) 持有。
-
-backlog 是实现诊断量；论文是否采用 freshness 指标以及如何定义，仍由 Evaluation 决定。
-
-证据：`EVIDENCE-H2-METRICS`。
+依据：`EVIDENCE-LEGACY-BASELINE`；相关输入诊断由 FINDING-H1 持有。待补：固定工作量的批形状、GPU 工作与双向传输对照。
 
 <a id="finding-h1"></a>
-### FINDING-H1：Release offsets 降低了实测输入处理突发
+#### FINDING-H1 — 历史偏移比较记录了输入处理突发减弱
 
-保留的诊断比较显示，绝对 release grid 能把同步到达分散到周期内，并降低 input-processing contention。该证据说明 release offsets 能控制 offered-arrival structure；它没有直接测得 KV restore bandwidth 峰值，也不满足当前 formal provenance 标准。
+保留的比较记录显示偏移释放分散了输入处理需求。这只支持该配置域中的输入侧诊断；记录不具备当前正式来源资格，也没有直接测得恢复带宽峰值或用户结果延迟。
 
-证据：`EVIDENCE-H1-COMPARISON`。
+依据：`EVIDENCE-H1-COMPARISON`。待补：匹配对照与端到端事件关联。
 
-<a id="finding-h2"></a>
-### FINDING-H2 — 当前交付路径改变了指标含义
+### 驻留节省与恢复代价
 
-当前 frontend latency 只覆盖输入提交与当时可见输出的取得，不覆盖当前输入后续的完整模型工作。继承的成功字段也只能表示调用是否及时返回，不能升级为论文级 latency、freshness 或 QoE 结论；各交付相关字段的当前语义与禁止解释由 [`Experiments`](experiments.md#measurement-semantics) 持有。
-
-证据：`EVIDENCE-H2-METRICS`。本条是测量语义发现，不是研究机制。
-
-<a id="finding-h3"></a>
-### FINDING-H3 — 现有引擎原语能够实现部分 KV 逐出与恢复
-
-源码审计表明，现有 request ownership、GPU prefix reuse 和 host offload 原语足以组合出所需语义：idle 后释放所有权，逐出选定 GPU tail，下一次使用先复用 GPU prefix，再恢复连续 host-backed blocks；coverage gap 之后通过重算恢复。
-
-Conveyor 增加的是 idle-transition policy、持续会话下的 host-coverage 维护、状态观测和控制接口；它不声称发明 prefix caching 或 host offload。
-
-证据：`EVIDENCE-H3-KV-EVICTION-SEMANTICS`。
+这一组分别提供空闲驻留下降和状态准备开销的线索：前者说明回收路径可能释放其他会话可用的 GPU 空间，后者说明重新使用这些状态仍需付出恢复与等待成本。由于相关对照尚未满足统一工作量与服务判定要求，两类观察目前只能支撑后续容量—延迟联合实验，不能组合为正式容量提升结论。
 
 <a id="finding-h4"></a>
-### FINDING-H4 — 保留前缀逐出降低了诊断点的闲置会话 GPU 驻留
+#### FINDING-H4 — 部分逐出在有限诊断时程内降低了 GPU 驻留
 
-保留的诊断 run 中，启用 retained-prefix eviction 后，GPU KV occupancy 从接近 pool 极限的增长转为明显更低的锯齿稳态。这支持机制能够释放 idle-session residency，但现有证据不满足当前 formal 标准，跨系统 model work 也未匹配，因此不能直接作为论文容量提升主结果；精确配置与数值由 `EVIDENCE-H4-RESIDENCY` 解析。
+保留的运行轨迹中，逐出后的 GPU KV 占用呈较低的锯齿形态。这支持该路径能回收空闲状态占用；有限轨迹不证明长期有界，工作量差异也使其不能直接成为容量提升主结果。
 
-证据：`EVIDENCE-H4-RESIDENCY`。
+依据：`EVIDENCE-H4-RESIDENCY`。待补：给定会话分布和观测期限下的达标容量、主机开销与失败边界。
 
 <a id="finding-h5"></a>
-### FINDING-H5 — 按需恢复会进入更新关键路径
+#### FINDING-H5 — 缺失 KV 的准备可能推迟后续执行
 
-on-demand restore 只能在真实 demand 出现之后开始，因此 copy cost 和链路排队会进入该次更新的 admission critical path；任何先于恢复完成的必要输入工作还会与其串行累积。随着需恢复 KV 增加，这些成本必须进入 restore-bandwidth frontier。预取的潜在价值正是改变恢复时序，而不是消除其资源成本。
+当计算必须等待按需恢复完成时，传输及相关排队进入依赖路径。其他输入工作是否与之串行，应由实际依赖和事件判断；装载发起至完成上报的窗口也可能包含引擎等待，不能当作纯链路占用。
 
-证据：`EVIDENCE-H5-CRITICAL-PATH`。
+依据：`EVIDENCE-H5-CRITICAL-PATH`；历史诊断及路径解释。待补：提交、DMA、完成上报与再次调度的分解，以及可重叠部分。
 
-<a id="finding-h6"></a>
-### FINDING-H6 — 测量状态构造必须与稳态机制分离
+### 实现可行性与验证缺口
 
-为了从指定上下文状态开始测量，状态构造必须在周期输入开始前完成，并与正常 idle eviction 的状态转换分开。构造屏障只建立合法起点，不能被包装成 Conveyor 机制；其精确协议与失败条件由 [`Experiments`](experiments.md#initial-context-preloading) 持有。
+这一组是实现可行性依据，与端到端性能观察不属于同一结果层次：源码审计说明部分逐出、恢复与预取具有可执行路径，但并发正确性与净收益均未验证。设计语义由 [System](system.md) 维护，此处只解释证据支持到什么程度。
 
-证据：`EVIDENCE-H6-INITIAL-CONTEXT`。本条属于 evaluation state construction。
+<a id="finding-h3"></a>
+#### FINDING-H3 — 当前原语提供部分逐出与恢复的实现路径
+
+所审路径在 idle 后解除请求引用，逐出选定状态，并在后续使用中组合 GPU 连续前缀、主机回载与缺口后的重算。它使用既有缓存和 offload 原语；策略整合的性能价值需要另外证明。
+
+依据：`EVIDENCE-H3-KV-EVICTION-SEMANTICS`，源码审计。限制：不代表共享、在途复制、取消和全部停止条件下的完备证明；历史保持还依赖参考输入与生成保留语义。
 
 <a id="finding-h7"></a>
-### FINDING-H7：KV 预取语义已完整但性能结论未定
+#### FINDING-H7 — 预取已有源码路径，正确性覆盖和净收益仍待验证
 
-源码审计支持以下正确性语义：host-backed blocks 可以提前进入 GPU cache，并由之后的正常 cache reuse 使用；capacity deferral、input overtaking 和 later eviction 都安全退化为 on-demand restore 或 recomputation。具体 transport 和 cache registration 方式是实现细节。
+当前源码包含主机状态提前装入 GPU 缓存、容量不足延后和后续正常复用的路径。目标先分配、完成后发布索引；缓存还可能在使用前被替换。这些路径支持设计可实现性的检查，不足以宣称所有并发回退均已验证。
 
-历史性能 artifacts 不完整，现有证据只能支持语义检查。输入准备、copy overlap、capacity pressure 与 cache reuse 的共同作用尚未形成可复现的净延迟结论。
+依据：`EVIDENCE-H7-PREFETCH`；历史性能 artifact 不完整，当前源码只能补充语义审查。待补：需求超越、重复恢复、引用生命周期、高压竞争和净延迟实验。
 
-证据：`EVIDENCE-H7-PREFETCH`，registry 角色为 `legacy-unreconstructable`；当前源码只能补充 semantic audit，不能补出遗失的性能证据。
+<a id="missing-submission-results"></a>
+## 缺失的正式结果
 
-## Diagnostic Boundary
+| 所需结果 | 当前空缺 | 对应计划 |
+| --- | --- | --- |
+| 代表性问题实例 | 应用时间契约、历史需求与受控容量证据 | Q1、工作负载矩阵 |
+| 端到端主结果 | 公平工作量、统一服务目标、重复运行和承载边界 | Q2、Q3 |
+| 机制因果关系 | 完整消融及相互影响；未来节奏与提交后触发对照 | Q4 |
+| 可解释的资源边界 | 标定、独立预测与失败点 | Q5 |
+| 正确性与质量 | 状态往返、参考历史、代表任务及替代策略 | Q6 |
+| 适用性与开销 | 短会话、会话流动、主机压力、抖动及拓扑变化 | Q7 |
 
-旧队列故障、一次性调试参数和过时 workload story 只保存在冻结的 [`legacy-experiment-log.md`](agent/legacy-experiment-log.md) 或不可变 `results/` 中。它们不能作为当前 paper prose source，也不能用于定义研究范围或证明研究问题的重要性。
+<a id="diagnostic-appendix-fairness-and-measurement"></a>
+## 诊断附录：公平性与测量
 
-Agent 引用 finding 时必须保留完整 `FINDING-*` ID、证据角色、配置域和限制，并通过 evidence registry 解析精确配置。若 finding 与新的 clean run 冲突，应更新本 owner 和 registry，而不是在 README、Problem 或 System 中复制第二个版本。
+本附录保留后续实验必须知道的测量限制和可追溯观察，按测量问题分组。
+
+### 事件与进度关联
+
+以下条目从不同角度说明调用、生成、消费和模型进度不是同一事件：周期调用可以继续而模型不再推进，缓冲取出的结果未必对应当前输入，接口层也未向引擎传递应用时间契约。任何以调用或交付字段代替模型进度的解释都需要先建立事件关联。
+
+<a id="finding-b1"></a>
+#### FINDING-B1 — 周期调用不能证明模型进度
+
+调用可以继续而会话不再产生新模型进度，必须独立观测活性和已处理输入。依据：`EVIDENCE-LEGACY-BASELINE`。
+
+<a id="finding-b2"></a>
+#### FINDING-B2 — 现有调用时长缺少输入到结果的关联
+
+缓冲取出结果没有足够身份将其归因于当前输入，调用返回也早于本次完整模型执行。用户可见延迟需新事件关联。依据：`EVIDENCE-H2-METRICS`。
+
+<a id="finding-f7"></a>
+#### FINDING-F7 — 生成超过消费会积累未交付输出
+
+需要成对记录生成与消费进度；backlog 不能单独代表内容年龄。具体生成差异见实验附录。依据：`EVIDENCE-H2-METRICS`。
+
+<a id="finding-h2"></a>
+#### FINDING-H2 — 当前交付字段具有实现相关语义
+
+当前 RPC 延迟、成功字段和消费计数不能代表当前输入的完整模型工作或应用 QoE。定义统一由 [测量语义](experiments.md#measurement-semantics) 持有。依据：`EVIDENCE-H2-METRICS`。
+
+<a id="finding-c1"></a>
+#### FINDING-C1 — 当前引擎接口未显式接收应用时间契约
+
+当前实现的应用网格与引擎迭代分属不同层；不能由迭代事件推断应用周期或未来 deadline。该判断限于本仓路径，不概括所有 serving engine。依据：`EVIDENCE-LEGACY-BASELINE` 的历史接口诊断；当前映射见 [动态边](agent/dynamic-edges.json)。
+
+### 公平性与比较资格
+
+以下条目限定哪些运行有资格进入比较：输入管线可以先于容量成为瓶颈，生成工作量差异使旧对照不公平，调度模式差异与逐出安全耦合。正式对照需要先消除或控制这些因素。
+
+<a id="finding-a1"></a>
+#### FINDING-A1 — 输入串行瓶颈可能掩盖容量问题
+
+历史诊断中，跨会话串行输入准备可以先限制负载。容量实验应隔离该因素。依据：`EVIDENCE-LEGACY-BASELINE`。
+
+<a id="finding-a2"></a>
+#### FINDING-A2 — 输入管线需要保持等价的并行与顺序语义
+
+保持单会话顺序、并行处理不同会话是针对已观察串行瓶颈的实现修正；共享 runtime 竞争仍可能影响尾延迟，不能声称所有输入瓶颈已消除。依据：`EVIDENCE-LEGACY-BASELINE`。
+
+<a id="finding-c2"></a>
+#### FINDING-C2 — 当前对比存在生成工作量差异
+
+当前 first-party 系统的生成上限不同，相关旧运行不构成相同模型工作的公平比较。精确参数与控制缺口见 [生成工作量差异](experiments.md#executed-decode-difference)。依据：`EVIDENCE-LEGACY-BASELINE`；当前代码对照同见实验附录。
+
+<a id="finding-c3"></a>
+#### FINDING-C3 — 调度模式与逐出安全需要匹配验证
+
+当前逐出实现固定调度模式，但这不是异步调度必然不安全的证明。源码检查发现主路径与 utility 触发路径不同，停止条件和在途复制的风险也不同。正式消融需要等价调度控制及针对引用生命周期的验证。
+
+依据：`EVIDENCE-EXEC-MODEL-AUDIT` 与 `EVIDENCE-LEGACY-BASELINE`。主路径保护检查不能推广到全部停止与传输场景。
+
+### 执行成本诊断
+
+以下条目来自同一批步时长诊断，解释当前执行成本观察能支持什么：捕获上限、口径不一致和拟合解释都限制其外推，数值差异在复算统一前不选定正式值。
+
+<a id="finding-e1"></a>
+#### FINDING-E1 — 保留样本中大多数含 prefill 步超过捕获上限
+
+在 `EVIDENCE-STEP-TIMING-RETAINED` 的限定配置中，按“有请求被调度多于一个 token”识别的步，超过捕获上限者分别为 baseline 200/202、Conveyor 499/507。计数包含初始化。它不能证明全部 prefill 均在图外，剩余样本的实际执行模式需单独检查。
+
+`EVIDENCE-EXEC-MODEL-AUDIT` 解释默认图选择规则；相同默认规则不保证实际批形状与图覆盖相同。待补：逐步实际模式、有效测量窗口和跨系统分布。
+
+<a id="finding-e2"></a>
+#### FINDING-E2 — decode 诊断步时长与带宽解释相容，因果归因未定
+
+`EVIDENCE-STEP-TIMING-RETAINED` 的旧汇总报告 decode 步时长处于相近范围，并报告每增加一个并发序列约增加 0.66 ms。此前正文 p50 范围为 23.5–23.7 ms，而结构化记录为 23.6–23.8 ms；口径尚需复算统一，本稿不选择其中一个作为正式数字。
+
+同步路径测得步延迟，异步路径包含吞吐归因含义；工作量也未匹配。与权重带宽估算相容只能作为假说，不能证明全部时间由权重读取决定或排除图/调度优化。待补：HBM 测量、执行窗口定义和因果对照。
+
+<a id="finding-e3"></a>
+#### FINDING-E3 — 诊断分解显示形状相关成本，不能解释为硬件满载
+
+在 `EVIDENCE-STEP-TIMING-RETAINED` 的 Conveyor 同步路径中，旧分解基于 487 个样本，报告 64-token 附近的成本台阶及拟合 R²=0.944。其周期墙钟归因为 1480 ms decode 与 520 ms prefill；这些归因区间包含等待的可能性，合计覆盖周期不代表 GPU kernel 活跃率为 100%。
+
+限制：单运行、拟合解释、跨系统 cap 与调度模式不匹配。待补：传输和 kernel 事件验证，检查台阶是否跨配置保持。
+
+<a id="finding-e4"></a>
+#### FINDING-E4 — 尾部余量公式只解释部分样本，净增长口径待修正
+
+`EVIDENCE-STEP-TIMING-RETAINED` 的有限窗口中，62 个被检查周期有 58 个符合“新增输入 + 1 + ((C−1) mod 16)”的恢复调度量公式，C 为该段停止时的 computed-token 数；465 组相邻间隔中 464 组符合所报告模差规律。未命中样本尚需解释，不能将公式写成每次恢复的保证。
+
+`EVIDENCE-EXEC-MODEL-AUDIT` 将候选解释关联到未满块、备份滞后和段末采样内容未保留。该路径的诊断净增长为 53+(M−1)=77 token，当前配置常数按 53+M 计为 78。应分别记录输入、生成、保留与重算；修改常数和重跑属于后续协议实现工作。主机覆盖更大缺口仍可能引发更长后缀重算。
+
+### 实验初始状态
+
+<a id="finding-h6"></a>
+#### FINDING-H6 — 实验初始状态需要与正常更新分离
+
+预加载及其完成屏障用于构造可解释起点，不能计为研究机制；目标长度并不自动等于实际长度。依据：`EVIDENCE-H6-INITIAL-CONTEXT`。操作与失败口径见 [初始上下文预加载](experiments.md#initial-context-preloading)。

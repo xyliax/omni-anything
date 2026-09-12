@@ -45,6 +45,8 @@
         "docs/problem.md",
         "docs/system.md",
         "docs/findings.md",
+        "docs/PAPER.md",
+        "docs/experiments.md",
         "docs/papers/**",
         "docs/references/**",
         "eurosys2027/AGENTS.md",
@@ -60,6 +62,7 @@
         "docs/problem.md",
         "docs/experiments.md",
         "docs/findings.md",
+        "docs/PAPER.md",
         "eurosys2027/AGENTS.md",
         "eurosys2027/planning/introduction-outline.md"
       ],

@@ -13,7 +13,7 @@
   "role_definitions": {
     "formal": "reproducible clean-source evidence eligible for performance or matched-system claims",
     "diagnostic": "reconstructable non-formal evidence; dirty runs require a retained patch artifact",
-    "legacy-unreconstructable": "historical evidence missing raw data, clean provenance, or a reconstructable patch; never eligible as formal",
+    "legacy-unreconstructable": "historical evidence with incomplete run reproducibility; raw-data availability, statistic recomputability and source reconstruction must be assessed separately in reproducibility; never formal merely because some statistics can be recomputed",
     "source-audit": "current source supports semantic claims only, not measured performance",
     "external-source-audit": "dated external or pinned sources that must be rechecked before current-state citation"
   },
@@ -102,7 +102,8 @@
           "path": "engines/conveyor/worker/engine_patch"
         }
       ],
-      "reproducibility": "current source supports the semantics; the original audit run is historical"
+      "reproducibility": "current source supports the semantics; the original audit run is historical",
+      "interpretation_limits": "Audited source paths are not a proof for all shared-reference, transfer-in-flight, stop or cancellation cases; fixed tail margin does not guarantee confirmed host coverage."
     },
     {
       "id": "EVIDENCE-H4-RESIDENCY",
@@ -120,7 +121,8 @@
           "ref": "RUN-CONVEYOR-RETAINED"
         }
       ],
-      "reproducibility": "retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; rerun clean before a formal paper claim"
+      "reproducibility": "retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; rerun clean before a formal paper claim",
+      "interpretation_limits": "Finite diagnostic occupancy trace only; no unbounded-time stability or matched-workload capacity claim."
     },
     {
       "id": "EVIDENCE-H5-CRITICAL-PATH",
@@ -139,7 +141,8 @@
           "date": "2026-08-12"
         }
       ],
-      "reproducibility": "diagnostic timing only"
+      "reproducibility": "diagnostic timing only",
+      "interpretation_limits": "Issue-to-completion-report timing can include engine waiting; do not treat it as pure DMA duration or assume all input preparation is serialized with it."
     },
     {
       "id": "EVIDENCE-H6-INITIAL-CONTEXT",
@@ -219,7 +222,8 @@
           "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "numbers recomputable from retained scheduler.log and per_iteration.log; both runs are dirty and fail current formal acceptance; baseline timings are throughput-attributed under async scheduling and lower-bound true step latency"
+      "reproducibility": "numbers recomputable from retained scheduler.log and per_iteration.log; both runs are dirty and fail current formal acceptance; baseline timings are throughput-attributed under async scheduling and lower-bound true step latency",
+      "interpretation_limits": "Graph-limit counts do not establish every prefill execution mode; scheduler wall-clock attribution is not GPU busy fraction; decode p50 summaries disagree slightly across records; the tail formula has nonmatching samples. Recompute before using these as quantitative paper results."
     },
     {
       "id": "EVIDENCE-H7-PREFETCH",
@@ -238,7 +242,8 @@
           "path": "engines/conveyor/worker/engine_patch"
         }
       ],
-      "reproducibility": "raw prefetch run is not retained; current source supports semantics only and performance evidence must be rerun"
+      "reproducibility": "raw prefetch run is not retained; current source supports semantics only and performance evidence must be rerun",
+      "interpretation_limits": "Source paths use push-triggered prefetch and do not establish future-grid scheduling, exhaustive fallback correctness or a net latency benefit."
     }
   ]
 }
