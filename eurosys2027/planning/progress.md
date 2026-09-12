@@ -1,24 +1,11 @@
 # Progress
 
-Last updated: 2026-08-25.
+Last updated: 2026-09-13.
 
-| Workstream | Status | Notes |
-| --- | --- | --- |
-| Official EuroSys 2027 CFP verification | Complete | Format, page limit, double-blind, dates, AI disclosure and review criteria recorded |
-| ACM template provenance | Complete | Stable `acmart` v2.20 pinned; release sources matched byte-for-byte with CTAN production archive |
-| LaTeX manuscript scaffold | Complete | Anonymous SIGPLAN 10pt review entry plus separate supplement |
-| Build and format checks | Complete | Main and supplement compile with vendored acmart v2.20; main is US Letter, two-column, anonymous, page/line numbered, and all fonts are embedded |
-| Paper contract | Scaffolded | Positioning, main claim, decisive experiment and kill condition not frozen |
-| Story logic | Partially drafted | Owner-backed setting, goal, challenges, and solution overview are in the manuscript; closest-work novelty and final contributions remain open |
-| Cross-section dependency map | Complete | Intro → Background → Design → Implementation → Evaluation contracts and exit criteria recorded |
-| Six-paragraph Introduction contract | Partially drafted | Paragraphs 1 and 3--5 have conservative prose; closest-work citations and final contributions remain explicit placeholders |
-| Claims/evidence ledger | Scaffolded | No paper claim promoted; formal evidence remains governed by project owners |
-| Related-work matrix | Scaffolded | Literature rows not yet populated |
-| Figure plan | Scaffolded | Figure contracts exist; no assets created |
-| Paper sections | Partially drafted | Idea-level Introduction, Background, Design, Implementation, and Evaluation Methodology content is filled; final modality, output path, model/hardware matrix, metrics, and results remain explicitly unfrozen |
-| Evaluation content | Blocked by project readiness | Do not add final claims until matched formal evidence exists |
-| Final submission audit | Not started | Recheck official rules and HotCRP immediately before submission |
+本文件旧内容基于过期叙事已于 2026-09-13 清理；重建时以 docs/PAPER.md 的章节骨架、取材关系与 owner 文档为准。
+
+仍然有效的已完成项（2026-08-25 建立）：EuroSys 2027 官方 CFP 核验、acmart v2.20 模板 pin 与 provenance、LaTeX 匿名主稿与补充材料脚手架、build/format 检查。2026-09-13 状态：全部 sections 与叙事类 planning 文件已清理为骨架，等待按 docs/PAPER.md 重建；图 1/图 2 的规格与资产（figures/、planning/figure-*.md）为近期工作，保留。
 
 ## Next Milestone
 
-Audit the owner-backed prose, complete the closest-work matrix, jointly freeze the running example and experimental matrix, define schedulability/latency/user-visible delivery, and equalize the evaluated systems before formal runs. Do not write the Abstract, final Contributions, or Evaluation results before those gates pass.
+按 docs/PAPER.md 的写作流程重建：先完成材料依赖表中的作者决策（主完成事件、时间契约与偏移权限、策略规则）与 closest-work 核验，再按各章步骤骨架搭正文；Abstract、最终 Contributions 与 Evaluation 结果在正式证据之后填写。

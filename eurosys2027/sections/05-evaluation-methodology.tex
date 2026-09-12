@@ -1,79 +1,8 @@
 \section{Evaluation Methodology}
 \label{sec:evaluation-methodology}
 
-\subsection{Research Questions}
+% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
+% 对应 PAPER §6 步骤 ①：Setup 与公平性——研究问题（Q1–Q7）、被评估系统与匹配控制、工作负载与平台矩阵、
+% 指标与判定；协议真值在 docs/experiments.md，本节不复制易变配置。
 
-The evaluation is organized around six questions rather than around source
-modules:
-\begin{enumerate}
-  \item Does GPU KV capacity limit concurrency before per-period computation?
-  \item How much sustainable concurrency can Conveyor recover in that regime?
-  \item What latency and data-movement costs accompany the capacity change?
-  \item Which effect is attributable to release offsets, partial eviction, and
-        prefetching, respectively?
-  \item Does a capacity/compute/restore-bandwidth model predict transitions
-        beyond one configuration?
-  \item What overheads and failure regions bound the design?
-\end{enumerate}
-
-The first question establishes that the evaluated configuration is in the
-regime addressed by the paper.  The second and third jointly test benefit and
-cost.  The remaining questions test causal attribution and the limits of
-generalization.
-
-\subsection{Evaluated Systems and Controls}
-
-\draftplaceholder{Freeze the named evaluated systems only after the closest-work audit and final implementation selection. Include a matched control that differs only in the mechanisms under test, plus any external baselines required to substantiate the final novelty claim.}
-
-The primary control keeps the same model, modality path, offered and executed
-work, scheduler behavior, and observation semantics while retaining its KV
-state in the GPU cache.  Conveyor adds release offsets, host backing, partial
-eviction, and optional prefetch.  An upstream or external implementation whose
-work or observation path differs may serve as a behavior reference, but its
-measurements are not mixed into matched performance claims.
-
-Mechanism ablations add one change at a time: release offsets; release offsets
-plus host backing and partial eviction; and then prefetching.  A retained-
-prefix sweep varies $K$.  Each comparison must use matched scheduler and
-work-defining controls; their concrete settings are frozen only after the
-implementation entering formal evaluation is selected.
-
-\draftplaceholder{Before collecting paper results, freeze and equalize every work-defining control across compared systems, including offered input, generated work, scheduler behavior, initialization, and output-delivery semantics.}
-
-\subsection{Workloads and Hardware}
-
-\draftplaceholder{Freeze and report the evaluated model set, input and output modalities, user-visible delivery path, hardware profiles, interconnects, and serving-engine revision only after the experimental matrix is finalized. The current prototype path is not a paper-scope constraint.}
-
-The experimental matrix must cross the capacity, compute, and restoration-
-bandwidth regimes claimed by the paper.  At every comparison point, the
-systems use the same model revision, modality path, offered work, output-work
-definition, scheduler behavior, and other work-defining controls.
-
-If initial-context preloading is used, it completes before the measured
-periodic phase and is reported as workload state rather than as a Conveyor
-mechanism.  The resource model separately calibrates usable GPU KV bytes, KV
-bytes per token, prefill and decode cost, HBM demand, and host-device copy
-throughput.  Any analytical hardware profile is labeled as such; a
-cross-hardware statement requires measured validation rather than a linear
-extrapolation alone.
-
-\subsection{Metrics and Reproducibility}
-
-Capacity results report GPU KV occupancy, resident blocks per session, host
-memory, and transfer volume together with compute utilization and session
-liveness.  Latency is decomposed from input release through feature
-extraction, scheduler admission, restoration, prefill, and decode, with
-per-session distributions and tails.  An implementation-level timer, buffer
-counter, or transport return event becomes a paper metric only after its
-relationship to end-to-end latency, freshness, or user-visible delivery has
-been defined and validated.
-
-Each reported point uses a fresh process set, a fixed model revision and
-environment, a steady-state window separated from initialization, repeated
-runs with uncertainty, and a complete manifest and terminal validation.  A
-process exit code alone is insufficient.  Performance claims use only
-reproducible runs with a fixed source revision, complete raw measurements, and
-recorded provenance.  Historical measurements and code inspection may explain
-design decisions but do not supply headline numbers.
-
-\draftplaceholder{Freeze the operational definitions of sustainable concurrency, per-period latency, warmup, repetitions, and uncertainty before filling Section~\ref{sec:evaluation}.}
+\draftplaceholder{Cleared draft (2026-09-13). Rebuild from docs/PAPER.md \S6 step 1 and the protocol owner docs/experiments.md.}

@@ -37,15 +37,7 @@ make check
 
 ## Writing Workflow
 
-1. 在 [`planning/paper-contract.md`](planning/paper-contract.md) 冻结论文类型、一句话主张、decisive experiment 和 kill condition。
-2. 在 [`planning/story-logic.md`](planning/story-logic.md) 检查 limitation、key idea、challenge、module 与 contribution 的链条。
-3. 在 [`planning/introduction-outline.md`](planning/introduction-outline.md) 按六段 flow 固定 Intro 的承接关系和 gap。
-4. 在 [`planning/section-contracts.md`](planning/section-contracts.md) 锁定 Intro、Background、Design、Implementation 与 Evaluation 之间的输入、输出和依赖。
-5. 在 [`planning/claims-and-evidence.md`](planning/claims-and-evidence.md) 为每个 paper-facing claim 绑定 owner 与 evidence。
-6. 在 [`planning/evaluation-map.md`](planning/evaluation-map.md) 和 [`planning/figures.md`](planning/figures.md) 预先规划能证伪主张的实验与图表。
-7. 先写 Intro、Background、Design 和 Implementation 的段落骨架，再逐段填内容；在 Evaluation contract 冻结前不围绕实现细节扩写故事。
-8. 未获 formal evidence 的数字保持 `TBD`，不能从旧日志复制。
-9. 每次使用 AI 辅助写作或分析，都更新 [`planning/ai-use-log.md`](planning/ai-use-log.md)。
+叙事骨架、取材关系与写作流程集中在 [`../docs/PAPER.md`](../docs/PAPER.md)：按各章步骤骨架转写正文，沿锚点回 owner 文档取论证与关键句措辞；遇【空位】查材料依赖表。本目录的 planning 文件承担 venue 规则与流程检查（submission/reviewer checklist、page budget、related-work matrix、ai-use-log）；叙事类 planning 文件已于 2026-09-13 清理为骨架，随正文重建。未获 formal evidence 的数字保持 `TBD`，不能从旧日志复制；每次使用 AI 辅助写作或分析，都更新 [`planning/ai-use-log.md`](planning/ai-use-log.md)。
 
 ## Directory Map
 
