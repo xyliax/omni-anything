@@ -36,7 +36,7 @@ make check
 
 ## Writing Workflow
 
-叙事骨架、取材关系与写作流程集中在 [`../docs/PAPER.md`](../docs/PAPER.md)：按各章步骤骨架转写正文，沿锚点回 owner 文档取论证与关键句措辞；遇【空位】查材料依赖表。本目录的 planning 文件承担 venue 规则与流程检查（submission/reviewer checklist、page budget、related-work matrix、ai-use-log）；叙事类 planning 文件已于 2026-09-13 清理为骨架，随正文重建。未获 formal evidence 的数字保持 `TBD`，不能从旧日志复制；每次使用 AI 辅助写作或分析，都更新 [`planning/ai-use-log.md`](planning/ai-use-log.md)。
+叙事骨架、取材关系与写作流程集中在 [`../docs/PAPER.md`](../docs/PAPER.md)：按各章步骤骨架转写正文，沿锚点回 owner 文档取论证与关键句措辞；遇【空位】查材料依赖表。本目录的 planning 文件只承担 venue 规则、流程检查与作者工作材料（submission/reviewer checklist、related-work matrix、ai-use-log、注册摘要、稿件审阅意见、画图指南）；叙事类 planning 文件已于 2026-09-21 退役，其规则并入 `docs/PAPER.md`。页面预算按 EuroSys 2027 的 12 页技术内容规划，参考量级为 Intro 1.5、Background/Motivation 1.5、Design 3、Implementation 1、Evaluation 3.75、Related Work 0.75、Discussion 与 Conclusion 0.5；超出时删内容不改版式。未获 formal evidence 的数字保持 `TBD`，不能从旧日志复制；每次使用 AI 辅助写作或分析，都更新 [`planning/ai-use-log.md`](planning/ai-use-log.md)。
 
 ## Directory Map
 
@@ -48,7 +48,7 @@ eurosys2027/
 ├── references.bib               bibliography database
 ├── sections/                    one source file per paper section
 ├── figures/                     figure assets and figure contracts
-├── planning/                    story, evidence, schedule, and checklists
+├── planning/                    venue checklists, related-work matrix, figure guide, AI-use log
 ├── scripts/                     non-destructive format checks
 └── vendor/acmart/               pinned ACM template and provenance
 ```

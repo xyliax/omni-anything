@@ -9,7 +9,7 @@ Workspace scaffold (completed 2026-08-25): official CFP verified; acmart v2.20 p
 ## Important Dates
 
 - Spring cycle: closed.
-- Fall title and abstract registration: 2026-09-17, anywhere on Earth.
+- Fall title and abstract registration: 2026-09-17, anywhere on Earth. Completed; the registered text is kept in `abstract-submission.txt` (result placeholders `XX`/`YY` must be resolved or removed before full-paper submission).
 - Fall full paper submission: 2026-09-24, anywhere on Earth.
 - Fall reviews available: 2027-01-06.
 - Fall author response: 2027-01-08.

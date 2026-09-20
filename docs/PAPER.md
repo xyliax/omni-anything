@@ -30,7 +30,7 @@
 
 ### 写作流程
 
-按以下顺序把本大纲转写为论文正文：
+按以下顺序把本大纲转写为论文正文。写作顺序纪律：先固定中心问题与候选贡献（本大纲的对应两节），再按各章步骤搭骨架并同步规划 Evaluation，最后逐段扩写；Abstract 与最终 Contributions 写在最后。limitation → key idea → challenge → module → contribution → section 的链条须逐项闭合，任何一环缺失时以待补标记呈现，不得用更强措辞补偿。
 
 1. **按章走步骤。** 每章按其步骤骨架推进：步骤的主张句是该段落主题句的雏形；沿锚点回 owner 文档取完整论证、限定与关键句标记的精确措辞；用钩子句收尾并交给下一步。
 2. **空位与未决的处理。** 遇【空位】查[材料依赖](#material-dependencies)，确认它等待哪项作者决策或实验证据；遇未决策略保持问题形式转写，不虚构规则。
@@ -109,7 +109,7 @@ Introduction 按六步漏斗组织。每步给出草稿级主张与递向下一�
 
 - 主张：交互式 AI 应用的会话跨请求保留历史并持续推进；新兴的模型级双工交互让会话按媒体时钟持续吸收输入、推进状态，以支持自然话轮转换、重叠输入和及时打断（→ [负载现实](problem.md#interaction-sessions-and-their-timing)）。
 - 钩子：一边是按时钟规律增长、必须跨周期保留的历史状态，一边是有限的 GPU 内存——二者将在某一负载点相交。
-- 待补：running example、应用来源、目标事件。
+- 待补：running example、应用来源、目标事件。running example 当前不设置 provisional default：需在实验矩阵与图 1 的 formal motivating evidence 冻结后由作者确认，并在 Background、Design walkthrough 与 Evaluation 中复用同一实例。
 
 **② 张力。**
 
@@ -370,9 +370,9 @@ Introduction 按六步漏斗组织。每步给出草稿级主张与递向下一�
 
 | 图 | 内容 | 服务的步骤 | 现状 |
 | --- | --- | --- | --- |
-| 图 1 · 动机实例时间轴 | 两 panel：对齐轮次的多会话周期负载（同步计算爆发+共享空闲窗+聚合 KV 穿越容量；对齐归因于既有服务侧调度，负载相位另由文字交代）；单会话两周期的 reactive vs cyclic 恢复时序对比 | §1①②、§2⑤ | v4 设计契约已定（`eurosys2027/planning/figure-1-motivated-example.md`），作者手绘 `.drawio` 进行中；机制示意，测量部分待 Q1 |
+| 图 1 · 动机实例时间轴 | 两 panel：对齐轮次的多会话周期负载（同步计算爆发+共享空闲窗+聚合 KV 穿越容量；对齐归因于既有服务侧调度，负载相位另由文字交代）；单会话两周期的 reactive vs cyclic 恢复时序对比 | §1①②、§2⑤ | v4 设计契约已定（[画图指南](../eurosys2027/planning/figure-drawing-guide.md)），作者手绘 `.drawio` 进行中；机制示意，测量部分待 Q1 |
 | 图 2 · 张力测量 | KV 分配随会话数/上下文逼近容量线而计算利用率仍有余量的剪刀差；候选加画 `U(t)` 对齐 vs 错开两条曲线（峰值之和 vs 均值之和） | §2②③、§4② | 待 Q1 数据；`U(t)` 分解式见[资源边界](problem.md#resource-frontier) |
-| 图 3 · 设计总览 | 连续 residency swimlane：均匀相位网格、空闲逐出与期限前预取、容量门控因果链（带圈序号）、共享链路窗口、pool 曲线对照对齐基线（与图 1 世界闭环） | §4① | v4 设计契约已定（`eurosys2027/planning/figure-2-design-overview.md`），作者手绘 `.drawio` 进行中；随策略决策更新 |
+| 图 3 · 设计总览 | 连续 residency swimlane：均匀相位网格、空闲逐出与期限前预取、容量门控因果链（带圈序号）、共享链路窗口、pool 曲线对照对齐基线（与图 1 世界闭环） | §4① | v4 设计契约已定（[画图指南](../eurosys2027/planning/figure-drawing-guide.md)；文件名沿用 `figure2-design-overview.*`），作者手绘 `.drawio` 进行中；随策略决策更新 |
 | 图 4 · KV 块状态机 | 六维状态模型的图形化：分配/内容/覆盖/引用/传输/索引的转换 | §4③④ | 待画；语义 owner 为 [KV 状态模型](system.md#kv-state-model) |
 | 算法框 | 逐出与预取策略的输入、动作、前置条件 | §4③–⑤ | 待策略决策（[未决设计决策](system.md#open-design-decisions)） |
 | 评估图族 | 主结果承载能力曲线（含 SLO 线）、延迟分布与关键路径堆叠、消融条形、预测—实测、失效边界与长期轨迹 | §6②–⑦ | 待实验；图目对应 §6 各步的判读 |

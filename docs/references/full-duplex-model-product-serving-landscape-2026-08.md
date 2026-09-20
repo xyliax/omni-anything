@@ -1,10 +1,12 @@
 # 全双工模型、产品与 serving 版图（2026-08）
 
-Updated: 2026-08-03
-2026-08-07 快照：并入产品与文献查证的证据层；术语统一为全双工。
-2026-09-13 快照：增补级联与模型级全双工的 2026 比较口径（第 6 节）；复核主表 tick 数据无需修正。
-2026-09-15 口径修订：区分组件架构、双工决策与更新时序，补明 DuplexCascade 的 micro-turn 归类；本次不重新核验主表产品状态与数字。
-2026-09-15 素材补充：第 7 节按三类请求整理代表工作，核验论文、官方文档、代码与模型发布页；年份和公开属性属于对应外部实例。
+**核对状态**
+
+- 2026-08-03：初版整理。
+- 2026-08-07：并入产品与文献查证的证据层；术语统一为全双工。
+- 2026-09-13：增补级联与模型级全双工的 2026 比较口径（第 6 节）；复核主表 tick 数据，无需修正。
+- 2026-09-15：口径修订，区分组件架构、双工决策与更新时序，补明 DuplexCascade 的 micro-turn 归类；未重新核验主表产品状态与数字。
+- 2026-09-15：素材补充，第 7 节按三类请求整理代表工作，核验论文、官方文档、代码与模型发布页；年份和公开属性属于对应外部实例。GPT-Live 一行的 API 可用性据官方开发者指南更新，其余产品状态未重核。
 
 ## 划界
 
@@ -36,12 +38,11 @@ Updated: 2026-08-03
 
 | 工作 | 首次公开 | 上线状态 | 原生 tick | 参数 | 单会话上下文 | 单 GPU 容量 | 量化 / 硬件 / 效率 |
 | --- | --- | --- | ---: | ---: | --- | --- | --- |
-| [GPT-Live][gpt-live] | **2026-07-08** | **生产**。ChatGPT Voice Go/Plus/Pro 默认（Live-1），Free 默认（mini）；API 未开放；周用户超 1.5 亿（非并发） | 未披露；官方 "continuously processes input while generating output"，每秒多次决定 `speak/listen/pause/interrupt/tool`；复杂问题委托 GPT-5.5 后台 | 未披露 | 未披露；社区实测 ≥1 h（Simon Willison 个例报告，非系统测量）。[系统卡][gpt-live-card]无架构数字 | 未披露 | 未披露 |
+| [GPT-Live][gpt-live] | **2026-07-08** | **生产**。ChatGPT Voice Go/Plus/Pro 默认（Live-1），Free 默认（mini）；[开发者指南][gpt-live-guide]已发布，访问资格以当时官方说明为准；周用户超 1.5 亿（非并发） | 未披露；官方 "continuously processes input while generating output"，每秒多次决定 `speak/listen/pause/interrupt/tool`；复杂问题委托 GPT-5.5 后台 | 未披露 | 未披露；社区实测 ≥1 h（Simon Willison 个例报告，非系统测量）。[系统卡][gpt-live-card]无架构数字 | 未披露 | 未披露 |
 | [Seeduplex][seeduplex] | **2026-04-09** | **生产**。fully rolled out 到豆包 App，称服务数亿用户 | 未披露；"listen while speaking"，逐步决策 start replying / continue listening / respond to interruptions | 未披露 | 未披露 | 未披露 | speculative decoding + 量化；精度/GPU 未披露。公开数字均为相对上一代 A/B：endpoint latency −250ms、打断 −300ms、误响应与误打断减半、抢话 −40%、MOS +12%。自述克服高并发延迟尖峰与稳定性问题，解法未公开 |
 | [TML-Interaction-Small][tml] | **2026-05-11** | 研究预览，未来 limited preview | **200 ms** micro-turn | **276B MoE / 12B active** | 未披露；官方明确超长 session 仍是问题 | 未披露 | Blackwell + NVLS；自定义 MoE gather+GEMV + batch-invariant kernels（额外开销 <5%，非 utilization）；持久化 SGLang streaming session；GPU 数/量化未披露 |
 
-GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 节边界表。
-上表的产品状态保留原快照口径。本次补充核验时，OpenAI 已提供 [GPT-Live 开发者指南][gpt-live-guide]；原快照中的“API 未开放”不能继续作为当前可用性的结论，具体访问资格仍须依据当时官方说明。
+GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 节边界表。上表其余产品状态保留原快照口径。
 
 ## 2. 公开模型与研究原型
 

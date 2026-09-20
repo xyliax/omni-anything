@@ -1,6 +1,6 @@
 # 延迟线存储：历史称呼与命名启发
 
-本文件是外部历史资料与编辑意见，不是项目事实、机制或术语 owner。核对日期：2026-09-15。项目类比沿用 `docs/problem.md` 与 `docs/system.md`；本文不修改研究范围、机制状态或论文标题。
+本文件是外部历史资料与编辑意见，不是项目事实、机制或术语 owner。核对日期：2026-09-15。项目类比沿用 `docs/problem.md` 与 `docs/system.md`；本文不修改研究范围、机制状态或论文标题。系统于 2026-09-17 由 Conveyor 更名为 Pilarius，实现代码沿用旧标识符；本文各处系统名已随之更新。
 
 ## 可直接核对的历史来源
 
@@ -37,18 +37,18 @@ Recirculating delay-line memory 可以作为根据上述过程形成的技术描
 
 因此，当时的收益是用延迟线介质和反馈电路提供存储，降低对昂贵电子存储单元的需求。循环维持已经编码的信息，不会使有限延迟线容量随循环次数无限增长。
 
-| 比较项 | 延迟线存储 | Conveyor 的候选设计空间 |
+| 比较项 | 延迟线存储 | Pilarius 的候选设计空间 |
 | --- | --- | --- |
 | 历史如何保留 | 信息模式由传播介质与反馈循环维持 | 应用指定的历史由有效后备或可重建历史保留 |
 | 昂贵资源的使用 | 输入、输出与再生电路接续处理传播中的脉冲，多个比特共享配套电路 | GPU 在需要状态的窗口中驻留所需内容，更新间可回收部分空间 |
 | 时间为什么重要 | 比特到达访问点的时机决定串行访问 | 预计使用时间与可用余量约束迁移、恢复及重建安排 |
 | 容量来自什么 | 介质能同时容纳的脉冲位置及配套电路 | 给定 GPU 空间、传输与计算预算下可满足服务目标的会话规模 |
 
-共同的设计启发是：**长期保留状态与持续占用昂贵的快速存储可以分别设计，状态使用的时间结构因而进入容量分析。** 这是一项有边界的历史类比，不声称 Conveyor 将数据保存在传输链路中，或实现了物理延迟线。
+共同的设计启发是：**长期保留状态与持续占用昂贵的快速存储可以分别设计，状态使用的时间结构因而进入容量分析。** 这是一项有边界的历史类比，不声称 Pilarius 将数据保存在传输链路中，或实现了物理延迟线。
 
-更具体的映射是：延迟线由物理传播介质保留比特，共享输入输出和再生电路按时间接续处理脉冲；Conveyor 的候选设计让历史保持可恢复，并在不同状态使用窗口中复用实际 GPU 空间。因此，共同点是信息持续保留与昂贵硬件按时间复用的结合；被复用的资源、状态载体和容量决定因素不同。延迟线的数据一直占据介质中的可分辨位置，不能表述为它不需要物理存储，或只在处理器访问时才占用存储。
+更具体的映射是：延迟线由物理传播介质保留比特，共享输入输出和再生电路按时间接续处理脉冲；Pilarius 的候选设计让历史保持可恢复，并在不同状态使用窗口中复用实际 GPU 空间。因此，共同点是信息持续保留与昂贵硬件按时间复用的结合；被复用的资源、状态载体和容量决定因素不同。延迟线的数据一直占据介质中的可分辨位置，不能表述为它不需要物理存储，或只在处理器访问时才占用存储。
 
-延迟线的循环由传播时延与电路时钟形成，串行访问可能需要等待目标位置到达。Conveyor 的准备机会来自应用更新契约以及有界工作完成后的余量，预计下一次需求用于约束准备时间。具体空闲窗口与多会话可用预算仍取决于配置和竞争；历史类比不证明固定周期、恢复及时性或承载收益。
+延迟线的循环由传播时延与电路时钟形成，串行访问可能需要等待目标位置到达。Pilarius 的准备机会来自应用更新契约以及有界工作完成后的余量，预计下一次需求用于约束准备时间。具体空闲窗口与多会话可用预算仍取决于配置和竞争；历史类比不证明固定周期、恢复及时性或承载收益。
 
 ## 传播时延、容量与抛球类比
 
@@ -100,13 +100,13 @@ Recirculating delay-line memory 可以作为根据上述过程形成的技术描
 
 可用于 Introduction 的进一步编辑草句为：
 
-> Delay-line memories kept information in acoustic form between successive passages through shared electronic regeneration circuitry. Conveyor draws a conceptual parallel: it preserves recoverable history outside the GPU between state-use windows and prepares the required KV state before subsequent computation, allowing sessions to reuse limited GPU memory. The opportunity depends on coordinating state preparation and residency within transfer, compute, and timing constraints.
+> Delay-line memories kept information in acoustic form between successive passages through shared electronic regeneration circuitry. Pilarius draws a conceptual parallel: it preserves recoverable history outside the GPU between state-use windows and prepares the required KV state before subsequent computation, allowing sessions to reuse limited GPU memory. The opportunity depends on coordinating state preparation and residency within transfer, compute, and timing constraints.
 
 这段是候选设计叙事，不是已实现能力或实测结果。
 
-## 第九个候选的解释要求
+## Cyclic State Restoration 的解释要求
 
-作者进一步澄清讨论的是候选清单第九项中的 Cyclic State Restoration。该词组是现代描述性候选，强调反复回收和准备状态的过程；它不是原始延迟线文献的术语。若采用，应先按问题 owner 的术语规则正式定义。建议定义的语义为：在相邻模型更新之间反复回收部分 GPU KV 驻留，并在下一次使用前准备所需的保留历史。其循环对应更新间的状态使用与准备，不要求逐周期恢复全部历史或相同字节集合。
+Cyclic State Restoration 是现代描述性词组，强调反复回收和准备状态的过程；它不是原始延迟线文献的术语。该词已由[问题 owner 的术语表](../problem.md#terminology)正式定义，本文只记录当初的解释建议，不复述定义。当时建议的语义为：在相邻模型更新之间反复回收部分 GPU KV 驻留，并在下一次使用前准备所需的保留历史。其循环对应更新间的状态使用与准备，不要求逐周期恢复全部历史或相同字节集合。
 
 正文应区分术语解释和历史类比：摘要首次使用时可用短语给出核心含义；Introduction 可用一小段对照延迟线的循环与再生、现代状态驻留与准备；Design 展示状态有效性、空间占用、恢复时间及传输与计算预算的实际关系。历史背景一两句通常足够，机制定义和论证需要具体。名称本身不构成额外 research mechanism。
 
@@ -120,16 +120,16 @@ Recirculating delay-line memory 可以作为根据上述过程形成的技术描
 
 历史名称优先描述器件或维持状态的过程，没有要求用宽泛性能形容词命名。最有依据的词根是 recirculation、regeneration 与 cyclic。它们分别强调返回、重新形成和反复出现的使用过程。
 
-若保留作者已认可的 Memory Multiplexing，较准确的历史启发候选为：
+作者已采纳的标题为：
 
-> Conveyor: Memory Multiplexing through Cyclic State Restoration for Interactive Model Serving
+> Pilarius: Memory Multiplexing through Cyclic State Restoration for Interactive Model Serving
 
-Cyclic State Restoration 是此处提出的描述性候选，概括跨更新反复准备所需状态，使 GPU 空间能够在会话间复用；它不是从原始文献直接继承的术语，不表示逐周期恢复全部历史，也不保证会话窗口完全不重叠。若采用，须由问题 owner 正式定义，并由最终设计说明恢复与驻留如何受传输、计算和时间预算共同约束。
+Pilarius 为拉丁语"抛球者、玩球艺人"（源自 pila＝球），承接本文的抛球类比：有限的手在固定节奏下轮流接住多个循环回落的球。该名与延迟线类比相容，但不能据此推断早期延迟线技术曾以类似名称命名，也不能把历史类比或系统名本身作为独立机制、创新证明或性能证据。
 
-更贴近历史词根的候选为：
+Cyclic State Restoration 概括跨更新反复准备所需状态，使 GPU 空间能够在会话间复用；它不是从原始文献直接继承的术语，不表示逐周期恢复全部历史，也不保证会话窗口完全不重叠。选择 Restoration 的理由是：它兼容回载与有条件的重建，比 Recirculation 或 Regenerative 更贴合机制的实际含义。正式定义以问题 owner 的术语表为准；恢复与驻留如何受传输、计算和时间预算共同约束由最终设计说明。
 
-> Conveyor: Memory Multiplexing through State Recirculation for Interactive Model Serving
+未采纳的备选为更贴近历史词根的版本：
+
+> Memory Multiplexing through State Recirculation for Interactive Model Serving
 
 该版本历史辨识度更强，但 Recirculation 容易让读者预期字面上的数据闭环搬运。若最终设计包含迁移与重建混合，必须解释它描述的是逻辑状态跨更新的使用和准备过程；仅回载与主动重算仍是不同路径，后者当前是扩展。就机制准确性而言，Restoration 比直接把系统称作 Recirculating Memory 或 Regenerative Memory 更稳妥。
-
-Conveyor 可以继续作为系统名：传送与反复准备状态的意象与此类比相容。不能据此推断早期延迟线技术曾以 Conveyor 命名，或把历史类比作为独立机制、创新证明或性能证据。

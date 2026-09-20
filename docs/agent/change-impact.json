@@ -63,8 +63,7 @@
         "docs/experiments.md",
         "docs/findings.md",
         "docs/PAPER.md",
-        "eurosys2027/AGENTS.md",
-        "eurosys2027/planning/introduction-outline.md"
+        "eurosys2027/AGENTS.md"
       ],
       "verify": ["tests/test_narrative_scope.py"]
     }

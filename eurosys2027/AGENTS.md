@@ -23,7 +23,7 @@
 - diagnostic、legacy-unreconstructable 和 source-audit 证据不得写成 formal performance result。
 - review 稿始终保持 double-blind：不写作者、单位、项目主页、可识别仓库链接、acknowledgment 或自我指涉措辞。
 - 不修改 `acmart.cls`、版面尺寸、字号、行距、栏距或 caption 字号来压缩篇幅。
-- 写作顺序必须遵守 `planning/section-contracts.md`：先 paper contract 与 story logic，再搭 Intro/Background/Design/Implementation 骨架，同时规划 Evaluation，最后才逐段扩写。
+- 写作顺序必须遵守 `docs/PAPER.md` 的写作流程：先固定中心问题与候选贡献，再按各章步骤搭骨架并同步规划 Evaluation，最后才逐段扩写。
 - 在 Intro challenge、Design module 和 Evaluation question 尚未一一对应前，不得从代码路径或 patch 细节出发扩写正文。
 - 每次实质性使用 AI 都要更新 `planning/ai-use-log.md`；最终 disclosure 由作者根据 EuroSys/ACM 当时规则确认。
 - 新的论文正文只写入 `sections/`、`main.tex`、`supplement.tex`、`references.bib`、`figures/` 或 `planning/`。
