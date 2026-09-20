@@ -1,10 +1,158 @@
-\section{Periodic Interactive Model Serving}
+\section{Background and Motivation}
 \label{sec:problem}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% PAPER §2 五步：① 负载画像（何时知道下一次更新）② 时钟画像的资源形状（输入门控；空闲不可自填）
-% ③ 参照策略下的张力（全驻留；三性质前提）④ 逃生路线的交换代价 ⑤ 机会与三级时间信息。
-% PAPER §3 四步（形式化）：① 对象与事件 ② 服务目标 ③ KV 空闲区间 ④ 资源约束与可观测。
-% 本文件是否拆分为独立的 Background 与 Formulation 两节，按 docs/PAPER.md 的章节骨架与页面预算决定。
+% Rebuilt 2026-09-15 from docs/PAPER.md §2 and docs/problem.md (background sections).
+% Formulation (§3) lives in sections/02b-formulation.tex.
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild from the step skeletons in docs/PAPER.md \S2--\S3 and docs/problem.md.}
+\subsection{Request Classes and Timing Contracts}
+\label{sec:request-classes}
+
+Interactive sessions retain history across requests and keep advancing. What
+separates them for a serving system is how the target dialogue model's updates
+are triggered. We distinguish three request classes. In
+\emph{message-triggered turn-based requests}, a user or application explicitly
+submits a complete message and the model produces one bounded response; the
+next submission time is generally unknown. In \emph{endpoint-triggered speech
+requests}, input is captured continuously, and an automatic endpoint
+rule---combining voice activity, silence, and semantic cues---decides that a
+turn has ended and triggers one bounded response task; the front end may run
+at a fixed rate, but the dialogue model's response tasks start irregularly.
+In \emph{clocked full-duplex sessions}, the session stays open, input and
+output overlap, and the dialogue model processes available input, advances its
+state, and chooses an action at every fixed micro-turn, without waiting for a
+turn to end. The class boundary is the trigger of the dialogue model's
+decisions, not the component architecture: a cascaded pipeline whose dialogue
+model advances every micro-turn belongs to the third class.
+
+The third class matters because some interaction tasks constrain both the
+content and the moment of a response. Incremental translation of continuous
+speech must deliver correct partial translations while the speaker is still
+talking; responding to a semantic cue inside an ongoing utterance has a window
+that may close before the utterance ends; reporting actions in a continuous
+video stream faces events that produce no speech endpoint at all. When the
+required information appears at some moment and the valid response window
+closes before the speaker finishes, any path that gates its decisions on the
+end of the utterance misses the task even with a perfect endpoint predictor.
+Fixed micro-turns give the model an update opportunity at every time step, so
+``has the user finished'' becomes a state the model can judge at each update
+instead of a precondition for computing at all. Enhanced event-triggered
+systems may also satisfy such tasks; these examples establish the need for
+decisions that are independent of turn endings, not the uniqueness of the
+fixed-period realization.
+
+Two resource features follow from the clocked contract. First, the effective
+computation of one session in one period is bounded on both sides. On the
+input side, new content is produced in real time and the model cannot process
+input that does not yet exist; how the arriving stream is chunked into
+per-update input blocks, and whether already-arrived content may be processed
+incrementally before release, is fixed by the model's chunking and update
+contract. On the output side, the rate at which deliverable output is emitted
+is clamped near the real-time consumption rate: lockstep models fix the output
+positions of every time step in their sequence format, so generation cannot
+run past input that has not arrived; models that decouple generation from
+synthesis bound the per-period emission with a runtime cap and trained segment
+boundaries, and long responses stream across periods. Bounded buffering allows
+a bounded lead, but sustained accumulation beyond consumption violates the
+service contract and inflates user-visible latency. Per-period work is
+therefore capped by contract; when this bounded work completes faster than
+real time, the update finishes early and leaves an idle window until the next
+input arrives. Second, under full history retention the state added per period
+corresponds to the input and output positions the model actually retains, so
+when both are stable the per-period increment is approximately regular, and an
+output budget bounds it from above.
+
+A turn-based request can keep generating until its response completes, and its
+state can then step aside as a whole. A clocked session is different in both
+respects: its per-period computation is bounded and intermittent, yet the
+session does not end---the next update needs the same history, so the history
+KV must survive every idle window. The idleness discussed here is
+per-session; with many sessions interleaved, the GPU may stay busy throughout.
+
+\subsection{Historical KV and the Capacity Problem}
+\label{sec:capacity-problem}
+
+Take full residency as the reference policy: all retained state stays on the
+GPU, retention semantics are preserved exactly, and the next update starts
+with zero preparation delay. The policy can fail only on the capacity axis.
+Aggregate residency demand grows monotonically with session count and
+retained-state size, while the usable KV pool is bounded by what remains after
+model weights, activations, and runtime reservations. When per-period
+computation does not saturate the period, residency demand can reach the
+resource ceiling before compute demand does. We treat this as a proposition to
+verify, not a premise: it holds only where three workload properties hold
+together---history is reused across updates, updates advance on a describable
+period with idle intervals between successive uses, and per-period compute is
+unsaturated. Absent any one property the problem degenerates into forms that
+existing work already covers.
+
+The first property makes the retention policy a workload parameter: an
+application may retain full history or cap per-session state with a window or
+summary. This paper does not adjudicate quality among retention policies; it
+requires only that the workload, under its chosen policy, still reuses
+substantial state across updates. All residency-side comparisons hold the
+retention policy fixed.
+
+\begin{figure}
+  \placeholder{Figure~2: capacity tension. Measured KV allocation approaching
+  the pool limit as session count and context grow, while per-period compute
+  retains slack; candidate second panel contrasts aligned versus staggered
+  release (sum of peaks versus sum of time-averages). Pending controlled
+  motivation data (Q1).}
+  \caption{KV capacity tension under the full-residency reference
+  (placeholder; pending Q1).}
+  \label{fig:tension}
+\end{figure}
+
+Known ways out fall along the two dimensions introduced above. On the
+semantic dimension, windowing, compression, and summarization shrink or cap
+retained state, changing what later computation sees; retained state still
+crosses idle intervals and still occupies residency, so this dimension changes
+the size of the residency problem, not its solution. On the residency
+dimension, engine-built swapping evicts and restores whole spans reactively on
+allocation failure; tiered-recovery designs such as Pensieve and HCache begin
+reload or reconstruction only after the request has entered a batch; hybrid
+recovery--recompute schedulers such as Cake and CacheFlow shorten the wait but
+do not move it off the critical path. Retention semantics survive; timeliness
+does not. Systems that do act ahead of demand bind their signals to other
+sources: queue depth (CachedAttention) yields a lead time the system cannot
+choose; recency heuristics misfire precisely on the ``idle but returning
+soon'' pattern that clocked sessions exhibit every period; application hints
+(SYMPHONY) can be wrong and arrive at coarse lead times; pause-duration
+estimates (InferCept) target irregular external calls; model-internal
+prediction (InfiniGen, ECHO) operates within a single step; workflow graphs
+(KVFlow) provide step distances, not times. \emph{[citations to be verified]}
+None of these signals is the recurring release time that a clocked workload
+itself commits.
+
+\subsection{Opportunity and Cost}
+\label{sec:opportunity}
+
+Clocked sessions hold precisely the asset the residency-dimension routes lack.
+A turn-based request cannot know its next arrival; an endpoint-triggered
+request starts when a turn-end is detected. A periodic workload, by contrast,
+commits its next use time to the system as a property of the workload: the
+information is available before the demand arises and recurs across
+describable periods, so it can drive residency reclamation during idle
+intervals and state restoration ahead of use. The asset comes in three
+grades, each unlocking different actions under increasingly strong
+assumptions: knowing that a rhythm exists supports demand estimation; seeing
+concrete release times supports preparing state before demand enters the
+critical path; controlling release offsets supports rearranging how sessions
+overlap. Offset control does not follow from rhythm visibility, and the value
+of timing information is not represented by its strongest grade alone.
+
+The opportunity is not free. Early restoration occupies GPU space ahead of
+need; concurrent sessions contend for the same transfer link; staggered
+updates can erode batching efficiency. Exploiting committed timing therefore
+raises three challenges that any design must answer together:
+\begin{enumerate}
+  \item the next demand is predictable, but the actual execution moment is
+        shaped by queueing;
+  \item state may be stored in several places, but its validity must be
+        decidable at use time; and
+  \item restoring ahead of use saves critical-path time while occupying space
+        that other sessions need.
+\end{enumerate}
+To weigh these costs, ``which state, used when, prepared how early'' must
+first become decidable quantities. The next section fixes the objects, events,
+and objective that the rest of the paper shares.

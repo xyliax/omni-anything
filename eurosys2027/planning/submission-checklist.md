@@ -4,6 +4,8 @@ Last verified: 2026-08-25, Asia/Shanghai.
 
 Authoritative source: [EuroSys 2027 Call for Papers](https://2027.eurosys.org/cfp.html). The official CFP and submission system override this local summary if they change.
 
+Workspace scaffold (completed 2026-08-25): official CFP verified; acmart v2.20 pinned with provenance in `vendor/acmart/UPSTREAM.md`; anonymous main and supplement LaTeX scaffolds; build and format checks (`make check`). Writing progress is not tracked here or anywhere in planning/ — open blockers live in the material-dependency table of [`docs/PAPER.md`](../../docs/PAPER.md#material-dependencies).
+
 ## Important Dates
 
 - Spring cycle: closed.

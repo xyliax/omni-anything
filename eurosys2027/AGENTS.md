@@ -27,6 +27,7 @@
 - 在 Intro challenge、Design module 和 Evaluation question 尚未一一对应前，不得从代码路径或 patch 细节出发扩写正文。
 - 每次实质性使用 AI 都要更新 `planning/ai-use-log.md`；最终 disclosure 由作者根据 EuroSys/ACM 当时规则确认。
 - 新的论文正文只写入 `sections/`、`main.tex`、`supplement.tex`、`references.bib`、`figures/` 或 `planning/`。
+- TeX 正文源文件按一句一行组织；不要按固定列宽硬换行，也不要把单词或短语拆成独立行。空行只表示正文段落边界。该规则只规范源文件可读性，PDF 中的实际断行仍由 LaTeX 决定。
 
 ## Validation
 
@@ -42,4 +43,4 @@ make check
 python -m pytest
 ```
 
-模板或 venue 规则更新时，必须同步更新 `vendor/acmart/UPSTREAM.md`、`planning/submission-checklist.md` 和 `planning/progress.md`。
+模板或 venue 规则更新时，必须同步更新 `vendor/acmart/UPSTREAM.md` 和 `planning/submission-checklist.md`。

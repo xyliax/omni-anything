@@ -32,11 +32,17 @@ SCOPE_DOCS = (
 )
 
 PAPER_NARRATIVE = (
+    ROOT / "eurosys2027" / "sections" / "00-abstract.tex",
     ROOT / "eurosys2027" / "sections" / "01-introduction.tex",
     ROOT / "eurosys2027" / "sections" / "02-background-motivation.tex",
+    ROOT / "eurosys2027" / "sections" / "02b-formulation.tex",
     ROOT / "eurosys2027" / "sections" / "03-design.tex",
     ROOT / "eurosys2027" / "sections" / "04-implementation.tex",
+    ROOT / "eurosys2027" / "sections" / "05-evaluation-methodology.tex",
+    ROOT / "eurosys2027" / "sections" / "06-evaluation.tex",
+    ROOT / "eurosys2027" / "sections" / "07-related-work.tex",
     ROOT / "eurosys2027" / "sections" / "08-discussion.tex",
+    ROOT / "eurosys2027" / "sections" / "09-conclusion.tex",
 )
 
 # A model or device name can remain in the experiment owner or an external

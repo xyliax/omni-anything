@@ -38,4 +38,4 @@ encoder 输入在引擎步内调度并 eager 执行。encoder CUDA graph 机制�
 
 ## 与本仓库的关系
 
-baseline worker 在引擎几何参数（模型、显存比例、`max_model_len`、`max_num_seqs`）之外只设置 `enforce_eager=False`；Conveyor worker 另外启用 prefix caching 与 CPU offload connector，并在 eviction 模式下强制同步调度。两者的组批与 CUDA graph 行为一致，全部来自上述默认值。本仓负载下的实测后果（图覆盖、步耗时结构、恢复 prefill 余量）由 [`docs/findings.md`](../findings.md) 的 FINDING-E1 至 FINDING-E4 持有。
+baseline worker 在引擎几何参数（模型、显存比例、`max_model_len`、`max_num_seqs`）之外只设置 `enforce_eager=False`；Pilarius worker 另外启用 prefix caching 与 CPU offload connector，并在 eviction 模式下强制同步调度。两者的组批与 CUDA graph 行为一致，全部来自上述默认值。本仓负载下的实测后果（图覆盖、步耗时结构、恢复 prefill 余量）由 [`docs/findings.md`](../findings.md) 的 FINDING-E1 至 FINDING-E4 持有。

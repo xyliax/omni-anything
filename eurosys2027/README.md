@@ -5,11 +5,10 @@
 ## Current Scope
 
 - 目标 venue：EuroSys 2027。
-- 当前阶段：写作框架、模板和合规检查已经建立；论文正文、数字和结论尚未填充。
+- 当前阶段：全章草稿已按 [`../docs/PAPER.md`](../docs/PAPER.md) 骨架转写；数字与结论保持空位，等待 formal evidence（开放阻塞项见其[材料依赖表](../docs/PAPER.md#material-dependencies)）。
 - 主稿入口：[`main.tex`](main.tex)。
 - 补充材料入口：[`supplement.tex`](supplement.tex)。
 - 官方规则摘要：[`planning/submission-checklist.md`](planning/submission-checklist.md)。
-- 当前进度：[`planning/progress.md`](planning/progress.md)。
 - 模板 provenance：[`vendor/acmart/UPSTREAM.md`](vendor/acmart/UPSTREAM.md)。
 
 ## Authoritative Project Sources

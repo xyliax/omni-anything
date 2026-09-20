@@ -1,6 +1,6 @@
 # Duplex Serving: Open Problems Beyond the Current Scope (2026-09)
 
-Dated reading of the systems literature on serving full-duplex speech models, checked against primary sources on 2026-09-02. Future-direction notes only: the current project studies KV residency for periodic interaction sessions on one GPU (see [`docs/problem.md`](../problem.md)), and nothing here is a claim, mechanism or contribution of that work. The facts about each cited system live in [the duplex serving systems landscape](duplex-serving-systems-landscape-2026-09.md); this file records what that landscape leaves open.
+Dated reading of the systems literature on serving full-duplex speech models, checked against primary sources on 2026-09-02. Future-direction notes only: the current project studies KV residency for periodic interaction sessions (see [`docs/problem.md`](../problem.md)), and nothing here is a claim, mechanism or contribution of that work. Model, hardware and topology coverage must be read from the project owners rather than treated as frozen scope. The facts about each cited system live in [the duplex serving systems landscape](duplex-serving-systems-landscape-2026-09.md); this file records what that landscape leaves open.
 
 ## Claims already occupied
 
@@ -17,6 +17,8 @@ vLLM-Omni's stage graph (arXiv 2602.02204) already ships an experimental duplex 
 **Idle-listening compute.** Freeze-Omni gates its input stream on voice-activity detection and spends no LLM compute while the user is silent; Moshi at 12.5 Hz and MiniCPM-o 4.5 at 1 Hz run a full forward pass every frame regardless of who is talking or whether anyone is. No paper exploits silence to reduce duplex serving cost. Searching for adaptive frame rate, skipping, gating and silence-conditioned inference in duplex models finds only generic LLM layer skipping (Learning to Skip, arXiv 2311.15436; What Layers When, arXiv 2510.13876) and streaming ASR or enhancement skipping (fast-skip regularization, arXiv 2104.02882; Skip-RNN, arXiv 2207.11108).
 
 **Cross-family runtime.** No published system spans the divergent duplex families in one runtime: parallel multi-stream with inner monologue (Moshi, SALM-Duplex), block-interleaved single stream (BayLing-Duplex, OmniFlatten, SyncLLM), time-division windows over an omni model (MiniCPM-o 4.5), and VAD-gated state machines over a half-duplex LLM (Freeze-Omni, VITA-1.5, FlexDuo). VoxServe covers none of them, LiveServe covers only cascaded pipelines, Metronome covers one model at a time.
+
+Terminology clarification (2026-09-15): this inventory mixes architectural and execution properties, so it is not a set of mutually exclusive request classes. In particular, [DuplexCascade](https://arxiv.org/abs/2603.09180) combines an ASR–LLM–TTS cascade with fixed micro-turn updates of the dialogue LLM. Cascaded architecture does not imply endpoint-triggered dialogue updates; front-end VAD or ASR cadence does not establish the cadence of the model owning the managed KV. The project classification and resource conditions are maintained in [Problem](../problem.md#interaction-sessions-and-their-timing).
 
 **Duplex-specific speculative or multi-stream decoding.** VADUSA (arXiv 2410.21951) and Speech Speculative Decoding (arXiv 2505.15380) accelerate turn-based autoregressive TTS; nothing addresses multi-stream decoding under a recurring frame deadline.
 

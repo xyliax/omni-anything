@@ -1,9 +1,149 @@
-\section{Conveyor Design}
+\section{\systemname Design}
 \label{sec:design}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% PAPER §4 六步：① 总览与不变量（设计总览关键句 + 三挑战；图 2 落位）② 释放偏移调度（含初始指派与动态再指派两个子问题）
-% ③ 主机后备与空闲逐出 ④ 按需恢复 ⑤ KV 预取 ⑥ 正确性与回退。
-% 每步主张取 docs/system.md 对应机制卡片的一句话论证；未决策略保持问题形式，指向 system.md 未决设计决策表。
+% Rebuilt 2026-09-15 from docs/PAPER.md §4 and the mechanism cards in
+% docs/system.md. Undecided policies stay stated as open design decisions.
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild each subsection from its mechanism card in docs/system.md via the step skeleton in docs/PAPER.md \S4. Undecided policies stay stated as open design decisions.}
+\subsection{Overview and Invariants}
+\label{sec:design-overview}
+
+The candidate design links idle-state reclamation to subsequent state
+preparation: reclamation is grounded in access references and valid host
+coverage, restoration in anticipated demand and resource pressure, and the
+release offset---where the application permits it---is assigned once at
+admission and never moved thereafter. This is a design overview, not an
+implemented unified scheduler; Section~\ref{sec:implementation} separates the
+implemented paths from candidate interfaces. Seven design requirements bound
+every mechanism: retained history semantics are never truncated by KV
+management; offsets are set only within the application's contract, with waits
+accounted in service metrics; blocks still referenced by execution or
+transfers are never reclaimed; KV-dependent computation reads only valid GPU
+content; every missing range has a decidable recovery source; prefetch
+failures fall back to the normal restoration path; and active state, caches,
+in-flight transfer targets, and host copies all count toward resource use.
+
+\begin{figure}
+  \placeholder{Figure~3: design overview. Components and information flow;
+  candidate interfaces versus implemented paths distinguished by dashed and
+  solid edges; must match the final algorithms before submission.}
+  \caption{\systemname overview (placeholder; tracks open policy decisions).}
+  \label{fig:overview}
+\end{figure}
+
+The three mechanisms below answer the three challenges of
+Section~\ref{sec:opportunity} in state-lifecycle order: first arrange when
+updates happen, then manage state between updates, then prepare state before
+use. Each mechanism is a hypothesis under test; none is claimed as an
+established gain.
+
+\subsection{Scheduling Release Offsets}
+\label{sec:design-offsets}
+
+Release offsets determine how per-session demands overlap. They are a control
+variable only where the application permits; in our workload model that
+permission sits at the service-stack entrance, steady-state operation adds no
+user-visible cost, and the one-time alignment wait of the first submission is
+reported separately. \systemname v1 uses a uniform slot grid: the period is
+divided into equal slots, an arriving session occupies a free slot, admission
+reduces to slot availability, a departing session frees its slot after it
+fully ends, and an assigned offset never moves during the session's lifetime.
+Heterogeneous context lengths are absorbed by restoration depth rather than by
+offset adjustment: each session evicts and restores only what its own transfer
+window can carry, so sessions with more state keep more resident.
+
+The offset assignment has a resource-level reading: it divides the transfer
+link's time capacity among sessions, and the interval between adjacent
+releases is the restoration byte budget available to a session without
+contention. As long as each session's eviction depth is capped by its window
+budget, the link budget is fully used and the total reclaim does not depend on
+how shares are distributed---which is why demand-proportional spacing and
+dynamic reassignment are shelved as alternatives rather than pursued. On the
+space dimension, staggering offsets de-phases per-session residency curves:
+with partial eviction in effect, total peak allocation moves from the sum of
+per-session peaks toward the sum of time averages, by a margin set by the
+peak-to-mean ratio that the residency policy itself shapes. This interaction
+is a hypothesis for ablation. The slot count is derived from configuration
+rather than chosen freely, but its closed form is not yet writable: denser
+slots shorten windows, shallow the feasible eviction depth, and raise mean
+residency, so space, bandwidth, and compute constraints cannot be solved
+independently and minimized. \placeholder{Slot-count derivation as a joint
+feasibility system; solution and its predicted reclaim and capacity-extension
+ratio pending calibration (Q5). Late-input handling is an open design
+decision.}
+
+\subsection{Managing Idle KV State}
+\label{sec:design-idle}
+
+\paragraph{Incremental host backing.}
+A host copy is one precondition of safe eviction, but copying by itself
+reclaims nothing; it supplies the valid coverage that later decisions depend
+on. Copies are built asynchronously as state is produced, and the design
+distinguishes unstarted, in-flight, and confirmed coverage, because
+restoration decisions may rely only on the last.
+
+\paragraph{Idle-session eviction.}
+Reclaiming residency during idle intervals is the direct source of any
+capacity benefit. Safety rests jointly on reference checks and copy
+confirmation: the policy first confirms the target state is no longer accessed
+by current execution, releases the corresponding request references, selects
+blocks that remain safe to reclaim, retains a policy prefix, and reclaims the
+rest; shared blocks and in-flight transfer references are checked separately.
+\systemname v1 evicts from the tail and retains the prefix, with depth capped
+by what the session's offset window can bring back, and evicts only blocks
+with confirmed host copies; recomputing unbacked ranges is a reserved
+extension. Eviction creates gaps, and every gap must be filled before the next
+use.
+
+\paragraph{On-demand restoration.}
+On-demand restoration is the fallback when prefetching is absent or beaten:
+reuse the contiguous GPU prefix, reload missing ranges from confirmed host
+coverage, and recompute the dependent suffix after the first unrecoverable
+gap. Its semantic correctness and its timely completion are independent
+properties and are verified separately; a semantically correct restoration can
+still miss the service objective, because transfer and recomputation enter the
+critical path and can queue.
+
+\begin{figure}
+  \placeholder{Figure~4: KV block state model. Transitions across the six
+  dimensions---session activity, GPU allocation, GPU content, host coverage,
+  transfer, and cache visibility; a storage cursor indicates progress, not
+  confirmed coverage of everything before it.}
+  \caption{KV block state model (placeholder; semantics owned by the design
+  document's state model).}
+  \label{fig:state-model}
+\end{figure}
+
+\subsection{Preparing State Before Use}
+\label{sec:design-prefetch}
+
+Prefetching moves state preparation off the critical path. Its lead time must
+cover the full dependency chain from submission to the next execution
+opportunity, not just the transfer itself. \systemname v1 triggers prefetch by
+space gating: once the preceding session's eviction frees the target space, a
+prefetch may start, and pending prefetches are ordered by deadline on the slot
+grid. The lead time is a tunable: starting earlier lengthens the occupancy
+window and raises mean residency, eroding the staggering benefit, so its value
+is left to a sensitivity experiment. Correctness is preserved by
+falling back: if capacity is short the prefetch defers; if input arrives
+first, prefetch coordinates with on-demand restoration; if prefetched state is
+evicted again before use, it is treated as an ordinary miss.
+\placeholder{Algorithm box: inputs, actions, preconditions, and complexity of
+the eviction and prefetch policies; pending the open policy decisions.}
+
+\subsection{Correctness and Fallback}
+\label{sec:design-correctness}
+
+Five properties require argument, and running examples cannot substitute for
+it: content consistency (copy identity, valid ranges, and read order agree
+with the reference history), no premature reuse (execution and transfer
+references cover the full use span), recoverability of coverage gaps (missing
+ranges and dependent suffixes can be recomputed from retained history),
+tolerance of prefetch failure (failures, duplicate requests, capacity
+rejections, and demand overtaking never yield invalid reads), and explainable
+service state (input failures and sustained backlog are distinguishable).
+Fallbacks preserve reference semantics but may still miss deadlines; the two
+guarantees are stated separately. How far these properties can be argued
+depends on implementation facts---the next section states what the current
+implementation supports and what remains candidate design.
+\placeholder{State-transition preconditions, shared-reference and cancellation
+protocol, and provable invariants; pending design completion.}

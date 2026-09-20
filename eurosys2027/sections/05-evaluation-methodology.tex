@@ -1,8 +1,58 @@
 \section{Evaluation Methodology}
-\label{sec:evaluation-methodology}
+\label{sec:methodology}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% 对应 PAPER §6 步骤 ①：Setup 与公平性——研究问题（Q1–Q7）、被评估系统与匹配控制、工作负载与平台矩阵、
-% 指标与判定；协议真值在 docs/experiments.md，本节不复制易变配置。
+% Rebuilt 2026-09-15 from docs/PAPER.md §6① and docs/experiments.md
+% (comparison families, fairness, ablation matrix, measurement semantics).
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild from docs/PAPER.md \S6 step 1 and the protocol owner docs/experiments.md.}
+Our evaluation is organized around seven questions: whether KV capacity limits
+service before compute or input handling does (Q1); how many sessions each
+system can serve within the objective (Q2); at what latency cost (Q3); what
+each mechanism contributes (Q4); whether the resource model predicts held-out
+operating points (Q5); whether state round-trips preserve retained semantics
+(Q6); and where the approach stops helping (Q7).
+
+\paragraph{Fairness.}
+Formal comparisons fix the model and precision, input content and processing
+semantics, actually executed generation work, reference history, scheduling
+mode, batching budgets, cache and host-copy budgets, output-delivery
+accounting, and observation switches. End-to-end comparisons must match work
+and apply a uniform service verdict; claims that a specific mechanism causes a
+benefit must control variables. Configuration names and default switches do
+not substitute for verifying the executed path.
+
+\paragraph{Compared systems.}
+The comparison families are: full residency (the reference policy, and the
+capacity and latency baseline), recomputation of missing state, on-demand host
+reload, \systemname and its ablations, the closest session-level KV-management
+systems, and retention policies such as windowing or summarization---the last
+included as workload parameters that change per-session retained-state size,
+not as baselines to defeat, and without adjudicating quality among retention
+policies.
+\placeholder{Selection and adaptation of the closest external systems
+(candidates include session-KV tiering and duplex-serving systems); versions,
+missing capabilities, and re-implementation status to be documented.}
+
+\paragraph{Ablations and the three grades of timing.}
+Restoration-trigger arms map to the three grades of timing information:
+on-demand restoration and post-submission prefetch use no future timing;
+rhythm-based prefetch uses the first two grades (rhythm and visible release
+times); the release-policy arm (aligned versus staggered offsets) tests the
+third grade, offset control. Reference history, host copies, and the transfer
+path are held fixed across arms, and the actual moment each trigger signal is
+produced is recorded. An oracle arm with exact future information, if used, is
+labeled as an undeployable upper reference.
+
+\paragraph{Metrics.}
+Update service latency runs from actual submission $a(i,k)$ to generation
+completion, with each session's one-time alignment wait reported separately,
+and is always read together with the update-backlog metric. Capacity is
+reported as offered, admitted, and completed load under the stated deadline,
+distribution, and horizon. KV occupancy separates allocated space, valid
+content, reusable cache, and host copies; restoration cost separates bytes,
+initiation queueing, transfer, completion reporting, and rescheduling wait.
+Sustained growth makes the workload non-stationary, so trajectories over time
+and context are reported rather than single steady-state points.
+\placeholder{Workload and platform instantiation: application timing
+contracts, session-lifetime distributions, retention-policy parameters, state
+geometry, and device/interconnect inventory; the matrix is not yet frozen and
+no current prototype configuration is promoted to paper scope.}

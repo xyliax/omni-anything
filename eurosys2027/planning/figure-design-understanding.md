@@ -1,4 +1,4 @@
-# Conveyor 图形设计前的机制理解审计
+# Pilarius 图形设计前的机制理解审计
 
 日期：2026-09-08。历史审计说明：本文记录重画前的理解校正，下文“现有/原图”指被审计的上一版；后续预览与复现契约见 [Figure 1 spec](figure-1-motivated-example.md) 和 [Figure 2 spec](figure-2-design-overview.md)。用途：校正作者反馈后用于绘图的理解，作为各图 spec 的前置阅读；不是问题、机制、协议或 finding 的新 owner。本文是对现有 owner 与源码的阅读映射，涉及当前状态时回到原 owner。**现有两张 SVG 为待替换草稿，本次不继续润色或宣称已通过技术审阅。**
 
@@ -107,7 +107,7 @@
 - `E` 的 `host_backed` 是对选中集合的事后查询；不是驱逐前的覆盖许可。
 - `L/R` 是 issue/report window，含提交/轮询/调度等待，不是 CUDA event DMA 时长。
 - [当前 residency sampler](../../infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py) 优先读 request-owned blocks，否则沿 GPU cached prefix 走；缺口之后的 cached tail 和不属于 request 的在途预取不自动包含在这个值里。它不等价于完整 physical residency census。
-- retained Conveyor 没有该连续 sampler，旧 exporter 使用 eviction/reload 事件推估。不能据此前沿补出精确 Host block 地图或完整 allocator total。
+- retained Pilarius 没有该连续 sampler，旧 exporter 使用 eviction/reload 事件推估。不能据此前沿补出精确 Host block 地图或完整 allocator total。
 
 ## 7. 原图具体错在哪里
 
@@ -127,7 +127,7 @@
 
 作者指定的 1 s、4 slots、4 会话继续有效；每会话 compute 小于半周期，允许局部重叠。其余参数是示意，不自动继承实验配置，也不是论文最终 workload contract。
 
-**Intro 的任务**：让读者看到长期历史要求、GPU capacity 与恢复等待之间的冲突，并理解 next-use timing 提供的机会。可以以相同逻辑 KV 显示全驻留、idle eviction + demand reload、Conveyor planned recovery 的局部对照。若涉及 offsets 独有收益，必须考虑“同步输入 + 引擎内部流水线”这一对照，不能把普通流水线已有的资源收益全归于 offset。理想对照不是未经测量的性能曲线。
+**Intro 的任务**：让读者看到长期历史要求、GPU capacity 与恢复等待之间的冲突，并理解 next-use timing 提供的机会。可以以相同逻辑 KV 显示全驻留、idle eviction + demand reload、Pilarius planned recovery 的局部对照。若涉及 offsets 独有收益，必须考虑“同步输入 + 引擎内部流水线”这一对照，不能把普通流水线已有的资源收益全归于 offset。理想对照不是未经测量的性能曲线。
 
 **Design 的任务**：保留用户的纵向时间剖面，但选取能回答机制问题的时刻：
 

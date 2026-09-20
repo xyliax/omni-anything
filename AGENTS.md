@@ -62,7 +62,7 @@
 | System requirement | 研究设计成立所需的不变量或约束；规定系统必须满足什么，但不声称创新 | 写入 `docs/system.md` 的设计不变量或约束 |
 | Implementation choice | 当前代码对 requirement 的一种可替换实现；用于 workflow、维护和诊断 | 写入实现流程、局部 `AGENTS.md` 或 registry，不进入贡献或机制列表 |
 
-代码差异、独有开关或 matched baseline/Conveyor configuration 差异本身不构成 research mechanism。若替换某项接口、缓冲或同步实现而不改变 paper claim 与对应 ablation，该项应归为 implementation choice；由实现变化引出的测量口径可以形成 finding，但不能反向包装为机制创新。
+代码差异、独有开关或 matched baseline/Pilarius configuration 差异本身不构成 research mechanism。若替换某项接口、缓冲或同步实现而不改变 paper claim 与对应 ablation，该项应归为 implementation choice；由实现变化引出的测量口径可以形成 finding，但不能反向包装为机制创新。
 
 ## Narrative Scope Guard
 
@@ -91,4 +91,4 @@
 
 ## Required Checks
 
-从仓库根运行 `python -m pytest`。其中 `tests/test_narrative_scope.py` 是 scope anti-narrowing 的必要回归检查；修改根入口、核心 human docs、论文 planning 或外部资料目录边界时，不得删除或绕过它。
+检查按改动类型分级：仅改动文档时，只需运行 `python -m pytest tests/test_narrative_scope.py`；改动代码、测试或配置，以及提交前，从仓库根运行完整 `python -m pytest`。`tests/test_narrative_scope.py` 是 scope anti-narrowing 的必要回归检查；修改根入口、核心 human docs、论文 planning 或外部资料目录边界时，不得删除或绕过它。CI 始终运行全量测试。

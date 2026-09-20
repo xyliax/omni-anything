@@ -3,19 +3,23 @@
 Updated: 2026-08-03
 2026-08-07 快照：并入产品与文献查证的证据层；术语统一为全双工。
 2026-09-13 快照：增补级联与模型级全双工的 2026 比较口径（第 6 节）；复核主表 tick 数据无需修正。
+2026-09-15 口径修订：区分组件架构、双工决策与更新时序，补明 DuplexCascade 的 micro-turn 归类；本次不重新核验主表产品状态与数字。
+2026-09-15 素材补充：第 7 节按三类请求整理代表工作，核验论文、官方文档、代码与模型发布页；年份和公开属性属于对应外部实例。
 
 ## 划界
 
 本文是有日期的外部公开规格整理，不是项目事实源，也不定义本项目的 workload、机制、术语或 contribution。任何内容进入 paper 前都必须重新核验原始来源，并按 [`docs/problem.md`](../problem.md#terminology) 与四份 human owner 重新表述；不得从本文件把外部系统的后台任务、音频播放链或指标定义套用到当前原型。
 
-只把下面这种系统算作**模型级全双工（model-level full-duplex）**：模型在输出期间继续吸收输入，并把 silence、overlap、backchannel、打断或主动开口当作模型时间上下文或学到的动作。以下两类不自动算：
+主表按公开材料是否支持**模型级全双工（model-level full-duplex）**筛选：模型在输出期间继续吸收输入，并把 silence、overlap、backchannel、打断或主动开口当作模型时间上下文或学到的动作。该属性不要求所有组件合成一个端到端模型。以下现象本身不足以证明这一属性：
 
 - WebSocket 能同时收发，或用户说话时取消 TTS；
-- `VAD 判停 → ASR → 文本 LLM → TTS`，即使各模块都做成 streaming。
+- 前端持续采集、转写并判断端点，端点后调用对话模型，即使输入处理和输出播放都做成 streaming。
+
+本表的筛选也不等于项目的周期性 KV 适用性分类。原生模型和级联中的对话主干，都应按目标模型的更新节奏、跨更新状态复用和实际 KV 空闲区间分析；输入输出可重叠不自动证明固定 micro-turn，未纳入主表也不等于不适用项目方案。尤其不能把“级联”作为“端点触发”的同义词：DuplexCascade 保留 ASR–LLM–TTS 架构，却让对话 LLM 按固定 micro-turn 持续决策，属于 [Problem 的第三类时间结构](../problem.md#interaction-sessions-and-their-timing)。
 
 **约定**
 
-- **tick**：模型或调度器完成一次交互决策的原生最小时间单位，不是网络包长、首包延迟或评测 deadline。
+- **tick**：来源描述的模型时间步或同步块粒度；是否对应目标对话主干的一次更新需按契约核验，不等于完成该更新的实际计算时间、网络包长、首包延迟或评测 deadline。
 - 容量数字分为「实测」「config cap」「下界」「外推」；没有数据一律写「未披露」。**N\*** 只沿用本文所整理来源对 schedulable concurrency 的定义，不为本项目冻结验收阈值。
 - 90 s 新会话数字只反映短时突发下的容量，不能替代长时稳态容量。
 - config cap（如 Raon `FD_MAX_SESSIONS_PER_GPU=2`）**≠ 实测最大值**。
@@ -37,6 +41,7 @@ Updated: 2026-08-03
 | [TML-Interaction-Small][tml] | **2026-05-11** | 研究预览，未来 limited preview | **200 ms** micro-turn | **276B MoE / 12B active** | 未披露；官方明确超长 session 仍是问题 | 未披露 | Blackwell + NVLS；自定义 MoE gather+GEMV + batch-invariant kernels（额外开销 <5%，非 utilization）；持久化 SGLang streaming session；GPU 数/量化未披露 |
 
 GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 节边界表。
+上表的产品状态保留原快照口径。本次补充核验时，OpenAI 已提供 [GPT-Live 开发者指南][gpt-live-guide]；原快照中的“API 未开放”不能继续作为当前可用性的结论，具体访问资格仍须依据当时官方说明。
 
 ## 2. 公开模型与研究原型
 
@@ -136,9 +141,9 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 | [Amazon Nova 2 Sonic][nova-sonic] | Bedrock 生产；双向 speech-to-speech、interrupt、async tool；最高 1M tokens；单连接 8 min 可续 | 官方仍强调 "intelligent turn-taking detects when user finishes speaking" |
 | [Qwen3.5-Omni-Plus-Realtime][qwen-realtime] | Model Studio API；session 最长 120 min；history 100 audio turns / 累计 ≈600s，drop-oldest；语义打断；思考模式与音频输出互斥 | 模型内部时序与原生 tick 未公开 |
 
-其他常被称为 full-duplex 的 FireRedChat、FlexDuo、DuplexCascade、Unmute 等，需要按其实际控制路径区分。若核心仍是外部 VAD/ASR/LLM/TTS/controller 或两套不能同时听说的 LLM 进程，属于系统级双向/级联方案，不应仅凭双向传输归入模型级全双工；但 DuplexCascade 明确提出了 **VAD-free cascaded ASR–LLM–TTS pipeline**，用固定 micro-turn 和控制 token 实现全双工，是“级联架构”和“全双工交互”可以组合的直接反例。Qwen2.5/3.x-Omni、GLM-4-Voice、Step-Audio 等普通流式语音模型也不能仅凭 streaming output 推断为模型级全双工。
+其他常被称为 full-duplex 的 FireRedChat、FlexDuo、DuplexCascade、Unmute 等，需要分别核验组件架构、输入输出重叠能力、交互决策承担者及其更新时序。外部控制器负责打断、对话 LLM 仅在事件后重新调用，与对话 LLM 在每个 micro-turn 利用最新输入选择行为，是不同路径；存在 ASR、TTS、多个模型或控制器本身不能判定属于哪一种。DuplexCascade 明确提出 **VAD-free cascaded ASR–LLM–TTS pipeline**，在固定 micro-turn 上让对话 LLM 通过控制 token 决策，说明级联主干也可以承担持续双工决策。Qwen2.5/3.x-Omni、GLM-4-Voice、Step-Audio 等则不能仅凭 streaming output 推断模型是否具有持续双工决策或固定周期更新。
 
-明确剔除：dGSLM 是双路对话生成先驱但不是在线 agent；Mini-Omni2 的 duplex 主要是关键词打断；DuplexMamba 并行生成的是文本非 assistant speech；VITA/Freeze-Omni/MinMo/Nemotron VoiceChat 依赖双模型或外部控制。它们可作组件 baseline，但不应与模型级全双工混在同一规格表里。
+其他未纳入主表的边界工作：dGSLM 的双路对话生成不等于在线 agent；Mini-Omni2 的关键词打断不足以证明完整的持续交互决策；DuplexMamba 的并行文本生成与本表语音输出属性需分开记录。VITA、Freeze-Omni、MinMo、Nemotron VoiceChat 则需逐一核验实际模型与控制路径，不能因为依赖多个模型或外部控制就统一排除其双工能力或周期性 KV 管理需求。主表未收录只表示本次规格整理没有按相同口径收录足够证据，不是能力不可实现的结论。
 
 ## 5. 后台工作与结果注入的公开证据
 
@@ -149,12 +154,79 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 
 检索记录（2026-08-01）：除 Metronome 外未核验到全双工 GPU serving 论文；[Awesome-Full-Duplex-SDM][awesome-fd] 无 serving 条目。[Nemotron 3 VoiceChat][nemotron-voicechat]（2026-03，12B 开源）模型卡无并发或批量规格。
 
-## 6. 级联与模型级全双工的 2026 比较口径（2026-09-13 增补）
+## 6. 组件架构、双工能力与更新时序的比较（2026-09 修订）
 
-- **产业分析的共识框架已从"谁更快"转为取舍**：级联胜在模块可替换、逐阶段可观测与审计、任意文本 LLM 与工具生态（[Coval 2026 指南][coval-2026]、[Gradium 对比][gradium-2026]，均为厂商/产业分析内容）；模型级全双工胜在重叠语音、backchannel、及时打断等双工行为与副语言信息（[2026 S2S 架构综述][ksopyla-2026]，个人技术博客）。"级联必然更慢"被明确否定：流式 TTS 首音频已降至 ~100 ms TTFB，级联端到端延迟主要由 LLM TTFT 决定（[Inworld 架构对比][inworld-arch]，厂商内容）。Gradium（Moshi 作者创业公司）自述当前研究问题是"把级联的模块化带进全双工架构"。
-- **级联结构上的全双工决策粒度是秒级**：[DuplexCascade][duplexcascade]（arXiv:2603.09180）无任何 VAD——流式 ASR 的部分结果每 `Δt` 被 flush 成一个文本 micro-turn 送入 LLM，用户静音也照常运行（以 `<no voice>` token 表示），话轮决策由 LLM 通过控制 token（`<user is speaking>`/`<user finish speaking>`/`<user is interrupting>`/`<user backchannel>` 等）在每个 tick 作出；对话历史跨 micro-turn 持续增长（训练上限 4096 token），推理侧 KV 缓存实现未披露。`Δt` 消融（0.3–1.8 s，Full-Duplex-Bench）：话轮准确率在 1.2 s 最高后回落，延迟随 `Δt` 单调上升，作者取 0.6 s 为折中（模拟评测）。
+- **产业资料提出的架构取舍**：级联便于模块替换、逐阶段观测与审计，以及复用文本 LLM 和工具生态（[Coval 2026 指南][coval-2026]、[Gradium 对比][gradium-2026]，均为厂商/产业分析内容）。原生音频表示对副语言信息的保留属于表示与训练优势；重叠语音、附和和及时打断则需要按实际交互决策路径评估，级联本身不排除这些行为（[2026 S2S 架构综述][ksopyla-2026]为个人技术博客，不能据此宣称学术界共识或普遍质量优势）。Inworld 的[厂商对比][inworld-arch]列出约 100 ms 的流式 TTS TTFB，并强调 LLM TTFT 等阶段成本；这些数字依配置而定，不支持仅凭架构推断谁更快。Gradium 自述的方向是把级联的模块化带入全双工架构，也不是二者互斥的论据。
+- **DuplexCascade 的固定 micro-turn 实例**：[DuplexCascade][duplexcascade]（arXiv:2603.09180）去除 VAD 端点门控，流式 ASR 的部分结果每 `Δt` 被 flush 成一个文本 micro-turn 送入 LLM；用户静音也照常运行（以 `<no voice>` token 表示），话轮决策由 LLM 通过控制 token（`<user is speaking>`/`<user finish speaking>`/`<user is interrupting>`/`<user backchannel>` 等）在每个 tick 作出。对话历史跨 micro-turn 持续增长（训练上限 4096 token）；现已有[官方代码][duplexcascade-repo]与[模型权重][duplexcascade-weights]，其跨更新 KV 复用与空闲区间尚需另行核验，不能继续概括为“推理实现未披露”。`Δt` 消融（0.3–1.8 s，Full-Duplex-Bench）：话轮准确率在 1.2 s 最高后回落，延迟随 `Δt` 单调上升，作者取 0.6 s 为折中（模拟评测）。这些是该实例的周期取舍，不能据此断言所有级联双工的决策都是秒级。
 - **交互基准对照**（自报，无独立复现）：PersonaPlex 自报 FullDuplexBench 用户打断成功率 100%（对照 Gemini Live 43.9%、Moshi 60.6%）、平均响应延迟 205 ms（[综述转述][ksopyla-2026]）。
 - 检索复核（2026-09-13）：主表 2026-08 前的模型与 tick 数据无需修正；未发现 2026-08 之后新的模型级全双工生产上线声明。
+
+<a id="representative-request-families"></a>
+## 7. 三类请求的代表模型与工作
+
+这一节为论文背景与相关工作提供素材，分类采用 [Problem 的请求触发口径](../problem.md#interaction-sessions-and-their-timing)。每项写明所讨论的接口、配置或执行路径；同一模型的其他使用方式需要另行归类。例如，MiniCPM-o 4.5 同时支持轮次式和全双工模式，本节第三类只讨论其持续双工路径。
+
+年份指所列模型、方法或产品首次公开的年份，具体版本在名称中注明；API 系列按首次发布年记录，当前配置依据官方文档核验。公开属性以本次核验为准，区分开源代码、开放权重、闭源模型和仅论文公开。开放权重不自动意味着采用无额外限制的开源许可。
+
+### 7.1 显式提交的轮次型请求
+
+这一类选择消息提交后生成有限响应的典型路径；流式返回 token 仍可以采用这种触发方式。
+
+| 代表模型或工作 | 年份 | 开源／闭源属性 | 简短特点与归类依据 |
+| --- | --- | --- | --- |
+| [GPT-4o：消息式文本接口][gpt4o] | 2024 | 闭源模型，API 提供服务 | 根据提交的消息生成本轮响应；可以流式返回，更新启动仍由请求提交触发 |
+| [Llama 3.1 Instruct：常规聊天调用][llama31] | 2024 | 开放权重与推理代码；Llama Community License | 以聊天模板组织多轮文本，对每次提交生成有限响应，是开放权重文本服务的典型实例 |
+| [Qwen2.5-7B-Instruct：常规聊天调用][qwen25-model] | 2024 | 开放权重与推理代码；Apache-2.0 | 消息式指令模型，可用于多轮聊天和工具调用；这条调用路径不按媒体时钟持续更新 |
+| [vLLM / PagedAttention：2023 论文中的请求路径][pagedattention] | 2023 | [开源 serving 系统][vllm-repo]；Apache-2.0 | 围绕有限 prompt 与生成请求进行持续批处理和分页 KV 管理，是这一服务形态的代表系统工作 |
+
+**优先引用：** 用 Llama 或 Qwen 说明典型消息式模型，用 vLLM / PagedAttention 说明经典生成请求的服务抽象。分类不意味着这些模型或框架无法接入其他交互运行时。
+
+### 7.2 端点触发的语音请求
+
+这一类选择自动话轮结束判定后提交有限响应任务的路径。前端可以持续运行，系统也可以在播放期间检测用户打断。
+
+| 代表模型或工作 | 年份 | 开源／闭源属性 | 简短特点与归类依据 |
+| --- | --- | --- | --- |
+| [LiveKit：语义端点驱动的 Agents 管线][livekit-eou] | 2024 | [开源框架][livekit-agents]＋[开放检测权重][livekit-turn-model]；检测权重采用 LiveKit Model License，下游 LLM 可开可闭 | 用 VAD 与内容、上下文预测发言结束，再启动对话响应；持续运行的是端点检测与输入链 |
+| [OpenAI GPT-Realtime：自动端点触发配置][gpt-realtime-original] | 2025 | 闭源模型，Realtime API 提供服务 | 在 [`server_vad` 或 `semantic_vad`、`create_response=true`][openai-vad] 配置下，由端点触发响应；原生音频与打断支持不改变这条接口路径的触发方式 |
+| [Gemini Live API：自动活动检测配置][gemini-live-capabilities] | 2024 | 闭源模型，Live API 提供服务 | 用自动活动检测组织音频话轮，并支持输出期间的打断；这里讨论由检测边界组织响应的配置 |
+
+LiveKit 的年份对应语义 EOU 检测模型首发，Gemini 的年份对应 [Live API 系列首发][gemini-release-notes]，不表示今天的全部能力在该年已经提供。LiveKit 当前检测权重有框架使用限制，不能把“权重可下载”直接写成 Apache-2.0 模型。OpenAI 与 Gemini 的归类描述其公开接口的响应触发契约，不据此断言闭源主干内部的全部 KV 更新时序。
+
+**优先引用：** LiveKit 是语义端点与完整语音管线的直接实例；GPT-Realtime 展示原生语音接口也可以采用端点触发响应。它们适合说明端点路径本身，而非充当已匹配的性能基线。
+
+### 7.3 按固定 micro-turn 推进的持续双工会话
+
+这一类选择双方尚未完成完整话轮、对话模型也按固定时间片继续更新的路径。来源不一定使用 micro-turn 这个词；固定帧、同步 chunk 或时间片设计只要提供相应执行契约，也可以支持这一归类。
+
+| 代表模型或工作 | 年份 | 开源／闭源属性 | 简短特点与归类依据 |
+| --- | --- | --- | --- |
+| [Moshi][moshi] | 2024 | [开源代码][moshi-repo]（MIT）＋开放权重（CC-BY-4.0） | 以固定音频帧并行建模用户与系统语音；说话或沉默都处于持续时间流中 |
+| [SyncLLM][syncllm]，EMNLP 2024 | 2024 | 论文与[样例][syncllm-project]公开；本次未核验官方代码或 checkpoint 发布 | 以固定时长同步块交错建模双方语音，并与真实时钟同步；是时间契约明确的研究实例 |
+| [DuplexCascade][duplexcascade] | 2026 | [开源推理代码][duplexcascade-repo]＋[开放模型权重][duplexcascade-weights]，均标注 MIT；权重需同意访问条款 | 在 ASR–LLM–TTS 级联中按固定 micro-turn 更新对话 LLM，以控制 token 选择等待、回应或附和 |
+| [Thinking Machines：TML-Interaction-Small][tml] | 2026 | 闭源模型，研究预览；未公布完整模型权重 | 官方明确使用 time-aligned micro-turns，在共同时间轴上处理多流输入、输出和沉默 |
+| [PersonaPlex][personaplex] | 2026 | [开源代码][personaplex-repo]（MIT）＋开放权重（NVIDIA Open Model License） | 延续 Moshi 的并行流式双工设计，加入文本角色条件与声音条件，支持可控人物设定 |
+| [MiniCPM-o 4.5：持续双工模式][minicpmo] | 2026 | [开放代码与权重][minicpmo-repo]；Apache-2.0 | 将环境音视频与输出组织成时间对齐的块，每片选择 listen 或 speak，并限制生成领先于播放 |
+
+**优先引用：** Moshi 代表开放的并行语音流模型，SyncLLM 直接支撑共同时间基准与固定块契约，DuplexCascade 支撑级联架构也可采用 micro-turn，Thinking Machines 提供术语出处与时间敏感任务动机。PersonaPlex 与 MiniCPM-o 4.5 补充角色控制和多模态实例。上述属性不单独证明历史 KV 增长、存在可用空闲或已经能接入项目方案。
+
+### 7.4 持续双工的商业实例与需要分路径分析的工作
+
+以下工作对动机和边界讨论有价值，但现有公开证据不足以把其整个系统直接写成已核验的固定 micro-turn 契约。
+
+| 工作 | 年份 | 开源／闭源属性 | 简短特点与证据边界 |
+| --- | --- | --- | --- |
+| [GPT-Live][gpt-live-guide] | 2026 | 闭源模型，公开开发者文档 | 持续听说并向后台委派任务；文档给出会话时间线与 frame progress，但没有明确固定 micro-turn 时长 |
+| [Seeduplex][seeduplex-blog] | 2026 | 闭源模型，官方产品与技术说明 | 将听说与交互决策纳入模型，强调干扰抑制和节奏控制；公开材料未给出固定更新周期 |
+| [Freeze-Omni][freeze-omni] | 2024 | [公开推理代码与权重][freeze-omni-repo] | VAD 启动分块输入，LLM 状态分类控制生成与打断；监听 prefill 和响应生成应分别分析，不能仅凭“分块”归入第三类 |
+
+GPT-Live 的年份沿用第 1 节发布快照，本次以官方开发者文档复核持续听说与委派属性。GPT-Live、Seeduplex 可以支撑持续双工的部署动机；若论文需要声称固定周期或据此计算 KV 预算，还须获得相应模型契约。Freeze-Omni 则适合说明事件门控、分块状态判断和输出生成可以出现在不同路径上，三类请求的比较必须始终明确观察层级。
+
+### 7.5 作为论文素材的使用方式
+
+Background 可从每类选择一至两个直接实例，以更新触发方式连接计算节奏和历史复用；Related Work 再展开时间建模、交互控制与服务抽象。代表工作表说明这些请求形态已有真实来源，不能替代服务资源的实测证据，也不直接冻结论文的 evaluated systems。
+
+可用于正文的概括是：消息式文本模型根据显式提交启动有限响应；端点驱动的语音接口根据自动话轮判定启动响应；固定时间片双工模型则持续处理双方输入输出并选择行为。最后一种契约已同时出现在并行语音模型和级联 ASR–LLM–TTS 系统中，因而其资源分析应围绕周期与状态复用展开，架构名称不能代替时间契约。
 
 ## Sources
 
@@ -210,6 +282,25 @@ GPT-Live 与 `GPT-Realtime-2.1` 不是同一公开产品定义；后者见第 4 
 [duplexcascade]: https://arxiv.org/abs/2603.09180
 [gpt-realtime]: https://developers.openai.com/api/docs/models/gpt-realtime-2.1
 [gpt-realtime-guide]: https://developers.openai.com/api/docs/guides/realtime-conversations
+[gpt4o]: https://developers.openai.com/api/docs/models/gpt-4o
+[llama31]: https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/MODEL_CARD.md
+[qwen25-model]: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
+[pagedattention]: https://arxiv.org/abs/2309.06180
+[vllm-repo]: https://github.com/vllm-project/vllm
+[livekit-eou]: https://livekit.com/blog/using-a-transformer-to-improve-end-of-turn-detection
+[livekit-agents]: https://github.com/livekit/agents
+[livekit-turn-model]: https://huggingface.co/livekit/turn-detector
+[gpt-realtime-original]: https://developers.openai.com/api/docs/models/gpt-realtime
+[openai-vad]: https://developers.openai.com/api/docs/guides/realtime-vad
+[gemini-live-capabilities]: https://ai.google.dev/gemini-api/docs/live-api/capabilities
+[gemini-release-notes]: https://ai.google.dev/gemini-api/docs/changelog
+[syncllm-project]: https://syncllm.cs.washington.edu/
+[duplexcascade-repo]: https://github.com/sbintuitions/DuplexCascade
+[duplexcascade-weights]: https://huggingface.co/sbintuitions/DuplexCascade
+[gpt-live-guide]: https://developers.openai.com/api/docs/guides/live
+[gpt-live-session-guide]: https://developers.openai.com/api/docs/guides/live-conversations
+[freeze-omni]: https://arxiv.org/abs/2411.00774
+[freeze-omni-repo]: https://github.com/VITA-MLLM/Freeze-Omni
 [gemini-live]: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-live-preview
 [gemini-live-guide]: https://ai.google.dev/gemini-api/docs/live-session
 [nova-sonic]: https://docs.aws.amazon.com/nova/latest/nova2-userguide/

@@ -1,8 +1,97 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% PAPER §1 六步漏斗：① 世界 ② 张力 ③ 逃生路线的交换代价 ④ 关键观察 ⑤ 挑战 ⑥ 系统、贡献与结果。
-% 关键句（核心洞察、待验证命题、待核验定位）的措辞以 docs/problem.md 的【关键】标记为准，不得漂移。
+% Rebuilt 2026-09-15 from docs/PAPER.md §1 (six-step funnel) and docs/problem.md.
+% Key-sentence wording (core insight, unverified proposition, positioning) must
+% not drift from the【关键】markers in docs/problem.md.
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild this section from the six-step skeleton in docs/PAPER.md \S1 and its owner documents. Do not insert preliminary effect sizes.}
+Interactive AI applications increasingly hold a session open and advance it
+continuously rather than one request at a time. In the emerging full-duplex
+form of this workload, a dialogue model absorbs whatever input has arrived,
+advances its history state, and chooses to speak or stay silent at every fixed
+time step---a \emph{micro-turn}---so that it can take turns naturally, handle
+overlapping speech, and react to interruptions in time. A session of this kind
+couples two things that request-oriented serving treats separately: a soft
+real-time objective for every update, and history state that must survive
+across updates for as long as the session lives. That history grows on a
+clock, and it has to be kept somewhere; GPU memory is finite. These two facts
+are on a collision course.
+
+The natural reference policy keeps every retained byte on the GPU. Full
+residency loses nothing semantically and adds zero preparation latency to any
+update; the only axis on which it can fail is capacity. Under this reference,
+aggregate residency demand grows monotonically with the number of sessions and
+with the retained state per session, while the compute demanded by each period
+is bounded by the workload's own real-time contract and typically does not
+saturate the period. KV capacity can therefore run out before compute
+does---a proposition we state carefully because it is a claim about workloads,
+not a universal fact, and we verify it experimentally in
+Section~\ref{sec:evaluation}. When it holds, the question becomes: which part
+of the reference policy should change, and at what cost?
+
+\begin{figure}
+  \placeholder{Figure~1: motivating timeline. On a common input timeline,
+  distinguish input arrival, update release, KV demand, restoration, and
+  delivery for concurrent sessions; show the idle interval of one session and
+  the critical path of an on-demand restoration. Schematic portion drafted;
+  measured portion pending the controlled capacity experiment (Q1).}
+  \caption{Motivating example (placeholder; measured portion pending).}
+  \label{fig:motivation}
+\end{figure}
+
+Known escape routes fall along two distinct dimensions. One dimension changes
+\emph{what a session retains}: windowing, compression, and summarization cap
+per-session state, but alter the history visible to later computation---an
+application-side quality trade-off. This dimension is orthogonal to residency
+management: whatever retention policy the application picks, the retained
+state still has to exist across idle intervals and still occupies GPU
+residency. The serving system's own decision space is the second dimension,
+\emph{when retained state resides on the GPU}. On this dimension, offloading
+with on-demand restoration preserves retained semantics but leaves reload and
+recomputation on the critical path of the next update, and systems that do act
+early bind their advance signals to sources that a clocked workload does not
+need---queue depth, application hints, pause-duration estimates, model-internal
+prediction, or workflow step distance. None of these signals is the release
+time that the workload itself commits. No existing route on the residency
+dimension achieves timely readiness---unless the workload itself can tell the
+system when state will be used again.
+
+A clocked workload does exactly that. It commits its next use time to the
+system as a property of the workload: the information is available before the
+demand arises and recurs across describable periods, so it can drive residency
+reclamation during idle intervals and state restoration ahead of use. This
+observation is the pivot of the paper. It is not free to exploit: the next
+demand is predictable, but the moment execution actually starts is shaped by
+queueing; state may live in several places, but its validity must be
+decidable; restoring early removes waiting from the critical path, but
+occupies space that other sessions need.
+
+\systemname is our vehicle for turning the committed timing into capacity
+under those three challenges. It assigns each admitted session a fixed release
+offset on a uniform slot grid, so that per-session demands interleave rather
+than coincide; it evicts the tail of an idle session's KV state under a
+host-backed copy, bounded by what the session's transfer window can bring
+back; and it prefetches evicted state ahead of the committed next use, falling
+back to on-demand restoration when the prediction is beaten by reality. Each
+mechanism is stated here as a hypothesis tied to an ablation, not as an
+established gain.
+
+\placeholder{Results sentence for the Introduction: verified change in
+sessions served within a uniform service objective versus matched
+full-residency and on-demand baselines, with its latency cost and validity
+boundary (Q2, Q3). No effect sizes before the formal runs.}
+
+In summary, this paper makes the following contributions, each contingent on
+the evidence noted in Section~\ref{sec:evaluation}:
+\begin{itemize}
+  \item a resource characterization of long-lived KV state in clocked
+        interactive serving, treating the retention policy as a workload
+        parameter rather than a quality debate;
+  \item a serving design that couples release-offset assignment, host-backed
+        partial eviction, and prefetching to the update timing that the
+        workload itself commits; and
+  \item an evaluation protocol with matched generation work and a uniform
+        service verdict, plus results that bound when timing-driven residency
+        management helps and when it does not.
+        \placeholder{Contribution list to be re-scoped against final evidence.}
+\end{itemize}

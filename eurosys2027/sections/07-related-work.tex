@@ -1,9 +1,64 @@
 \section{Related Work}
-\label{sec:related-work}
+\label{sec:related}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% PAPER §7：九个工作族各一步（迭代级服务与分页 / 会话级 KV 分层与恢复 / 恢复与重算的混合 / 下一次使用感知与预取 /
-% 双工与实时语音 serving / 服务目标与请求信息 / 周期任务与 deadline 调度 / 窗口与替代状态结构 / 分层内存与放置），
-% 收束为待核验定位句。逐项差异先按原文核验（planning/related-work-matrix.md 与 docs/references/ 两份版图）。
+% Rebuilt 2026-09-15 from docs/PAPER.md §7 (nine families). Family boundaries
+% are drafts pending per-paper verification; no \cite before verification.
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild from docs/PAPER.md \S7. Complete the closest-work verification before writing prose; compare capabilities and assumptions, not publication summaries.}
+We organize related work by the problem solved and the information consumed.
+Every per-system boundary below is re-verified against the original text
+before submission. \emph{[citations to be verified throughout this section]}
+
+\paragraph{Iteration-level serving and paged memory.}
+Orca and PagedAttention/vLLM established iteration-granularity scheduling and
+physical KV paging inside a request's lifetime; they do not manage the
+session-level lifecycle of state across updates.
+
+\paragraph{Session-level KV tiering and restoration.}
+CachedAttention, Pensieve, HCache, Strata, Bidaw, Mooncake, LMCache, and
+engine-built swapping place paused-session state across tiers and reload it on
+return. Their restoration triggers are queue depth or request arrival; none
+consumes the release times a clocked workload commits.
+
+\paragraph{Hybrid restoration and recomputation.}
+InferCept, Cake, and CacheFlow shorten the restoration segment by mixing
+reload with recomputation; the segment stays on the critical path.
+
+\paragraph{Next-use awareness and prefetching.}
+SYMPHONY, InfiniGen, ECHO, KVFlow, and learned prefix caching show that lead
+time has value, but their signals---application hints, in-layer prediction,
+workflow step distance---differ in source and action domain from a periodic
+rhythm.
+
+\paragraph{Duplex and real-time speech serving.}
+The nearest family. Metronome frames per-update deadlines as periodic
+real-time tasks and constrains retained state by windowing, holding the
+windowed state fully resident; LiveServe evicts on observed next-use estimates
+and prefetches on speech onset---estimates, not workload-committed times;
+VoxServe and stage-graph substrates schedule request-scoped soft deadlines.
+
+\paragraph{Service objectives derived from request information.}
+JITServe, DistServe, Sarathi-Serve, and Clockwork derive scheduling targets
+from application requirements for request-level service, not for cross-period
+session state.
+
+\paragraph{Periodic tasks and deadline scheduling.}
+Classical periodic-task theory and deadline schedulers supply the vocabulary
+of offsets and schedulability; they do not manage state movement or
+restoration timing.
+
+\paragraph{Windows, compression, and alternative state structures.}
+These change the semantics and size of retained state---a dimension orthogonal
+to residency management. We treat them as composable workload parameters in a
+quality--resource trade-off, not as baselines to defeat.
+
+\paragraph{Tiered memory, placement, and heterogeneous execution.}
+DirectKV, FlashGen, NEO, OrbitFlow, and FlexGen change the hardware conditions
+that set restoration costs; they shape how our conclusions extrapolate rather
+than serving as direct comparisons.
+
+Across the nine families, and pending per-paper verification: no known work
+uses the next-use times committed by a periodic workload to drive residency
+reclamation and state restoration, moving state preparation off the critical
+path without changing the application's retention semantics. The scope in
+which this positioning holds is the scope in which our assumptions hold; what
+remains when they loosen is the subject of the next section.

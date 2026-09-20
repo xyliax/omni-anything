@@ -54,6 +54,10 @@ with recurring per-frame deadlines of 80 ms for Moshi and one to two seconds for
 It names two departures from chatbot serving: deadlines recur so the tail compounds over thousands of frames,
 and per-session KV is pinned and grows monotonically with no idle gap in which to swap or recompute it.
 
+The latter is the paper's characterization of continuous sessions, not proof that their KV is accessed continuously between frames.
+The absence of long gaps between complete dialogue turns does not establish the absence of shorter KV-idle intervals between periodic updates.
+For this project's applicability test, update releases, KV access endpoints and overlapping work must be checked under the [workload contract](../problem.md#intrinsic-reuse-interval).
+
 Its finding is that failure is a memory cliff rather than compute drift.
 Latency sits at a few milliseconds, then jumps in one step to a roughly 1.6 second wall
 when the block pool saturates and the scheduler stalls every session.
@@ -212,4 +216,4 @@ A characterization with real session lengths, talk and listen ratios, interrupti
 
 ## Coverage summary
 
-Three of the four serving papers appeared between February and July 2026 and their citation graph is nearly empty: Metronome cites neither VoxServe nor LiveServe, and LiveServe does not mention Metronome. Each occupies a distinct layer: VoxServe a request-scoped execution abstraction and streaming soft-deadline scheduler for half-duplex speech LMs; LiveServe interaction-aware scheduling, barge-in handling, playback-aware throttling and next-use-ranked KV eviction with speech-onset prefetch over vLLM-Omni; Metronome the periodic real-time-task framing with bounded per-session KV; vLLM-Omni the stage-graph substrate. How each relates to Conveyor is recorded in the closest-work matrix under `eurosys2027/planning/`, not here.
+Three of the four serving papers appeared between February and July 2026 and their citation graph is nearly empty: Metronome cites neither VoxServe nor LiveServe, and LiveServe does not mention Metronome. Each occupies a distinct layer: VoxServe a request-scoped execution abstraction and streaming soft-deadline scheduler for half-duplex speech LMs; LiveServe interaction-aware scheduling, barge-in handling, playback-aware throttling and next-use-ranked KV eviction with speech-onset prefetch over vLLM-Omni; Metronome the periodic real-time-task framing with bounded per-session KV; vLLM-Omni the stage-graph substrate. How each relates to Pilarius is recorded in the closest-work matrix under `eurosys2027/planning/`, not here.

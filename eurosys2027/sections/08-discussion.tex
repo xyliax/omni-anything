@@ -1,7 +1,27 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-% 旧内容基于过期叙事已清理（2026-09-13）；重写时以 docs/PAPER.md 对应章节的步骤骨架与 owner 文档为准。
-% PAPER §8 三步：① 偏移不可控时还剩什么 ② 退化条件 ③ 限制分层（工程限制与方法固有条件分开）。
+% Rebuilt 2026-09-15 from docs/PAPER.md §8 (three steps).
 
-\draftplaceholder{Cleared draft (2026-09-13). Rebuild from docs/PAPER.md \S8 after the experimental matrix is frozen; distinguish idea-level assumptions from limits of the chosen evaluation.}
+\paragraph{When offsets are not controllable.}
+Offset control is the strongest of the three grades of timing information.
+Where the application does not permit assignment, rhythm visibility still
+supports demand estimation and preparation ahead of use; how much of the
+benefit survives is an empirical question.
+\placeholder{Measured share of the benefit retained without offset control
+(Q4 offset arm).}
+
+\paragraph{Degenerate conditions.}
+Aperiodic input, absent idle intervals, short sessions, or insufficient host
+capacity degrade the mechanisms to the on-demand path. These regions are
+reported as measured (Q7). The quality trade-off among retention policies is
+an application-side parameter; its effect on the applicable domain is
+discussed on the same footing.
+
+\paragraph{Layered limitations.}
+Engineering limits (current trigger paths, unverified concurrency scenarios,
+observation overhead) are stated separately from conditions inherent to the
+method (a describable rhythm and usable idle intervals). Model errors and
+uncovered dimensions are listed explicitly; the current prototype does not
+decide the final research scope, and the effect of adding devices depends on
+actual topology and contention rather than admitting a general judgment.

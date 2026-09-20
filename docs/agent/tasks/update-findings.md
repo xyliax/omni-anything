@@ -7,7 +7,7 @@ raw run
 → terminal status and validation
 → structured experiment record
 → EVIDENCE alias
-→ FINDING claim card
+→ FINDING 条目（findings.md 分组状态表中的一行）
 → Current State table
 ```
 
@@ -17,7 +17,7 @@ raw run
 - evidence 使用 `EVIDENCE-*`；
 - evidence role 只能使用 `docs/agent/evidence.json.role_definitions` 中的枚举；
 - prose 不写 exact timestamp run ID；
-- `record.verdict` 遵循 records/README.md；`evidence.role` 遵循 registry 枚举；finding 正文分别解释观察、推论与待验证项，不混用三者状态；
+- `record.verdict` 遵循 records/README.md；`evidence.role` 遵循 registry 枚举；finding 条目在其表行内分别交代观察、限定与待补，不混用三者状态；表行容纳不下的过程细节放 record，不回到卡片式正文；
 - measurement 带配置域和来源类别；
 - limitation 与 remaining uncertainty 不得省略；源码可重建、原始数据可用、统计可复算及公平比较资格分别判断；
 - superseded 结论从 current finding 移除，但历史 record 保留；

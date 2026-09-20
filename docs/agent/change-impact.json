@@ -28,7 +28,7 @@
     {
       "id": "IMPACT-METRIC-SEMANTICS",
       "when": ["infra/trace/**", "engines/*/worker/stream_server.py"],
-      "inspect": ["docs/experiments.md", "docs/findings.md", "infra/trace/AGENTS.md"],
+      "inspect": ["docs/experiments.md", "docs/findings.md", "docs/agent/tasks/analyze-results.md", "infra/trace/AGENTS.md"],
       "verify": ["tests/test_trace.py", "tests/test_run_validation.py"]
     },
     {

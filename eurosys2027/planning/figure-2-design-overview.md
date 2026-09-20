@@ -1,96 +1,56 @@
-# Figure 2 — Simultaneous KV snapshots with capacity-gated prefetch
+# Figure 2 — Design overview: continuous swimlanes with capacity-gated prefetch (v4, hand-drawn)
 
-Status: redesigned preview for author feedback, 2026-09-08. Supersedes the fixed four-state/offload-stage draft. Not yet integrated into the manuscript. Prerequisite: [mechanism understanding audit](figure-design-understanding.md).
+Status: v4 design contract, 2026-09-20. Supersedes the v3 matplotlib rendering after two author decisions: (1) the pool subplot **reintroduces the aligned-phase comparison line, renamed from "hypothetical" to the baseline it now literally is** — Figure 1's aligned-rounds world — closing the visual loop between the two figures; (2) production switches to **hand-drawn Draw.io** by the author, with this spec as the drawing contract. The v3 matplotlib previews in `figures/` are frozen layout references until the `.drawio` version lands; the generator script has been retired. Prerequisite: [mechanism understanding audit](figure-design-understanding.md).
 
 ## Argument, classification and source mapping
 
-Takeaway: a completed session releases GPU capacity that enables another session's prefetch while a third session still computes; restored KV can then wait ready for the next use.
+Takeaway: three mechanisms cooperate — a uniform phase grid spreads per-session peaks, idle-tail eviction frees capacity with a depth bounded by the per-window link budget, and deadline-aware prefetch restores KV before the next release. The capacity-gated causal chain (S3 deferred → S1 evicts → S3 prefetches → ready before release) is carried by circled numbers 1–4 and narrated in the caption. Against the aligned-rounds baseline of Figure 1, the staggered grid holds the pool peak under capacity where alignment would exceed it.
 
-This is an **author-selected 1 s / 4-slot mechanism illustration**, not an experimental trace, rescaled trace, simulator result or performance prediction. [Problem](../../docs/problem.md) owns period, release offsets and full-history semantics; [System](../../docs/system.md) owns state, eviction and recovery semantics; [Findings](../../docs/findings.md) owns current maturity. The source-linked [audit](figure-design-understanding.md) distinguishes the implemented push-triggered prefetch from the candidate earlier next-use scheduling drawn here. No permanent cache protection, universal host-coverage gate, global EDF queue or measured prefetch benefit is implied.
+This is an **author-selected four-slot mechanism illustration over a symbolic period T**, not an experimental trace, rescaled trace, simulator result or performance prediction. [Problem](../../docs/problem.md) owns period, release offsets and full-history semantics; [System](../../docs/system.md) owns state, eviction and recovery semantics; [Findings](../../docs/findings.md) owns current maturity. The source-linked [audit](figure-design-understanding.md) distinguishes the implemented push-triggered prefetch from the candidate earlier next-use scheduling drawn here. Do not infer implementation status from this figure. No permanent cache protection, universal host-coverage gate, global EDF queue or measured prefetch benefit is implied.
 
-Use a temporal resource walkthrough, not a module-only architecture diagram. Every row shows all four sessions at the same real coordinate; continuous ribbons and release diamonds preserve timing between selected rows. A capacity gate provides one concrete non-ideal branch, avoiding four independent idealized handoffs.
+## Event model (internal drawing coordinates)
 
-## Executable model
+**Numeric discipline.** All values in this section are **internal drawing coordinates** that fix proportions only (T = 1000 units); they echo one current model configuration and must never be rendered as figure text. The displayed axis is labeled in symbolic periods (0, T/4, T/2, 3T/4, T), the capacity line carries the word "capacity" and no value, the pool subplot has no numeric ticks, and block counts appear only as band heights. Real magnitudes belong to measured figures with evidence binding.
 
-The authoritative drawing implementation is `scripts/render-kv-figures.py`: `Session`, `EVENTS`, `snapshot`, `EXECUTION`, `PREFETCH`, `SAMPLES_MS`. These are illustration parameters, not project experimental facts.
-
-Each session has separate logical block count, confirmed host frontier, valid GPU block set, in-flight H2D destination set, in-flight D2H destination set, activity and deferred-request flag. Display labels are derived from those dimensions; a single modulo-period four-state function is not used.
-
-Assumptions:
-
-- Four sessions S1–S4; T = 1000 ms; stable release offsets 0, 250, 500, 750 ms. Slots specify releases, not exclusive execution reservations.
-- Initial histories have 8, 8, 8, 9 blocks. S4 is continuing its previous update; S1 is ready at release and starts computing later.
-- No physical prefix sharing across sessions. Every block is an equal-sized illustrative unit.
-- Idle eviction retains blocks `{0, 1, newest}` and removes the selected middle. Retention is an example cache outcome, not a pinning guarantee.
-- The selected idle transitions occur after host completion. This successful example does not claim current eviction universally checks host coverage before choosing blocks. All retained fresh blocks are assumed valid/hashable; unfinished-tail destruction and recomputation are outside this example.
-- Prefetch requires an idle session, a host-backed missing span, enough GPU capacity and the shared H2D lane. Destinations occupy capacity immediately, but become valid only at completion. Completed copies remain idle cache contents until execution, and are assumed to survive replacement in this example.
-- One H2D transfer at a time; D2H is displayed separately and may overlap H2D. This is a schematic bidirectional feasibility assumption, not a measured link-throughput model. Transfers of differing sizes use authored illustrative windows; constant bandwidth is not claimed.
+Assumptions (unchanged since the audited event model): four sessions, offsets φ = 0 / T/4 / T/2 / 3T/4 (releases, not exclusive execution reservations); initial histories 8, 8, 8, 9 blocks; S4's previous update straddles t = 0; no cross-session sharing; idle eviction retains `{0, 1, newest}` as an example cache outcome after host backing completes; prefetch needs an idle session, host-backed span, pool capacity and the shared H2D lane, with destinations occupying capacity from issue; one H2D at a time, D2H may overlap; authored 50–60-unit windows, no bandwidth model claimed.
 
 ### Timing contract
 
-| Session | Execution envelopes (ms) | Prefetch (ms) | New block / D2H window (ms) |
+| Session | Execution envelopes (units, T=1000) | Prefetch (units) | Grow / D2H window (units) |
 | --- | --- | --- | --- |
-| S1 | 30–380; next 1030–1380 (clipped by plot) | 900–960; initial KV already ready | 140 / 160–210 |
+| S1 | 30–380; 1030–1380 (clipped) | 900–960 | 140 / 160–210 |
 | S2 | 280–620 | 160–220 | 420 / 450–490 |
-| S3 | 530–850 | request deferred at 300; issue 380, complete 440 | 600 / 615–665 |
-| S4 | previous −220–120; current 780–1120 | 650–710 | previous tail completes backing at 20; current new block at 900 / 915–965 |
+| S3 | 530–850 | deferred 300; issue 380, complete 440 | 600 / 615–665 |
+| S4 | −220–120; 780–1120 | 650–710 | 900 / 915–965; previous tail backs by 20 |
 
-Execution durations are 320–350 ms, all below half the period, and neighboring envelopes overlap. Envelopes may represent interleaved/batched engine work; do not interpret them as four independent kernels. No deadline marker is drawn.
+Causal chain: at 300 ms pool use is 23 and S3 needs 5 > 25 − 23 (deferred); at 380 ms S1 goes idle and evicts 6, S3 reserves 5 (23 − 6 + 5 = 22); S3 completes at 440, its input releases at 500, compute starts at 530. Completion, release and use remain distinct.
 
-Growth appends one logical and GPU-valid block. A later D2H issue creates a pending host destination; completion advances confirmed host coverage. There is no compulsory post-compute full-history offload window. Eviction is a point event when the session becomes idle; it releases selected GPU capacity without deleting host history.
+Pool reference values (blocks, incl. H2D destinations): 23 at 0/180/300/500 ms, 22 at 400, 18 at 620, 24 at 750, 25 at 920/1100.
 
-### Capacity accounting and causal branch
+## Layout contract
 
-GPU pool usage is the union of valid GPU content and allocated H2D destinations, summed across the four unshared histories. It includes idle retained blocks and ready cached content, even when cache ownership is reclaimable. It is neither request-owned allocation alone nor a reconstruction from the repository's residency sampler.
+Full width 7.0 × 3.2 in; sans-serif; annotations 8 pt, axis/lane labels 9 pt; three stacked regions share one axis spanning 0–1.16T with light dashed verticals at the four phases (labeled φ1–φ4 once on top); axis ticks at 0, T/4, T/2, 3T/4, T. In-figure text budget: besides ticks, lane labels (S1–S4, H2D, D2H, Pool) and the legend, at most two short labels ("capacity", "aligned"), the φ labels, small + marks at KV growth, and circled numbers 1–4; all sentences live in the caption. No numeric magnitudes are rendered anywhere (see numeric discipline above).
 
-At 300 ms, existing pool use is 23 blocks; S3 needs 5 additional destinations, which exceeds the 25-block illustration pool. At 380 ms, S1 becomes idle and evicts 6; S3 then reserves 5, giving `23 − 6 + 5 = 22`. At 400 ms S2 computes while S3 copies. At 440 ms S3 becomes ready; at 500 ms its input is released; computation starts at 530 ms. Thus completion is distinct from release and use.
+- **Session lanes** (top): band height = GPU-resident blocks (0–10; valid + allocated H2D destinations), deep blue while computing, pale while idle, hatched for in-flight destinations; evictions are step-downs; diamonds at releases; each circled number gets a small anchor dot at its exact event coordinate (1 at S3's deferred request, 300 ms; 2 at S1's eviction step, 380 ms; 3 at S3's prefetch window; 4 at S3's ready-before-release window).
+- **Pool subplot** (~0.6 in): occupancy staircase summed from the lanes vs the dashed capacity line (word "capacity", no value; no numeric y ticks). A light dashed staircase adds the **aligned-rounds comparison**: the same eviction machinery with all phases aligned — its peak clearly exceeds the capacity line during the shared burst-and-restore window, with a deep valley during the shared idle; labeled "aligned" (light gray, visually subordinate). This isolates the phase mechanism (same eviction, different phases) and is the schematic counterpart of the GPU-space dual argument (owner: problem.md resource frontier; ablation pending Q4). Draw the actual curve slightly below the capacity line where they coincide so both stay visible.
+- **Link subplot**: two thin H2D/D2H tracks with session-labeled hatched windows; H2D windows are serialized and the real gaps between them are kept.
+- No block-level inset; eviction-content semantics (keep prefix + newest, host retains all blocks) live in the caption and Design text.
 
-This is a conservative chosen schedule: the example does not reclaim other idle prefixes to admit S3 sooner. Capacity deferral is not claimed to be the only possible allocator decision or an optimal policy. The shared H2D lane serializes the shown restores, but no measured bandwidth guarantee is inferred.
+## Visual vocabulary and Draw.io style tokens
 
-## Snapshot and geometry contract
+Deep blue `#28769B` = compute; pale blue `#EAF2F7` = resident idle KV; orange `#B87519` diagonal hatch on `#FFF0D9` = transfer in flight; ink `#263642` = curves/text; gray `#9CA9B2` = axes, phase verticals and the aligned comparison line; hollow diamond = release; + = newly appended KV; circled numbers = caption-narrated events. White background, no shadows, stroke ≈1 pt; grayscale legibility from hatching and value contrast.
 
-Canvas 720 × 908, 7 in wide; minimum 15 SVG units = 10.5 pt. Intended as a full-width tall design walkthrough, with final manuscript/caption fit still to be reviewed. Time is linear, `y = 108 + 0.55 × t_ms`, over 0–1160 ms. Snapshot cards have 53-unit height; irregular timestamps must never be evenly spaced.
+## Production and edit protocol
 
-| Time (ms) | S1 | S2 | S3 | S4 | GPU total, incl. H2D |
-| --- | --- | --- | --- | --- | --- |
-| 0 | Ready | Idle | Idle | Compute | 23 |
-| 180 | Compute | Prefetch | Idle | Idle | 23 |
-| 300 | Compute | Compute | Deferred | Idle | 23 |
-| 400 | Idle | Compute | Prefetch | Idle | 22 |
-| 500 | Idle | Compute | Ready | Idle | 23 |
-| 620 | Idle | Idle | Compute | Idle | 18 |
-| 750 | Idle | Idle | Compute | Ready | 24 |
-| 920 | Prefetch | Idle | Idle | Compute | 25 |
-| 1100 | Compute | Idle | Idle | Compute | 25 |
-
-Session card origins x = 116, 232, 348, 464. At each time point, upper block row G shows GPU content; lower H shows host coverage. Block identities align within a card from oldest to newest. Logical growth lengthens both row outlines; empty GPU cells are evicted logical blocks, not lost context. Maximum illustrated history is 10 blocks.
-
-- Blue solid blocks: valid GPU contents.
-- Dotted blocks: confirmed host contents.
-- Orange hatch on G: H2D destination, allocated but not ready.
-- Orange hatch on H: D2H destination, not yet confirmed.
-- Small plus above the latest block: newly appended KV awaiting host coverage.
-- Compute uses a square and pale blue card; Ready uses a hollow square, meaning idle with restored KV; Prefetch uses an up arrow; Deferred has an orange outline; Idle uses a dot.
-- Release uses a hollow diamond on the continuous ribbon, distinct from Ready. Phi in the heading is measured in ms.
-- Pool bar is on a fixed 0–25 scale. The row below it identifies the shared link's source/destination session: up is H2D, down is D2H; dash means no H2D in flight.
-- Bottom causal strip binds deferred request, capacity release and ready-to-use waiting to exact events in the main view.
-
-## Reproduction and validation
-
-```bash
-python eurosys2027/scripts/render-kv-figures.py
-```
-
-Outputs: `eurosys2027/figures/figure2-design-overview.{svg,pdf,png}`. Python standard library builds SVG; `rsvg-convert` exports PDF/PNG; Pillow optionally exports grayscale PNG. Machine-readable row states are generated at `eurosys2027/build/kv-figure-review/snapshot-states.json` for inspection, not retained as experiment evidence.
-
-Generator assertions check full valid history before execution, idle-only prefetch, host-backed restore spans, capacity deferral/acceptance, no overlapping H2D jobs, disjoint valid/in-flight destinations, pool capacity at every event, and sub-half-period execution. They also verify a ready-idle state and neighboring computation overlap. These check the drawing's internal consistency, not runtime implementation correctness.
-
-Update this spec and the event model before touching geometry. Then regenerate both figures, compare color/grayscale previews, and run root `python -m pytest`, paper `make check`, and `git diff --check`. Changes to this schematic must not mutate engine, trace or results artifacts. Do not reinstate fixed 30 ms offload, constant host coverage, 2 s / 8 slots, release=compute, or uncounted prefetch reservations.
+- **Source of truth: `eurosys2027/figures/figure2-design-overview.drawio`** (author hand-draws). Export vector PDF (crop) for LaTeX plus PNG for review, same basenames, replacing the frozen v3 previews.
+- Agent-assist loop: the author draws; the agent may inspect/patch the `.drawio` XML, render previews, and audit against this spec's event model, text budget and semantic owners. Group and name element clusters so XML patches preserve layout.
+- The matplotlib generator is retired with v4; the timing contract and pool reference values above are the drawing coordinates. Do not reinstate fixed 30 ms offload, constant host coverage, 2 s / 8 slots, release=compute, uncounted prefetch reservations, the snapshot-card layout, or slide-style sentence annotations.
+- Change this spec and the event model before the drawing; no measured axes or performance claims without the evidence-owner transaction.
 
 ## Caption draft
 
-Conveyor can reuse capacity released by an idle session to restore another session's KV while neighboring computation continues. Each time slice shows all four sessions' GPU (G) and host (H) blocks under an illustrative one-second release grid; computation lasts less than half a period and may overlap through batching or interleaving. S3's prefetch is initially deferred, becomes feasible when S1 evicts its middle blocks, and completes before S3's next execution; hatched GPU destinations count toward pool occupancy before becoming usable. Host backing advances independently with new KV, and the shared-link annotations distinguish H2D from D2H; this is a candidate mechanism schedule, not a measured trace or a guarantee that prefetched cache contents always survive until use.
+Pilarius spreads sessions over a uniform release grid (φ1–φ4, diamonds), evicts idle KV tails, and restores them before the next release. Each lane shows one session's GPU-resident KV blocks over time; hatched spans are in-flight transfers whose destination blocks already count toward pool occupancy, and + marks newly appended KV. (1) S3's prefetch is deferred while the pool cannot hold its missing span; (2) S1's idle transition evicts its mid-history — the prefix and newest blocks stay resident and the host retains every block; (3) the freed capacity admits S3's prefetch on the shared H2D link, whose serialized windows bound how deeply a session may evict per period; (4) S3's history is fully resident before its release, so computation starts on time while S2 computes throughout. The pool subplot sums the lanes against capacity; the light dashed staircase shows the same eviction machinery under the aligned rounds of Figure 1, whose peak exceeds capacity where the staggered grid stays below it (schematic; phase ablation pending). Axes are in periods and heights are relative: the schedule is an authored mechanism illustration carrying no measured magnitudes, and it does not guarantee that prefetched contents always survive until use.
 
-## Review status
+## Review gate
 
-Rebuilt from the source-audited semantics and visually inspected in color and grayscale. The author is reviewing narrative density and visual composition. Formal prefetch benefit, behavior under replacement and high pressure, exact deployment scheduling, and final two-column placement are not established by this figure.
+Open items before manuscript use: the aligned-comparison staircase is a schematic counterfactual of the drawn policy — its valley depth is a free drawing choice, its peak must exceed capacity, and the corresponding ablation (Q4) has no evidence yet; the Metronome aligned-rounds citation is verified under Figure 1's review gate; final two-column placement and caption fit at print size. Formal prefetch benefit, behavior under replacement and high pressure, and exact deployment scheduling are not established by this figure.
