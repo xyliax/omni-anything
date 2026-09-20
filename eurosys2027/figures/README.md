@@ -4,16 +4,16 @@
 
 | Figure | Purpose | Specification | Files |
 | --- | --- | --- | --- |
-| 1 | 动机：对齐轮次的多会话周期负载下，聚合 KV 穿越容量而共享空闲窗逐周期重现；单会话恢复时序对比（reactive vs cyclic） | [指南 §7 图 1 详细画法](../planning/figure-drawing-guide.md#figure-1) | `figure1-motivated-example.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
-| 2 | 设计总览（论文图号为图 3，见指南 §1）：连续 residency swimlane、均匀相位网格、容量门控因果链（带圈序号）、共享链路窗口、pool 对齐基线对照 | [指南 §8 图 3 详细画法](../planning/figure-drawing-guide.md#figure-3) | `figure2-design-overview.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
+| 1 | 动机：对齐轮次的多会话周期负载下，聚合 KV 穿越容量而共享空闲窗逐周期重现；单会话恢复时序对比（reactive vs cyclic） | [指南：图 1](../planning/figure-drawing-guide.md#figure-1) | `figure1-motivated-example.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
+| 2 | 设计总览（论文图号为图 3，文件名沿用旧编号）：连续 residency swimlane、均匀相位网格、容量门控因果链（带圈序号）、共享链路窗口、pool 对齐基线对照 | [指南：图 3](../planning/figure-drawing-guide.md#figure-3) | `figure2-design-overview.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
 
 ## Production
 
-作者用 Draw.io 手绘 `.drawio`（一页一图，元素分组命名），导出 vector PDF（crop）供 LaTeX、PNG 供审阅，与指南的参数表/事件模型逐项对照。旧生成器已随 v4 退役；其事件常数保留在指南的参数表中。
+作者用 Draw.io 手绘 `.drawio`（一页一图，元素分组命名），导出 vector PDF（crop）供 LaTeX、PNG 供审阅，画法、内部坐标与 caption 均见指南。
 
 ## Rules
 
 - 先改指南，再改图；caption 与语义不得偏离 owner 文档。
 - 机制图数字是示意设定，不是实测、模拟器结果或性能预测；实验结果图另须 formal `EVIDENCE-*`。
-- 7 in 宽度下注释 8 pt、轴/lane 标签 9 pt；图内文字预算与调色板、灰度规则见指南 §5–§6（深蓝 `#28769B`、浅蓝 `#EAF2F7`、橙 `#B87519`、墨 `#263642`、灰 `#9CA9B2`）。
+- 7 in 宽度下注释 8 pt、轴/lane 标签 9 pt；图内文字预算与调色板、灰度规则见指南通用规则（深蓝 `#28769B`、浅蓝 `#EAF2F7`、橙 `#B87519`、墨 `#263642`、灰 `#9CA9B2`）。
 - 不含作者、单位、私有路径、仓库 URL 或模型/设备绑定。
