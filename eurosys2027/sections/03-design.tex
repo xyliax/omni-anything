@@ -4,7 +4,7 @@
 % Rebuilt 2026-09-15 from docs/PAPER.md §4 and the mechanism cards in
 % docs/system.md. Undecided policies stay stated as open design decisions.
 
-\subsection{Overview and Invariants}
+\subsection{Overview}
 \label{sec:design-overview}
 
 The candidate design links idle-state reclamation to subsequent state
@@ -36,7 +36,7 @@ updates happen, then manage state between updates, then prepare state before
 use. Each mechanism is a hypothesis under test; none is claimed as an
 established gain.
 
-\subsection{Scheduling Release Offsets}
+\subsection{Release Offset Scheduling}
 \label{sec:design-offsets}
 
 Release offsets determine how per-session demands overlap. They are a control
@@ -71,7 +71,7 @@ feasibility system; solution and its predicted reclaim and capacity-extension
 ratio pending calibration (Q5). Late-input handling is an open design
 decision.}
 
-\subsection{Managing Idle KV State}
+\subsection{Host-Backed Partial Eviction}
 \label{sec:design-idle}
 
 \paragraph{Incremental host backing.}
@@ -113,7 +113,7 @@ critical path and can queue.
   \label{fig:state-model}
 \end{figure}
 
-\subsection{Preparing State Before Use}
+\subsection{KV Prefetching}
 \label{sec:design-prefetch}
 
 Prefetching moves state preparation off the critical path. Its lead time must

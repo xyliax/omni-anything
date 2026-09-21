@@ -55,7 +55,7 @@
         "eurosys2027/sections/02-background-motivation.tex",
         "eurosys2027/sections/03-design.tex",
         "eurosys2027/sections/04-implementation.tex",
-        "eurosys2027/sections/08-discussion.tex"
+        "eurosys2027/sections/06-discussion.tex"
       ],
       "inspect": [
         "AGENTS.md",

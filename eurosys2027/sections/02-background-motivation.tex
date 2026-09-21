@@ -2,7 +2,6 @@
 \label{sec:problem}
 
 % Rebuilt 2026-09-15 from docs/PAPER.md §2 and docs/problem.md (background sections).
-% Formulation (§3) lives in sections/02b-formulation.tex.
 
 \subsection{Request Classes and Timing Contracts}
 \label{sec:request-classes}
@@ -154,5 +153,80 @@ raises three challenges that any design must answer together:
         that other sessions need.
 \end{enumerate}
 To weigh these costs, ``which state, used when, prepared how early'' must
-first become decidable quantities. The next section fixes the objects, events,
-and objective that the rest of the paper shares.
+first become decidable quantities. Section~\ref{sec:formulation} fixes the
+objects, events, and objective that the rest of the paper shares.
+
+\subsection{Problem Formulation}
+\label{sec:formulation}
+
+This section fixes the objects and the objective that design and evaluation
+share, so that both use the same verdict.
+
+\paragraph{Sessions and events.}
+We model the workload as \emph{periodic interaction sessions}: updates become
+eligible on a describable period, and adjacent updates depend on the same
+growing history. With a common period $T$ and reference time $t_0$, the $k$-th
+update of session $i$ has release time $r(i,k) = t_0 + \phi_i + kT$, where
+$\phi_i \in [0, T)$ is the session's release offset. Release means eligibility:
+the input is available, not that the request has entered the engine. We
+distinguish four events per update: release $r(i,k)$, actual submission
+$a(i,k)$, the start $s(i,k)$ of computation that depends on the target KV, and
+the completion event $c(i,k)$. The rhythm must come from the workload itself;
+a service-stack entrance may choose phase alignment within the application's
+contract, in which case $a$ coincides with $r$ in steady state and each
+session pays at most one period of alignment wait at its first submission,
+reported separately. Waits introduced by deferring ready input count toward
+latency, and changes to input chunking must be measured against original input
+time.
+
+\paragraph{Service objective.}
+The soft real-time objective is $c(i,k) - r(i,k) \le D_i$. The completion
+event is the \emph{generation completion} of the update; user-visible delivery
+is modeled as a constant offset thereafter, an assumption we state explicitly.
+The latency baseline is the actual submission $a(i,k)$ and must be read
+together with an update-backlog metric, so that deferred submissions cannot
+hide overload. Per-update generation is parameterized as $m(i,k) \le M$. For
+sessions with real-time output consumption at rate $R_{\mathrm{play}}$,
+bounded buffering and freshness limit how far cumulative generation may lead
+consumption: over any $n$ consecutive periods, retained-and-delivered output
+obeys $\sum_{j=k}^{k+n-1} N_{\mathrm{out}}(j) \le R_{\mathrm{play}} \cdot nT +
+B_{\mathrm{out}}$ for a bounded lead allowance $B_{\mathrm{out}}$. A single
+update may emit more than one period of content when prebuffering is allowed;
+the contract bounds sustained lead, not each period in isolation.
+\placeholder{Concrete target value $D$, permitted violation ratio
+(parameterized sweep), observation horizon, and session-failure rule; pending
+protocol freeze (measurement semantics owner).}
+
+\paragraph{KV idle intervals.}
+Let $q(i,k)$ be the last use of the target KV by update $k$. If the next use
+$s(i,k+1)$ starts later and no other execution touches the state, the span
+between them is a KV idle interval---the time window in which every
+residency-reducing action must fit. For sessions whose bounded update
+completes early and whose next update is gated by input and clock, the
+interval recurs every period. Periodicity supplies the prediction; queueing,
+long computations, backlogged execution, or overlapping access can shorten or
+eliminate the interval. Release offsets change how sessions overlap; they
+create neither idle time nor bandwidth for any single session.
+
+\paragraph{Resource constraints.}
+Physical capacity bounds allocation at every instant: with $G_{KV}$ the usable
+KV pool and $b_p$ the size of allocated block $p$, $\sum_{p} b_p \le G_{KV}$,
+where prefetch targets count from allocation, before their content arrives.
+Peak allocation therefore depends on when eviction and restoration are
+scheduled, and allocatable space does not imply content readiness. Treating
+the transfer link as a renewable time resource yields a stronger candidate
+feasibility condition than aggregate bandwidth checks: each session's periodic
+restoration demand should receive enough link time before its deadline. This
+condition is a modeling assumption to be calibrated, not a established law:
+link time is not exclusively assigned---backup, gap recomputation, and
+competing sessions share it---and the window from initiation to completion
+includes scheduling waits. One offset assignment thus simultaneously shapes
+three coupled resources: link time, the duration of GPU space occupancy, and
+batch composition. The same link view bounds the total reclaimable residency
+per period by the smaller of the link's per-period byte budget and the total
+evictable state, which suggests---again as an assumption to verify---that the
+achievable capacity extension is a property of link capability and timing
+structure rather than of the per-session retention policy.
+\placeholder{Batch-dependent cost function, calibrated transfer service curve,
+and the feasibility condition itself; validated by independent calibration and
+held-out prediction (Q5).}
