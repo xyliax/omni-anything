@@ -12,7 +12,7 @@
 6. 不根据静态 import 图猜测 subprocess、gRPC、ZMQ 或 monkeypatch，查询 `dynamic-edges.json`。
 7. 判断代码差异能否进入 paper 机制列表时，只读取根 [`AGENTS.md`](../../AGENTS.md#research-classification) 的 `Research Classification`，本目录不另建分类标准。
 8. paper-facing 命名必须先查 [`docs/problem.md`](../problem.md#terminology)；实现 identifier 不得反向成为论文术语。
-9. 投稿正文由五份顶层文档组织：problem 以叙事漏斗建立背景、缺口与对象，system 以机制卡片论证设计，experiments 定义公平评估，findings 限定结论，PAPER 持有章节骨架、取材关系与转写纪律。命令、运行诊断和治理不复制进论文。
+9. 投稿正文由五份顶层文档组织：problem 以递进论证建立背景、缺口与对象，system 以机制卡片论证设计，experiments 定义公平评估，findings 限定结论，PAPER 持有章节骨架、取材关系与转写纪律。命令、运行诊断和治理不复制进论文。
 10. 修改根入口、核心 human docs、论文 planning 或外部资料目录时，先读取根 [`AGENTS.md`](../../AGENTS.md#narrative-scope-guard)，并运行 `tests/test_narrative_scope.py`；当前 prototype 和 measured path 不得升级为 paper scope。
 
 ## Registries

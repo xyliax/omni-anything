@@ -1,11 +1,11 @@
 # Figure Assets
 
-> 图 1 与设计总览图已进入 v4 手绘阶段：**`.drawio` 为源文件（作者手绘，待创建）**，本目录现存的 `{svg,pdf,png}` 是 v3 预览的冻结参考，`.drawio` 版落地后替换删除。画法、参数表与 caption 草稿见 [图件手绘指南](../planning/figure-drawing-guide.md)；内部一致性不等于实测或最终论文审定。
+> 图 1 与设计总览图已进入 v4 手绘阶段：**`.drawio` 为源文件**（已由 `scripts/scaffold-drawio.py` 按指南坐标生成起点版，作者在其上手改；改过之后不要再重跑脚本覆盖），本目录现存的 `{svg,pdf,png}` 是 v3 预览的冻结参考，`.drawio` 版落地后替换删除。画法、参数表与 caption 草稿见 [图件手绘指南](../planning/figure-drawing-guide.md)；内部一致性不等于实测或最终论文审定。
 
 | Figure | Purpose | Specification | Files |
 | --- | --- | --- | --- |
-| 1 | 动机：对齐轮次的多会话周期负载下，聚合 KV 穿越容量而共享空闲窗逐周期重现；单会话恢复时序对比（reactive vs cyclic） | [指南：图 1](../planning/figure-drawing-guide.md#figure-1) | `figure1-motivated-example.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
-| 2 | 设计总览（论文图号为图 3，文件名沿用旧编号）：连续 residency swimlane、均匀相位网格、容量门控因果链（带圈序号）、共享链路窗口、pool 对齐基线对照 | [指南：图 3](../planning/figure-drawing-guide.md#figure-3) | `figure2-design-overview.drawio`（待创建）；`{svg,pdf,png}` 为冻结预览 |
+| 1 | 动机：对齐轮次的多会话周期负载下，聚合 KV 穿越容量而共享空闲窗逐周期重现；单会话恢复时序对比（reactive vs cyclic） | [指南：图 1](../planning/figure-drawing-guide.md#figure-1) | `figure1-motivated-example.drawio`（起点版已生成）；`{svg,pdf,png}` 为冻结预览 |
+| 2 | 设计总览（论文图号为图 3，文件名沿用旧编号）：连续 residency swimlane、均匀相位网格、容量门控因果链（带圈序号）、共享链路窗口、pool 对齐基线对照 | [指南：图 3](../planning/figure-drawing-guide.md#figure-3) | `figure2-design-overview.drawio`（起点版已生成）；`{svg,pdf,png}` 为冻结预览 |
 
 ## Production
 

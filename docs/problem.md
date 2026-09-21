@@ -6,7 +6,7 @@
 <a id="interaction-sessions-and-their-timing"></a>
 ### 交互会话及其时间结构
 
-交互式 AI 应用的会话可以跨越多轮请求、多次工具执行和多个传输连接，围绕共同历史持续推进。新兴的全双工交互允许系统在输出期间继续接收和处理输入，以支持自然话轮转换、重叠输入和及时打断。本文以其中按媒体时钟更新、以固定 micro-turn（微轮次）推进的持续双工会话为应用动机：对话模型以固定时间步吸收可用输入、推进历史状态，并选择输出或沉默。这种时间结构可以出现在原生交互模型中，也可以由级联 ASR–LLM–TTS 管线实现（模型与产品实例见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)；其交互价值见[固定 micro-turn 交互与端点触发的比较](#why-model-level-full-duplex-is-worth-studying)）。
+交互式 AI 应用的会话可以跨越多轮请求、多次工具执行和多个传输连接，围绕共同历史持续推进。新兴的全双工交互允许系统在输出期间继续接收和处理输入，以支持自然话轮转换、重叠输入和及时打断。本文以其中按媒体时钟更新、以固定 micro-turn（微轮次）推进的持续双工会话为应用动机：对话模型以固定时间步吸收可用输入、推进历史状态，并选择输出或沉默。这种时间结构可以出现在原生交互模型中，也可以由级联 ASR–LLM–TTS 管线实现（模型与产品实例见[全双工模型与产品综述](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)；其交互价值见[固定 micro-turn 交互与端点触发的比较](#why-model-level-full-duplex-is-worth-studying)）。
 
 Thinking Machines 的[官方说明](https://thinkingmachines.ai/blog/interaction-models/)使用 time-aligned micro-turns 描述在短时间片上持续交错处理输入和生成输出的设计。本文沿用这一时间片用法：一个 micro-turn 可以包含用户的新输入、模型输出或沉默，即使任何一方尚未说完完整话轮，交互状态仍可以推进。因此，micro-turn 能描述持续交互如何随真实时间展开；它的固定时长、目标模型的状态推进方式及历史保留策略仍须由具体契约给出。
 
@@ -62,7 +62,7 @@ Thinking Machines 的[官方说明](https://thinkingmachines.ai/blog/interaction
 
 #### 持续检测与对话模型持续更新
 
-区分这类负载与级联系统的持续检测，需要先固定分类轴。级联描述组件架构，全双工描述同时听说的能力，micro-turn 描述按短时间片组织交互的方式；第一张表的请求类别只由对话模型更新的触发方式决定，不由组件架构决定——检测器持续判断、控制器管理打断与取消的系统，其对话模型仍可能由端点或打断事件启动，流式输出或工具调用同样不改变触发类别。[DuplexCascade](https://arxiv.org/abs/2603.09180) 保留 ASR–LLM–TTS 级联架构而让对话 LLM 按固定 micro-turn 持续决策，是架构轴与交互轴正交的反例，就更新节奏而言应按第三类持续双工会话分析。附和与纠正等输出期间的交互控制是级联系统同样可以承担的任务，不能作为固定 micro-turn 的独占能力证据。组件机制与行为评测的细节见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)与[双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md)。
+区分这类负载与级联系统的持续检测，需要先固定分类轴。级联描述组件架构，全双工描述同时听说的能力，micro-turn 描述按短时间片组织交互的方式；第一张表的请求类别只由对话模型更新的触发方式决定，不由组件架构决定——检测器持续判断、控制器管理打断与取消的系统，其对话模型仍可能由端点或打断事件启动，流式输出或工具调用同样不改变触发类别。[DuplexCascade](https://arxiv.org/abs/2603.09180) 保留 ASR–LLM–TTS 级联架构而让对话 LLM 按固定 micro-turn 持续决策，是架构轴与交互轴正交的反例，就更新节奏而言应按第三类持续双工会话分析。附和与纠正等输出期间的交互控制是级联系统同样可以承担的任务，不能作为固定 micro-turn 的独占能力证据。组件机制与行为评测的细节见[全双工模型与产品综述](references/full-duplex-model-product-serving-landscape-2026-08.md#划界)与[双工 serving 综述](references/duplex-serving-systems-landscape-2026-09.md)。
 
 #### 周期性 KV 管理的判定依据
 
@@ -80,27 +80,27 @@ Thinking Machines 的[官方说明](https://thinkingmachines.ai/blog/interaction
 <a id="representative-models-and-work"></a>
 #### 代表模型与部署实例
 
-上述判定依据面向已有真实来源的时间结构。按触发方式整理的[代表模型与工作](references/full-duplex-model-product-serving-landscape-2026-08.md#representative-request-families)逐项列出年份、开源／闭源属性与支持归类的特点，覆盖消息式文本服务、端点触发的语音接口和固定时间片双工模型，供 Background 与 Related Work 选材。公开材料中的 GPT-Live、Seeduplex 和 Thinking Machines 交互模型展示了持续听说与交互决策进入模型的方向；这些工作采用不同的决策粒度，周期由模型与部署契约决定，音频 I/O 的分块粒度也不必等于对话主干的更新周期（各模型的精确 tick、来源与证据性质见[全双工模型与产品版图](references/full-duplex-model-product-serving-landscape-2026-08.md#2-公开模型与研究原型)与[交互模型分析](references/thinking-machines-interaction-model.md#交互模型机制)）。级联方案保有模块可替换、逐阶段可观测、复用文本 LLM 与工具生态等模块化优势，并可通过播放感知的节流与下一次使用感知的 KV 管理改善服务（见[双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md#liveserve)）；这些优势不限定模型更新采用端点触发还是持续时钟驱动。代表实例说明这些时间结构已有真实来源，但不直接确定论文的实验对象，具体实例的周期也不能直接成为本文 workload 的统一常数；周期性 KV 管理仍须按目标模型的更新、历史复用与访问契约核验。
+上述判定依据面向已有真实来源的时间结构。按触发方式整理的[代表模型与工作](references/full-duplex-model-product-serving-landscape-2026-08.md#representative-request-families)逐项列出年份、开源／闭源属性与支持归类的特点，覆盖消息式文本服务、端点触发的语音接口和固定时间片双工模型，供 Background 与 Related Work 选材。公开材料中的 GPT-Live、Seeduplex 和 Thinking Machines 交互模型展示了持续听说与交互决策进入模型的方向；这些工作采用不同的决策粒度，周期由模型与部署契约决定，音频 I/O 的分块粒度也不必等于对话主干的更新周期（各模型的精确 tick、来源与证据性质见[全双工模型与产品综述](references/full-duplex-model-product-serving-landscape-2026-08.md#2-公开模型与研究原型)与[交互模型分析](references/thinking-machines-interaction-model.md#交互模型机制)）。级联方案保有模块可替换、逐阶段可观测、复用文本 LLM 与工具生态等模块化优势，并可通过播放感知的节流与下一次使用感知的 KV 管理改善服务（见[双工 serving 综述](references/duplex-serving-systems-landscape-2026-09.md#liveserve)）；这些优势不限定模型更新采用端点触发还是持续时钟驱动。代表实例说明这些时间结构已有真实来源，但不直接确定论文的实验对象，具体实例的周期也不能直接成为本文 workload 的统一常数；周期性 KV 管理仍须按目标模型的更新、历史复用与访问契约核验。
 
 持续协作的交互需求解释了为什么值得研究双工会话；其具体更新契约解释了本文的资源问题。端点触发的语音请求由话轮边界触发有限响应任务，下一次任务提交通常不规律；按固定 micro-turn 推进的持续双工会话则提供规律更新机会。其周期工作量受输入供给、输出预算与实时消费契约约束；若单次更新提前完成且期间无其他 KV 访问，就出现反复的 KV 空闲区间。在历史持续保留并增长的条件下，周期性计算余量和长期状态增长同时出现，构成单独研究这类 workload 的理由。
 
 <a id="why-historical-kv-state-can-limit-capacity"></a>
-### 历史状态的容量张力
+### 历史状态的容量约束
 
 自回归 Transformer 可以缓存历史位置的 attention key/value，以避免在后续执行中重复计算。在使用完整保留历史进行注意力计算的模型中，追加上下文位置通常会增加相应的 KV 状态。增长关系受模型结构、状态精度、上下文长度上限和历史保留策略影响；固定窗口或其他有界状态结构需要分别分析。
 
-以全驻留为参照策略：应用保留的全部状态驻留在 GPU，保留语义零损失、下次更新零准备延迟——它只可能在容量轴上失败。在该参照下，累计驻留需求随会话数与保留状态规模单调增长，而可用 GPU KV 容量受模型权重、activation 和运行时保留空间约束。当单会话每周期的计算尚未饱和其周期时，驻留需求就可能先于计算需求触及资源上限。
+以全驻留为参照策略：应用保留的全部状态驻留在 GPU，保留语义零损失、下次更新零准备延迟；它只可能在容量轴上失败。在该参照下，累计驻留需求随会话数与保留状态规模单调增长，而可用 GPU KV 容量受模型权重、activation 和运行时保留空间约束。当单会话每周期的计算尚未饱和其周期时，驻留需求就可能先于计算需求触及资源上限。
 
-> **【关键 · 待验证命题】** 在全驻留参照下，历史 KV 的驻留需求可能先于更新计算需求触及 GPU 资源上限（裁决实验：[Q1](experiments.md#evaluation-questions)）。
+> **【关键 · 待验证命题】** 在全驻留参照下，历史 KV 的驻留需求可能先于更新计算需求触及 GPU 资源上限（判定实验：[Q1](experiments.md#evaluation-questions)）。
 
 这一矛盾依赖三个负载性质同时成立：历史必须跨更新复用；更新按周期推进、相邻使用之间留有空闲区间；单周期计算不饱和。任一性质缺失，问题都退化为已有工作覆盖的形态——无跨更新复用则无驻留问题，无节奏则是一般缓存管理，计算先饱和则是算力问题。
 
 > **【关键 · 定义】** 本文的容量矛盾以三个负载性质同时成立为前提：历史跨更新复用、更新按可描述周期推进且留有空闲区间、单周期计算不饱和。
 
-其中第一个性质把保留策略作为负载给定的参数：应用可以保留完整历史，也可以通过窗口或摘要为单会话状态设置上限；本文不裁决保留策略之间的质量取舍，只要求所研究负载在其选定的保留策略下仍跨更新复用可观的状态。参照策略在容量轴上失效后，自然的问题是：改动参照的哪一部分可以化解矛盾，代价是什么。
+其中第一个性质把保留策略作为负载给定的参数：应用可以保留完整历史，也可以通过窗口或摘要为单会话状态设置上限；本文不判定保留策略之间的质量取舍，只要求所研究负载在其选定的保留策略下仍跨更新复用可观的状态。参照策略在容量轴上失效后，自然的问题是：改动参照的哪一部分可以化解矛盾，代价是什么。
 
 <a id="the-gap-in-existing-approaches"></a>
-### 现有路线的交换代价
+### 现有路线的代价
 
 化解上述矛盾的已知动作分属两个维度：一个维度改变会话保留什么状态，属于应用侧的质量取舍；另一个维度改变保留状态何时驻留 GPU，才是服务系统的决策空间。对周期会话，驻留维度的已知路线各自放弃了负载需要保住的性质。
 
@@ -108,18 +108,18 @@ Thinking Machines 的[官方说明](https://thinkingmachines.ai/blog/interaction
 
 **放弃常驻、被动恢复。** offload 把空闲状态移出 GPU，需求出现后再回载或重算：引擎内建 swap 在分配失败时整段换出换回；分层方案在请求已入批后才开始回载与重建（Pensieve, EuroSys'25；HCache, EuroSys'25）；恢复与重算的混合调度（Cake, ICML'25；CacheFlow, arXiv:2604.25080）缩短这段等待，但不改变它在关键路径上的位置。保留语义不变，以及时性为代价。
 
-**提前准备，但信号与周期节奏错配。** 利用未来信息的工作证明了提前量的价值，但各自绑定不同的信号来源与动作域：队列深度（CachedAttention, ATC'24）的提前量由负载决定，系统无法指定；最近使用类启发在"会话空闲但即将回归"时恰好误判——这正是周期会话空闲区间的常态；应用行为提示可能出错、提前量为秒级（SYMPHONY, NSDI'26）；暂停时长估计针对不规则的外部调用事件（InferCept, ICML'24）；模型内部结构的预测提前量在单步的层内（InfiniGen, OSDI'24；ECHO, OSDI'26）；工作流图给出的是步数距离而非时刻，保护的是静态共享前缀（KVFlow, NeurIPS'25）。这些信号都不是周期负载承诺的、跨更新反复出现的释放时刻。
+**提前准备，但信号与周期节奏错配。** 利用未来信息的工作证明了提前量的价值，但各自绑定不同的信号来源与动作域：队列深度（CachedAttention, ATC'24）的提前量由负载决定，系统无法指定；最近使用类启发在"会话空闲但即将回归"时恰好误判，而这正是周期会话空闲区间的常态；应用行为提示可能出错、提前量为秒级（SYMPHONY, NSDI'26）；暂停时长估计针对不规则的外部调用事件（InferCept, ICML'24）；模型内部结构的预测提前量在单步的层内（InfiniGen, OSDI'24；ECHO, OSDI'26）；工作流图给出的是步数距离而非时刻，保护的是静态共享前缀（KVFlow, NeurIPS'25）。这些信号都不是周期负载预先给定的、跨更新反复出现的释放时刻。
 
-驻留维度的已知路线或者把恢复留在关键路径上，或者依赖与周期节奏错配的信号；缩减保留状态属于另一维度，改变的是驻留问题的规模而非其解，不能替代驻留决策。外部系统的机制细节与出版态势见 [KV offload 版图](references/kv-offload-restore-landscape-2026-08.md) 与 [双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md)。
+驻留维度的已知路线或者把恢复留在关键路径上，或者依赖与周期节奏错配的信号；缩减保留状态属于另一维度，改变的是驻留问题的规模而非其解，不能替代驻留决策。外部系统的机制细节与出版态势见 [KV offload 综述](references/kv-offload-restore-landscape-2026-08.md) 与 [双工 serving 综述](references/duplex-serving-systems-landscape-2026-09.md)。
 
-> **【关键 · 待核验定位】** 尚无已知工作利用周期负载承诺的下一次使用时刻驱动驻留回收与状态恢复，在不改变应用保留语义的前提下把状态准备移出关键路径。
+> **【关键 · 待核验定位】** 尚无已知工作利用周期负载预先给定的下一次使用时刻驱动驻留回收与状态恢复，在不改变应用保留语义的前提下把状态准备移出关键路径。
 
 <a id="why-timing-information-matters"></a>
 ### 时间信息的机会与代价
 
-周期会话恰好具备上述驻留路线所缺的信息条件。显式提交的轮次型请求通常无法提前知道下一条消息的到达时刻，端点触发的语音请求由话轮判定触发本轮响应任务，而周期会话的后续状态需求可依据负载节奏提前准备。具体释放时刻由应用契约承诺时，这一信息在需求出现之前就可获得，并随每次更新反复出现。若更新间存在可用空闲区间，系统就有机会把状态准备移出关键路径：空闲期建立副本并回收驻留，下次使用前恢复状态。
+周期会话恰好具备上述驻留路线所缺的信息条件。显式提交的轮次型请求通常无法提前知道下一条消息的到达时刻，端点触发的语音请求由话轮判定触发本轮响应任务，而周期会话的后续状态需求可依据负载节奏提前准备。具体释放时刻由应用契约预先给定时，这一信息在需求出现之前就可获得，并随每次更新反复出现。若更新间存在可用空闲区间，系统就有机会把状态准备移出关键路径：空闲期建立副本并回收驻留，下次使用前恢复状态。
 
-> **【关键 · 核心洞察】** 周期负载把下一次使用时刻作为负载性质承诺给系统：该信息先于需求出现、跨可描述周期反复出现，因而可以驱动空闲期的驻留回收与使用前的状态恢复。
+> **【关键 · 核心洞察】** 周期负载把下一次使用时刻作为负载性质预先提供给系统：该信息先于需求出现、跨可描述周期反复出现，因而可以驱动空闲期的驻留回收与使用前的状态恢复。
 
 该信息分三级，各自解锁不同的动作，也对应强度递增的假设：知道节奏存在，系统可以估计后续的状态需求；获得具体释放时刻，可以在需求进入关键路径前准备状态；拥有释放偏移的控制权，才可以重排多会话需求的重叠。偏移控制权不能从节奏可见性推出，时间信息的价值也不能由最强一级代表。
 
@@ -295,12 +295,12 @@ GPU 空间维度存在对偶的论证。在部分逐出与定时恢复生效的�
 - Lin et al., *Full-Duplex-Bench*：[原文](https://arxiv.org/abs/2503.04721)与[论文笔记](papers/Full-Duplex-Bench-%20A%20Benchmark%20to%20Evaluate%20Full-Duplex%20Spoken%20Dialogue%20Models%20on%20Turn-taking%20Capabilities/overview_cn.md)——按停顿处理、附和、话轮转换和打断管理分项评估交互行为。
 - Yang et al., *DuplexCascade*：[原文](https://arxiv.org/abs/2603.09180)——级联 ASR–LLM–TTS 架构去除 VAD 端点门控、以 micro-turn 实现全双工。
 
-一手调研与版图（各文档自带证据边界，其中数字与配置属于外部来源，不是项目结果或论文周期常数）：
+一手调研与综述（各文档自带证据边界，其中数字与配置属于外部来源，不是项目结果或论文周期常数）：
 
 - [固定 micro-turn 与端点触发交互的一手调研](references/micro-turn-versus-endpoint-interaction.md)——主动时机任务、用户研究、DuplexCascade 的汇总质量与周期消融，以及缺少匹配对照的因果边界。
-- [全双工模型、产品与 serving 版图](references/full-duplex-model-product-serving-landscape-2026-08.md)——模型级全双工的公开证据、组件架构与更新时序的区别，以及不同方案的能力取舍。
+- [全双工模型、产品与 serving 综述](references/full-duplex-model-product-serving-landscape-2026-08.md)——模型级全双工的公开证据、组件架构与更新时序的区别，以及不同方案的能力取舍。
 - [Thinking Machines 交互模型分析](references/thinking-machines-interaction-model.md)——共享时间线、沉默、重叠、插话、搜索和界面更新等交互事件。
-- [全双工 serving 版图](references/duplex-serving-systems-landscape-2026-09.md)——级联语音 serving 中的播放进度、barge-in、阶段协调与 KV 管理。
+- [全双工 serving 综述](references/duplex-serving-systems-landscape-2026-09.md)——级联语音 serving 中的播放进度、barge-in、阶段协调与 KV 管理。
 
 术语参照：
 

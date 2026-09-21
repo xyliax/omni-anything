@@ -14,7 +14,7 @@
 
 ```text
 .
-├── README.md                        # 最小落地页；只保留 Getting Started 环境搭建
+├── README.md                        # 最小入口页；只保留 Getting Started 环境搭建
 ├── AGENTS.md                        # 本文件；owner: 任务路由、跨目录约束、Research Classification
 ├── CLAUDE.md -> AGENTS.md           # 兼容 symlink
 ├── pyproject.toml                   # 包与 pytest 配置
@@ -25,7 +25,7 @@
 │   ├── findings.md                  # owner: 当前状态、结论、数字与限制；不重复完整协议
 │   ├── PAPER.md                     # 论文叙事工作大纲：定位、叙事骨架、取材与转写纪律；不是事实 owner
 │   ├── papers/                      # 论文摘要与阅读笔记；不是项目事实
-│   ├── references/                  # 外部规格整理与版图调研；不是项目事实
+│   ├── references/                  # 外部规格整理与综述调研；不是项目事实
 │   └── agent/                       # Agent 导航层，不是第二套项目事实
 │       ├── README.md                # 任务 read-set 与交付要求；修改代码前必读
 │       ├── ownership.json           # 机器可检验的所有权声明
