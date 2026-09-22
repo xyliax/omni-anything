@@ -32,7 +32,7 @@ make supplement
 make check
 ```
 
-输出位于 `build/`。`make check` 会做几项基本检查：PDF 是否生成、页面尺寸、文档类的双栏与匿名选项，以及源文件里是否出现被禁止的格式改动；它不能替代提交前人工审计。
+每次 `make paper` 成功后，可读的 PDF 复制为本目录下的 `paper.pdf`（补充材料为 `supplement.pdf`），直接打开即可；`build/` 只放 latexmk 的中间文件，不必进入。两个 PDF 已加入 `.gitignore`，不入库。latexmk 按内容校验增量编译：源文件未变时数十毫秒返回，改动一章约三到五秒。`make check` 会做几项基本检查：PDF 是否生成、页面尺寸、文档类的双栏与匿名选项，以及源文件里是否出现被禁止的格式改动；它不能替代提交前人工审计。
 
 ## Writing Workflow
 

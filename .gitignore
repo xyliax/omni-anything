@@ -403,3 +403,7 @@ pyrightconfig.json
 !infra/
 !infra/env/
 !infra/env/AGENTS.md
+
+# eurosys2027: readable build outputs copied next to the sources
+/eurosys2027/paper.pdf
+/eurosys2027/supplement.pdf
