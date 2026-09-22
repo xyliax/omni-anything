@@ -1,19 +1,22 @@
 # Figure Assets
 
-> 图 1 与设计总览图已进入 v4 手绘阶段：**`.drawio` 为源文件**（已由 `scripts/scaffold-drawio.py` 按指南坐标生成起点版，作者在其上手改；改过之后不要再重跑脚本覆盖），本目录现存的 `{svg,pdf,png}` 是 v3 预览的冻结参考，`.drawio` 版落地后替换删除。画法、参数表与 caption 草稿见 [图件手绘指南](../planning/figure-drawing-guide.md)；内部一致性不等于实测或最终论文审定。
+本目录只放图的源文件与供 LaTeX 引用的导出件。画法、caption 与图件分工见 [图件手绘指南](../planning/figure-drawing-guide.md)；图号与各图在论文中的位置以 [docs/PAPER.md 图件计划](../../docs/PAPER.md#figure-plan) 为准。
 
-| Figure | Purpose | Specification | Files |
-| --- | --- | --- | --- |
-| 1 | 动机：对齐轮次的多会话周期负载下，聚合 KV 穿越容量而共享空闲窗逐周期重现；单会话恢复时序对比（reactive vs cyclic） | [指南：图 1](../planning/figure-drawing-guide.md#figure-1) | `figure1-motivated-example.drawio`（起点版已生成）；`{svg,pdf,png}` 为冻结预览 |
-| 2 | 设计总览（论文图号为图 3，文件名沿用旧编号）：连续 residency swimlane、均匀相位网格、容量门控因果链（带圈序号）、共享链路窗口、pool 对齐基线对照 | [指南：图 3](../planning/figure-drawing-guide.md#figure-3) | `figure2-design-overview.drawio`（起点版已生成）；`{svg,pdf,png}` 为冻结预览 |
+| 文件 | 内容 | 状态 |
+| --- | --- | --- |
+| `figure.drawio` | 图 1 源文件（Draw.io，含 `intro` 与 `caption` 两页），作者手绘 | 已画完，细节仍在调整；建议另存为 `figure-intro.drawio` 使基名与导出件一致 |
+| `figure-intro.pdf` | 图 1 导出件，`sections/01-introduction.tex` 以 `figure*` 双栏引用 | 当前为由 SVG 经 Chrome 转出的临时版本，作者从 Draw.io 直接导出的 PDF 到位后覆盖 |
 
-## Production
+图 2（相位与恢复时机）与设计总览图尚未开始，源文件按同样方式命名：`figure-<用途>.drawio` 与 `figure-<用途>.pdf`。
 
-作者用 Draw.io 手绘 `.drawio`（一页一图，元素分组命名），导出 vector PDF（crop）供 LaTeX、PNG 供审阅，画法、内部坐标与 caption 均见指南。
+## 导出
 
-## Rules
+从 Draw.io 直接 Export as PDF：选中整页、勾选 crop，字体嵌入由 Draw.io 桌面版自动完成。不要经 SVG 中转：Draw.io 导出的 SVG 把文字放在 `foreignObject` 里并附位图兜底，rsvg、cairosvg 一类工具只会取位图，文字就变成图片。若只有 SVG，可用无头 Chrome 打印成 PDF（`--headless=new --print-to-pdf`），foreignObject 能正常渲染。导出后用 `pdffonts` 确认字体已嵌入、名字是所选字体而不是 Helvetica 回退。
 
-- 先改指南，再改图；caption 与语义不得偏离 owner 文档。
-- 机制图数字是示意设定，不是实测、模拟器结果或性能预测；实验结果图另须 formal `EVIDENCE-*`。
-- 7 in 宽度下注释 8 pt、轴/lane 标签 9 pt；图内文字预算与调色板、灰度规则见指南通用规则（深蓝 `#28769B`、浅蓝 `#EAF2F7`、橙 `#B87519`、墨 `#263642`、灰 `#9CA9B2`）。
-- 不含作者、单位、私有路径、仓库 URL 或模型/设备绑定。
+## 规则
+
+- 图内字体与全文图件统一，目前为 Inter；图内标签 8 px 以上（双栏放大 1.25 倍后约 10 pt），图例不低于 7 px。
+- 图内不出现具体数值，时间轴用符号刻度，容量线只写名称。
+- 颜色语义见指南：蓝色系表示输入侧（音频流、prefill、input tokens），橙色系表示输出侧（decode、语音输出、output tokens），蓝灰表示历史 KV，红色全图只用于容量触顶一处。
+- 不含作者、单位、私有路径、仓库 URL 或模型与设备名。
+- 先改指南再改图；caption 的术语与 [docs/problem.md 术语表](../../docs/problem.md#terminology) 一致。

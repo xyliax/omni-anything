@@ -29,15 +29,12 @@ not a universal fact, and we verify it experimentally in
 Section~\ref{sec:evaluation}. When it holds, the question becomes: which part
 of the reference policy should change, and at what cost?
 
-\begin{figure}
-  \placeholder{Figure~1: motivating timeline. On a common input timeline,
-  distinguish input arrival, update release, KV demand, restoration, and
-  delivery for concurrent sessions; show the idle interval of one session and
-  the critical path of an on-demand restoration. Schematic portion drafted;
-  measured portion pending the controlled capacity experiment (Q1).}
-  \caption{Motivating example (placeholder; measured portion pending).}
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/figure-intro.pdf}
+  \caption{A full-duplex session advances in periodic micro-turns. The $k$-th micro-turn begins at $d_k$ and is due by $d_{k+1}=d_k+T$: the model encodes the audio received over the previous period, prefills the resulting input tokens, and decodes a bounded output segment for playback, after which the GPU idles until the next deadline. Input and output tokens are appended to the KV history, which remains resident across periods. Decoding work per period is bounded by the chunk length and the output budget, whereas resident KV grows with every period; across concurrent sessions, GPU memory is exhausted long before compute is saturated.}
   \label{fig:motivation}
-\end{figure}
+\end{figure*}
 
 Known escape routes fall along two distinct dimensions. One dimension changes
 \emph{what a session retains}: windowing, compression, and summarization cap
