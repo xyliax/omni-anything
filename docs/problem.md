@@ -141,7 +141,7 @@ Thinking Machines 的[官方说明](https://thinkingmachines.ai/blog/interaction
 
 <a id="from-model-timing-to-periodic-updates"></a>本文将上述负载建模为周期性交互会话（periodic interaction session）：更新按可描述的周期获得执行资格，相邻更新依赖同一段持续增长的历史。该节奏有真实来源——具有固定速率时间步或固定时长同步块的模型每隔固定时长消费新输入并推进状态（模型实例见[文末来源](#sources-and-remaining-background-work)）——但它是工作负载模型的假设而非普遍事实：流式或双工本身不构成周期性，节奏必须来自负载本身，服务端自行施加的计时器不构成该信息；对本已周期的负载，服务栈入口在契约允许范围内选择相位对齐则是合法控制——节奏来自负载，对齐属于服务栈。输入迟到、传输抖动和执行排队是这一抽象必须容忍的偏差。
 
-在目标对话模型按固定 micro-turn 推进状态的契约下，可将一次微轮次的状态推进映射为一次应用级 update，并用相邻更新的释放间隔定义 period `T`。在每个时间片对应一次更新的契约中，`T` 对应 micro-turn 时长；它不等于完成这次更新的实际计算时间。一个 micro-turn 内可以包含多次引擎迭代，输入与输出也不必逐块一一对应。若只有前端检测器按时间片运行，而目标对话模型仍由端点或打断事件启动，则不能据此前端时间片为对话模型建立上述映射。周期性交互会话仍是本文的资源抽象，micro-turn 用于解释持续双工实例的时间结构。
+在目标对话模型按固定 micro-turn 推进状态的契约下，可将一次微轮次的状态推进视为一次应用级更新，并用相邻更新的释放间隔定义 period `T`。在每个时间片对应一次更新的契约中，`T` 对应 micro-turn 时长；它不等于完成这次更新的实际计算时间。一个 micro-turn 内可以包含多次引擎迭代，输入与输出也不必逐块一一对应。若只有前端检测器按时间片运行，而目标对话模型仍由端点或打断事件启动，则不能据此前端时间片为对话模型建立上述映射。周期性交互会话仍是本文的资源抽象，micro-turn 用于解释持续双工实例的时间结构。
 
 <a id="periodic-interaction-session"></a>
 ### 周期性交互会话
@@ -239,7 +239,7 @@ GPU 空间维度存在对偶的论证。在部分逐出与定时恢复生效的�
 | workload profile | 指定更新触发方式下的计算节奏、实时输出契约和状态增长特征，用于描述各类请求的资源需求 |
 | message-triggered turn-based request | 显式提交的轮次型请求：用户或应用提交一条完整消息后发起有限响应；连续音频的自动端点触发单列为下一类 |
 | endpoint-triggered speech request | 端点触发的语音请求：连续音频经自动端点判定后，触发目标对话模型的一次有限响应任务；对话模型不在每个固定时间片持续选择行为。判定可结合语音活动、静默时长、语义与上下文，架构可以是级联或端到端；前端连续检测、输入 KV 增量追加或候选响应预生成，不自动构成每个 micro-turn 的持续回应决策 |
-| clocked full-duplex session | 按固定 micro-turn 推进的持续双工会话：会话保持打开，允许输入输出重叠，目标对话模型在每个固定时间片吸收可用输入、推进状态并选择输出或沉默；输出期间的更新也不以话轮结束为前提。周期、输出预算与历史保留语义由应用契约给出，架构可为原生或级联 |
+| full-duplex session | 按固定 micro-turn 推进的持续双工会话：会话保持打开，允许输入输出重叠，目标对话模型在每个固定时间片吸收可用输入、推进状态并选择输出或沉默；输出期间的状态推进也不以话轮结束为前提。周期、输出预算与历史保留语义由应用契约给出，架构可为原生或级联。论文英文以 full-duplex session 称之，需要强调存续时间时写 long-lived full-duplex session；此前的 clocked full-duplex session 为自造词，Thinking Machines 与 Metronome 均无此用法，已停用 |
 | model-level full duplex | 模型级全双工：模型在输出期间继续接收输入，把双方行为及其时间关系纳入持续上下文，并决定回应时机与内容，包括沉默、重叠、附和、打断或主动开口；仅有双向传输或外部取消不自动满足。该属性可由级联中的对话主干承担，不等同于原生端到端语音架构；固定周期和 KV 增长需另行核验 |
 | cascaded speech pipeline | 级联语音管线：把 ASR、文本 LLM 或对话管理器、TTS 等组件串联起来的模块化架构；对话更新可以由端点触发，也可以按固定 micro-turn 推进，双工能力需按实际输入处理与行为决策路径核验 |
 | VAD / endpointing / turn detection | VAD 只检测音频中是否有语音；endpointing 或 turn detection 根据 VAD、静默时长、语义和策略决定何时提交或结束一段输入；这些控制信号不等同于模型级全双工 |
@@ -247,7 +247,7 @@ GPU 空间维度存在对偶的论证。在部分逐出与定时恢复生效的�
 | half-duplex interaction | 听说角色按话轮交替，不支持在系统输出期间同时处理用户输入并更新交互决策；端点触发本身不自动意味着半双工 |
 | streaming / full duplex | 分别指增量处理、输入与输出能够重叠；均不隐含周期性 |
 | periodic interaction session | 更新资格具有可描述周期规律、历史跨更新延续的会话 |
-| update | 一次应用级更新；在固定 micro-turn 推进目标模型状态的契约下，可将一次微轮次映射为一次 update；实现中的 tick 与 engine iteration 仍需单独映射，不能直接等同 |
+| 更新（一个 micro-turn 内的计算） | 中文文档中"更新"指目标模型在一个 micro-turn 内的一次状态推进，是普通用语而非专名。论文英文不设对应专名，也不使用 update 一词：时间片写 micro-turn，片内的计算按内容写 the computation of micro-turn k、prefill、decoding 或 the model's work per period。实现中的 tick 与 engine iteration 仍需单独映射，不能直接等同 |
 | period / release time / release offset | 分别为 `T`、`r(i,k)`、相对共同时间原点的 `phi_i` |
 | input chunk | 更新携带的新增输入块；切分单位由应用定义，不一定是媒体帧 |
 | update latency target | 从指定起点到指定完成事件的软实时目标 `D_i` |

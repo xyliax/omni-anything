@@ -89,9 +89,9 @@
 
 摘要按句群结构组织为一个紧凑段落（形制对照 AdaServe/Metronome 摘要）；以下描述每个句位承担什么，成品英文句由 `eurosys2027/sections/00-abstract.tex` 持有。铺垫压缩、We-present 提前是既定形制决策；空位纪律不变——不填提升倍数、最优性或普适性表述。
 
-1. **铺垫句群（问题、缺口与关键观察，四句）。** 依次承担：负载时间结构——会话为长期存续的 full-duplex（输入输出重叠，一处同位语定义，为 §2 的双工铺垫设置 anchor），以固定时长 micro-turn 推进，每个 micro-turn 内模型吸收新到输入、决定回应内容与时机、可解码有界输出段（micro-turn=时间片、update=片内计算，一处绑定后全文用 update）；更新之间无模型计算，而保留的 KV 状态跨 micro-turn 持续增长；residency dilemma——全驻留在计算余量仍在时耗尽 GPU 容量（待 Q1 验证），reactive offloading 把恢复放回关键路径；关键观察——更新时刻表是负载预先给定的性质，状态的下一次使用先于需求可知（措辞锚定核心洞察标记）。产品专名不进摘要（摘要无法带引用），移至 §1① 带引用引入；以对象层命题开篇，不用「makes X explicit」式元话语，不用「in this pattern」式模糊指代承担定义。
+1. **铺垫句群（问题、缺口与关键观察，四句）。** 依次承担：负载时间结构——会话为长期存续的 full-duplex（输入输出重叠，一处同位语定义，为 §2 的双工铺垫设置 anchor），以固定时长 micro-turn 推进，每个 micro-turn 内模型吸收新到输入、决定回应内容与时机、可解码有界输出段（micro-turn=时间片；片内计算不设专名、不用 update，按内容写 prefill、decoding 或 the computation of micro-turn k）；更新之间无模型计算，而保留的 KV 状态跨 micro-turn 持续增长；residency dilemma——全驻留在计算余量仍在时耗尽 GPU 容量（待 Q1 验证），reactive offloading 把恢复放回关键路径；关键观察——更新时刻表是负载预先给定的性质，状态的下一次使用先于需求可知（措辞锚定核心洞察标记）。产品专名不进摘要（摘要无法带引用），移至 §1① 带引用引入；以对象层命题开篇，不用「makes X explicit」式元话语，不用「in this pattern」式模糊指代承担定义。
 2. **We-present 句。** supports-X-through-Y 句式，携带 cyclic state restoration，保留「不截断应用保留历史」限定；抽象层次停在决策层，以 Metronome/AdaServe 摘要为准，不点名实现接口。
-3. **操作展开与能力句一（合并为一句）。** cyclic state restoration 的操作语义与逐出深度合并：更新后逐出可恢复状态、下次 scheduled update 前恢复完成；深度以链路在 KV-idle interval 内可回搬量为界（措辞对照 [problem.md 术语表](problem.md#terminology)的词条定义，不得漂移）。
+3. **操作展开与能力句一（合并为一句）。** cyclic state restoration 的操作语义与逐出深度合并：每个 micro-turn 之后逐出可恢复状态、下一个 micro-turn 之前恢复完成；深度以链路在 KV-idle interval 内可回搬量为界（措辞对照 [problem.md 术语表](problem.md#terminology)的词条定义，不得漂移）。
 4. **能力句二（相位错峰）。** 接纳时一次指派固定相位，把恢复期限与驻留峰值分散在周期内；机制句停在决策层，容量效果留给结果句。
 5. **能力句三（异构与接纳；兼任决策所要求的结尾能力句）。** 异构会话同一 plan 吸收——恢复需求大者多留驻留；接纳归约为寻找空闲 phase。位于结果句之前，摘要以结果收尾（AdaServe 形制）。
 6. **结果句。** 与 full-residency（点名）和 the strongest existing baseline（不点名；on-demand restoration 不作为点名对照出现）比较——【空位：匹配对照与统一服务判定下经验证的承载能力结果】（§5②）。
