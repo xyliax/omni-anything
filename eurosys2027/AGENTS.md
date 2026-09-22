@@ -27,6 +27,8 @@
 - 在 Intro challenge、Design module 和 Evaluation question 尚未一一对应前，不得从代码路径或 patch 细节出发扩写正文。
 - 每次实质性使用 AI 都要更新 `planning/ai-use-log.md`；最终 disclosure 由作者根据 EuroSys/ACM 当时规则确认。
 - 新的论文正文只写入 `sections/`、`main.tex`、`supplement.tex`、`references.bib`、`figures/` 或 `planning/`。
+- 图件由作者在 Draw.io 手绘，agent 不生成 `.drawio` 起点文件或渲染脚本；agent 可读取 XML 做核对、按 `planning/figure-drawing-guide.md` 提出修改建议、在作者授权下做坐标级修改。导出的 PDF 必须嵌入字体，检查方法见 `figures/README.md`。
+- 图内与 caption 用词遵守 `docs/problem.md#terminology`：时间片写 micro-turn，期限写 deadline 与 period T；不用 recurring deadline、frame budget、tick、update。
 - TeX 正文源文件按一句一行组织；不要按固定列宽硬换行，也不要把单词或短语拆成独立行。空行只表示正文段落边界。该规则只规范源文件可读性，PDF 中的实际断行仍由 LaTeX 决定。
 
 ## Validation
