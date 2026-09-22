@@ -5,7 +5,7 @@
 | 文件 | 内容 | 状态 |
 | --- | --- | --- |
 | `figure.drawio` | 图 1 源文件（Draw.io，含 `intro` 与 `caption` 两页），作者手绘 | 已画完，细节仍在调整；建议另存为 `figure-intro.drawio` 使基名与导出件一致 |
-| `figure-intro.pdf` | 图 1 导出件，`sections/01-introduction.tex` 以 `figure*` 双栏引用 | 当前为由 SVG 经 Chrome 转出的临时版本，作者从 Draw.io 直接导出的 PDF 到位后覆盖 |
+| `figure-intro.pdf` | 图 1 导出件，`sections/01-introduction.tex` 以 `figure*` 双栏引用 | 作者从 Draw.io 直接导出，Inter 已嵌入 |
 
 图 2（相位与恢复时机）与设计总览图尚未开始，源文件按同样方式命名：`figure-<用途>.drawio` 与 `figure-<用途>.pdf`。
 

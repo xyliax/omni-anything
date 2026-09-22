@@ -45,7 +45,7 @@
 
 > A full-duplex session advances in periodic micro-turns. The k-th micro-turn begins at d_k and is due by d_{k+1} = d_k + T: the model encodes the audio received over the previous period, prefills the resulting input tokens, and decodes a bounded output segment for playback, after which the GPU idles until the next deadline. Input and output tokens are appended to the KV history, which remains resident across periods. Decoding work per period is bounded by the chunk length and the output budget, whereas resident KV grows with every period; across concurrent sessions, GPU memory is exhausted long before compute is saturated.
 
-**尚可调整。** 两处 T 标签仍是 Helvetica，应改为 Inter；图例字号 6.67 px 应提到 8 px；输出流带若只在说话的轮次画格、格长随 decode 变化，能解释 decode 段宽度为何不同，可选。
+**尚可调整。** 两处 T 标签导出后落成 LiberationSans（Draw.io 对 Helvetica 的替代），应改为 Inter；图例字号 6.67 px 应提到 8 px；输出流带若只在说话的轮次画格、格长随 decode 变化，能解释 decode 段宽度为何不同，可选。
 
 <a id="figure-2"></a>
 ## 图 2：相位与恢复时机（待画）
