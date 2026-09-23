@@ -4,14 +4,14 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="w1rlbFqt1l_fD-IMcbMO-1" parent="1" style="text;whiteSpace=wrap;fontFamily=Georgia;fontSize=9;" value="Figure1: A full-duplex session advances in periodic micro-turns. The k-th micro-turn begins at d_k and is due by d_{k+1} = d_k + T. Within it, the model encodes the audio received over the previous period, prefills the resulting input tokens, and decodes a bounded output segment for playback; the GPU then idles until the next deadline. Input and output tokens are appended to the session&#39;s KV history, which remains resident on the GPU across periods. Decoding work per period is bounded by the chunk length and the output budget, whereas resident KV grows with every period; across concurrent sessions, GPU memory is exhausted long before compute is saturated." vertex="1">
+        <mxCell id="w1rlbFqt1l_fD-IMcbMO-1" parent="1" style="text;whiteSpace=wrap;fontFamily=Georgia;fontSize=9;" value="Figure1: A full-duplex session advances in periodic micro-turns. The k-th micro-turn begins at d_k and is due by d_{k+1} = d_k + T. Within it, the model encodes the audio received over the previous period, prefills the resulting input tokens, and decodes a bounded output segment for playback; the GPU then idles until the next deadline. Input and output tokens are appended to the session's KV history, which remains resident on the GPU across periods. Decoding work per period is bounded by the chunk length and the output budget, whereas resident KV grows with every period; across concurrent sessions, GPU memory is exhausted long before compute is saturated." vertex="1">
           <mxGeometry height="73" width="554" x="52" y="16" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
   <diagram name="intro" id="fig">
-    <mxGraphModel dx="471" dy="265" grid="1" gridSize="2" guides="0" tooltips="1" connect="1" arrows="0" fold="1" page="1" pageScale="1" pageWidth="280" pageHeight="160" math="0" shadow="0">
+    <mxGraphModel dx="393" dy="221" grid="1" gridSize="2" guides="0" tooltips="1" connect="1" arrows="0" fold="1" page="1" pageScale="1" pageWidth="280" pageHeight="160" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -276,26 +276,9 @@
         <mxCell id="Wi5gnGQU1_V9IxxCOKg8-40" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=1;fillWeight=4;hachureGap=8;hachureAngle=45;fillColor=#FF9933;fillStyle=solid;" value="" vertex="1">
           <mxGeometry height="15" width="16" x="24" y="34" as="geometry" />
         </mxCell>
-        <mxCell id="kv-curve-b" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#5B7083;strokeWidth=1.5;" value="">
+        <mxCell id="kv-curve-b" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#5B7083;strokeWidth=1;" value="">
           <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="297" y="97.5" />
-              <mxPoint x="302" y="97.5" />
-              <mxPoint x="317" y="94.5" />
-              <mxPoint x="327" y="92.5" />
-              <mxPoint x="377" y="92.5" />
-              <mxPoint x="377" y="92.5" />
-              <mxPoint x="382" y="92.5" />
-              <mxPoint x="397" y="89.5" />
-              <mxPoint x="407" y="87.5" />
-              <mxPoint x="457" y="87.5" />
-              <mxPoint x="462" y="87.5" />
-              <mxPoint x="477" y="84.5" />
-              <mxPoint x="485" y="83.5" />
-            </Array>
-            <mxPoint x="273" y="97.5" as="sourcePoint" />
-            <mxPoint x="491" y="83.5" as="targetPoint" />
-          </mxGeometry>
+            <mxPoint x="273" y="104.0" as="sourcePoint" /><mxPoint x="486" y="82.0" as="targetPoint" /><Array as="points"><mxPoint x="297" y="104.0" /><mxPoint x="300" y="104.0" /><mxPoint x="305" y="101.5" /><mxPoint x="308" y="100.0" /><mxPoint x="373" y="100.0" /><mxPoint x="380" y="100.0" /><mxPoint x="385" y="97.5" /><mxPoint x="400" y="90.0" /><mxPoint x="453" y="90.0" /><mxPoint x="460" y="90.0" /><mxPoint x="465" y="87.5" /><mxPoint x="476.0" y="82.0" /></Array></mxGeometry>
         </mxCell>
         <mxCell id="CqgY5iNhX7f6SiIJZxp2-3" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.rect;fillColor2=none;strokeWidth=0.5;size=20;indent=5;strokeColor=#FF9933;fillColor=light-dark(#fff0d9, #142129);gradientColor=none;gradientDirection=east;" value="" vertex="1">
           <mxGeometry height="9" width="78" x="173" y="57" as="geometry" />
@@ -328,7 +311,7 @@
           <mxGeometry height="8" width="8" x="153" y="6" as="geometry" />
         </mxCell>
         <mxCell id="CqgY5iNhX7f6SiIJZxp2-17" connectable="0" parent="1" style="group" value="" vertex="1">
-          <mxGeometry height="11" width="11" x="263" y="90" as="geometry" />
+          <mxGeometry height="11" width="11" x="263" y="98.5" as="geometry" />
         </mxCell>
         <mxCell id="kv-break-1" edge="1" parent="CqgY5iNhX7f6SiIJZxp2-17" style="endArrow=none;html=1;strokeColor=#9CA9B2;strokeWidth=1;" value="">
           <mxGeometry relative="1" as="geometry">
@@ -373,7 +356,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="kv-hit-dot" parent="1" style="ellipse;html=1;fillColor=#C0392B;strokeColor=#C0392B;" value="" vertex="1">
-          <mxGeometry height="5" width="5" x="487" y="82" as="geometry" />
+          <mxGeometry height="5" width="5" x="473.5" y="79.5" as="geometry" />
         </mxCell>
         <mxCell id="lg-group" connectable="0" parent="1" style="group" value="" vertex="1">
           <mxGeometry height="34" width="295.5243478260869" x="15" y="86" as="geometry" />
@@ -433,7 +416,7 @@
           <mxGeometry height="8" width="50" x="25" y="6" as="geometry" />
         </mxCell>
         <mxCell id="CqgY5iNhX7f6SiIJZxp2-83" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=8;fontColor=#263642;strokeColor=none;fillColor=none;spacingLeft=0;" value="GPU memory capacity" vertex="1">
-          <mxGeometry height="7" width="69.52173913043477" x="392.00260869565216" y="100" as="geometry" />
+          <mxGeometry height="7" width="69.52173913043477" x="392.00260869565216" y="88" as="geometry" />
         </mxCell>
         <mxCell id="CqgY5iNhX7f6SiIJZxp2-107" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Inter;fontSize=8;fontColor=#263642;strokeColor=none;fillColor=none;spacingLeft=0;" value="reach limit!" vertex="1">
           <mxGeometry height="7" width="42" x="462" y="88" as="geometry" />
