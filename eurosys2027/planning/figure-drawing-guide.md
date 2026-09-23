@@ -1,6 +1,6 @@
 # 图件手绘指南
 
-本文记录论文示意图的分工、已画完的图的定稿记号，以及尚未画的图应当长什么样。示意图不是测量结果；语义有疑问时回到 [docs/problem.md](../../docs/problem.md) 与 [docs/system.md](../../docs/system.md)，图号与位置以 [docs/PAPER.md 图件计划](../../docs/PAPER.md#figure-plan) 为准。源文件与导出方式见 [figures/README.md](../figures/README.md)。
+本文记录论文示意图的分工、已画完的图的定稿记号，以及尚未画的图应当长什么样。示意图不是测量结果；语义有疑问时回到 [docs/problem.md](../../docs/problem.md) 与 [docs/system.md](../../docs/system.md)，图号与位置以 [docs/PAPER.md 图件计划](../../docs/PAPER.md#figure-plan) 为准。`figures/` 只放 `.drawio` 源文件与导出的 PDF。导出时从 Draw.io 直接 Export as PDF 并勾选 crop；不要经 SVG 中转，Draw.io 的 SVG 把文字放在 foreignObject 里并附位图兜底，rsvg 一类工具只会取位图。导出后用 `pdffonts` 确认字体已嵌入且是 Inter 而非 Helvetica 回退。
 
 ## 图的分工
 

@@ -37,7 +37,7 @@ make check        # 编译并做格式检查
 
 叙事骨架、取材关系与写作流程集中在 [`../docs/PAPER.md`](../docs/PAPER.md)：按各章步骤骨架转写正文，沿锚点回 owner 文档取论证与关键句措辞；遇【空位】查材料依赖表。页面预算按 EuroSys 2027 的 12 页技术内容规划，参考量级为 Intro 1.5、Background/Motivation 1.5、Design 3、Implementation 1、Evaluation 3.75、Related Work 0.75、Discussion 与 Conclusion 0.5；超出时删内容不改版式。未获 formal evidence 的数字保持 `TBD`，不能从旧日志复制。
 
-图件流程：作者用 Draw.io 手绘，源文件与导出件放 `figures/`，画法、caption 与待画清单在 [`planning/figure-drawing-guide.md`](planning/figure-drawing-guide.md)，导出步骤与字体要求在 [`figures/README.md`](figures/README.md)。
+图件流程：作者用 Draw.io 手绘，`figures/` 只放 `.drawio` 源文件和导出的 PDF；画法、caption、待画清单与导出要求在 [`planning/figure-drawing-guide.md`](planning/figure-drawing-guide.md)。
 
 每次使用 AI 辅助写作、分析或画图，都更新 [`planning/ai-use-log.md`](planning/ai-use-log.md)。
 
