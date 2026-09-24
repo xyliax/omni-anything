@@ -7,7 +7,7 @@
 - `mode` 选择实现行为，`trace` 只选择观测。
 - `paringest` 记录 `delivery output_token_cap=... deliv=...`。记录损坏、session death、RPC error 和 client failure 是 run issue；`deliv < output cap` 本身不再作为 correctness failure。
 - initial-context preloading 只允许 `paringest`；EngineCore fix 逐 segment 刷新冻结的 `session.max_tokens`。
-- 当前 worker 的 per-segment decode cap 是 \(M+8\)。在统一为 \(M\) 并重跑前，它不是 Conveyor 的最终公平对照。
+- 生成工作量差异与对照资格见 `docs/experiments.md#executed-decode-difference`，运行前核验实际 worker 配置。
 
 ## Usage
 

@@ -2,6 +2,12 @@
   "schema_version": 1,
   "rules": [
     {
+      "id": "IMPACT-DESIGN-DOCUMENTATION",
+      "when": ["docs/problem.md", "docs/system.md", "docs/experiments.md"],
+      "inspect": ["docs/agent/contracts.json", "docs/PAPER.md", "eurosys2027/AGENTS.md"],
+      "verify": ["tests/test_narrative_scope.py"]
+    },
+    {
       "id": "IMPACT-MECHANISM-SEMANTICS",
       "when": ["engines/conveyor/worker/engine_patch/**", "engines/conveyor/gateway/**"],
       "inspect": ["docs/system.md", "docs/agent/contracts.json", "docs/agent/dynamic-edges.json", "engines/conveyor/AGENTS.md"],
@@ -39,32 +45,8 @@
     },
     {
       "id": "IMPACT-NARRATIVE-SCOPE",
-      "when": [
-        "AGENTS.md",
-        "README.md",
-        "docs/problem.md",
-        "docs/system.md",
-        "docs/findings.md",
-        "docs/PAPER.md",
-        "docs/experiments.md",
-        "docs/papers/**",
-        "docs/references/**",
-        "eurosys2027/AGENTS.md",
-        "eurosys2027/planning/**",
-        "eurosys2027/sections/01-introduction.tex",
-        "eurosys2027/sections/02-background-motivation.tex",
-        "eurosys2027/sections/03-design.tex",
-        "eurosys2027/sections/04-implementation.tex",
-        "eurosys2027/sections/06-discussion.tex"
-      ],
-      "inspect": [
-        "AGENTS.md",
-        "docs/problem.md",
-        "docs/experiments.md",
-        "docs/findings.md",
-        "docs/PAPER.md",
-        "eurosys2027/AGENTS.md"
-      ],
+      "when": ["AGENTS.md", "README.md", "docs/problem.md", "docs/system.md", "docs/findings.md", "docs/PAPER.md", "docs/experiments.md", "docs/papers/**", "docs/references/**", "eurosys2027/AGENTS.md", "eurosys2027/planning/**", "eurosys2027/sections/01-introduction.tex", "eurosys2027/sections/02-background-motivation.tex", "eurosys2027/sections/03-design.tex", "eurosys2027/sections/04-implementation.tex", "eurosys2027/sections/06-discussion.tex"],
+      "inspect": ["AGENTS.md", "docs/problem.md", "docs/experiments.md", "docs/findings.md", "docs/PAPER.md", "eurosys2027/AGENTS.md"],
       "verify": ["tests/test_narrative_scope.py"]
     }
   ]

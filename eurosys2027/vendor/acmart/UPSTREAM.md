@@ -1,5 +1,7 @@
 # ACM Template Provenance
 
+Venue requirements rechecked against the official CFP on 2026-09-24; the pinned template files were not changed. The submission checklist is maintained in [`planning/submission-checklist.md`](../../planning/submission-checklist.md).
+
 ## Why This Template Was Selected
 
 The official [EuroSys 2027 Call for Papers](https://2027.eurosys.org/cfp.html) explicitly encourages authors to use the ACM SIGPLAN LaTeX or MS Word templates. This workspace uses the SIGPLAN mode of ACM's `acmart` class.

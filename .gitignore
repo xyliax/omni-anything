@@ -404,6 +404,8 @@ pyrightconfig.json
 !infra/env/
 !infra/env/AGENTS.md
 
-# eurosys2027: readable build outputs copied next to the sources
-/eurosys2027/paper.pdf
+# eurosys2027: track paper.pdf; keep the supplementary build output local
 /eurosys2027/supplement.pdf
+
+# Draw.io automatic backups; editable sources and exported PDFs are tracked.
+/eurosys2027/figures/.*.drawio.bkp

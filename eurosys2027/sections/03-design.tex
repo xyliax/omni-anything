@@ -1,149 +1,106 @@
 \section{\systemname Design}
 \label{sec:design}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §4 and the mechanism cards in
-% docs/system.md. Undecided policies stay stated as open design decisions.
-
 \subsection{Overview}
 \label{sec:design-overview}
 
-The candidate design links idle-state reclamation to subsequent state
-preparation: reclamation is grounded in access references and valid host
-coverage, restoration in anticipated demand and resource pressure, and the
-release offset---where the application permits it---is assigned once at
-admission and never moved thereafter. This is a design overview, not an
-implemented unified scheduler; Section~\ref{sec:implementation} separates the
-implemented paths from candidate interfaces. Seven design requirements bound
-every mechanism: retained history semantics are never truncated by KV
-management; offsets are set only within the application's contract, with waits
-accounted in service metrics; blocks still referenced by execution or
-transfers are never reclaimed; KV-dependent computation reads only valid GPU
-content; every missing range has a decidable recovery source; prefetch
-failures fall back to the normal restoration path; and active state, caches,
-in-flight transfer targets, and host copies all count toward resource use.
+\systemname separates planning from the repeated execution of a residency schedule.
+The session manager plans at admission, follows the plan across micro-turns, and revises it as accumulated growth or changes in the session population require.
+Its decisions are each session's phase, eviction budget, and restoration timing.
+The plan seeks to free GPU KV capacity while leaving enough time for transfers and computation before the recurring deadlines.
 
-\begin{figure}
-  \placeholder{Figure~3: design overview. Components and information flow;
-  candidate interfaces versus implemented paths distinguished by dashed and
-  solid edges; must match the final algorithms before submission.}
-  \caption{\systemname overview (placeholder; tracks open policy decisions).}
-  \label{fig:overview}
-\end{figure}
+Consider the one-second session in Figure~\ref{fig:motivation}.
+At a tick, its previous history is ready on the GPU.
+The session processes the new input and generates any output, extending that history.
+After the selected KV ranges are no longer in use and have valid host copies, the manager can release their GPU storage.
+Other sessions use the reclaimed capacity while this session is idle.
+Before its next tick, the manager allocates the restoration destination and copies the evicted ranges back.
+Figure~\ref{fig:comparison}(b) shows this cycle across staggered sessions.
 
-The three mechanisms below answer the three challenges of
-Section~\ref{sec:opportunity} in state-lifecycle order: first arrange when
-updates happen, then manage state between updates, then prepare state before
-use. Each mechanism is a hypothesis under test; none is claimed as an
-established gain.
-
-\subsection{Release Offset Scheduling}
+\subsection{Admission Planning}
 \label{sec:design-offsets}
 
-Release offsets determine how per-session demands overlap. They are a control
-variable only where the application permits; in our workload model that
-permission sits at the service-stack entrance, steady-state operation adds no
-user-visible cost, and the one-time alignment wait of the first submission is
-reported separately. \systemname v1 uses a uniform slot grid: the period is
-divided into equal slots, an arriving session occupies a free slot, admission
-reduces to slot availability, a departing session frees its slot after it
-fully ends, and an assigned offset never moves during the session's lifetime.
-Heterogeneous context lengths are absorbed by restoration depth rather than by
-offset adjustment: each session evicts and restores only what its own transfer
-window can carry, so sessions with more state keep more resident.
+\paragraph{Phase assignment.}
+For a period $T$, the manager divides the period into $S$ uniformly spaced slots with phases
+\begin{equation}
+  \phi_j = jT/S, \qquad j\in\{0,\ldots,S-1\}.
+  \label{eq:slots}
+\end{equation}
+An arriving session receives one of these phases.
+Uniform spacing spreads computation and restoration across the period.
+It does not by itself guarantee balanced traffic: sessions may have different histories, computation times, and eviction budgets.
 
-The offset assignment has a resource-level reading: it divides the transfer
-link's time capacity among sessions, and the interval between adjacent
-releases is the restoration byte budget available to a session without
-contention. As long as each session's eviction depth is capped by its window
-budget, the link budget is fully used and the total reclaim does not depend on
-how shares are distributed---which is why demand-proportional spacing and
-dynamic reassignment are shelved as alternatives rather than pursued. On the
-space dimension, staggering offsets de-phases per-session residency curves:
-with partial eviction in effect, total peak allocation moves from the sum of
-per-session peaks toward the sum of time averages, by a margin set by the
-peak-to-mean ratio that the residency policy itself shapes. This interaction
-is a hypothesis for ablation. The slot count is derived from configuration
-rather than chosen freely, but its closed form is not yet writable: denser
-slots shorten windows, shallow the feasible eviction depth, and raise mean
-residency, so space, bandwidth, and compute constraints cannot be solved
-independently and minimized. \placeholder{Slot-count derivation as a joint
-feasibility system; solution and its predicted reclaim and capacity-extension
-ratio pending calibration (Q5). Late-input handling is an open design
-decision.}
+\paragraph{Planning horizon.}
+Admission uses the configured model and period, current retained state, expected state growth, and resource estimates over a finite horizon $H$.
+The aim is to anticipate the gradual increase in memory and recovery demand rather than wait for an allocation failure.
+A plan feasible over $H$ does not reserve capacity for every admitted session to reach its maximum context length.
+Continued service therefore depends on extending or revising the plan as execution proceeds.
 
-\subsection{Host-Backed Partial Eviction}
+\paragraph{Per-session budgets.}
+The eviction budget specifies how many bytes of a session's idle KV may be released.
+The manager must choose it together with restoration timing: a larger budget is useful only if those bytes can return before the next tick.
+Budgets may differ across sessions, but their feasibility depends on the shared resources.
+Admission must account for computation under the chosen phases, transfers within their available windows, host storage, and GPU allocation at every point in the horizon.
+In particular, it must count the full destination of each restoration when that space is allocated (Equation~\ref{eq:memory}).
+
+A free phase slot is consequently insufficient for admission.
+A candidate schedule may fit its total traffic within one period and still fail because several destinations must coexist before another session can release memory.
+Conversely, making every eviction small enough to avoid transfer contention may leave too much idle state on the GPU.
+The planning problem is to find a useful eviction budget for each session while satisfying both constraints.
+\placeholder{Admission algorithm: selection of $S$ and $H$, growth and resource estimates, phase-slot assignment, budget allocation, scheduling margins, and the feasibility test.}
+
+\subsection{Cyclic KV Restoration}
 \label{sec:design-idle}
 
-\paragraph{Incremental host backing.}
-A host copy is one precondition of safe eviction, but copying by itself
-reclaims nothing; it supplies the valid coverage that later decisions depend
-on. Copies are built asynchronously as state is produced, and the design
-distinguishes unstarted, in-flight, and confirmed coverage, because
-restoration decisions may rely only on the last.
+\paragraph{Releasing idle state.}
+Eviction begins only after the selected ranges are no longer referenced by computation or ongoing transfers.
+For host-backed restoration, each range must also have a complete, valid host copy.
+An unfinished backup is not a recovery source, and making a backup does not itself release the GPU allocation.
+If a physical block is shared, all outstanding references must permit reclamation.
 
-\paragraph{Idle-session eviction.}
-Reclaiming residency during idle intervals is the direct source of any
-capacity benefit. Safety rests jointly on reference checks and copy
-confirmation: the policy first confirms the target state is no longer accessed
-by current execution, releases the corresponding request references, selects
-blocks that remain safe to reclaim, retains a policy prefix, and reclaims the
-rest; shared blocks and in-flight transfer references are checked separately.
-\systemname v1 evicts from the tail and retains the prefix, with depth capped
-by what the session's offset window can bring back, and evicts only blocks
-with confirmed host copies; recomputing unbacked ranges is a reserved
-extension. Eviction creates gaps, and every gap must be filled before the next
-use.
+The budget limits the amount reclaimed; it does not require eviction of the session's entire history.
+State that cannot be recovered within the planned window remains resident.
+This distinction matters as histories grow: even with a fixed restoration budget, the resident portion may increase and eventually require a plan revision.
+\placeholder{KV range selection and block granularity; creation and validation of host copies, including the cost of backing up newly generated state.}
 
-\paragraph{On-demand restoration.}
-On-demand restoration is the fallback when prefetching is absent or beaten:
-reuse the contiguous GPU prefix, reload missing ranges from confirmed host
-coverage, and recompute the dependent suffix after the first unrecoverable
-gap. Its semantic correctness and its timely completion are independent
-properties and are verified separately; a semantically correct restoration can
-still miss the service objective, because transfer and recomputation enter the
-critical path and can queue.
-
-\begin{figure}
-  \placeholder{Figure~4: KV block state model. Transitions across the six
-  dimensions---session activity, GPU allocation, GPU content, host coverage,
-  transfer, and cache visibility; a storage cursor indicates progress, not
-  confirmed coverage of everything before it.}
-  \caption{KV block state model (placeholder; semantics owned by the design
-  document's state model).}
-  \label{fig:state-model}
-\end{figure}
-
-\subsection{KV Prefetching}
+\paragraph{Starting restoration.}
 \label{sec:design-prefetch}
+The manager schedules H2D copying to finish before the next tick, allowing for transfer and completion overhead (Equation~\ref{eq:restore-time}).
+A restoration starts only when its planned start time has arrived and enough GPU memory is available for its full destination.
+Space released by another session's eviction can satisfy this allocation.
+Memory availability alone does not trigger an early copy: holding restored state longer than necessary can reduce the capacity available to other sessions.
 
-Prefetching moves state preparation off the critical path. Its lead time must
-cover the full dependency chain from submission to the next execution
-opportunity, not just the transfer itself. \systemname v1 triggers prefetch by
-space gating: once the preceding session's eviction frees the target space, a
-prefetch may start, and pending prefetches are ordered by deadline on the slot
-grid. The lead time is a tunable: starting earlier lengthens the occupancy
-window and raises mean residency, eroding the staggering benefit, so its value
-is left to a sensitivity experiment. Correctness is preserved by
-falling back: if capacity is short the prefetch defers; if input arrives
-first, prefetch coordinates with on-demand restoration; if prefetched state is
-evicted again before use, it is treated as an ordinary miss.
-\placeholder{Algorithm box: inputs, actions, preconditions, and complexity of
-the eviction and prefetch policies; pending the open policy decisions.}
+The H2D stream is shared, so a session cannot independently assume the entire link rate throughout its restoration window.
+Transfer ordering and the available bandwidth must agree with the plan.
+If the required space is unavailable at the scheduled start, the restoration is delayed; the intended completion time then needs to be reassessed.
+Checking these execution conditions each period is distinct from recomputing all phases and budgets.
+\placeholder{Transfer ordering, queueing allowance, and handling of a restoration whose planned allocation or completion time cannot be met.}
 
-\subsection{Correctness and Fallback}
+\paragraph{Returning to computation.}
+An allocated destination is not usable KV until its copy has completed.
+The next micro-turn must wait for all required ranges to become valid before accessing them.
+If preparation finishes late, demand restoration recovers the missing state, with the resulting wait charged to service latency.
+Correct recovery may therefore preserve the history while still violating the soft deadline.
+
+\subsection{Revising the Plan}
+\label{sec:design-revisions}
+
+The design relies on small, sufficiently predictable KV increments over the planning horizon.
+Under this workload assumption, the manager can follow a plan for multiple periods instead of adjusting every eviction budget after every micro-turn.
+Longer-term growth still changes residency and restoration costs, so the plan needs infrequent correction.
+Session admission and departure can require larger revisions because they change the set of demands sharing memory and bandwidth.
+
+A revision must account for allocations and copies already in progress.
+Replacing a future schedule cannot reclaim a referenced block or make an unfinished copy available to computation.
+Transitions between plans can therefore affect service even when each plan is feasible on its own.
+\placeholder{Horizon extension, revision triggers, handling of in-flight work, and service policy when no feasible revised plan exists.}
+
+\subsection{Correctness Conditions}
 \label{sec:design-correctness}
 
-Five properties require argument, and running examples cannot substitute for
-it: content consistency (copy identity, valid ranges, and read order agree
-with the reference history), no premature reuse (execution and transfer
-references cover the full use span), recoverability of coverage gaps (missing
-ranges and dependent suffixes can be recomputed from retained history),
-tolerance of prefetch failure (failures, duplicate requests, capacity
-rejections, and demand overtaking never yield invalid reads), and explainable
-service state (input failures and sustained backlog are distinguishable).
-Fallbacks preserve reference semantics but may still miss deadlines; the two
-guarantees are stated separately. How far these properties can be argued
-depends on implementation facts---the next section states what the current
-implementation supports and what remains candidate design.
-\placeholder{State-transition preconditions, shared-reference and cancellation
-protocol, and provable invariants; pending design completion.}
+Residency management preserves the history selected by the application.
+Every evicted range must remain recoverable, each restored range must contain the state for the same session and logical positions, and no block may be reused while computation or a transfer still references it.
+Concurrent demand, prefetching, and eviction must maintain one consistent view of allocation and content validity.
+
+These invariants also apply when a transfer misses its deadline or a plan becomes infeasible.
+\placeholder{State-transition argument and synchronization rules for concurrent restoration, demand, eviction, and plan revision.}

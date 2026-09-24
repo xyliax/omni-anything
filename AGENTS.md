@@ -6,6 +6,8 @@
 
 项目研究周期性交互模型服务中的长期 KV 状态管理：随上下文增长的历史 KV 状态可能在周期计算预算用尽前先耗尽有限的 GPU KV capacity。研究范围与术语以 [`docs/problem.md`](docs/problem.md) 为准，当前可执行配置与证据覆盖分别以 [`docs/experiments.md`](docs/experiments.md) 和 [`docs/findings.md`](docs/findings.md) 为准。prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output、hardware 或 topology scope；除非实验矩阵和 paper contract 明确冻结，否则不得把它们写成论文边界。
 
+用户最新说明优先于旧文档。文档冲突或缺少机制细节时询问用户，不从旧稿补猜；设计说明不等于代码实现证明。项目记忆只维护在对应 owner，不另建隐藏角色规则或重复的 current-state 文档。
+
 会话开始或用户提示远端有更新时检查远端；用户允许同步时使用 fast-forward pull。若远端变化涉及文档或代码结构，重读本文件和任务路径上的局部 `AGENTS.md`。
 
 ## Task Router
@@ -23,9 +25,9 @@
 │   ├── system.md                    # owner: 机制语义、状态机、端到端流程；不保存结果数字
 │   ├── experiments.md               # owner: 实验配置域、evaluated systems、指标与协议；不保存结论
 │   ├── findings.md                  # owner: 当前状态、结论、数字与限制；不重复完整协议
-│   ├── PAPER.md                     # 论文叙事工作大纲：定位、叙事骨架、取材与转写纪律；不是事实 owner
+│   ├── PAPER.md                     # 章节任务、图件状态与剩余写作；不是事实 owner
 │   ├── papers/                      # 论文摘要与阅读笔记；不是项目事实
-│   ├── references/                  # 外部规格整理与综述调研；不是项目事实
+│   ├── references/                  # 带来源的外部参数与文献笔记；不默认读取
 │   └── agent/                       # Agent 导航层，不是第二套项目事实
 │       ├── README.md                # 任务 read-set 与交付要求；修改代码前必读
 │       ├── ownership.json           # 机器可检验的所有权声明
@@ -82,6 +84,7 @@
 
 ## Documentation Style
 
+- 人类文档简洁、准确、专业；Agent 文档只保留有效路由和必要约束。过期评审、重复清单和已无用途的草稿删除，不用新建历史层保存；不可变证据与披露记录按各自规则保留并定向读取。
 - 核心文档服务于投稿：解释问题、论证设计、定义评估、呈现有依据的结果。缺少内容可保留具体待补提纲，不用无依据的结论填满章节。
 - 命令、接口、兼容修补与仓库治理集中在复现附录或 Agent 层；只有影响正确性、公平性或结果解释时才进入研究正文。历史证据不因正文清理而改写或删除。
 - 外部原始文献可在背景与相关工作中按需引用；明确其支持的属性，不将文献实例或当前原型转为未经冻结的论文边界。

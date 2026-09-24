@@ -24,7 +24,10 @@
       "docs/agent/legacy-experiment-log.md"
     ],
     "directory_rules": "nearest AGENTS.md; results/README.md is the explicit evidence-operations exception",
-    "exact_run_artifacts": "results/"
+    "exact_run_artifacts": "results/",
+    "paper_work_plan": "docs/PAPER.md",
+    "paper_submission_rules": "eurosys2027/planning/submission-checklist.md",
+    "ai_use_disclosure": "eurosys2027/planning/ai-use-log.md"
   },
   "volatile_content": {
     "performance_numbers": [
@@ -51,7 +54,10 @@
     "AGENTS.md": "routing, constraints and research-classification discipline only",
     "docs/system.md": "semantic explanation without result measurements",
     "docs/agent/*.json": "paths, ids, bindings and verification without independent research claims",
-    "docs/PAPER.md": "submission outline, narrative skeleton and transcription discipline, with candidate claims and explicit evidence gaps; not an independent fact owner",
-    "docs/agent/records/": "immutable historical measurements and verdicts; corrections use superseding records"
+    "docs/PAPER.md": "section tasks, figure status and unresolved writing dependencies; link factual owners rather than duplicate designs, results or historical reviews",
+    "docs/agent/records/": "immutable historical measurements and verdicts; corrections use superseding records",
+    "docs/references/": "dated external-source notes, not project mechanisms or novelty verdicts; MiniCPM-o 4.5 worked-example parameters are maintained in minicpm-o-4.5-kv-geometry.md",
+    ".claude/": "local tool settings only; project instructions are rooted in AGENTS.md, with no parallel role-memory layer",
+    "eurosys2027/planning/": "submission checklist and AI-use disclosure only; research tasks live in docs/PAPER.md or their factual owners"
   }
 }

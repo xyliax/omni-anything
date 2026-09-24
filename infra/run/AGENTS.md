@@ -1,6 +1,6 @@
 # infra/run
 
-实验无关的运行基础设施，共四个文件。**不引用任何实验的名字**——被两个实验的 runner 导入，自己不导入实验；唯一的反向边是复用 `infra/env/verify.py` 的探测函数（`capture` / `collect_software`）。
+实验无关的运行基础设施。**不引用任何实验的名字**——由 runner 调用，自己不导入实验；复用 `infra/env/verify.py` 的探测函数（`capture` / `collect_software`）。
 
 | 文件 | 职责 | 关键契约 |
 | --- | --- | --- |
@@ -9,4 +9,4 @@
 | `probes.py` | provenance 快照：git 状态、third_party pin、主机、GPU、模型 snapshot 路径 | 只读探测、错误记录不抛；例外是 `resolve_model_snapshot`——模型 revision 锁定在这里生效（锁定 snapshot 路径直接进 worker argv），snapshot 不在缓存时 fail-fast，而不是静默返回 None |
 | `process.py` | 进程组编排：启动子进程（stdout/stderr 重定向到 run 目录）、`cleanup()` 终止整组、`tail_text` 取日志尾部 | `start_new_session=True`，按 PGID 杀是收掉 vLLM EngineCore 子进程的唯一可靠办法；日志 `"xb"` 模式绝不追加；workflow 的 `finally` 依赖 `cleanup()` 兜底——任何路径退出都不留孤儿 GPU 进程 |
 
-新实验接入时按 `docs/system.md` 的 `Extension Points` 使用这四件；不要在实验目录里复制它们的功能。
+新实验按 `docs/agent/tasks/run-experiment.md` 和 `docs/agent/system-map.json` 接入共享运行设施，不在实验目录复制运行生命周期。

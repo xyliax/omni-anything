@@ -55,7 +55,7 @@ miss    recompute the whole history from stored text (positions re-applied)
 
 ### Pensieve（EuroSys'25）
 
-部分逐出的先例，但保留的部分与 Pilarius 相反：先丢头部、保护尾部；恢复在轮次已入批后才开始。
+该工作支持部分逐出：先丢头部、保护尾部；恢复在轮次已入批后才开始。
 
 ```text
 unit    32-token KV chunks; tiers GPU + host DRAM; raw text kept as source

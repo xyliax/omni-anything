@@ -1,28 +1,6 @@
 \section{Implementation}
 \label{sec:implementation}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §5 and docs/system.md implementation boundary.
+\placeholder{Verified implementation details: serving engine and version; integration of session phases with execution; KV allocation and host-copy tracking; H2D scheduling and completion events; plan revision and recovery paths. Identify which parts of Section~\ref{sec:design} are implemented and which remain design proposals.}
 
-\systemname is implemented as a serving-stack entrance that assigns offsets
-and submits updates on an absolute target grid, together with engine-side
-policies for host backing, idle eviction, restoration, and prefetching over
-the engine's existing paged-KV and offloading primitives. This section
-explains where information is produced, when each policy runs, and how it
-coordinates with the engine; reference management across cache and transfer,
-and event correlation across layers, are the engineering facts that affect
-correctness and the interpretation of measurements.
-
-Three boundaries of the current implementation matter for what the evaluation
-may claim. First, prefetching is currently triggered by input push: future
-release times are not yet passed to the prefetch policy, so grid-driven
-early prefetch is a distinct experimental condition, not an implemented
-default. Second, tail eviction uses a fixed tail margin whose selection is not
-yet intersected with confirmed host coverage. Third, the absolute target grid
-does not guarantee jitter-free submission, since synchronous call waits can
-defer subsequent submissions. These boundaries determine which ablation arms
-are currently executable and are reported with the results.
-
-Source entry points, commands, environment pinning, and compatibility patches
-are provided in the reproducibility appendix.
-\placeholder{Final implementation version, parts shared with baselines, and
-paths not yet supported; pending the frozen experiment matrix.}
+\placeholder{Comparison infrastructure: shared execution components, baseline adaptations, timing instrumentation, and measured instrumentation overhead.}

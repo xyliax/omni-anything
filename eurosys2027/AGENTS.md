@@ -1,48 +1,22 @@
-# EuroSys 2027 Writing Workspace
+# 论文写作规则
 
-本目录专用于 EuroSys 2027 论文写作，是仓库根目录下的独立论文写作工作区，不是项目事实层。
+本目录是表达层，不是项目事实 owner。按任务读取对应正文和 owner，不默认加载整个 docs、外部论文或历史评审。
 
-## Read Before Writing
-
-按内容读取对应 owner：
-
-| 写作内容 | 必读 owner |
+| 内容 | Owner |
 | --- | --- |
 | 问题、范围、术语 | `docs/problem.md` |
-| 机制、状态机、设计不变量 | `docs/system.md` |
-| evaluated systems、指标、实验协议 | `docs/experiments.md` |
-| 数字、结论、限制和证据成熟度 | `docs/findings.md` + `docs/agent/evidence.json` |
+| 设计、状态与未决算法 | `docs/system.md` |
+| 配置、指标、实验协议 | `docs/experiments.md` |
+| 已登记证据与限制 | `docs/findings.md`；精确来源按 ID 查 `docs/agent/evidence.json` |
+| 章节、图件状态与写作待办 | `docs/PAPER.md` |
 
-## Writing Rules
+- 作者最新说明优先于旧文档。冲突先澄清并更新对应 owner；不能用旧实现限制未定的论文设计，也不能将作者的设计说明当成实现证明。
+- prototype、measured path、模型、模态、输出、硬件及拓扑不自动成为最终论文范围；experiment 矩阵未冻结时保持变量与证据边界。外部模型可作有来源的具体例子，不据例子冻结 scope。
+- 假设、设计要求、实现与结果分开。仅将根 `AGENTS.md` 定义的 research mechanism 写成贡献；数字注明来源性质与配置，项目测量通过 `EVIDENCE-*` 追溯，外部推导引用原始参数。
+- 用简明专业的正文解释行为、原因和证据。作者备忘、审核规则、旧命名和实现待办不进入正文。术语以 `docs/problem.md#terminology` 为准，tick 表示周期起点，deadline 表示期望完成时刻；slot 与 manager 不自动构成贡献。
+- review 稿保持双盲。不改模板、字号、行距、栏距或 caption 字号压缩篇幅。
+- TeX 一句一行，空行表示段落。先对齐问题、设计与评估，再扩写正文。
+- 作者维护 Draw.io 图件；agent 可读取核对，修改须遵循作者授权。`figures/` 只放 `.drawio` 和导出 PDF，不另建画图指南。导出使用 `drawio -x -f pdf --crop -p <页码> -o <out.pdf> figures/figure.drawio` 后执行 `pdfcrop --margins 1 <out.pdf> <out.pdf>`，用 `pdffonts` 检查字体嵌入。
+- 实质 AI 使用记入 `planning/ai-use-log.md`，只记录日期、工具、工作内容和作者复核责任。该记录供披露，不是设计记忆或当前待办；不得默认整份读取。
 
-- 草稿不得覆盖 owner；发生冲突时先更新或澄清 owner，再改论文。
-- `docs/problem.md` 与 `docs/findings.md` 中的 current prototype、measured path 和 evidence coverage 只描述仓库当前事实，不自动成为最终论文的 workload、modality、output path、hardware 或 external-validity scope。实验矩阵冻结前，正文只写 idea-level assumptions 或显式 placeholder，不得把当前缺失的路径宣布为 paper non-goal。
-- 只把根 `AGENTS.md` 定义的 research mechanism 写成贡献；system requirement 和 implementation choice 分别进入设计约束或实现章节。
-- 论文核心术语必须来自 `docs/problem.md#terminology`。若需新术语，先完成 canonical glossary transaction。
-- 任何数字都必须标明实测、模拟器标定、推导或冻结先验，并绑定配置域和 `EVIDENCE-*`。
-- diagnostic、legacy-unreconstructable 和 source-audit 证据不得写成 formal performance result。
-- review 稿始终保持 double-blind：不写作者、单位、项目主页、可识别仓库链接、acknowledgment 或自我指涉措辞。
-- 不修改 `acmart.cls`、版面尺寸、字号、行距、栏距或 caption 字号来压缩篇幅。
-- 写作顺序必须遵守 `docs/PAPER.md` 的写作流程：先固定中心问题与候选贡献，再按各章步骤搭骨架并同步规划 Evaluation，最后才逐段扩写。
-- 在 Intro challenge、Design module 和 Evaluation question 尚未一一对应前，不得从代码路径或 patch 细节出发扩写正文。
-- 每次实质性使用 AI 都要更新 `planning/ai-use-log.md`；最终 disclosure 由作者根据 EuroSys/ACM 当时规则确认。
-- 新的论文正文只写入 `sections/`、`main.tex`、`supplement.tex`、`references.bib`、`figures/` 或 `planning/`。
-- 图件由作者在 Draw.io 手绘，agent 不生成 `.drawio` 起点文件或渲染脚本；agent 可读取 XML 做核对、按 `planning/figure-drawing-guide.md` 提出修改建议、在作者授权下做坐标级修改。`figures/` 只放 `.drawio` 与导出的 PDF，不放说明文件；导出要求见 `planning/figure-drawing-guide.md`。
-- 图内与 caption 用词遵守 `docs/problem.md#terminology`：时间片写 micro-turn，期限写 deadline 与 period T；不用 recurring deadline、frame budget、tick、update。
-- TeX 正文源文件按一句一行组织；不要按固定列宽硬换行，也不要把单词或短语拆成独立行。空行只表示正文段落边界。该规则只规范源文件可读性，PDF 中的实际断行仍由 LaTeX 决定。
-
-## Validation
-
-从本目录运行：
-
-```bash
-make check
-```
-
-从仓库根运行：
-
-```bash
-python -m pytest
-```
-
-模板或 venue 规则更新时，必须同步更新 `vendor/acmart/UPSTREAM.md` 和 `planning/submission-checklist.md`。
+从本目录运行 `make check`，再按根 `AGENTS.md` 的改动类型运行 pytest。venue 规则和模板来源分别维护于 `planning/submission-checklist.md` 与 `vendor/acmart/UPSTREAM.md`；变更时同步核对。

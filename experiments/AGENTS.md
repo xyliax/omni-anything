@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [`shared/`](shared/) | offered workload、model、platform 常量 | 两个系统共同读取 |
 | [`baseline/`](baseline/) | Upstream/Matched Metronome 配置和 runner | `engines/baseline/` 与 third-party pin |
-| [`conveyor/`](conveyor/) | Conveyor 配置和 runner | `engines/conveyor/` |
+| [`conveyor/`](conveyor/) | Pilarius 配置和 runner | `engines/conveyor/` |
 
 ## 公共规则
 

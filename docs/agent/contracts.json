@@ -57,7 +57,7 @@
     },
     {
       "id": "CONTRACT-KV-EVICTION-SAFETY",
-      "rule": "eviction requires an idle session and safe execution/transfer references; the retained-prefix path runs at an idle scheduler transition, while fixed-tail diagnostics use a utility request with an idle check; current selection releases request references and uses a fixed tail margin, not intersection with confirmed host coverage; gaps may require recomputing a dependent suffix",
+      "rule": "design requirement: eviction preserves reference history and requires safe execution and transfer references; historical source-audit details are in docs/findings.md#implementation-audit-boundaries and must be rechecked before code changes",
       "owners": [
         "docs/system.md",
         "engines/conveyor/AGENTS.md"
@@ -89,7 +89,7 @@
     },
     {
       "id": "CONTRACT-PREFETCH-FALLBACK",
-      "rule": "design requirement: prefetch failure, capacity deferral, demand overtaking and later eviction must preserve a valid demand-recovery path; current code provides such paths but source review is not exhaustive concurrency validation; completed-cache publication and reference lifetimes require separate checks",
+      "rule": "design requirement: allocation precedes H2D; computation reads only completed valid KV; capacity deferral, demand overtaking, cancellation and later eviction require coordinated recovery; semantic recovery does not guarantee the deadline",
       "owners": [
         "docs/system.md",
         "engines/conveyor/AGENTS.md"
@@ -119,6 +119,25 @@
       "verification": [
         "tests/test_narrative_scope.py"
       ]
+    },
+    {
+      "id": "CONTRACT-PERIOD-DEADLINE",
+      "rule": "design convention: the next planned tick is the current period soft deadline; c-r is deadline latency, c-a is diagnostic, and delayed submission does not shift the deadline; fixed network delay is a provisional analysis assumption",
+      "owners": [
+        "docs/problem.md#service-objective",
+        "docs/experiments.md#measurement-semantics"
+      ],
+      "verification": []
+    },
+    {
+      "id": "CONTRACT-CYCLIC-RESTORATION",
+      "rule": "design requirement, not implementation status: the session manager controls H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility",
+      "owners": [
+        "docs/system.md#kv-prefetching",
+        "docs/system.md#release-offset-scheduling",
+        "docs/system.md#planning-updates"
+      ],
+      "verification": []
     }
   ],
   "experiment_record_v1": {

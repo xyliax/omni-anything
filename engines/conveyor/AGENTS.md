@@ -1,6 +1,6 @@
 # engines/conveyor
 
-Conveyor 引擎本体，由 `experiments/conveyor/` 按路径 spawn。论文术语和机制语义见 `docs/problem.md#terminology` 与 `docs/system.md`；本文件只说明代码映射。
+Pilarius 的引擎实现（目录标识 `conveyor`），由 `experiments/conveyor/` 按路径 spawn。本文件只用于代码定位，不证明新设计已实现；修改前核验目标路径。论文术语和机制语义见 `docs/problem.md#terminology` 与 `docs/system.md`。
 
 ## Local Workflow
 

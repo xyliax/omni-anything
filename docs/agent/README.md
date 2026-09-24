@@ -1,41 +1,30 @@
-# Agent Task Router
+# Agent 导航
 
-本目录是面向 Agent 的导航和操作层，不构成第二套项目事实。研究语义必须回到 `docs/problem.md`、`docs/system.md`、`docs/experiments.md` 和 `docs/findings.md`；owner 只表示维护职责；写作前仍须区分假设、要求、实现和证据。本目录只持有组件定位、动态边、修改影响、验证方法和 evidence alias。
+根 `AGENTS.md` 是唯一项目入口。本目录只维护代码导航、操作约束与证据索引，不保存第二套研究结论。用户最新说明优先；缺少机制细节时询问用户，不能从旧稿或旧实现猜测。
 
-## Read Policy
+## 最小读取范围
 
-1. 先从根 `AGENTS.md` 判断任务；
-2. 只加载对应 task guide 指定的 read-set；
-3. 修改目录前读取最近一层 `AGENTS.md`；
-4. 遇到数字或机制状态，回到 `docs/findings.md`；
-5. 遇到 exact run 或 provenance，查询 `evidence.json`；
-6. 不根据静态 import 图猜测 subprocess、gRPC、ZMQ 或 monkeypatch，查询 `dynamic-edges.json`。
-7. 判断代码差异能否进入 paper 机制列表时，只读取根 [`AGENTS.md`](../../AGENTS.md#research-classification) 的 `Research Classification`，本目录不另建分类标准。
-8. paper-facing 命名必须先查 [`docs/problem.md`](../problem.md#terminology)；实现 identifier 不得反向成为论文术语。
-9. 投稿正文由五份顶层文档组织：problem 以递进论证建立背景、缺口与对象，system 以机制卡片论证设计，experiments 定义公平评估，findings 限定结论，PAPER 持有章节骨架、取材关系与转写纪律。命令、运行诊断和治理不复制进论文。
-10. 修改根入口、核心 human docs、论文 planning 或外部资料目录时，先读取根 [`AGENTS.md`](../../AGENTS.md#narrative-scope-guard)，并运行 `tests/test_narrative_scope.py`；当前 prototype 和 measured path 不得升级为 paper scope。
-
-## Registries
-
-| Registry | Owns |
+| 任务 | 读取 |
 | --- | --- |
-| [`ownership.json`](ownership.json) | 事实域 owner 与禁止复制规则 |
-| [`system-map.json`](system-map.json) | 仓内组件的 source path/entrypoint，以及外部 runtime node 的 locator/process role |
-| [`dynamic-edges.json`](dynamic-edges.json) | subprocess、gRPC、ZMQ、sitecustomize、runtime patch 与 artifact 边 |
-| [`contracts.json`](contracts.json) | 不变量、failure behavior 与 verification |
-| [`change-impact.json`](change-impact.json) | path change 到必查文档/测试的映射 |
-| [`evidence.json`](evidence.json) | `FINDING-*` 到 evidence alias、exact run 与重建能力 |
+| 论文措辞与结构 | 目标正文、`docs/PAPER.md`、`eurosys2027/AGENTS.md`；事实按域查 owner |
+| 问题或设计讨论 | `docs/problem.md` 或 `docs/system.md` 的相关节；证据按需查 Findings |
+| 理解运行路径 | [understand-runtime](tasks/understand-runtime.md) |
+| 修改引擎 | [modify-engine](tasks/modify-engine.md) |
+| 设计或运行实验 | `docs/experiments.md`；实际运行再读 [run-experiment](tasks/run-experiment.md) |
+| 分析 run | [analyze-results](tasks/analyze-results.md) |
+| 接受新结论 | [update-findings](tasks/update-findings.md) |
 
-## Task Guides
+修改路径前读取最近 `AGENTS.md`。组件和动态绑定分别查 `system-map.json`、`dynamic-edges.json`；不根据静态 import 猜跨进程调用。运行前核验代码和配置，旧审计不是当前功能证明。
 
-| Task | Guide |
+## Registry
+
+| 文件 | 职责 |
 | --- | --- |
-| 从零理解完整 runtime | [`understand-runtime.md`](tasks/understand-runtime.md) |
-| 修改 engine 或机制 | [`modify-engine.md`](tasks/modify-engine.md) |
-| 新增、修改或运行实验 | [`run-experiment.md`](tasks/run-experiment.md) |
-| 解释一次 run 或 Perfetto | [`analyze-results.md`](tasks/analyze-results.md) |
-| 接受新结论或更新证据 | [`update-findings.md`](tasks/update-findings.md) |
+| [ownership.json](ownership.json) | 事实域与唯一 owner |
+| [system-map.json](system-map.json) | 组件、入口及外部运行节点 |
+| [dynamic-edges.json](dynamic-edges.json) | subprocess、IPC、注入与 artifact 边 |
+| [contracts.json](contracts.json) | 不变量与验证入口；注明设计要求与实现事实 |
+| [change-impact.json](change-impact.json) | 改动需同步的文档和检查 |
+| [evidence.json](evidence.json) | 按 `EVIDENCE-*` 定位 exact run、hash 和 provenance |
 
-## Historical Records
-
-[`legacy-experiment-log.md`](legacy-experiment-log.md) 由旧 append-only 日志迁移而来并已冻结，不是 current-state owner，也不是 paper prose source。它保留历史术语和过时的研究表述；只有用户明确要求分析历史实验时才读取。后续 experiment record 按 [`records/README.md`](records/README.md) 创建，使用 `contracts.json` 中的 `experiment_record_v1` 字段；只有被接受的结论才进入 findings。
+历史材料只按目标 ID 或具体问题读取：`records/` 与 `legacy-experiment-log.md` 保留实验历史，后者已冻结；论文 AI 使用记录只供披露。`docs/papers/` 与 `docs/references/` 是外部资料，不加入默认 read-set，不以其旧比较结论约束新设计。新记录按 [records/README.md](records/README.md) 创建。

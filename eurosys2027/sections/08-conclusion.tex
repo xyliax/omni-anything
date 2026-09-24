@@ -1,14 +1,8 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §9. Past-tense template; results and
-% verdicts are filled only after formal evaluation.
-
-This paper examined the tension between long-lived KV state and GPU memory
-capacity in clocked interactive serving, and proposed driving residency
-reclamation and state restoration with the next-use times that the workload
-itself commits. \placeholder{Concluding verdicts, in past tense and bound to
-evidence: whether the KV-capacity-bound proposition held (Q1), the measured
-capacity change under matched baselines and a uniform service objective with
-its costs and validity boundary (Q2, Q3), and the applicability domain defined
-by the three workload properties. No new claims here.}
+Periodic interaction exposes repeated opportunities to release a session's idle KV and restore it before the next tick.
+Using those opportunities requires coordinating transfer time with the GPU space occupied by restoration destinations.
+\systemname combines uniform phase assignment with per-session eviction and restoration planning over a finite horizon, followed by infrequent revisions as histories and session populations change.
+The design seeks to increase service capacity while preserving retained history and meeting recurring soft deadlines.
+\placeholder{Measured capacity and latency gains, together with the workload, duration, and resource conditions under which they hold.}

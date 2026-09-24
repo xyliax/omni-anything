@@ -26,7 +26,6 @@ SCOPE_DOCS = (
     ROOT / "docs" / "findings.md",
     ROOT / "docs" / "PAPER.md",
     ROOT / "eurosys2027" / "AGENTS.md",
-    ROOT / "eurosys2027" / "planning" / "figure-drawing-guide.md",
 )
 
 PAPER_NARRATIVE = (
@@ -97,7 +96,7 @@ class NarrativeScopeTests(unittest.TestCase):
         # The running-example rule moved from the retired planning shells into
         # the paper outline; it must survive there.
         outline = (ROOT / "docs/PAPER.md").read_text(encoding="utf-8")
-        self.assertIn("当前不设置 provisional default", outline)
+        self.assertIn("具体例子不限定最终实验范围", outline)
 
     def test_external_reference_directories_declare_their_boundary(self) -> None:
         for relative in ("docs/papers/AGENTS.md", "docs/references/AGENTS.md"):

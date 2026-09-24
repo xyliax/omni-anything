@@ -5,102 +5,106 @@
 \label{sec:request-classes}
 \label{sec:formulation}
 
-A periodic interaction session carries its history from one micro-turn to the next.
-The application determines which history to retain, whether through full retention, a fixed window, or a summary.
-Residency management changes where the corresponding KV is stored while preserving that choice.
-The opportunity to release GPU space depends on when the model uses the state: periodic input capture alone does not establish periodic model execution or an interval without KV accesses.
+An application's retention policy determines which history remains available to the model.
+Full retention, a fixed window, and a summary therefore have different implications for both memory use and model behavior.
+Residency management preserves the selected history while changing where its KV is stored.
+Reclaiming GPU space requires an interval without access to that state; periodic input capture alone does not establish such an interval.
 
 For timing analysis, consider sessions with a common period $T$ and reference time $t_0$.
-Session $i$ has phase $\phi_i\in[0,T)$, so the tick that releases micro-turn $k$ is
+Session $i$ has phase $\phi_i\in[0,T)$, so its micro-turn $k$ is released at the tick
 \begin{equation}
   r(i,k)=t_0+\phi_i+kT.
   \label{eq:release}
 \end{equation}
-Each micro-turn should finish generation by the next tick:
+Let $c(i,k)$ denote completion of generation for that micro-turn.
+Its soft deadline is the next tick, giving the service target
 \begin{equation}
-  c(i,k)\le r(i,k+1)=r(i,k)+T,
+  c(i,k)\le r(i,k+1)=r(i,k)+T.
   \label{eq:deadline}
 \end{equation}
-where $c(i,k)$ is generation completion.
-This is a soft deadline, with occasional misses allowed under a specified miss-rate limit.
-Latency is measured from the planned tick as $c(i,k)-r(i,k)$; delaying input submission or computation does not move the deadline.
-Delivery latency and initial phase-alignment delay require separate accounting (Section~\ref{sec:methodology}).
+Occasional misses are permitted under a specified deadline-miss rate limit.
+Latency is $c(i,k)-r(i,k)$, so delays before submission remain part of the service latency and do not shift the deadline.
+Initial phase alignment and delivery delay require separate accounting (Section~\ref{sec:methodology}).
 \placeholder{Allowed deadline-miss rate, observation interval, and model-specific generation-completion event.}
 
-Let $q(i,k)$ be the last use of the KV selected for eviction in micro-turn $k$.
-That state can leave the GPU once outstanding references are released and a valid host copy is available.
-It must return before the next computation accesses it; \systemname targets completion by $r(i,k+1)$ to keep restoration off the next micro-turn's execution path.
-The interval from $q(i,k)$ to that tick is the planned window for reclamation and restoration, provided there are no intervening accesses.
-Late computation can shorten or eliminate this window.
+Reclamation can begin only after computation stops accessing the selected KV.
+Let $q(i,k)$ denote the last use of the KV selected for eviction in micro-turn $k$.
+The server can release that state once outstanding references are gone and a valid host copy is available.
+Restoration must complete before the next computation accesses the state; \systemname targets the next tick, $r(i,k+1)$, to avoid delaying that computation.
+The planned reclamation and restoration window therefore extends from $q(i,k)$ to $r(i,k+1)$, provided no intervening accesses occur.
+Late computation shortens this window and may eliminate it entirely.
 
 \subsection{When KV Capacity Limits Concurrency}
 \label{sec:capacity-problem}
 \label{sec:slack-conditions}
 
-A session's KV-idle interval does not imply spare compute capacity: other sessions may keep the GPU busy throughout it.
-Nor do periodic releases alone establish compute slack~\cite{liu1973scheduling}.
-The relevant question is whether \emph{all admitted sessions} still leave time within the period when their retained KV fills GPU memory.
-Even if each micro-turn adds a predictable amount of state, attention to a growing history can increase execution time.
-The memory and compute limits must therefore be compared at the same context length.
+The capacity argument compares the memory and execution time required by all admitted sessions.
+One session's KV may be idle while other sessions keep the GPU busy, and periodic releases alone do not establish compute slack~\cite{liu1973scheduling}.
+Execution time can also increase with context length, even when the amount of new input and generated output per micro-turn is fixed.
+We must therefore assess the complete workload's execution time at the context length that fills GPU KV capacity.
 
-Consider a reference configuration with $N$ sessions whose inputs are available at the same tick and whose period is $T$.
-Each session reaches a maximum retained length of $L$ positions within the period, with $\kappa$ KV bytes per position and no inter-session sharing.
-Let $G_{\mathrm{KV}}$ be the GPU capacity available for KV after weights, activations, and other runtime allocations.
+Consider $N$ sessions whose inputs are available at the same tick, with a common period $T$ and no inter-session KV sharing.
+Each session reaches a maximum retained length of $L$ positions within the period, with $\kappa$ KV bytes per position.
+Let $G_{\mathrm{KV}}$ be the capacity available for KV after weights, activations, and other runtime allocations.
 Ignoring allocation rounding, full residency fills this pool at
 \begin{equation}
   L_{\mathrm{mem}}=\frac{G_{\mathrm{KV}}}{N\kappa}.
   \label{eq:memory-boundary}
 \end{equation}
-Let $C_N(L)$ be the elapsed time needed for all $N$ sessions' per-period work under a specified execution policy with the required KV resident.
-It includes input processing, model execution, and scheduling overhead; batching means that it is not generally the sum of isolated session times.
+Let $C_N(L)$ be the elapsed time to execute all $N$ sessions' per-period work under a specified policy, with the required KV resident.
+This includes input processing, model execution, and scheduling overhead; batching means it is not generally the sum of isolated session times.
 
-The time left at the memory limit is $T-C_N(L_{\mathrm{mem}})$.
-To bound it, hold the per-period input and generation work fixed and suppose that, over the context range of interest,
+The remaining compute budget at the memory limit is $T-C_N(L_{\mathrm{mem}})$.
+A positive value means that the retained KV fills the pool before the complete workload uses up the period.
+To obtain a sufficient condition in terms of resource and workload parameters, suppose execution time satisfies
 \begin{equation}
-  C_N(L)\le A_N+B_NL,\qquad A_N\ge0,\ B_N\ge0.
+  C_N(L)\le A_N+B_NL,\qquad A_N\ge0,\ B_N\ge0,
   \label{eq:compute-envelope}
 \end{equation}
-The intercept $A_N$ accounts for work independent of history length; the slope $B_N$ allows execution cost to grow with that length.
-This affine upper bound is an assumption to establish for the chosen workload, platform, and execution policy.
-If $L_{\mathrm{mem}}$ lies in the same range, the remaining time satisfies
+for fixed per-period input and generation work over the context range under analysis.
+The intercept $A_N$ accounts for work independent of history length, while the slope $B_N$ allows cost to increase with that length.
+This affine envelope must be established as an upper bound for the chosen workload, platform, and execution policy.
+If $L_{\mathrm{mem}}$ lies within the same range, then
 \begin{equation}
   T-C_N(L_{\mathrm{mem}})
   \ge T-A_N-\frac{B_NG_{\mathrm{KV}}}{N\kappa}.
   \label{eq:memory-before-compute}
 \end{equation}
-A positive right-hand side is sufficient for memory to fill before the period's compute budget is exhausted.
-If the right-hand side is at least $\eta T$ for $0<\eta<1$, all $N$ sessions leave at least a fraction $\eta$ of the period unused in this reference configuration.
+A positive right-hand side is sufficient to establish compute slack at the memory limit.
+If it is at least $\eta T$, for $0<\eta<1$, the workload leaves at least a fraction $\eta$ of the period unused.
 
-Coefficients fitted to measurements yield a prediction of slack, not a proven lower bound, and require validation on independent configurations.
-Even an established slack bound does not show that an additional session or recomputation will meet its deadline: the extra work, recovery costs, and interference must fit while preserving each session's deadline.
+Fitting $A_N$ and $B_N$ to measurements does not establish an upper bound.
+Such a fit predicts slack and requires validation on independent configurations.
+Even a valid slack bound does not guarantee that additional sessions or recomputation meet their deadlines.
+Their work must fit alongside recovery costs and interference while preserving every session's deadline.
 \placeholder{Motivating measurement: joint KV allocation and aggregate execution time at the full-residency limit, with concurrency and context length; validate the predicted compute slack on separate configurations.}
 
 \subsection{Restoration Needs Both Time and Space}
 \label{sec:opportunity}
 
-Removing a session's KV frees capacity only until the server allocates space to restore it.
-The full restoration destination must be allocated before copying starts, even though its KV is not yet usable.
-Let $\mathcal{P}(t)$ be the set of physical GPU blocks allocated to KV at time $t$, including destinations of unfinished restorations, and let $b_p$ be the size of block $p$.
-A feasible schedule requires
+Eviction frees GPU capacity until the server allocates a destination for restoration.
+The entire destination must be allocated before copying begins, even though its contents are not yet usable.
+Let $\mathcal{P}(t)$ contain the physical GPU blocks allocated to KV at time $t$, including destinations of unfinished restorations.
+For block sizes $b_p$, the capacity constraint is
 \begin{equation}
   \sum_{p\in\mathcal{P}(t)} b_p \le G_{\mathrm{KV}}
-  \quad\text{at every }t,
+  \quad\text{at every }t.
   \label{eq:memory}
 \end{equation}
-with each shared physical block counted once.
-Counting only valid KV would miss the allocation occupied by ongoing restorations.
+Each shared physical block is counted once; counting only valid KV would omit space already committed to ongoing restorations.
 
-That allocation must also occur early enough for the copy to finish.
-For a restoration of $e$ bytes starting at time $u$, let $\widehat B$ be its estimated effective host-to-device bandwidth and $\delta$ an allowance for scheduling and completion overhead.
-The estimated completion must satisfy
+The destination must become available early enough to complete the transfer before the next tick.
+For a restoration of $e$ bytes starting at $u$, let $\widehat B$ be the estimated effective host-to-device bandwidth.
+With an allowance $\delta$ for scheduling and completion overhead, the estimated completion must satisfy
 \begin{equation}
   u + e/\widehat B + \delta \le r(i,k+1).
   \label{eq:restore-time}
 \end{equation}
-The estimate must reflect bandwidth available under the shared transfer schedule, including the effects of host backup traffic and concurrent GPU work, rather than the link's nominal rate.
+The bandwidth estimate must reflect the shared transfer schedule, including interference from host backup traffic and concurrent GPU work.
+The nominal link rate alone does not capture these effects.
 
-These constraints pull restoration timing in opposite directions.
-An earlier restoration has more time to finish but holds its destination longer; a larger eviction releases more memory but takes longer to restore.
-Session phases change when space becomes available and when restored state is needed.
-A schedule can consequently fit its total transfer bytes within a period and still fail because transfers overlap or their destinations exceed GPU capacity at some instant.
-Memory multiplexing requires checking both the transfer windows and GPU allocation over time, together with computation under the chosen phases.
+Equations~\ref{eq:memory} and~\ref{eq:restore-time} constrain the same restoration decision.
+Starting earlier leaves more time for copying but holds the destination longer; evicting more bytes releases more capacity but lengthens the transfer.
+Session phases determine when memory is released relative to when other sessions need their KV restored.
+A per-period transfer budget can therefore be satisfied even when individual restorations lack time or their destinations cannot coexist in GPU memory.
+The server must check the transfer windows and GPU allocation over time, together with computation under the chosen phases.

@@ -1,27 +1,32 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §8 (three steps).
+\paragraph{Applications without phase control.}
+An application may expose future ticks while requiring fixed release phases.
+Advance restoration can still use that timing information, but the manager cannot redistribute demand by assigning phases.
+The benefit then depends on the supplied schedule and available memory.
+The phase ablation in Section~\ref{sec:eval-ablation} separates these two sources of benefit.
 
-\paragraph{When offsets are not controllable.}
-Offset control is the strongest of the three grades of timing information.
-Where the application does not permit assignment, rhythm visibility still
-supports demand estimation and preparation ahead of use; how much of the
-benefit survives is an empirical question.
-\placeholder{Measured share of the benefit retained without offset control
-(Q4 offset arm).}
+\paragraph{Finite-horizon admission.}
+A finite prediction horizon limits how far admission can anticipate history growth and interference.
+Smooth growth can permit infrequent revisions, but it does not guarantee that a feasible schedule exists indefinitely.
+If state keeps growing, memory, host capacity, or recovery time can eventually become limiting.
+The reported capacity is consequently tied to session duration, the prediction horizon, and the policy for handling infeasible revisions.
 
-\paragraph{Degenerate conditions.}
-Aperiodic input, absent idle intervals, short sessions, or insufficient host
-capacity degrade the mechanisms to the on-demand path. These regions are
-reported as measured (Q7). The quality trade-off among retention policies is
-an application-side parameter; its effect on the applicable domain is
-discussed on the same footing.
+\paragraph{Using spare computation for recovery.}
+Recomputation could extend cyclic restoration when H2D bandwidth becomes limiting.
+After using a selected KV range, the manager could release it and rebuild it before the next tick from retained historical inputs.
+This would be a recurring recovery choice, not only a fallback after a failed transfer.
+Its compute budget must come from slack across the admitted workload; the idle interval of one session is insufficient if other sessions occupy the GPU.
 
-\paragraph{Layered limitations.}
-Engineering limits (current trigger paths, unverified concurrency scenarios,
-observation overhead) are stated separately from conditions inherent to the
-method (a describable rhythm and usable idle intervals). Model errors and
-uncovered dimensions are listed explicitly; the current prototype does not
-decide the final research scope, and the effect of adding devices depends on
-actual topology and contention rather than admitting a general judgment.
+Combining loading with recomputation is established in prior work.
+Cake recomputes earlier prefix chunks while loading later chunks, exploiting the lower attention cost of earlier positions~\cite{jin2025cake}.
+For multimodal sessions, applying such a division also requires the appropriate replay inputs, positions, dependencies, and temporary memory.
+A shorter period reduces the time available for both transfers and recomputation, so it does not by itself favor recomputation.
+\placeholder{Cyclic recomputation design: retained replay inputs, eligible ranges, activation conditions, and joint compute, transfer, and memory budgeting.}
+
+\paragraph{Workload and platform dependence.}
+A small retained history leaves little memory to reclaim, and a short interval between uses leaves little time to restore it.
+Effective transfer bandwidth, host-copy availability, and batching efficiency determine the useful eviction budget.
+Different periods or execution profiles can also produce unequal demands despite uniformly spaced phases.
+Uniform spacing spreads release times but does not optimize for these differences in resource demand.

@@ -1,64 +1,37 @@
 \section{Related Work}
 \label{sec:related}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §7 (nine families). Family boundaries
-% are drafts pending per-paper verification; no \cite before verification.
+\paragraph{Scheduling and KV allocation.}
+Orca schedules generation at iteration granularity, allowing batch membership to change as requests arrive and finish~\cite{yu2022orca}.
+PagedAttention maps logical KV blocks to noncontiguous physical storage, reducing fragmentation and enabling sharing in vLLM~\cite{kwon2023vllm}.
+vLLM also supports swapping and recomputation when memory pressure requires preemption.
+These techniques improve how active work uses computation and memory.
+The residency problem considered here remains when the valid KV retained by periodic sessions exceeds GPU capacity.
+\systemname coordinates when that state occupies the GPU between uses; it still needs an execution engine and allocator that use the resulting capacity efficiently.
 
-We organize related work by the problem solved and the information consumed.
-Every per-system boundary below is re-verified against the original text
-before submission. \emph{[citations to be verified throughout this section]}
+\paragraph{State recovery during interruptions.}
+InferCept manages requests whose generation pauses for interactions with external tools or environments~\cite{abhyankar2024infercept}.
+It estimates interruption durations, chooses among preserving, swapping, and recomputing KV, and chunks recovery work to reduce interference with other requests.
+This work establishes that idle-state decisions should consider both memory occupancy and recovery cost.
+Our setting adds a recurring restoration target and, where permitted, control over session phases.
+The design uses these properties to coordinate repeated recovery with the allocation of its destinations.
 
-\paragraph{Iteration-level serving and paged memory.}
-Orca and PagedAttention/vLLM established iteration-granularity scheduling and
-physical KV paging inside a request's lifetime; they do not manage the
-session-level lifecycle of state across updates.
+\paragraph{Combining loading and recomputation.}
+Cake prepares cached prefixes by concurrently loading some KV chunks and recomputing others~\cite{jin2025cake}.
+Its division follows causal attention costs: recomputation proceeds from earlier positions while loading proceeds from later positions.
+The extension in Section~\ref{sec:discussion} builds on this use of computation to supplement loading.
+Periodic restoration additionally requires fitting repeated preparation into a shared schedule as retained histories grow.
 
-\paragraph{Session-level KV tiering and restoration.}
-CachedAttention, Pensieve, HCache, Strata, Bidaw, Mooncake, LMCache, and
-engine-built swapping place paused-session state across tiers and reload it on
-return. Their restoration triggers are queue depth or request arrival; none
-consumes the release times a clocked workload commits.
+\paragraph{Latency-constrained serving.}
+DistServe separates prefill and decoding onto different GPUs and allocates resources to satisfy time-to-first-token and time-per-output-token objectives~\cite{zhong2024distserve}.
+Its design addresses interference between execution stages with different latency requirements.
+\systemname instead coordinates retained state across successive periods of an ongoing session, including time when that session performs no computation.
+Both designs require evaluating useful service under a latency objective rather than reporting throughput alone.
 
-\paragraph{Hybrid restoration and recomputation.}
-InferCept, Cake, and CacheFlow shorten the restoration segment by mixing
-reload with recomputation; the segment stays on the critical path.
-
-\paragraph{Next-use awareness and prefetching.}
-SYMPHONY, InfiniGen, ECHO, KVFlow, and learned prefix caching show that lead
-time has value, but their signals---application hints, in-layer prediction,
-workflow step distance---differ in source and action domain from a periodic
-rhythm.
-
-\paragraph{Duplex and real-time speech serving.}
-The nearest family. Metronome frames per-update deadlines as periodic
-real-time tasks and constrains retained state by windowing, holding the
-windowed state fully resident; LiveServe evicts on observed next-use estimates
-and prefetches on speech onset---estimates, not workload-committed times;
-VoxServe and stage-graph substrates schedule request-scoped soft deadlines.
-
-\paragraph{Service objectives derived from request information.}
-JITServe, DistServe, Sarathi-Serve, and Clockwork derive scheduling targets
-from application requirements for request-level service, not for cross-period
-session state.
-
-\paragraph{Periodic tasks and deadline scheduling.}
-Classical periodic-task theory and deadline schedulers supply the vocabulary
-of offsets and schedulability; they do not manage state movement or
-restoration timing.
-
-\paragraph{Windows, compression, and alternative state structures.}
-These change the semantics and size of retained state---a dimension orthogonal
-to residency management. We treat them as composable workload parameters in a
-quality--resource trade-off, not as baselines to defeat.
-
-\paragraph{Tiered memory, placement, and heterogeneous execution.}
-DirectKV, FlashGen, NEO, OrbitFlow, and FlexGen change the hardware conditions
-that set restoration costs; they shape how our conclusions extrapolate rather
-than serving as direct comparisons.
-
-Across the nine families, and pending per-paper verification: no known work
-uses the next-use times committed by a periodic workload to drive residency
-reclamation and state restoration, moving state preparation off the critical
-path without changing the application's retention semantics. The scope in
-which this positioning holds is the scope in which our assumptions hold, as
-delimited in Section~\ref{sec:discussion}.
+\paragraph{Periodic interaction and bounded history.}
+Metronome studies memory exhaustion in periodic interaction serving and combines an in-engine KV window with deadline-aware admission~\cite{meng2026metronome}.
+Its window bounds state by retaining recent tokens and attention sinks.
+Its evaluation also uses phase-staggered input streams.
+\systemname preserves the history selected by the application and varies its GPU residency through partial eviction and advance restoration.
+This trades host capacity and recurring recovery work for GPU capacity.
+The approaches therefore make different retention and resource choices; a performance comparison must either hold retained history fixed or report the effect of changing it.

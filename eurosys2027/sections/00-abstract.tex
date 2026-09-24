@@ -1,11 +1,14 @@
 \begin{abstract}
-We study interactive model serving in which sessions process new input at fixed intervals and retain history across updates.
-As conversations grow, their historical key--value (KV) state can exhaust GPU memory while the combined work of admitted sessions still leaves time within each period.
-Offloading idle KV to host memory releases capacity, but restoring it when the next update arrives delays computation.
-Restoring it earlier also has a cost: the entire destination must be allocated before copying begins, reducing the time for which other sessions can use that space.
-We present the design of \systemname, which uses the known timing of periodic updates for \emph{cyclic KV restoration}: evicting part of a session's idle KV and restoring it before the next update.
-Where the application permits, \systemname staggers session starts so that one session's eviction can make room for another's restoration.
-It plans these restorations around shared transfer bandwidth and available GPU space, aiming to serve more sessions without changing the history each retains.
-Our analysis gives a sufficient condition for KV capacity to be exhausted while compute time remains, subject to an execution-time bound for the workload under study.
-\placeholder{Measured session capacity and deadline-miss rate versus full residency and on-demand restoration, under the same service objective; include workload, retained-history policy, and observation duration.}
+Emerging interaction models sustain long-lived full-duplex sessions in which input and output overlap.
+In periodic service, a model processes newly accumulated input in fixed-duration micro-turns and decides whether and when to respond.
+After a micro-turn finishes, its historical key--value (KV) state can remain idle until the next update, yet still occupy GPU memory.
+As retained history grows, full residency can exhaust GPU capacity while the combined work of admitted sessions still leaves time within each period.
+Offloading idle KV frees capacity, but restoring it on demand puts recovery on the next update's critical path.
+The periodic schedule provides advance notice of the next update, making it possible to plan restoration before demand.
+We present the design of \systemname, a serving system for memory multiplexing through cyclic KV restoration, without truncating the history retained by the application.
+Where the application permits, \systemname staggers session phases, evicts recoverable KV after use, and schedules its restoration from host memory before the next update.
+Space released by one session can then accommodate another session's restoration.
+The plan limits eviction to the volume that the shared link can restore in time and accounts for each restoration's full GPU allocation before copying begins.
+\placeholder{Evaluation result: \systemname serves XX times as many concurrent sessions as full residency and YY times as many as the strongest evaluated baseline [name], under the same service objective and matched generation work.
+Report the workload, observation duration, and deadline-miss rates.}
 \end{abstract}

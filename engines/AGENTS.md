@@ -1,10 +1,10 @@
-# Engines（系统层）
+# 引擎层
 
-两个可执行 serving system。它们只被 runner 按路径 spawn，不被 `experiments` import；仓库自有的 experiment→engine 边界使用 argv、env、gRPC 和 run artifacts。worker 与 vLLM EngineCore 之间另有 msgpack/ZMQ utility IPC。完整动态边见 `docs/agent/dynamic-edges.json`。
+引擎由 runner 按路径启动，禁止 import `experiments`。仓内启动与 IPC 的索引见 `docs/agent/dynamic-edges.json`。
 
-| 目录 | 对应系统 | 启动方 |
+| 目录 | 系统 | 启动方 |
 | --- | --- | --- |
-| [`baseline/`](baseline/) | matched Metronome baseline；`vanilla` 仅为 upstream artifact target | `experiments/baseline/` |
-| [`conveyor/`](conveyor/) | Conveyor：release offsets、partial KV eviction、KV prefetch | `experiments/conveyor/` |
+| `baseline/` | matched Metronome baseline | `experiments/baseline/` |
+| `conveyor/` | Pilarius 的实现目录 | `experiments/conveyor/` |
 
-参与正式比较的系统统一使用 `infra/trace/collectors/`。当前 matched baseline 的 per-segment decode cap 仍为 \(M+8\)，Conveyor 为 \(M\)；修复并重跑前不得称为完全相同的 executed workload。
+正式比较共用 `infra/trace/collectors/`。生成工作量、调度及副本路径的匹配要求见 `docs/experiments.md#executed-decode-difference`；不能由配置名称推定公平。局部说明用于定位，改代码前核验实际路径。
