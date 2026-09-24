@@ -1,94 +1,76 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §1 (six-step funnel) and docs/problem.md.
-% Key-sentence wording (core insight, unverified proposition, positioning) must
-% not drift from the【关键】markers in docs/problem.md.
+A conversational assistant that can respond to interruptions must process new input even while it speaks.
+MiniCPM-o 4.5 does so in one-second chunks: it incorporates the latest input, decides whether to speak, and generates output when needed~\cite{cui2026minicpmo45}.
+We use Thinking Machines Lab's term \emph{micro-turns} for these short interaction intervals~\cite{thinkingmachines2026interactionmodels}.
+Each micro-turn extends a history that the model uses in subsequent updates.
+We study how to serve concurrent sessions that advance in this periodic manner.
 
-Interactive AI applications increasingly hold a session open and advance it
-continuously rather than one request at a time. In the emerging full-duplex
-form of this workload, a dialogue model absorbs whatever input has arrived,
-advances its history state, and chooses to speak or stay silent at every fixed
-time step---a \emph{micro-turn}---so that it can take turns naturally, handle
-overlapping speech, and react to interruptions in time. A session of this kind
-couples two things that request-oriented serving treats separately: a soft
-real-time objective for every update, and history state that must survive
-across updates for as long as the session lives. That history grows on a
-clock, and it has to be kept somewhere; GPU memory is finite. These two facts
-are on a collision course.
-
-The natural reference policy keeps every retained byte on the GPU. Full
-residency loses nothing semantically and adds zero preparation latency to any
-update; the only axis on which it can fail is capacity. Under this reference,
-aggregate residency demand grows monotonically with the number of sessions and
-with the retained state per session, while the compute demanded by each period
-is bounded by the workload's own real-time contract and typically does not
-saturate the period. KV capacity can therefore run out before compute
-does---a proposition we state carefully because it is a claim about workloads,
-not a universal fact, and we verify it experimentally in
-Section~\ref{sec:evaluation}. When it holds, the question becomes: which part
-of the reference policy should change, and at what cost?
+Models cache attention keys and values (KV) for retained history so that later updates can reuse them.
+This state has a memory cost even between updates: retaining ten minutes of MiniCPM-o 4.5 input audio, for example, requires approximately 0.82\,GiB per session in BF16.
+This is a parameter-based estimate, not a serving measurement: the model produces 10 audio feature tokens per second, and its published backbone configuration requires 144\,KiB of KV per position~\cite{cui2026minicpmo45,openbmb2026minicpmconfig}.
+The estimate assumes full retention and excludes text, visual inputs, control tokens, other model state, and allocation overhead.
+When a micro-turn finishes before the end of its period, its KV is idle but remains allocated under full GPU residency (Figure~\ref{fig:motivation}).
+Across sessions, this retained state can fill the available KV capacity while their combined computation still leaves time within the period.
+Whether this occurs depends on the workload and execution policy; periodic execution alone does not imply spare GPU compute capacity.
+% 2 (K and V) * 36 layers * 8 KV heads * 128 dimensions * 2 bytes = 144 KiB/position.
+% 10 positions/s * 600 s * 144 KiB/position = 0.823974609375 GiB.
 
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/figure-intro.pdf}
-  \caption{A full-duplex session advances in periodic micro-turns. The $k$-th micro-turn begins at $d_k$ and is due by $d_{k+1}=d_k+T$: the model encodes the audio received over the previous period, prefills the resulting input tokens, and decodes a bounded output segment for playback, after which the GPU idles until the next deadline. Input and output tokens are appended to the KV history, which remains resident across periods. Decoding work per period is bounded by the chunk length and the output budget, whereas resident KV grows with every period; across concurrent sessions, GPU memory is exhausted long before compute is saturated.}
+  \caption{Periodic execution with persistent history.
+  Each micro-turn encodes and prefills new input and may decode output for playback.
+  Retained input and output extend the KV history, which occupies GPU memory even between micro-turns under full residency.
+  The timeline and memory growth are schematic, illustrating how retained state can reach the capacity limit.}
   \label{fig:motivation}
+  \Description{A periodic session processes input, generates output, and waits for the next period.
+  Its retained token history grows, and the corresponding illustrative KV footprint reaches a GPU capacity line.}
 \end{figure*}
 
-Known escape routes fall along two distinct dimensions. One dimension changes
-\emph{what a session retains}: windowing, compression, and summarization cap
-per-session state, but alter the history visible to later computation---an
-application-side quality trade-off. This dimension is orthogonal to residency
-management: whatever retention policy the application picks, the retained
-state still has to exist across idle intervals and still occupies GPU
-residency. The serving system's own decision space is the second dimension,
-\emph{when retained state resides on the GPU}. On this dimension, offloading
-with on-demand restoration preserves retained semantics but leaves reload and
-recomputation on the critical path of the next update, and systems that do act
-early bind their advance signals to sources that a clocked workload does not
-need---queue depth, application hints, pause-duration estimates, model-internal
-prediction, or workflow step distance. None of these signals is the release
-time that the workload itself commits. No existing route on the residency
-dimension achieves timely readiness---unless the workload itself can tell the
-system when state will be used again.
+One way to limit this memory cost is to retain less history.
+Metronome bounds the KV window of periodic interaction sessions and uses deadline feedback to control admission~\cite{meng2026metronome}.
+For applications that need a larger history, offloading idle KV preserves that history at the cost of recovering it later.
+InferCept, for example, chooses among retaining, swapping, and recomputing state for requests paused by external interactions~\cite{abhyankar2024infercept}.
+Periodic service makes recovery a recurring scheduling problem: whenever KV is evicted between micro-turns, it must be restored for the next one.
+Waiting until that micro-turn arrives puts restoration on its execution path (Figure~\ref{fig:comparison}(a)).
 
-A clocked workload does exactly that. It commits its next use time to the
-system as a property of the workload: the information is available before the
-demand arises and recurs across describable periods, so it can drive residency
-reclamation during idle intervals and state restoration ahead of use. This
-observation is the pivot of the paper. It is not free to exploit: the next
-demand is predictable, but the moment execution actually starts is shaped by
-queueing; state may live in several places, but its validity must be
-decidable; restoring early removes waiting from the critical path, but
-occupies space that other sessions need.
+The start of each period, or \emph{tick}, is known in advance, giving the server an opportunity to restore KV before it is needed.
+When the application also permits the server to choose each session's phase, or start offset within the period, the server can stagger these updates.
+One session's idle interval can then provide GPU space for another session's work.
+This is the opportunity for \emph{memory multiplexing}: sessions reuse the same GPU KV space at different times while each retains its own history.
 
-\systemname is our vehicle for turning the committed timing into capacity
-under those three challenges. It assigns each admitted session a fixed release
-offset on a uniform slot grid, so that per-session demands interleave rather
-than coincide; it evicts the tail of an idle session's KV state under a
-host-backed copy, bounded by what the session's transfer window can bring
-back; and it prefetches evicted state ahead of the committed next use, falling
-back to on-demand restoration when the prediction is beaten by reality. Each
-mechanism is stated here as a hypothesis tied to an ablation, not as an
-established gain.
+Using that space requires more than fitting the transfer bytes into a period.
+A restoration must allocate its entire destination before copying begins, so an early transfer occupies memory that other sessions may still need.
+A later transfer leaves that space free longer but has less time to complete before the next tick.
+Likewise, evicting more KV reclaims more space but requires a longer transfer to restore it.
+Session phases determine when these demands occur relative to one another.
+The server must therefore coordinate when sessions run, how much KV they evict, and when they restore it, checking both shared bandwidth and GPU allocation throughout the period.
 
-\placeholder{Results sentence for the Introduction: verified change in
-sessions served within a uniform service objective versus matched
-full-residency and on-demand baselines, with its latency cost and validity
-boundary (Q2, Q3). No effect sizes before the formal runs.}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/figure-comparison.pdf}
+  \caption{Schematic comparison of restoration timing.
+  (a) On-demand swapping delays computation until KV returns.
+  (b) Staggered sessions release space for one another's restorations before their next ticks.
+  Upper curves show aggregate GPU KV allocation, including each restoration's full destination from the start of allocation.
+  Hatching denotes host-to-device (H2D) copies, dotted outlines denote evicted state, and gray denotes idle resident KV.
+  The pale curve in (b) shows full residency.}
+  \label{fig:comparison}
+  \Description{On-demand restoration delays a session, whereas staggered sessions alternate eviction and restoration before their next ticks.
+  Aggregate GPU allocation includes the full destination of each ongoing H2D copy.
+  A pale curve shows the higher allocation under full residency.}
+\end{figure}
 
-In summary, this paper makes the following contributions, each contingent on
-the evidence noted in Section~\ref{sec:evaluation}:
-\begin{itemize}
-  \item a resource characterization of long-lived KV state in clocked
-        interactive serving, treating the retention policy as a workload
-        parameter rather than a quality debate;
-  \item a serving design that couples release-offset assignment, host-backed
-        partial eviction, and prefetching to the update timing that the
-        workload itself commits; and
-  \item an evaluation protocol with matched generation work and a uniform
-        service verdict, plus results that bound when timing-driven residency
-        management helps and when it does not.
-        \placeholder{Contribution list to be re-scoped against final evidence.}
-\end{itemize}
+We present \systemname, a design that coordinates these decisions through \emph{cyclic KV restoration}.
+After each micro-turn, it evicts part of the session's idle KV and schedules that state to return by the next tick.
+By staggering sessions, it seeks to use space released by one session for another's restoration, as illustrated in Figure~\ref{fig:comparison}(b).
+The aim is to serve more sessions while preserving their history and meeting a recurring soft deadline: each micro-turn should finish by the next tick.
+
+History growth means that a schedule that fits now may no longer fit later.
+At admission, \systemname plans over a finite lookahead interval, accounting for expected KV growth and the computation, transfers, and allocations needed during that interval.
+It follows the plan across micro-turns, with infrequent revisions as histories grow or sessions enter and leave.
+Planning ahead is intended to anticipate resource pressure without replanning every micro-turn; feasibility within one such interval does not guarantee capacity for the session's entire lifetime.
+
+\placeholder{Final contributions and measured results: establish the workload and configuration range in which KV capacity fills while compute time remains; identify the validated contribution of coordinating phases, eviction amounts, and restoration timing; report session capacity and deadline violations relative to full residency and on-demand restoration under the same service objective.}

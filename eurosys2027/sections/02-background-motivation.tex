@@ -1,232 +1,106 @@
 \section{Background and Motivation}
 \label{sec:problem}
 
-% Rebuilt 2026-09-15 from docs/PAPER.md §2 and docs/problem.md (background sections).
-
-\subsection{Request Classes and Timing Contracts}
+\subsection{Periodic Execution and Retained State}
 \label{sec:request-classes}
-
-Interactive sessions retain history across requests and keep advancing. What
-separates them for a serving system is how the target dialogue model's updates
-are triggered. We distinguish three request classes. In
-\emph{message-triggered turn-based requests}, a user or application explicitly
-submits a complete message and the model produces one bounded response; the
-next submission time is generally unknown. In \emph{endpoint-triggered speech
-requests}, input is captured continuously, and an automatic endpoint
-rule---combining voice activity, silence, and semantic cues---decides that a
-turn has ended and triggers one bounded response task; the front end may run
-at a fixed rate, but the dialogue model's response tasks start irregularly.
-In \emph{clocked full-duplex sessions}, the session stays open, input and
-output overlap, and the dialogue model processes available input, advances its
-state, and chooses an action at every fixed micro-turn, without waiting for a
-turn to end. The class boundary is the trigger of the dialogue model's
-decisions, not the component architecture: a cascaded pipeline whose dialogue
-model advances every micro-turn belongs to the third class.
-
-The third class matters because some interaction tasks constrain both the
-content and the moment of a response. Incremental translation of continuous
-speech must deliver correct partial translations while the speaker is still
-talking; responding to a semantic cue inside an ongoing utterance has a window
-that may close before the utterance ends; reporting actions in a continuous
-video stream faces events that produce no speech endpoint at all. When the
-required information appears at some moment and the valid response window
-closes before the speaker finishes, any path that gates its decisions on the
-end of the utterance misses the task even with a perfect endpoint predictor.
-Fixed micro-turns give the model an update opportunity at every time step, so
-``has the user finished'' becomes a state the model can judge at each update
-instead of a precondition for computing at all. Enhanced event-triggered
-systems may also satisfy such tasks; these examples establish the need for
-decisions that are independent of turn endings, not the uniqueness of the
-fixed-period realization.
-
-Two resource features follow from the clocked contract. First, the effective
-computation of one session in one period is bounded on both sides. On the
-input side, new content is produced in real time and the model cannot process
-input that does not yet exist; how the arriving stream is chunked into
-per-update input blocks, and whether already-arrived content may be processed
-incrementally before release, is fixed by the model's chunking and update
-contract. On the output side, the rate at which deliverable output is emitted
-is clamped near the real-time consumption rate: lockstep models fix the output
-positions of every time step in their sequence format, so generation cannot
-run past input that has not arrived; models that decouple generation from
-synthesis bound the per-period emission with a runtime cap and trained segment
-boundaries, and long responses stream across periods. Bounded buffering allows
-a bounded lead, but sustained accumulation beyond consumption violates the
-service contract and inflates user-visible latency. Per-period work is
-therefore capped by contract; when this bounded work completes faster than
-real time, the update finishes early and leaves an idle window until the next
-input arrives. Second, under full history retention the state added per period
-corresponds to the input and output positions the model actually retains, so
-when both are stable the per-period increment is approximately regular, and an
-output budget bounds it from above.
-
-A turn-based request can keep generating until its response completes, and its
-state can then step aside as a whole. A clocked session is different in both
-respects: its per-period computation is bounded and intermittent, yet the
-session does not end---the next update needs the same history, so the history
-KV must survive every idle window. The idleness discussed here is
-per-session; with many sessions interleaved, the GPU may stay busy throughout.
-
-\subsection{Historical KV and the Capacity Problem}
-\label{sec:capacity-problem}
-
-Take full residency as the reference policy: all retained state stays on the
-GPU, retention semantics are preserved exactly, and the next update starts
-with zero preparation delay. The policy can fail only on the capacity axis.
-Aggregate residency demand grows monotonically with session count and
-retained-state size, while the usable KV pool is bounded by what remains after
-model weights, activations, and runtime reservations. When per-period
-computation does not saturate the period, residency demand can reach the
-resource ceiling before compute demand does. We treat this as a proposition to
-verify, not a premise: it holds only where three workload properties hold
-together---history is reused across updates, updates advance on a describable
-period with idle intervals between successive uses, and per-period compute is
-unsaturated. Absent any one property the problem degenerates into forms that
-existing work already covers.
-
-The first property makes the retention policy a workload parameter: an
-application may retain full history or cap per-session state with a window or
-summary. This paper does not adjudicate quality among retention policies; it
-requires only that the workload, under its chosen policy, still reuses
-substantial state across updates. All residency-side comparisons hold the
-retention policy fixed.
-
-\begin{figure}
-  \placeholder{Figure~2: capacity tension. Measured KV allocation approaching
-  the pool limit as session count and context grow, while per-period compute
-  retains slack; candidate second panel contrasts aligned versus staggered
-  release (sum of peaks versus sum of time-averages). Pending controlled
-  motivation data (Q1).}
-  \caption{KV capacity tension under the full-residency reference
-  (placeholder; pending Q1).}
-  \label{fig:tension}
-\end{figure}
-
-Known ways out fall along the two dimensions introduced above. On the
-semantic dimension, windowing, compression, and summarization shrink or cap
-retained state, changing what later computation sees; retained state still
-crosses idle intervals and still occupies residency, so this dimension changes
-the size of the residency problem, not its solution. On the residency
-dimension, engine-built swapping evicts and restores whole spans reactively on
-allocation failure; tiered-recovery designs such as Pensieve and HCache begin
-reload or reconstruction only after the request has entered a batch; hybrid
-recovery--recompute schedulers such as Cake and CacheFlow shorten the wait but
-do not move it off the critical path. Retention semantics survive; timeliness
-does not. Systems that do act ahead of demand bind their signals to other
-sources: queue depth (CachedAttention) yields a lead time the system cannot
-choose; recency heuristics misfire precisely on the ``idle but returning
-soon'' pattern that clocked sessions exhibit every period; application hints
-(SYMPHONY) can be wrong and arrive at coarse lead times; pause-duration
-estimates (InferCept) target irregular external calls; model-internal
-prediction (InfiniGen, ECHO) operates within a single step; workflow graphs
-(KVFlow) provide step distances, not times. \emph{[citations to be verified]}
-None of these signals is the recurring release time that a clocked workload
-itself commits.
-
-\subsection{Opportunity and Cost}
-\label{sec:opportunity}
-
-Clocked sessions hold precisely the asset the residency-dimension routes lack.
-A turn-based request cannot know its next arrival; an endpoint-triggered
-request starts when a turn-end is detected. A periodic workload, by contrast,
-commits its next use time to the system as a property of the workload: the
-information is available before the demand arises and recurs across
-describable periods, so it can drive residency reclamation during idle
-intervals and state restoration ahead of use. The asset comes in three
-grades, each unlocking different actions under increasingly strong
-assumptions: knowing that a rhythm exists supports demand estimation; seeing
-concrete release times supports preparing state before demand enters the
-critical path; controlling release offsets supports rearranging how sessions
-overlap. Offset control does not follow from rhythm visibility, and the value
-of timing information is not represented by its strongest grade alone.
-
-The opportunity is not free. Early restoration occupies GPU space ahead of
-need; concurrent sessions contend for the same transfer link; staggered
-updates can erode batching efficiency. Exploiting committed timing therefore
-raises three challenges that any design must answer together:
-\begin{enumerate}
-  \item the next demand is predictable, but the actual execution moment is
-        shaped by queueing;
-  \item state may be stored in several places, but its validity must be
-        decidable at use time; and
-  \item restoring ahead of use saves critical-path time while occupying space
-        that other sessions need.
-\end{enumerate}
-To weigh these costs, ``which state, used when, prepared how early'' must
-first become decidable quantities. Section~\ref{sec:formulation} fixes the
-objects, events, and objective that the rest of the paper shares.
-
-\subsection{Problem Formulation}
 \label{sec:formulation}
 
-This section fixes the objects and the objective that design and evaluation
-share, so that both use the same verdict.
+A periodic interaction session carries its history from one micro-turn to the next.
+The application determines which history to retain, whether through full retention, a fixed window, or a summary.
+Residency management changes where the corresponding KV is stored while preserving that choice.
+The opportunity to release GPU space depends on when the model uses the state: periodic input capture alone does not establish periodic model execution or an interval without KV accesses.
 
-\paragraph{Sessions and events.}
-We model the workload as \emph{periodic interaction sessions}: updates become
-eligible on a describable period, and adjacent updates depend on the same
-growing history. With a common period $T$ and reference time $t_0$, the $k$-th
-update of session $i$ has release time $r(i,k) = t_0 + \phi_i + kT$, where
-$\phi_i \in [0, T)$ is the session's release offset. Release means eligibility:
-the input is available, not that the request has entered the engine. We
-distinguish four events per update: release $r(i,k)$, actual submission
-$a(i,k)$, the start $s(i,k)$ of computation that depends on the target KV, and
-the completion event $c(i,k)$. The rhythm must come from the workload itself;
-a service-stack entrance may choose phase alignment within the application's
-contract, in which case $a$ coincides with $r$ in steady state and each
-session pays at most one period of alignment wait at its first submission,
-reported separately. Waits introduced by deferring ready input count toward
-latency, and changes to input chunking must be measured against original input
-time.
+For timing analysis, consider sessions with a common period $T$ and reference time $t_0$.
+Session $i$ has phase $\phi_i\in[0,T)$, so the tick that releases micro-turn $k$ is
+\begin{equation}
+  r(i,k)=t_0+\phi_i+kT.
+  \label{eq:release}
+\end{equation}
+Each micro-turn should finish generation by the next tick:
+\begin{equation}
+  c(i,k)\le r(i,k+1)=r(i,k)+T,
+  \label{eq:deadline}
+\end{equation}
+where $c(i,k)$ is generation completion.
+This is a soft deadline, with occasional misses allowed under a specified miss-rate limit.
+Latency is measured from the planned tick as $c(i,k)-r(i,k)$; delaying input submission or computation does not move the deadline.
+Delivery latency and initial phase-alignment delay require separate accounting (Section~\ref{sec:methodology}).
+\placeholder{Allowed deadline-miss rate, observation interval, and model-specific generation-completion event.}
 
-\paragraph{Service objective.}
-The soft real-time objective is $c(i,k) - r(i,k) \le D_i$. The completion
-event is the \emph{generation completion} of the update; user-visible delivery
-is modeled as a constant offset thereafter, an assumption we state explicitly.
-The latency baseline is the actual submission $a(i,k)$ and must be read
-together with an update-backlog metric, so that deferred submissions cannot
-hide overload. Per-update generation is parameterized as $m(i,k) \le M$. For
-sessions with real-time output consumption at rate $R_{\mathrm{play}}$,
-bounded buffering and freshness limit how far cumulative generation may lead
-consumption: over any $n$ consecutive periods, retained-and-delivered output
-obeys $\sum_{j=k}^{k+n-1} N_{\mathrm{out}}(j) \le R_{\mathrm{play}} \cdot nT +
-B_{\mathrm{out}}$ for a bounded lead allowance $B_{\mathrm{out}}$. A single
-update may emit more than one period of content when prebuffering is allowed;
-the contract bounds sustained lead, not each period in isolation.
-\placeholder{Concrete target value $D$, permitted violation ratio
-(parameterized sweep), observation horizon, and session-failure rule; pending
-protocol freeze (measurement semantics owner).}
+Let $q(i,k)$ be the last use of the KV selected for eviction in micro-turn $k$.
+That state can leave the GPU once outstanding references are released and a valid host copy is available.
+It must return before the next computation accesses it; \systemname targets completion by $r(i,k+1)$ to keep restoration off the next micro-turn's execution path.
+The interval from $q(i,k)$ to that tick is the planned window for reclamation and restoration, provided there are no intervening accesses.
+Late computation can shorten or eliminate this window.
 
-\paragraph{KV idle intervals.}
-Let $q(i,k)$ be the last use of the target KV by update $k$. If the next use
-$s(i,k+1)$ starts later and no other execution touches the state, the span
-between them is a KV idle interval---the time window in which every
-residency-reducing action must fit. For sessions whose bounded update
-completes early and whose next update is gated by input and clock, the
-interval recurs every period. Periodicity supplies the prediction; queueing,
-long computations, backlogged execution, or overlapping access can shorten or
-eliminate the interval. Release offsets change how sessions overlap; they
-create neither idle time nor bandwidth for any single session.
+\subsection{When KV Capacity Limits Concurrency}
+\label{sec:capacity-problem}
+\label{sec:slack-conditions}
 
-\paragraph{Resource constraints.}
-Physical capacity bounds allocation at every instant: with $G_{KV}$ the usable
-KV pool and $b_p$ the size of allocated block $p$, $\sum_{p} b_p \le G_{KV}$,
-where prefetch targets count from allocation, before their content arrives.
-Peak allocation therefore depends on when eviction and restoration are
-scheduled, and allocatable space does not imply content readiness. Treating
-the transfer link as a renewable time resource yields a stronger candidate
-feasibility condition than aggregate bandwidth checks: each session's periodic
-restoration demand should receive enough link time before its deadline. This
-condition is a modeling assumption to be calibrated, not a established law:
-link time is not exclusively assigned---backup, gap recomputation, and
-competing sessions share it---and the window from initiation to completion
-includes scheduling waits. One offset assignment thus simultaneously shapes
-three coupled resources: link time, the duration of GPU space occupancy, and
-batch composition. The same link view bounds the total reclaimable residency
-per period by the smaller of the link's per-period byte budget and the total
-evictable state, which suggests---again as an assumption to verify---that the
-achievable capacity extension is a property of link capability and timing
-structure rather than of the per-session retention policy.
-\placeholder{Batch-dependent cost function, calibrated transfer service curve,
-and the feasibility condition itself; validated by independent calibration and
-held-out prediction (Q5).}
+A session's KV-idle interval does not imply spare compute capacity: other sessions may keep the GPU busy throughout it.
+Nor do periodic releases alone establish compute slack~\cite{liu1973scheduling}.
+The relevant question is whether \emph{all admitted sessions} still leave time within the period when their retained KV fills GPU memory.
+Even if each micro-turn adds a predictable amount of state, attention to a growing history can increase execution time.
+The memory and compute limits must therefore be compared at the same context length.
+
+Consider a reference configuration with $N$ sessions whose inputs are available at the same tick and whose period is $T$.
+Each session reaches a maximum retained length of $L$ positions within the period, with $\kappa$ KV bytes per position and no inter-session sharing.
+Let $G_{\mathrm{KV}}$ be the GPU capacity available for KV after weights, activations, and other runtime allocations.
+Ignoring allocation rounding, full residency fills this pool at
+\begin{equation}
+  L_{\mathrm{mem}}=\frac{G_{\mathrm{KV}}}{N\kappa}.
+  \label{eq:memory-boundary}
+\end{equation}
+Let $C_N(L)$ be the elapsed time needed for all $N$ sessions' per-period work under a specified execution policy with the required KV resident.
+It includes input processing, model execution, and scheduling overhead; batching means that it is not generally the sum of isolated session times.
+
+The time left at the memory limit is $T-C_N(L_{\mathrm{mem}})$.
+To bound it, hold the per-period input and generation work fixed and suppose that, over the context range of interest,
+\begin{equation}
+  C_N(L)\le A_N+B_NL,\qquad A_N\ge0,\ B_N\ge0.
+  \label{eq:compute-envelope}
+\end{equation}
+The intercept $A_N$ accounts for work independent of history length; the slope $B_N$ allows execution cost to grow with that length.
+This affine upper bound is an assumption to establish for the chosen workload, platform, and execution policy.
+If $L_{\mathrm{mem}}$ lies in the same range, the remaining time satisfies
+\begin{equation}
+  T-C_N(L_{\mathrm{mem}})
+  \ge T-A_N-\frac{B_NG_{\mathrm{KV}}}{N\kappa}.
+  \label{eq:memory-before-compute}
+\end{equation}
+A positive right-hand side is sufficient for memory to fill before the period's compute budget is exhausted.
+If the right-hand side is at least $\eta T$ for $0<\eta<1$, all $N$ sessions leave at least a fraction $\eta$ of the period unused in this reference configuration.
+
+Coefficients fitted to measurements yield a prediction of slack, not a proven lower bound, and require validation on independent configurations.
+Even an established slack bound does not show that an additional session or recomputation will meet its deadline: the extra work, recovery costs, and interference must fit while preserving each session's deadline.
+\placeholder{Motivating measurement: joint KV allocation and aggregate execution time at the full-residency limit, with concurrency and context length; validate the predicted compute slack on separate configurations.}
+
+\subsection{Restoration Needs Both Time and Space}
+\label{sec:opportunity}
+
+Removing a session's KV frees capacity only until the server allocates space to restore it.
+The full restoration destination must be allocated before copying starts, even though its KV is not yet usable.
+Let $\mathcal{P}(t)$ be the set of physical GPU blocks allocated to KV at time $t$, including destinations of unfinished restorations, and let $b_p$ be the size of block $p$.
+A feasible schedule requires
+\begin{equation}
+  \sum_{p\in\mathcal{P}(t)} b_p \le G_{\mathrm{KV}}
+  \quad\text{at every }t,
+  \label{eq:memory}
+\end{equation}
+with each shared physical block counted once.
+Counting only valid KV would miss the allocation occupied by ongoing restorations.
+
+That allocation must also occur early enough for the copy to finish.
+For a restoration of $e$ bytes starting at time $u$, let $\widehat B$ be its estimated effective host-to-device bandwidth and $\delta$ an allowance for scheduling and completion overhead.
+The estimated completion must satisfy
+\begin{equation}
+  u + e/\widehat B + \delta \le r(i,k+1).
+  \label{eq:restore-time}
+\end{equation}
+The estimate must reflect bandwidth available under the shared transfer schedule, including the effects of host backup traffic and concurrent GPU work, rather than the link's nominal rate.
+
+These constraints pull restoration timing in opposite directions.
+An earlier restoration has more time to finish but holds its destination longer; a larger eviction releases more memory but takes longer to restore.
+Session phases change when space becomes available and when restored state is needed.
+A schedule can consequently fit its total transfer bytes within a period and still fail because transfers overlap or their destinations exceed GPU capacity at some instant.
+Memory multiplexing requires checking both the transfer windows and GPU allocation over time, together with computation under the chosen phases.

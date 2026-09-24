@@ -1,12 +1,11 @@
 \begin{abstract}
-Emerging interaction models sustain long-lived full-duplex sessions, in which input and output overlap, and advance them in fixed-duration micro-turns: in each micro-turn, the model ingests the input accumulated since the previous one, determines both response content and timing, and may decode a bounded output segment for real-time delivery.
-Between updates the session performs no model computation, while its retained KV state persists and grows from one micro-turn to the next.
-This creates a residency dilemma: full residency lets concurrent sessions exhaust GPU memory while compute slack remains, whereas reactive offloading places restoration on the next update's critical path.
-The update schedule, however, is a property the workload commits in advance: when a session's state will next be needed is known before the demand arrives, cycle after cycle.
-We present \systemname, a serving system that supports memory multiplexing through cyclic state restoration, without truncating the history retained by the application.
-\systemname evicts recoverable state after an update and restores it before the session's next scheduled update; eviction depth is bounded by the volume that the shared transfer link can recover within the intervening KV-idle interval.
-At admission, \systemname assigns each session a fixed phase within the update period, spreading restoration deadlines and residency peaks across the period.
-\systemname serves heterogeneous sessions under a common plan: sessions with larger restoration demand retain more state on the GPU, and a new session is admitted only when a feasible phase is available.
-% Numbers below are placeholders (XX/YY); fill only from formal experiments per docs/findings.md and docs/agent/evidence.json.
-Our evaluation shows that \systemname serves XX$\times$ as many concurrent sessions as full-residency serving and YY$\times$ as many as the strongest existing baseline under the same service objective and matched generation work.
+We study interactive model serving in which sessions process new input at fixed intervals and retain history across updates.
+As conversations grow, their historical key--value (KV) state can exhaust GPU memory while the combined work of admitted sessions still leaves time within each period.
+Offloading idle KV to host memory releases capacity, but restoring it when the next update arrives delays computation.
+Restoring it earlier also has a cost: the entire destination must be allocated before copying begins, reducing the time for which other sessions can use that space.
+We present the design of \systemname, which uses the known timing of periodic updates for \emph{cyclic KV restoration}: evicting part of a session's idle KV and restoring it before the next update.
+Where the application permits, \systemname staggers session starts so that one session's eviction can make room for another's restoration.
+It plans these restorations around shared transfer bandwidth and available GPU space, aiming to serve more sessions without changing the history each retains.
+Our analysis gives a sufficient condition for KV capacity to be exhausted while compute time remains, subject to an execution-time bound for the workload under study.
+\placeholder{Measured session capacity and deadline-miss rate versus full residency and on-demand restoration, under the same service objective; include workload, retained-history policy, and observation duration.}
 \end{abstract}
