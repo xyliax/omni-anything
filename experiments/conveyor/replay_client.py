@@ -8,6 +8,7 @@ import json
 import math
 import time
 import urllib.request
+import urllib.error
 import wave
 from pathlib import Path
 
@@ -104,6 +105,22 @@ async def run(rows, uri, timeout, *, epoch_ns, period_ns):
         starved=False, sessions=records)
 
 
+def gateway_clock(uri, timeout_s=10):
+    """Wait for the gateway listener before choosing the source-clock origin."""
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            with urllib.request.urlopen(uri.replace('ws://', 'http://') + '/clock',
+                                        timeout=min(1, timeout_s)) as response:
+                return json.load(response)
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, ConnectionError, TimeoutError):
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(.05)
+
+
 def main():
     # This file is also invoked by absolute path from the pinned client cwd.
     import sys
@@ -115,8 +132,7 @@ def main():
     parser.add_argument('--timeout', required=True, type=float)
     args = parser.parse_args()
     data, rows = read_schedule(args.manifest)
-    with urllib.request.urlopen(args.uri.replace('ws://', 'http://') + '/clock', timeout=10) as response:
-        grid = json.load(response)
+    grid = gateway_clock(args.uri)
     if grid['period_ns'] != round(data['configuration']['period_s'] * 1e9):
         raise ValueError('input and gateway periods differ')
     result = asyncio.run(run(rows, args.uri, args.timeout, **grid))

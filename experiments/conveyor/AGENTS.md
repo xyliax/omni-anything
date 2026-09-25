@@ -59,3 +59,5 @@ python -m experiments.conveyor.capacity --profile costs.json --slo slo.json --co
 录音素材：`python -m experiments.conveyor.material --archive /data/dev-clean.tar.gz --output /data/speech-streams` 校验官方 archive 后构建不循环的同 speaker 流，保存逐 clip hash 与转换 provenance；输出目录必须不存在。固定队列时间表由 `schedule.generate_fixed_schedule` 生成。素材选择和连接录音的解释由实验 owner 持有。
 
 `python -m experiments.conveyor.evaluate prepare --spec <spec.json> --output <new-dir>` 冻结矩阵，随后 `run <new-dir>/plan.json` 顺序执行并保留检查点；formal 要求同一 clean commit。分析与成本提取只调用共享 `infra.trace.evaluation` 和 `infra.trace.calibration`。`--verify-copies` 逐层检查实际复制内容，会同步 GPU，只供诊断，不能用于 formal 性能。
+
+开放回放先有界等待 gateway `/clock` 就绪，再固定源时钟；listener 启动竞态不能使有效工作丢失，服务开始后不重设时钟。

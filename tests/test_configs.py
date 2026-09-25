@@ -39,6 +39,7 @@ class ConveyorConfigTests(unittest.TestCase):
                 command = worker_command(arriving, root / 'ready')
             self.assertEqual(command[command.index('--preload-sessions') + 1], '0')
             self.assertEqual(worker_environment(arriving, root)['OMNI_SERVICE_PRELOAD'], '1')
+            self.assertNotIn('OMNI_HOLD_KV_EVICTION', worker_environment(arriving, root))
             self.assertFalse(arriving.manifest_config()['engine']['preload_at_start'])
     def test_manager_and_gpu_trace_configuration(self) -> None:
         with self.assertRaises(ValueError):

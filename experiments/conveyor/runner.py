@@ -149,7 +149,7 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         if config.retained_prefix_blocks is not None:
             # Retained-prefix mode evicts beyond K at the idle transition.
             env["OMNI_RETAINED_PREFIX_BLOCKS"] = str(config.retained_prefix_blocks)
-            if config.initial_context_tokens:
+            if config.initial_context_tokens and config.preload_at_start:
                 # Initial-context preloading is state construction. Release the
                 # hold at the barrier without evicting there.
                 env["OMNI_HOLD_KV_EVICTION"] = "1"

@@ -9,6 +9,31 @@ import pytest
 from experiments.conveyor.replay_client import serve_one
 
 
+def test_gateway_clock_waits_for_listener_before_replay(monkeypatch):
+    import io
+    import urllib.error
+    from experiments.conveyor import replay_client as client
+    calls = []
+    def open_clock(*args, **kwargs):
+        calls.append(args)
+        if len(calls) == 1:
+            raise urllib.error.URLError(ConnectionRefusedError())
+        return io.StringIO('{"epoch_ns": 123, "period_ns": 2000000000}')
+    monkeypatch.setattr(client.urllib.request, 'urlopen', open_clock)
+    monkeypatch.setattr(client.time, 'sleep', lambda seconds: None)
+    assert client.gateway_clock('ws://localhost:1') == dict(epoch_ns=123, period_ns=2000000000)
+    assert len(calls) == 2
+
+
+def test_gateway_clock_stops_on_timeout(monkeypatch):
+    import urllib.error
+    from experiments.conveyor import replay_client as client
+    monkeypatch.setattr(client.urllib.request, 'urlopen',
+                        lambda *args, **kwargs: (_ for _ in ()).throw(urllib.error.URLError('unavailable')))
+    with pytest.raises(urllib.error.URLError):
+        client.gateway_clock('ws://localhost:1', timeout_s=0)
+
+
 def test_delayed_admission_keeps_source_clock_and_rejection_sends_no_audio(tmp_path):
     websockets = pytest.importorskip('websockets')
     audio = tmp_path / 'source.wav'
