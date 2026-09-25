@@ -10,4 +10,15 @@ It must also expose when newly produced KV is safe to copy and respect copy-comp
 These interfaces allow the backend to retain control of execution scheduling and batching.
 The session manager submits eligible updates and consumes execution events; it does not drive each model step or require a group to execute as one batch.
 A backend's support for persistent sessions supplies part of this interface, but KV lifecycle coordination is also required.
-\placeholder{Verified implementation: backend and version, supported KV operations, synchronization with execution, and implemented planning and recovery paths relative to the design above.}
+Our implementation integrates these operations with vLLM 0.23's persistent streaming requests and physical KV block allocator.
+An independent session manager first advances eligible idle evictions, then initiates ordered restorations, so a capacity-blocked restore cannot prevent the reclamation it needs.
+The copy service uses asynchronous device transfers and publishes readiness after completion; compute and copy references protect both source and destination blocks.
+At idle boundaries, the adapter preserves unselected blocks and the incomplete tail, restores backed complete blocks to their original logical positions, and hands the complete block table back to execution.
+It does not reset logical progress to reconstruct a missing tail through prefix-cache lookup.
+
+Membership changes use versioned plans: new restoration allocation pauses, already allocated copies settle, and the manager rechecks actual allocation before publishing the new version.
+The conservative candidate checker preserves existing phases and ceilings; arbitrary repacking remains outside this implementation.
+Validation covers multilayer, noncontiguous KV copies, logical block mappings, concurrent sessions, and resource release.
+Across eight short replay runs, all sessions complete and allocated GPU blocks return to the initial reserved block after termination.
+The managed runs check 267 session KV transfers byte for byte before publication.
+Performance runs disable this synchronous content inspection.

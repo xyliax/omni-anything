@@ -65,7 +65,9 @@ Ignoring allocation rounding, the full-residency capacity limit leaves execution
 \end{equation}
 The remaining aggregate execution budget is $T-C_N(L_{\mathrm{mem}})$.
 Memory multiplexing must fit its additional execution and interference costs within this budget while also satisfying individual deadlines, restoration windows, and allocation constraints.
-\placeholder{Measure complete periodic work at the full-residency capacity limit, including the distribution of per-update generation, context lengths, batching, and phase-dependent execution costs.}
+Section~\ref{sec:evaluation} tests whether additional periodic work can actually complete when retained state exceeds a fixed GPU KV budget.
+Its joint completion and allocation observations support a capacity benefit for the measured workload, without interpreting per-request latency as aggregate GPU busy time.
+The analytical estimates below separately examine how model geometry and device resources affect this opportunity.
 
 % external-reference-begin: cross-model-cycle-usage
 \begin{table*}[t]

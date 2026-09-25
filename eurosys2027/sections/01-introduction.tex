@@ -7,7 +7,7 @@ We refer to each ongoing interaction as an \emph{interaction session}.
 
 We study interaction sessions that advance through periodic updates, each processing new input and generating output as needed.
 For example, Moshi operates on 80\,ms audio frames, while Thinking Machines Lab's TML-Interaction-Small organizes input and output into 200\,ms \emph{time-aligned micro-turns}~\cite{defossez2024moshi,thinkingmachines2026interactionmodels}.
-A single response can span  updates, allowing new input to influence generation before the response ends.
+A single response can span multiple updates, allowing new input to influence generation before the response ends.
 The server must therefore preserve each session's history across updates, including intervals when that session is not executing.
 
 To reuse history across updates, the server caches attention keys and values (KV), whose footprint grows with the retained context.
@@ -75,4 +75,7 @@ The total retained context, including new input and generated output, must stay 
 The recurring schedule accounts for computation, transfers, and GPU allocation, while runtime operations act on the history actually retained.
 \systemname revises the plan when sessions join or leave.
 
-\placeholder{Final contributions and measured results: identify the configurations where KV capacity limits concurrency while compute time remains; establish the benefit attributable to coordinating phases, eviction amounts, and restoration timing; report concurrency and deadline-miss rates against full residency and on-demand restoration under matched service objectives.}
+Our contributions are a formulation of cyclic residency under coupled transfer-time and destination-space constraints, a serving design that enforces safe partial eviction and advance restoration, and a controlled evaluation of its capacity and latency tradeoff.
+In single-run H100 measurements with MiniCPM-o 4.5 and long initial histories, \systemname serves 14 sessions where full residency serves 11, increasing admitted and on-time work by 27.3\% in the primary measurement window.
+At the same admitted load, advance restoration reduces periodic p95 completion latency by 58.5\% relative to matched on-demand restoration.
+Section~\ref{sec:evaluation} reports the workload, observation windows, source-clock delay, and startup misses that qualify these results.

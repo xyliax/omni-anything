@@ -113,7 +113,8 @@ The plan must consequently match releases by preceding groups to allocations for
 Algorithm~\ref{alg:admission} constructs a feasible recurring plan when a new session arrives.
 It keeps the active slot grid and existing phases, and tries slots in increasing order of population, initial alignment delay, and slot index.
 For each placement, it considers an ordered, finite set of eviction-budget and restoration-lead profiles calibrated for the workload and backend.
-The evaluated conservative policy fixes one profile; a larger candidate set changes the search, not the feasibility conditions.
+The implemented conservative checker uses a single configured profile; a larger candidate set extends the search over the same feasibility conditions.
+The performance experiments hold the admitted cohort and eviction budget fixed to measure residency management and restoration timing.
 Within a candidate, restorations follow their planned trigger times, with a stable session order for ties.
 The search returns the first feasible plan and makes no optimal-capacity claim.
 

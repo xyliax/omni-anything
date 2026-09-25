@@ -16,10 +16,104 @@
 \author{Anonymous Author(s)}
 
 \begin{abstract}
-\draftplaceholder{Additional methods and results supporting the main paper.}
+This supplement records the assumptions behind the analytical resource estimates and additional accounting for the measured long-history workloads.
 \end{abstract}
 
 \maketitle
+
+\section{Measured Configuration and Execution}
+
+The main measurements run on one NVIDIA H100 80GB HBM3 device; the driver reports 81,559\,MiB of device memory.
+The experiment fixes the GPU KV pool explicitly, rather than using the nominal device capacity as the available KV budget.
+Table~\ref{tab:reproduction-settings} lists the shared parameters and controls.
+
+\begin{table*}[t]
+\centering
+\caption{Parameters for the six long-history measurements. Exact model revisions, expanded configurations, per-session schedules and command lines are preserved with the artifacts.}
+\label{tab:reproduction-settings}
+\begin{tabular}{ll}
+\toprule
+Parameter & Setting \\
+\midrule
+Host CPU and RAM & AMD EPYC 7R13; 16 logical CPUs, 8 cores; 249.69\,GiB visible RAM \\
+Host topology & One VM-visible NUMA node; post-run inventory, not proof of host isolation \\
+GPU and device link & H100 80GB HBM3; post-run GPU endpoint reading: PCIe Gen5 $\times$16 \\
+Runtime & Linux x86\_64; Python 3.12.11; CUDA 13.0; NVIDIA driver 595.91.07 \\
+Libraries & vLLM 0.23.0; PyTorch 2.11.0; Transformers 4.57.6; FlashInfer 0.6.12 \\
+Model & MiniCPM-o 4.5, revision beginning \texttt{503e754}; BF16 KV \\
+KV geometry & 36 layers, 8 KV heads, head dimension 128; 144\,KiB per position \\
+GPU KV pool & 48\,GiB; 21,845 blocks of 16 positions (2.25\,MiB per block) \\
+Host KV pool & 80\,GiB for managed systems; none for residency \\
+History & 30,000-token synthetic prefill; 32,768-position backend limit \\
+Audio & LibriSpeech dev-clean; 16\,kHz; 20\,ms PCM chunks; no looping \\
+Period and output & 2\,s; 8 text tokens; temperature 0; \texttt{ignore\_eos=True} \\
+Offered load & 12 and 14 sessions; seed 11; distinct source offsets and staggered clocks \\
+Input duration & 24\,s per session; 12 updates; 60\,s runner watchdog \\
+Primary window & Exclude first 6\,s of source clock; also report the full sequence \\
+Backend scheduling & Eager, synchronous; at most 16 sequences and 4,096 batched tokens \\
+CPU input processing & 8 ingest workers \\
+Resident admission & 11; natural phases; only admitted histories are initialized \\
+Managed admission & Matched fixed limits of 12 or 14; 4 assigned phase slots \\
+Eviction ceilings & 256 blocks/session at 12 offered; 640 at 14 offered \\
+Recovery controls & Retain at least 1 prefix block and incomplete tail; 1\% free-block reserve \\
+Restore trigger & After preprocessing (on-demand); 350\,ms before tick (\systemname) \\
+Observation & Engine completion/allocation/copy events; GPU monitor interval 200\,ms \\
+Excluded instrumentation & GPU activity profiler and intrusive KV-byte checking \\
+Repeats & One fresh worker run per system and offered load \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Initialization and input replay.}
+The initial text is tokenized to the requested length and processed by the real model.
+Managed initialization waits for valid host backing and releases eligible idle blocks before proceeding to the next session, avoiding a requirement to fit all initial histories on the GPU simultaneously.
+The input clock starts only after setup; initialization generation does not count toward delivered work.
+Recording streams concatenate each speaker's source utterances in lexical order without padding or looping, and each session uses its recorded offset.
+The open-loop source does not delay future updates to wait for earlier completion.
+Rejected sessions are not retried.
+
+\paragraph{Hardware provenance.}
+GPU identity, memory and driver version were captured in each run manifest.
+The CPU, RAM and PCIe endpoint details in Table~\ref{tab:reproduction-settings} were collected afterward on the same host and GPU.
+The endpoint's Gen5 reading does not establish the end-to-end host-link generation, effective H2D bandwidth, or physical NUMA placement.
+No nominal PCIe bandwidth is substituted for an observed transfer time.
+
+\section{KV Checks and Execution Costs}
+
+\paragraph{State and lifecycle checks.}
+Eight short replays compare resident execution with managed execution using 2,048-token initial histories and a 4\,GiB GPU KV pool.
+The checks cover one session, four concurrent sessions, staggered termination, and demand, submission, and advance restoration triggers.
+All 136 periodic updates complete, and every run returns to its initial one-block allocator reservation after session release.
+The five managed runs check 267 session transfers byte for byte across the model's KV layers before publishing their completion.
+An independent GPU round-trip test also checks noncontiguous blocks and unchanged unrelated destinations.
+
+The single-session pair produces identical token hashes for all eight updates.
+In the aligned four-session pair, ten of twenty output hashes differ, while context positions, generated-token counts, and physical copy checks agree.
+The cause of these output differences remains unresolved.
+
+\paragraph{Grouped execution costs.}
+Six separate resident runs measure one, two, and four sessions released together, at initial histories of 2,048 and 8,192 tokens.
+They use the same model, period, output budget, and eager backend settings, with a 50.80\,GiB automatically sized KV pool and seed 1729.
+Each run supplies five measured groups after a common four-second startup exclusion.
+Elapsed time runs from the first engine enqueue to the last generation completion in the group, including backend scheduling and execution.
+A release group may execute through several backend batches.
+
+\begin{table}[t]
+\centering
+\caption{Median / maximum grouped execution time in milliseconds. Each cell contains five observations from one run.}
+\label{tab:execution-costs}
+\begin{tabular}{rrrr}
+\toprule
+Initial positions & 1 session & 2 sessions & 4 sessions \\
+\midrule
+2,048 & 189.5 / 196.3 & 228.2 / 229.4 & 228.6 / 235.2 \\
+8,192 & 189.9 / 192.7 & 226.5 / 235.1 & 225.9 / 228.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The measured group costs illustrate the value of sharing execution across sessions at these history lengths.
+The main long-history comparison uses fixed cohorts and eviction budgets; these shorter-history samples are reported separately from its configuration.
 
 \section{Backbone Cost Estimation}
 
@@ -59,7 +153,26 @@ The per-session auxiliary KV reservations are 0.375, 1.5, and 0.0078125\,GiB, re
 The estimates exclude input encoders and speech-output modules, including Moshi's depth Transformer.
 
 \section{Additional Results}
-\draftplaceholder{Add supporting analyses after the corresponding formal evidence is accepted.}
+The main evaluation uses six single-run measurements, with two offered loads and three systems.
+The high-load primary window contains 140 offered updates: residency admits and completes 110; each managed system admits and completes 140.
+All admitted updates satisfy their planned-tick deadlines in this window.
+Under the supplementary source-ready-plus-two-seconds criterion, on-demand restoration completes 104 on time and 36 late, while \systemname completes 138 on time and two late.
+Across the full run, the corresponding on-time/late counts are 117/51 and 160/8.
+There is no unfinished admitted work in any of these measurements.
+
+\paragraph{Transfer and host costs.}
+For the high-load primary window, submitted H2D payloads total 210.94\,GiB for on-demand restoration and 223.59\,GiB for \systemname; submitted incremental D2H payloads total 1.53 and 1.14\,GiB, respectively.
+These counters include copy submissions within the common time interval, so different copy timing can change the number of transfers counted at its boundaries.
+They are not per-update matched transfer volumes, nor do they measure exclusive link occupancy.
+Both systems reach 62.85\,GiB of valid host backing, including reclaimable cached copies, with an 80\,GiB reserved host pool.
+Source-end draining takes 5.16 seconds for on-demand restoration and 3.16 seconds for \systemname, compared with 1.42 seconds for residency.
+The lower offered-load point reaches 54.43\,GiB of valid host backing in both managed systems.
+
+\paragraph{Reproducibility and interpretation.}
+Raw event logs, manifests, input schedules, source patches, terminal validation, and input hashes accompany the measurements.
+The primary analysis excludes the initial six seconds; the deadline sensitivity recomputes the full sequence from the same immutable events.
+The source-clock deadline is an explicitly supplementary analysis.
+No update within a run is treated as an independent experimental repeat, and no confidence interval is inferred from the percentile samples.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}

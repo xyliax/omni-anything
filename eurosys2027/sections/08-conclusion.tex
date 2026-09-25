@@ -5,4 +5,7 @@
 Its residency plan couples phase assignment, partial eviction, and restoration timing so that space released by idle state can prepare upcoming updates.
 The central constraint is both temporal and spatial: a restoration needs enough transfer time and a complete GPU destination before copying begins.
 Planning sizes session state at the configured maximum context and reuses the schedule as histories grow within that limit.
-\placeholder{Conclude with measured session-capacity gains and their latency and resource costs under the evaluated workloads, service objective, and observation durations.}
+In single-run H100 measurements with MiniCPM-o 4.5, long initial histories, and a 48\,GiB GPU KV budget, the evaluated configuration serves 14 sessions versus 11 under full residency.
+It completes all 168 admitted updates within their planned two-second deadlines, whereas matched on-demand restoration misses three.
+In the common post-startup window, advance restoration reduces periodic p95 completion latency by 58.5\%, with a 22.6\% reduction when measured from source readiness.
+These finite-window observations demonstrate a useful capacity--latency tradeoff; cross-model resource estimates remain analytical and do not extend the measured gains to untested workloads.
