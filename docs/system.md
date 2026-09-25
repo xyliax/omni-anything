@@ -108,22 +108,23 @@ Inference backend 以可替换的职责边界呈现；具体运行时与当前�
 触发来源是准入和会话集合变化。Planner 按配置的最大上下文估计 KV 需求，结合给定负载下候选分组的执行成本及资源状态，输出候选计划或不可行结果；不直接申请物理块或发起复制。具体约定见[最大上下文规划](#maximum-context-planning)。
 
 ```python
-def build_candidate_plan(session_changes, sessions, resources):
-    demand = estimate_at_max_context(sessions, session_changes, resources)
-    candidate = choose_joint_plan(demand, resources)  # 求解方法待定
-    # candidate 包括 phase/group、逐会话预算和周期内恢复时机
-    if not compute_and_deadline_constraints_hold(candidate, demand):
-        return INFEASIBLE
-    if not shared_transfer_schedule_fits(candidate, demand):
-        return INFEASIBLE
-    if not gpu_allocation_fits_over_time(candidate, demand):
-        return INFEASIBLE
-    if not host_capacity_fits(candidate, demand):
-        return INFEASIBLE
-    return candidate
+def build_candidate_plan(new_session, active_plan, resources, profiles):
+    demand = estimate_at_max_context(active_plan.sessions + [new_session])
+    for slot in slots_by_population_alignment_and_index(active_plan, new_session):
+        for profile in profiles:
+            candidate = extend_preserving_existing_phases(active_plan, new_session, slot, profile)
+            order_restorations_by_trigger_and_stable_session_order(candidate)
+            if not host_capacity_fits(candidate, demand):
+                continue
+            if not compute_deadlines_and_shared_transfers_fit(candidate, demand):
+                continue
+            events = allocation_and_safe_release_events(candidate, demand, active_plan)
+            if peak_physical_allocation(events, resources) <= resources.gpu_capacity:
+                return candidate  # revalidate at the safe activation boundary
+    return INFEASIBLE
 ```
 
-GPU 检查计入恢复目标从完整分配时开始的占用，不能只检查准入瞬间的空闲空间。按最大上下文核算每个会话的 KV 需求，再检查周期内的分配轨迹，不要求这些 KV 同时常驻 GPU。候选搜索、成本估计与恢复安排仍待确定。正常周期沿用已生效计划；会话集合变化时按[规划与修正](#planning-updates)衔接新旧计划。
+GPU 检查计入恢复目标从完整分配时开始的占用，不能只检查准入瞬间的空闲空间。按最大上下文核算每个会话的 KV 需求，再检查周期内的分配轨迹，不要求这些 KV 同时常驻 GPU。候选搜索采用有限、确定顺序的 first-feasible 检查：slot 按成员数、首次对齐等待、编号排序，预算／提前量 profile 按冻结顺序尝试。当前被评估实现的 profile 集合只有一个元素，预算与提前量由独立标定固定；它不自动求解最优组数或预算。事件扫描计入周期首尾、当前物理引用及切换阶段；同一时刻先记分配再记释放，新会话不提前获得尚未建立的主机副本收益。正常周期沿用已生效计划；会话集合变化时按[规划与修正](#planning-updates)衔接新旧计划。
 
 <a id="session-manager-flow"></a>
 ### Session manager：按时间和事件推进计划
@@ -510,3 +511,5 @@ GPU 预测采用周期区间扫描：每会话始终收取最大历史减逐出 
 有效副本、完整映射、位置不变、引用生命周期和完成后才能使用是此论证的实现义务。改变数值精度、采样语义或输入边界不属于仅改变驻留位置的变换。固定采样数切片使一次 gateway 迟到不会合并更多音频为一个不同的模型输入；相关观测和协议见[实验入口](experiments.md#finite-cohort-runner)。
 
 当前 managed adapter 在 idle 时保留未逐出物理块，包括未满块尾部；只搬运已确认有主机副本的完整块。恢复完成后先核验原逻辑位置的 block hash 和计算进度，再将完整块表及持有引用移交后端，不通过清零计算进度和 prefix-cache 重入来重算尾部。恢复中的块不能进入执行表，取消仍等待复制引用结算。这是保持参考历史的实现选择，不构成新机制。
+
+容量不足导致恢复等待时，仍须推进其他空闲会话的安全逐出；manager 先扫描可逐出会话，再推进有序恢复，避免等待阻塞自身所需的空间回收。

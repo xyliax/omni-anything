@@ -276,7 +276,8 @@
         "session_admit",
         "session_ready",
         "session_drained",
-        "session_release"
+        "session_release",
+        "initial_context_status"
       ],
       "observe": [
         "worker.log",
@@ -409,7 +410,8 @@
         "EngineCore.session_admit",
         "EngineCore.session_ready",
         "EngineCore.session_drained",
-        "EngineCore.session_release"
+        "EngineCore.session_release",
+        "EngineCore.initial_context_status"
       ],
       "why_static_tools_miss": [
         "monkeypatch",

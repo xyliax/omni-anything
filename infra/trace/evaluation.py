@@ -134,8 +134,7 @@ def aggregate(plan_path, output_root):
         sources.append(dict(entry, manifest_sha256=sha256_file(Path(entry['run_path'])/'manifest.json')))
         client = json.loads((Path(entry['run_path'])/'client.json').read_text())
         admissions[point['point_id']] = {row['id'] for row in client['sessions'] if row.get('admitted')}
-        if point['experiment']=='dynamic':
-            timelines[point['point_id']] = timeline(Path(entry['run_path']))
+        timelines[point['point_id']] = timeline(Path(entry['run_path']))
     for point in plan['points']:
         if point['system'] in ('natural_pre_tick','after_submit'):
             prefix = '/'.join(point['point_id'].split('/')[:-1])
@@ -153,7 +152,8 @@ def aggregate(plan_path, output_root):
                     'completion_p95_ms','source_ready_p95_ms','history_wait_p95_ms','peak_allocated_gpu_blocks'):
             values = [row[key] for row in trials if row[key] is not None]
             summary[key] = dict(mean=sum(values)/len(values) if values else None,
-                                minimum=min(values) if values else None, maximum=max(values) if values else None)
+                                minimum=min(values) if values else None, maximum=max(values) if values else None,
+                                observed_repeats=len(values))
         grouped.append(summary)
     paired = []
     for point in plan['points']:
@@ -177,6 +177,8 @@ def aggregate(plan_path, output_root):
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader(); writer.writerows(rows)
     store.write_json('plan.json', plan)
+    store.write_json('frozen_inputs.json', {name:json.loads(Path(name).read_text()) for name in plan.get('files',{})})
+    store.file('execution.jsonl').write_bytes(journal.read_bytes())
     store.write_json('dynamic_timelines.json', timelines)
     store.file('README.md').write_text(
         'Paired evaluation exports\n\n'
@@ -185,11 +187,15 @@ def aggregate(plan_path, output_root):
         'Completion is observed at the inference engine for the declared fixed text budget. Source latency includes initial phase alignment; it is not audio playback or client delivery latency. '
         'Preprocessing-to-enqueue time includes KV readiness and control handoff, not pure DMA.\n\n'
         'Read points.csv and summary.json together with the figures: rejection, late and unfinished work remain visible. '
+        'Latency statistics condition on observed completions; missing latency bars mean no completed sample, not zero latency. '
+        'The phase ablation shows the on-time fraction of admitted inputs, including every unfinished input in the denominator. '
+        'Restoration timing is plotted separately at fixed assigned phases so large natural-phase stalls do not hide the timing comparison. '
         'Host backing includes reclaimable cached content. All dynamic seeds have individual trajectory PDFs.\n\n'
         'Exact configurations and evidence scope are in plan.json and manifest.json. A controlled KV pool and the actually observed context lengths do not establish full-device or longer-context capacity. '
         'Output hashes are auxiliary diagnostics; KV correctness is checked separately.\n', encoding='utf-8')
     plot(rows, store.path)
     plot_additional(rows, timelines, store.path)
+    plot_single_cohort(rows, store.path)
     status = store.finalize(required=['summary.json','points.csv','plan.json','capacity.pdf'], exit_code=0,
                           extra_issues=[] if all(row['valid'] for row in rows) else ['one or more invalid measurements'])
     return store.path, status
@@ -201,31 +207,38 @@ def plot_additional(rows, timelines, output):
     for experiment, systems, keys, labels, filename in (
         ('dynamic', ('resident','pilarius'), ('on_time_offered_fraction','admitted_sessions','source_ready_p95_ms'),
          ('On-time fraction of offered inputs','Admitted sessions','Completion p95 from source (ms)'), 'dynamic'),
-        ('capacity', ('on_demand','after_submit','pilarius','natural_pre_tick'), ('history_wait_p95_ms','completion_p95_ms','source_ready_p95_ms'),
-         ('Preprocessing to enqueue p95 (ms)','Completion p95 from tick (ms)','Completion p95 from source (ms)'), 'ablation')):
+        ('capacity', ('on_demand','after_submit','pilarius'), ('history_wait_p95_ms','completion_p95_ms','source_ready_p95_ms'),
+         ('Preprocessing to enqueue p95 (ms)','Completion p95 from tick (ms)','Completion p95 from source (ms)'), 'ablation-timing'),
+        ('capacity', ('natural_pre_tick','pilarius'), ('on_time_admitted_fraction','peak_allocated_gpu_gib','source_ready_p95_ms'),
+         ('On-time fraction of admitted inputs','Peak allocated GPU KV (GiB)','Completion p95 from source (ms)'), 'ablation-phase')):
         trials = [r for r in rows if r['experiment']==experiment]
-        if filename=='ablation':
+        if filename.startswith('ablation'):
             points={(r['model'],r['axis']) for r in trials if r['system']=='after_submit'}
             trials=[r for r in trials if (r['model'],r['axis']) in points]
         models=sorted({r['model'] for r in trials})
         if not models:
             continue
-        if filename=='ablation':
+        if filename.startswith('ablation'):
             pairs=sorted({(r['model'],r['axis']) for r in trials})
-            fig,axes=plt.subplots(len(pairs),3,figsize=(11,3.3*len(pairs)),squeeze=False)
+            fig,axes=plt.subplots(len(pairs),len(keys),figsize=(11,3.3*len(pairs)),squeeze=False)
             for index,(model,concurrency) in enumerate(pairs):
                 for axis,key,label in zip(axes[index],keys,labels):
-                    means,lower,upper=[],[],[]
+                    means,lower,upper,coverage=[],[],[],[]
                     for system in systems:
-                        values=[r[key] for r in trials if r['model']==model and r['axis']==concurrency
-                                and r['system']==system and r[key] is not None]
+                        selected=[r for r in trials if r['model']==model and r['axis']==concurrency and r['system']==system]
+                        values=[r[key] for r in selected if r[key] is not None]
+                        coverage.append((len(values),len(selected)))
                         mean=sum(values)/len(values) if values else float('nan')
                         means.append(mean);lower.append(mean-min(values) if values else 0);upper.append(max(values)-mean if values else 0)
                     axis.bar(range(len(systems)),means,yerr=[lower,upper],capsize=3,color=[colors[s] for s in systems])
+                    for position,(observed,total) in enumerate(coverage):
+                        if observed < total:
+                            label_text='No completions' if not observed else f'{observed}/{total} trials have completions'
+                            axis.text(position,.97,label_text,transform=axis.get_xaxis_transform(),ha='center',va='top',rotation=90,fontsize=7)
                     axis.set_xticks(range(len(systems)),[SYSTEM_LABELS[s] for s in systems],rotation=22,ha='right',fontsize=8)
                     axis.set(ylabel=label,title=f'{MODEL_LABELS.get(model,model)}, N={concurrency}')
                     axis.grid(axis='y',alpha=.2)
-            fig.tight_layout();fig.savefig(output/'ablation.pdf',bbox_inches='tight');fig.savefig(output/'ablation.png',dpi=180,bbox_inches='tight');plt.close(fig)
+            fig.tight_layout();fig.savefig(output/f'{filename}.pdf',bbox_inches='tight');fig.savefig(output/f'{filename}.png',dpi=180,bbox_inches='tight');plt.close(fig)
             continue
         fig, axes=plt.subplots(len(models),3,figsize=(11,3*len(models)),squeeze=False)
         for index, model in enumerate(models):
@@ -249,7 +262,9 @@ def plot_additional(rows, timelines, output):
         pairs=sorted({'/'.join(key.split('/')[:-1]) for key in timelines})
         for prefix in pairs:
             fig,axes=plt.subplots(3,1,figsize=(8,6),sharex=True)
-            for system in ('resident','pilarius'):
+            for system in ('resident','on_demand','pilarius'):
+                if prefix+'/'+system not in timelines:
+                    continue
                 data=timelines[prefix+'/'+system]
                 for axis,key,label in zip(axes,('active','pending_inputs','allocated_blocks'),('Active admitted sessions','Pending source inputs','Allocated GPU KV (GiB)')):
                     points=data[key]
@@ -257,7 +272,33 @@ def plot_additional(rows, timelines, output):
                     axis.step([p[0] for p in points],[p[1]*scale for p in points],where='post',label=SYSTEM_LABELS[system],color=colors[system],linewidth=.8)
                     axis.set(ylabel=label,xlim=(0,None));axis.grid(alpha=.2)
             axes[0].set_title(prefix);axes[0].legend(frameon=False);axes[-1].set_xlabel('Time from original source clock (s)')
-            fig.tight_layout();fig.savefig(output/('trajectory-'+prefix.replace('/','-')+'.pdf'),bbox_inches='tight');plt.close(fig)
+            fig.tight_layout()
+            stem='trajectory-'+prefix.replace('/','-')
+            fig.savefig(output/(stem+'.pdf'),bbox_inches='tight');fig.savefig(output/(stem+'.png'),dpi=160,bbox_inches='tight');plt.close(fig)
+
+
+def plot_single_cohort(rows, output):
+    """Measured single-run bars; no fictitious repeat error bars."""
+    import matplotlib.pyplot as plt
+    systems = ('resident', 'on_demand', 'pilarius')
+    colors = ('#444444', '#d47716', '#1765ab')
+    for model, offered in sorted({(r['model'], r['axis']) for r in rows if r['experiment']=='capacity'}):
+        selected = [r for r in rows if r['model']==model and r['axis']==offered and r['experiment']=='capacity']
+        if any(sum(r['system']==s for r in selected)!=1 for s in systems):
+            continue
+        selected = [next(r for r in selected if r['system']==s) for s in systems]
+        fig, axes = plt.subplots(1,4,figsize=(12,3))
+        for ax,key,label in zip(axes, ('admitted_sessions','on_time_offered_fraction','history_wait_p95_ms','completion_p95_ms'),
+                               ('Admitted sessions','On-time / offered inputs (%)','Preprocess to enqueue p95 (ms)','Completion from tick p95 (ms)')):
+            values=[r[key]*(100 if key=='on_time_offered_fraction' else 1) if r[key] is not None else float('nan') for r in selected]
+            bars=ax.bar(range(3),values,color=colors)
+            ax.bar_label(bars,fmt='%.1f',padding=3,fontsize=8)
+            ax.set_xticks(range(3),[SYSTEM_LABELS[s] for s in systems],rotation=22,ha='right',fontsize=8)
+            ax.set_ylabel(label);ax.grid(axis='y',alpha=.2);ax.set_ylim(0,max(values)*1.2 if max(values)>0 else 1)
+        fig.suptitle(f'{MODEL_LABELS.get(model,model)} | {selected[0]["kv_pool_gib"]:g} GiB KV pool | {offered} offered sessions | one run per system',fontsize=10)
+        fig.tight_layout()
+        stem=f'cohort-{model}-{offered}'
+        fig.savefig(output/(stem+'.pdf'),bbox_inches='tight');fig.savefig(output/(stem+'.png'),dpi=180,bbox_inches='tight');plt.close(fig)
 
 
 def plot(rows, output):

@@ -145,6 +145,13 @@ class SessionManager:
                     if now < plan.next_tick - plan.restore_lead_s:
                         if self.adapter.evict(session):
                             session.evicted_generation = session.idle_generation
+            # Reclaim every eligible idle session before choosing a restore.
+            # A capacity-blocked oldest restore must not prevent later idle
+            # sessions from releasing the capacity that it needs.
+            for session in sorted(self.sessions.values(), key=lambda s: s.restoration_tick - s.plan.restore_lead_s):
+                if session.activity != "idle" or session.restore_inflight or session.pending_work is not None:
+                    continue
+                plan = session.plan
                 if self.restore_policy == 'pre_tick' and session.host_pins and now >= session.restoration_tick - plan.restore_lead_s:
                     if self.restoration_paused:
                         continue

@@ -40,6 +40,7 @@ class VllmKVMemoryManager:
         self.min_free = float(os.environ.get("OMNI_PREFETCH_MIN_FREE", "0.1"))
         self.planner = None
         self.closed_sessions = set()
+        self.initial_context_sessions = set()
         profile = os.environ.get("OMNI_ADMISSION_PROFILE")
         self.admission_profile = read_cost_profile(profile) if profile else None
         self.next_review = 0.0
@@ -494,6 +495,10 @@ def apply():
                            max_evict_blocks, group,
                            _adapter.planner.generation if _adapter.planner is not None else 0)
         self.session_manager.set_plan(request_id, plan)
+        if request_id in _adapter.initial_context_sessions and _adapter.planner is not None:
+            with _lock:
+                self.session_manager.sessions[request_id].missing_tick = plan.next_tick
+                _adapter.initial_context_sessions.remove(request_id)
         return {"planned": True}
     EngineCore.session_plan = session_plan
 
@@ -541,6 +546,15 @@ def apply():
             _adapter.hold = False
             return result
     EngineCore.initial_context_finalize = finalize
+
+    def initial_context_status(self, request_id):
+        with _lock:
+            _adapter.check_health()
+            session = self.session_manager.sessions.get(request_id)
+            _adapter.initial_context_sessions.add(request_id)
+            return {'evicted_blocks': len(session.host_pins) if session else 0,
+                    'free_gpu_blocks': _adapter.gpu.get_num_free_blocks()}
+    EngineCore.initial_context_status = initial_context_status
 
     def refuse_legacy_eviction(self, *args, **kwargs):
         return {"kv_evicted": False, "reason": "eviction is owned by Session Manager plans"}

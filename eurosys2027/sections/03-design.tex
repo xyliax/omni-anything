@@ -110,7 +110,54 @@ The planner therefore accounts for each entire destination from allocation until
 Total allocation must remain within $G_{\mathrm{KV}}$ throughout the recurring schedule.
 An earlier restoration gives the transfer more time but shortens the interval during which its state frees GPU space.
 The plan must consequently match releases by preceding groups to allocations for upcoming groups, accounting for state and host-copy storage at the configured context limits.
-\placeholder{Joint planning algorithm at maximum context: group count, session assignment, eviction budgets, restoration order and timing, cost estimates, and the time-and-space feasibility check.}
+Algorithm~\ref{alg:admission} constructs a feasible recurring plan when a new session arrives.
+It keeps the active slot grid and existing phases, and tries slots in increasing order of population, initial alignment delay, and slot index.
+For each placement, it considers an ordered, finite set of eviction-budget and restoration-lead profiles calibrated for the workload and backend.
+The evaluated conservative policy fixes one profile; a larger candidate set changes the search, not the feasibility conditions.
+Within a candidate, restorations follow their planned trigger times, with a stable session order for ties.
+The search returns the first feasible plan and makes no optimal-capacity claim.
+
+\begin{algorithm}[t]
+\caption{Admission with a recurring residency plan}
+\label{alg:admission}
+\begin{algorithmic}[1]
+\Require New session $x$, active plan $P$, resources $R$, ordered profiles $\mathcal{C}$
+\State $D \gets$ KV demands at each session's maximum context
+\For{$s$ in slots ordered by population, alignment delay, and index}
+  \For{$c$ in $\mathcal{C}$}
+    \State $Q \gets$ extend $P$ with $x$ in $s$ using profile $c$
+    \State Preserve existing phases; order restorations in $Q$
+    \If{host storage for $D$ exceeds capacity}
+      \State \textbf{continue}
+    \EndIf
+    \If{group execution or shared transfer windows do not fit}
+      \State \textbf{continue}
+    \EndIf
+    \State $E \gets$ allocation and safe-release events for $(Q,D)$
+    \State Include cyclic boundaries and the transition from $P$
+    \State $m \gets$ initial physical occupancy, including reservations
+    \State $\mathrm{fits} \gets (m \le R.\mathrm{gpuCapacity})$
+    \For{$a$ in $E$ ordered by time, allocations before releases at ties}
+      \State $m \gets m + \operatorname{allocationDelta}(a)$
+      \If{$m > R.\mathrm{gpuCapacity}$}
+        \State $\mathrm{fits} \gets \mathrm{false}$; \textbf{break}
+      \EndIf
+    \EndFor
+    \If{$\mathrm{fits}$}
+      \State \Return $Q$ for revalidation at the activation boundary
+    \EndIf
+  \EndFor
+\EndFor
+\State \Return \textsc{Reject}; retain $P$
+\end{algorithmic}
+\end{algorithm}
+
+The time check uses execution costs for the candidate group sizes, including backup and transfer interference, and checks both shared service and individual deadlines.
+The allocation scan charges each complete restoration destination when it is allocated, including time spent queued or ready before its tick.
+It credits an eviction only after execution and backing allow safe release; a newly admitted session receives no credit for a host copy that does not yet exist.
+The scan covers wraparound between periods and current allocations and references during activation.
+These are feasibility predictions under the calibrated cost estimates; runtime readiness and reference checks remain mandatory.
+Section~\ref{sec:design-revisions} describes activation and rejection when revalidation fails.
 
 \subsection{Safe Eviction and Scheduled Restoration}
 \label{sec:design-idle}

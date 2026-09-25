@@ -293,11 +293,17 @@ class StreamingOutputBudgetTests(unittest.TestCase):
             defaults = []
 
             class Engine:
+                def get_tokenizer(self):
+                    return SimpleNamespace(encode=lambda text: list(text.encode('utf-8')),
+                                           decode=lambda ids, **kwargs: 'x' * len(ids))
+
                 async def generate(self, stream, sampling_params, request_id):
                     defaults.append(sampling_params)
+                    tokens = []
                     async for item in stream:
                         submitted.append(item)
-                        yield SimpleNamespace(outputs=[SimpleNamespace(token_ids=[], text="")])
+                        tokens += list(range(item.sampling_params.max_tokens))
+                        yield SimpleNamespace(outputs=[SimpleNamespace(token_ids=list(tokens), text='x' * len(tokens))])
 
             engine = worker.StreamingEngine.__new__(worker.StreamingEngine)
             engine.SamplingParams = SimpleNamespace
@@ -306,7 +312,8 @@ class StreamingOutputBudgetTests(unittest.TestCase):
             engine.initial_context_tokens = initial_context_tokens
             if hasattr(worker, "audio_adapter"):
                 engine.input_adapter = worker.audio_adapter(family)
-            state = SimpleNamespace(queue=asyncio.Queue(), frame=0, error=None, done=False, closing=False)
+            state = SimpleNamespace(queue=asyncio.Queue(), frame=0, error=None, done=False,
+                                    closing=False, consumed=0, consumed_text=0)
             # Unequal input lengths must not change the output budget.
             audio = [([0.0] * 4, 16000), ([0.0] * 12, 16000)]
             for item in (*audio, None):
@@ -317,9 +324,17 @@ class StreamingOutputBudgetTests(unittest.TestCase):
             self.assertEqual([p.max_tokens for p in defaults], [cap])
             expected = ([1] if initial_context_tokens else []) + [cap, cap]
             self.assertEqual([item.sampling_params.max_tokens for item in submitted], expected)
+            if initial_context_tokens and hasattr(worker, 'audio_adapter'):
+                self.assertEqual(len(submitted[0].prompt['prompt_token_ids']), initial_context_tokens)
             self.assertTrue(all(item.sampling_params.ignore_eos for item in submitted))
             self.assertEqual([item.prompt["multi_modal_data"]["audio"]
                               for item in submitted[-2:]], audio)
+            if hasattr(worker, 'audio_adapter'):
+                engine.sessions = {1: state}
+                delivered = engine.collect_output([1], 2 * cap)[1]
+                self.assertEqual(len(delivered[0]), 2 * cap)
+                self.assertEqual(len(delivered[1]), 2 * cap)
+                self.assertEqual(state.consumed, len(state.tokens))
 
         # Load the actual workers without importing CUDA or opening a gRPC server.
         dependencies = {

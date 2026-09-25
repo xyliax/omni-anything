@@ -350,6 +350,20 @@ class SessionManagerTests(unittest.TestCase):
         self.assertEqual(self.adapter.restore.call_count, 2)
         self.assertEqual(state.plan.candidates(8), [3, 4])
 
+    def test_blocked_oldest_restore_does_not_block_later_idle_eviction(self):
+        self.manager.on_idle('s1e1')
+        oldest = self.manager.sessions['s1e1']
+        oldest.host_pins = [(2, 'host block')]
+        oldest.evicted_generation = oldest.idle_generation
+        self.manager.set_plan('s2e1', SessionPlan(2, 14, .2, 2))
+        self.manager.on_idle('s2e1')
+        self.now = 11.9
+        calls = []
+        self.adapter.evict.side_effect = lambda session: calls.append(('evict', session.request_id)) or True
+        self.adapter.restore.side_effect = lambda session: calls.append(('restore', session.request_id)) or False
+        self.manager.advance()
+        self.assertEqual(calls, [('evict', 's2e1'), ('restore', 's1e1')])
+
     def test_overtaking_input_and_cancel_do_not_issue_another_copy(self):
         state = self.manager.sessions["s1e1"]
         self.manager.on_idle("s1e1")

@@ -55,7 +55,8 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
         "--initial-context-tokens",
         str(config.initial_context_tokens),
         "--preload-sessions",
-        str(config.sessions if config.initial_context_tokens else 0),
+        str((min(config.sessions, config.resident_limit) if config.resident_control else config.sessions)
+            if config.initial_context_tokens and config.preload_at_start else 0),
         "--host-offload-gib",
         str(config.host_offload_gib),
     ]
@@ -121,6 +122,8 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         env['OMNI_ADMISSION_PROFILE'] = str(Path(config.admission_profile).resolve())
     if config.cohort_manifest:
         env['OMNI_SERVICE_EVENTS'] = str(run_dir / 'service_events.jsonl')
+        if config.initial_context_tokens:
+            env['OMNI_SERVICE_PRELOAD'] = '1'
         if config.open_loop:
             env['OMNI_INPUT_GATES'] = '1'
     if config.resident_control:

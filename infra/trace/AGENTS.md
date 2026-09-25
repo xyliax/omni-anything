@@ -35,4 +35,4 @@ python -m infra.trace.profile <run-dir> --variant named-streams
 
 开放回放使用 `replay.py`，分别报告 offered/admitted 工作、拒绝与未完成；clock/identity/budget 违规才是测量 invalid。`gpu_allocation` 是 GPU BlockPool 取得/释放引用后的逐操作物理计数，包含完整在途目的分配；无引用可回收缓存不计 allocated。它不是旧 `residency.log` 的 request-list 快照。`preprocessing_to_engine_enqueue_ms` 包含 readiness 与控制交接，不称作纯 DMA。
 
-`calibration.py` 提取独立校准成本；`evaluation.py` 校验矩阵所有 run hash 后聚合和导图。`collectors/kv_integrity.py` 是显式启用的侵入式物理 KV 检查，由 copy service 在发布前调用，不参与性能测量。`host_backing` 计数确认有效的主机缓存块，含可回收的旧会话缓存，不等于活跃引用计数。
+`calibration.py` 提取独立校准成本；`evaluation.py` 校验矩阵所有 run hash 后聚合和导图，并保留输入 JSON 与执行检查点。延迟只统计观察到完成的样本，消融图必须同时显示包含未完成输入的按期比例；无完成样本不能画成零延迟。`collectors/kv_integrity.py` 是显式启用的侵入式物理 KV 检查，由 copy service 在发布前调用，不参与性能测量。`host_backing` 计数确认有效的主机缓存块，含可回收的旧会话缓存，不等于活跃引用计数。

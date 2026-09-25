@@ -97,6 +97,7 @@ class ConveyorConfig:
     sessions: int = workload.SESSIONS
     duration_s: int = workload.DURATION_S
     initial_context_tokens: int = 0
+    preload_at_start: bool = True
     gpu: int = platform.DEFAULT_GPU_INDEX
 
     def __post_init__(self) -> None:
@@ -150,6 +151,8 @@ class ConveyorConfig:
 
     def validate(self) -> None:
         import math
+        if not isinstance(self.preload_at_start, bool):
+            raise ValueError('preload_at_start must be boolean')
         if self.verify_copies and not self.session_manager:
             raise ValueError('physical copy verification requires Session Manager')
         if self.phase_policy not in ('assigned', 'natural') or self.restore_policy not in ('pre_tick', 'on_demand', 'after_submit'):
@@ -179,8 +182,8 @@ class ConveyorConfig:
         if self.resident_control:
             if (not self.cohort_manifest or self.admission_profile or self.session_manager
                     or self.kv_eviction_enabled or self.retained_prefix_blocks is not None
-                    or self.evict_tail_blocks or self.resident_limit < 1 or self.initial_context_tokens):
-                raise ValueError('resident control requires cohort, positive limit, and no offload mechanisms or preload')
+                    or self.evict_tail_blocks or self.resident_limit < 1):
+                raise ValueError('resident control requires cohort, positive limit, and no offload mechanisms')
         elif bool(self.admission_profile) != bool(self.cohort_manifest):
             raise ValueError('admission_profile and cohort_manifest must be supplied together')
         if self.capacity_slo:
@@ -189,8 +192,8 @@ class ConveyorConfig:
             if not self.cohort_manifest or self.gpu_trace:
                 raise ValueError('capacity SLO requires cohort and GPU profiler off')
         if self.admission_profile:
-            if not self.session_manager or self.initial_context_tokens:
-                raise ValueError('cohort admission requires Session Manager and no preload barrier')
+            if not self.session_manager:
+                raise ValueError('cohort admission requires Session Manager')
             for path in (self.admission_profile, self.cohort_manifest):
                 json.loads(Path(path).read_text())
             if self.restore_lead_s > workload.PERIOD_MS / 1000 / self.slots:
@@ -231,7 +234,7 @@ class ConveyorConfig:
             raise ValueError("prefetch requires KV eviction")
         if not 0 <= self.prefetch_min_free < 1:
             raise ValueError("prefetch_min_free must be a fraction in [0, 1)")
-        if self.initial_context_tokens and not self.kv_eviction_enabled:
+        if self.initial_context_tokens and not (self.kv_eviction_enabled or self.resident_control):
             # the stop check reads session.max_tokens frozen at construction;
             # only the EngineCore patch refreshes it per chunk. A
             # preloaded run without the patch freezes every segment at the initial context's
@@ -280,6 +283,7 @@ class ConveyorConfig:
                 "max_num_seqs": self.max_num_seqs,
                 "gpu_memory_utilization": self.gpu_memory_utilization,
                 "initial_context_tokens": self.initial_context_tokens,
+                "preload_at_start": self.preload_at_start,
                 "ingest_workers": self.ingest_workers,
                 "startup_timeout_s": self.startup_timeout_s,
                 "slots": self.slots,

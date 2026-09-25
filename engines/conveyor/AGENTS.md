@@ -18,7 +18,7 @@ Pilarius 的引擎实现（目录标识 `conveyor`），由 `experiments/conveyo
 
 gateway 将 planned next tick/period 放进 gRPC metadata；worker 经 `session_plan` utility 安装计划后交付输入。设备观测实现只在 `infra/trace/collectors/gpu_activity.py`，此处只标注 compute/copy 身份。修改 manager 需运行 `tests/test_session_manager.py`；物理多层 KV 往返使用 `tests/test_session_manager_gpu.py` 的显式 GPU 命令。
 
-partial eviction 当前强制 synchronous scheduling。initial-context preloading 期间 `OMNI_HOLD_KV_EVICTION` 暂停 automatic eviction；`initial_context_finalize` 只解除暂停，不在 barrier 处立即逐出。patch 加载失败 exit 78。
+partial eviction 当前强制 synchronous scheduling。固定 cohort 的 initial-context preloading 依次真实 prefill 并等待 confirmed-host eviction；`initial_context_finalize` 解除暂停，远期临时计划防止初始化时恢复。`initial_context_status` 返回逐出块数与实际空闲块数；第一次正式计划交接缺失历史的恢复时刻，后续迟到输入不得移动它。全驻留只初始化其准入上限会话。patch 加载失败 exit 78。
 
 ## Admission Lifecycle
 
@@ -37,3 +37,7 @@ cohort 模式的 `service_events.go` 按采样数切片，记录原定 release/d
 `OMNI_VERIFY_COPIES=1` 在 copy service 的 device-complete 与 publish 之间调用共享物理检查器；逐字节不一致使复制服务失败并保留引用。该选项会同步 GPU，只供正确性诊断。已逐出历史的恢复时刻由 `missing_tick` 保存，后续迟到输入安装下一计划不能移动它。
 
 managed 路径保存完整逻辑块表和未满块尾部；`prepare_input` 核验 hash 与计算进度后，将 pins 直接移交 `kv_cache_manager.coordinator.single_type_managers[0]` 的请求块表。禁止对该请求重置 `num_computed_tokens` 再从 prefix cache 重入；旧非 managed 诊断路径仍保留原行为。
+
+manager 每轮先扫描全部可安全逐出的 idle 会话，再按恢复时刻顺序尝试完整目标分配；最早恢复因容量不足等待时，只阻止后续恢复，不得阻止可释放所需容量的 idle eviction。回归见 `tests/test_session_manager.py`。
+
+`preload_at_start=false` 用于动态回放：未来会话不在 worker ready 前初始化，状态构造耗时进入首个输入的原 deadline；初始化 token 始终从交付游标排除。

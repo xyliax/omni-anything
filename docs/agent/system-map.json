@@ -251,7 +251,7 @@
         "VllmKVMemoryManager",
         "apply"
       ],
-      "logical_role": "KV memory manager and backend resource adapter"
+      "logical_role": "KV memory manager and backend resource adapter; sequential initial-context status and one-time handoff to periodic plans"
     },
     {
       "id": "kv-copy-service",

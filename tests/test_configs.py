@@ -28,9 +28,18 @@ class ConveyorConfigTests(unittest.TestCase):
             self.assertEqual(worker_environment(config, root)['OMNI_ADMISSION_PROFILE'], str(costs))
             self.assertIn(str(config.root), worker_environment(config, root)['PYTHONPATH'].split(':'))
             self.assertEqual(len(config.manifest_config()['admission']['cohort']), 33)
-            with self.assertRaises(ValueError):
-                ConveyorConfig(session_manager=True, retained_prefix_blocks=1,
+            preloaded = ConveyorConfig(session_manager=True, retained_prefix_blocks=1,
                                admission_profile=str(costs), cohort_manifest=str(cohort), initial_context_tokens=32)
+            self.assertEqual(worker_environment(preloaded, root)['OMNI_SERVICE_PRELOAD'], '1')
+            from dataclasses import replace
+            from experiments.conveyor.runner import worker_command
+            from unittest.mock import patch
+            arriving = replace(preloaded, preload_at_start=False)
+            with patch('experiments.conveyor.runner.resolve_model_snapshot', return_value=Path('/model')):
+                command = worker_command(arriving, root / 'ready')
+            self.assertEqual(command[command.index('--preload-sessions') + 1], '0')
+            self.assertEqual(worker_environment(arriving, root)['OMNI_SERVICE_PRELOAD'], '1')
+            self.assertFalse(arriving.manifest_config()['engine']['preload_at_start'])
     def test_manager_and_gpu_trace_configuration(self) -> None:
         with self.assertRaises(ValueError):
             ConveyorConfig(session_manager=True)
