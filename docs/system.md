@@ -37,12 +37,13 @@ Inference backend 以可替换的职责边界呈现；具体运行时与当前�
 | Residency plan | Planner → Session manager | 会话与 group/phase 的关系、逐会话逐出预算、恢复时机及其适用范围；规划考虑的有限前瞻范围应可识别。运行期消费计划，不默认逐周期重新求解 |
 | Evict / Restore | Session manager → KV memory manager | 针对具体会话和逻辑 KV 范围请求逐出或恢复，受当前计划、预算和时机约束；这是两个操作，箭头不表示接收请求就立即执行成功 |
 | Transfer requests | KV memory manager → KV transfer engine | 已确定的 D2H/H2D 方向、源与目标、逻辑范围和依赖；提交前保证源有效、目标已分配并保护复制引用 |
-| Transfer completion | KV transfer engine → KV memory manager | 指定传输已成功完成；仅提交、排队或启动均不构成完成。失败应作为失败结果报告，不得伪装成功 |
-| KV readiness | KV memory manager → Session manager | 对应会话本次执行所需 KV 范围已在 GPU 上有效；内存管理器应先核验身份、范围与完成状态并发布有效内容，再通知就绪。局部复制完成不自动形成整体 readiness |
-| Requests | Session manager → Inference backend | 满足周期提交条件且所需 KV 就绪的执行工作；携带会话历史和本次输入的关联，不强制后端按 session group 组 batch |
-| Execution events | Inference backend → Session manager | 指明对应工作的执行进度、完成或失败；计算完成可触发后续回收检查，但不能代替 block 引用与主机覆盖检查 |
-| KV operations | KV memory manager ↔ Inference backend | 协调状态身份、映射、分配、释放、有效范围及引用；返回实际状态或失败。物理池和运行时引用保持一致权威来源，不维护互相矛盾的影子分配状态 |
-| 运行反馈（省略文字的返回箭头） | Session manager → Planner | 会话变化、实际资源需求及计划风险，供按需修正；不意味着每个 tick 都产生新计划 |
+| Transfer completion（图中省略） | KV transfer engine → KV memory manager | 指定传输已成功完成；仅提交、排队或启动均不构成完成。失败应作为失败结果报告，不得伪装成功 |
+| KV readiness（图中省略） | KV memory manager → Session manager | 对应会话本次执行所需 KV 范围已在 GPU 上有效；内存管理器应先核验身份、范围与完成状态并发布有效内容，再通知就绪。局部复制完成不自动形成整体 readiness |
+| Requests（图中省略） | Session manager → Inference backend | 满足周期提交条件且所需 KV 就绪的执行工作；携带会话历史和本次输入的关联，不强制后端按 session group 组 batch |
+| Request state | Inference backend → Session manager | 返回指定会话本次请求的执行进度、完成或失败状态，供更新周期进度并判断后续驻留操作；计算完成不代表所有 KV 引用已解除。后端自己组织 batch 并推进执行 step，不要求 session manager 逐 step 发起执行；状态通知粒度由对接协议确定 |
+| Allocate / Free | KV memory manager → Inference backend | 请求分配恢复所需的 GPU 目标或安全释放已有 GPU 块；通过后端分配与引用权威状态执行，不能绕过在途使用条件 |
+| Block state | Inference backend → KV memory manager | 返回块映射、实际分配与可用空间、有效范围及执行/共享/复制引用状态，并报告相应操作结果。计算结束不直接替代这些状态检查；不维护互相矛盾的影子分配状态 |
+| 运行反馈（图中省略） | Session manager → Planner | 会话变化、实际资源需求及计划风险，供按需修正；不意味着每个 tick 都产生新计划 |
 
 事件与请求至少须能关联到正确会话、逻辑 KV 范围及本次操作，避免取消、重复请求、计划修正或空间复用后，旧完成事件更新新的状态。具体关联标识、去重方式与新旧计划切换协议尚未冻结；保持正确关联与状态安全是要求。
 
@@ -51,12 +52,17 @@ Inference backend 以可替换的职责边界呈现；具体运行时与当前�
 <a id="figure-semantics"></a>
 ### 设计图的编码含义
 
-- **细灰色实线箭头（Control）**：计划下发或操作请求，不表示同步调用、已经成功或实际 KV 数据传输。
-- **细灰色虚线箭头（Feedback）**：状态、完成或错误反馈，不用于区分同步与异步。右侧无箭头的时间对齐辅助线不属于此类通信。
-- **粗彩色实线箭头**：实际 KV 复制方向；蓝色 D2H 表示 incremental host backing，紫色 H2D 表示 scheduled KV restoration。两个方向均可异步执行。
-- **组背景色**：蓝色 Compute、紫色 Restoration、灰色 Wait。Wait 表示本轮计算已结束、所需 KV 尚未恢复且在等待计划与资源条件；不表示已就绪但尚未到 tick，也不保证此时链路一定繁忙。
-- **KV 小块**：实心表示驻留有效状态，带纹理表示正在恢复的范围，空心虚线表示缺失范围；其边框不是通信线型。
-- **转盘与 H2D 活动条**：扇区身份固定为 group，状态按周期变化；活动条的有色区间表示该组的 H2D 服务，间隙表示 Idle。示意比例不代表实测持续时间、吞吐或利用率；转盘省略提前就绪后等待 tick 的阶段，不是完整状态机。
+- **左侧位置列**：CPU 对应四个组件的主机端管理逻辑，CPU + GPU 对应推理后端的调度与设备计算，GPU memory 对应各 session 的设备驻留 KV，PCIe link 对应示例中的主机—设备复制路径，Host memory 对应共享备份池。这是图示部署的定位说明，不将硬件或互连类型冻结为论文范围；transfer engine 的 CPU 逻辑负责提交和跟踪复制，不表示数据搬运本身由 CPU 逐字节执行。
+- **细灰色实线箭头**：逻辑请求或状态反馈，按箭头方向和标签区分；不再用虚线编码反馈，也不表示同步调用。仅保留 backend → session manager 的单向 Request state，表达请求执行状态反馈；后端自行组织 batch 和推进执行 step，图中省略请求提交／可执行条件对接，不删除 KV readiness 与执行条件约束。backend → memory manager 的 Block state 保留独立反馈。
+- **省略的反馈**：Transfer completion、KV readiness 与 planner 的运行反馈从总览图中省略以减少连线；[接口契约](#component-interface-contracts)和[运行流程](#operational-flow)仍要求这些交互，代码不得据图省掉它们。
+- **彩色实线箭头**：实际 KV 复制方向。多个蓝色细箭头表示计算期间分批进行的 incremental host backing (D2H)，适用于所有正在产生新增 KV 的会话；当前快照的 A、B 均在计算，因此均绘制多个箭头。紫色粗箭头表示按计划执行的 scheduled KV restoration (H2D)。线宽区分后台增量镜像与集中恢复，不表示实测带宽或规定固定速率；两个方向均可异步执行。
+- **Group state（组框与转盘）**：蓝色 Compute、紫色 Restoring、灰色 Waiting。灰色表示该组本轮计算已结束、所需 KV 尚未恢复，等待计划时机或资源；不表示已就绪等待 tick，不表示 H2D 链路或整个 GPU 空闲。
+- **H2D link（右侧活动条）**：紫色 Transfer 表示正在为字母所指的组传输 KV，与转盘中同一组的紫色恢复状态相对应；白色 No H2D 表示没有 H2D 复制在运行。此时 D2H 或计算仍可能运行。白色链路空档与灰色组等待不是同一状态，分别设置图例；瞬时组状态与时间区间活动也不是同一量。
+- **Session 与 KV 小块**：每个 group 内保留两个独立的 session 内框，省略 s1/s2 名字以容纳更多块；实心块表示驻留有效状态，带纹理块表示恢复中的范围，空心块表示缺失。块数与组数均为示意，不是固定配置或容量比例。
+- **Planner 图标**：显存占用随时间变化的示意轮廓及容量上界，表示驻留规划同时考虑时机与空间；不是实测曲线，也不代表已选定求解算法。正式名称是 Residency planner。
+- **转盘与活动条**：扇区身份固定，恢复状态按 C → D → A → B 变化；间隙表示 No H2D。比例不代表实测持续时间、吞吐或利用率；转盘省略提前就绪等待 tick 的阶段，不是完整状态机。
+
+图中 Inference Engine 对应本文的 inference backend 职责。按作者确认的后端选择，展示 vLLM-Omni 标识；右侧以 `AsyncLLM.generate()`、`StreamingInput` 与内部请求标记 `resumable=True` 标注当前流式会话接入方式，不再使用 “We use …” 说明句或将该路径泛称为 Realtime WebSocket API。`resumable=True` 不是 `generate()` 的直接参数，也不是 `StreamingInput` 的构造参数。具体调用见[当前原型接口](experiments.md#prototype-streaming-interface)，官方命名见[外部系统索引](references/duplex-serving-systems-landscape-2026-09.md#realtime-ecosystem)。后端标识与底层核心接口属于不同层次，不能仅凭 `AsyncLLM` 或 `StreamingInput` 的调用将 vLLM-Omni 标识改为 vLLM。这些是实现接口注记，不是研究机制或冻结的论文范围，亦不代替 Pilarius KV 对接的实现核验。
 
 <a id="research-mechanisms"></a>
 | 设计组成 | 预期作用 | 待验证问题 |
@@ -163,7 +169,7 @@ def try_submit(work):
 
 该组件把驻留请求转为满足引用与覆盖条件的内存操作。它使用后端的分配与引用权威状态，不以另一份独立计数替代物理池。下面的保护操作表示逻辑安全要求，不规定锁、事件或具体接口实现。
 
-**增量备份。** 后端报告新增 KV 已可安全复制时，仅处理尚无有效主机副本且未被在途复制覆盖的范围。
+**增量备份。** 每个正在推理的 session 都可在累计新增、可安全复制的 blocks 后触发一次异步 D2H；不等待整轮完成。后端报告新增 KV 已可安全复制时，仅处理尚无有效主机副本且未被在途复制覆盖的范围，具体触发与合并粒度未冻结。
 
 ```python
 def on_new_kv_available(session, ranges):
@@ -321,7 +327,7 @@ phase 的权限由应用允许的时间安排给出。首次对齐等待、推�
 ## 部分逐出与主机后备
 
 <a id="incremental-host-backing"></a>
-新增 KV 可异步建立主机副本；已备份的有效历史无需每轮重新 D2H。副本在主机上占用容量，未完成的复制仍可能持有 GPU 引用。备份本身不释放显存。
+新增 KV 在推理过程中分批异步建立主机副本，不要求等待整轮计算结束；所有正在生成新增 KV 的 session 都可触发这条镜像路径。累计可安全复制的新增 blocks 后发起一次 D2H，触发粒度、阈值与复制合并方式尚未固定，不由图中箭头数量推定。已备份的有效历史无需每轮重新 D2H。副本在主机上占用容量，未完成的复制仍可能持有 GPU 引用。备份本身不释放显存。
 
 <a id="idle-session-eviction"></a>
 逐出范围与粒度仍待确定。逐出量按会话决定，上界由可用恢复窗口、有效传输服务和安全可回收状态共同限制；它还需足够大以产生容量收益。窗口预算是必要约束，不能独立证明可行性。

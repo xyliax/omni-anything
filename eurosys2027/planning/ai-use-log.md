@@ -150,3 +150,17 @@
 - 作者复核责任：确认工作量与模型行为的表述、外部量级算例及理论假设；补充目标并发和历史长度下的完整周期测量、联合规划算法及恢复分配方案。公开阶段数据和条件推导不作为本系统实测结果。
 | 2026-09-25 | OpenAI Codex | 精修 design 页的接口标签、透明文字、planner 图标与线型图例，改用紫色 H2D 并将 backend 简化为单个实线框；在系统设计 owner 中补齐接口语义、状态安全与实现验收入口，保留未决算法与分配边界；作者复核图示和实现契约 |
 | 2026-09-25 | OpenAI Codex | 落实 Introduction 精简，清理研究文档、论文草稿与外部笔记中的过时状态、重复评述和无依据断言，核对代码差异、原始来源、链接及术语；保留未决设计和证据限制，作者复核最终研究表述 |
+
+## 2026-09-25 — 跨硬件预测表框架与云实验实例调研
+
+- 工具：Codex；作者授权的租卡调研 sub-agent。
+- 工作：在 Background 加入跨硬件 KV 容量边界表框架，保留预测数值、证据类型和瓶颈判断为待填项，并说明完整周期成本需要校准与独立验证；同步论文规划。按官方资料核验 AWS EC2、Lambda Cloud 与 Google Compute Engine 的 A100 实例、SSH/自定义环境能力、租赁粒度、报价及账户门槛，记录于实验配置 owner；未创建云资源。
+- 作者复核责任：确定共同负载、模型精度、周期与统计口径，补充实测和预测范围；在实际租用时确认账号权限、配额、库存、计费条件及硬件路径。表框架不代表任何卡型已出现容量先受限。
+| 2026-09-25 | OpenAI Codex | 区分 design 页的组等待与 H2D 空档，移除 session 编号增加 KV 块，省略内部反馈并保留实线计算完成／块状态接口；替换驻留规划图标，查阅 vLLM Realtime 与 StreamDiffusion 一手资料并独立标注外部实例；作者复核图示及实例定位，省略连线不删除实现契约 |
+| 2026-09-25 | OpenAI Codex | 保留作者的转盘与 PCIe 标注，按增量异步镜像语义为计算组增加细 D2H 箭头并加粗 H2D；删除 StreamDiffusion，将 vLLM Realtime 与 Diffusers / SD 1.5 + LCM-LoRA 排入 backend 示例小框，记录实时来源及 session 适用性待确认；作者复核模型名称和图示 |
+| 2026-09-25 | OpenAI Codex | 根据作者澄清将 design 页误置的 Diffusers / SD 1.5 示例更正为 SGLang / Streaming sessions；核验 SGLang 会话源码与 SGLang-Omni Realtime 文档，同步外部来源及系统图说明；作者复核后端命名与适用性 |
+| 2026-09-25 | OpenAI Codex | 合并 Session manager 与 backend 的请求／计算完成双向连线；按作者指定名称嵌入 vLLM-Omni、SGLang-Omni 官方标识及 NVIDIA / TensorRT-LLM 示例，移除白色卡片并记录标识来源；作者复核图示与后端示例定位 |
+| 2026-09-25 | OpenAI Codex | 按作者要求将 Request state 改为 backend 到 session manager 的单向反馈，统一三个后端标识的视觉尺寸，并增加 CPU、CPU + GPU、GPU memory、PCIe link、Host memory 左侧定位列；同步图示契约，作者复核部署标注与接口省略 |
+| 2026-09-25 | OpenAI Codex | 按作者当前仅使用 vLLM 的说明，在 Inference Engine 右侧补入 vLLM Realtime 支持 long-lived sessions 的简短注记；统一 vLLM 官方标识与名称，核验流式会话及 KV 复用来源；作者复核当前后端选择及正文表述 |
+| 2026-09-25 | OpenAI Codex | 核对本地流式会话调用与 vLLM 官方接口，将后端说明句替换为 AsyncLLM.generate()、StreamingInput 和内部 resumable=True 标记；区分直接引擎接口与 Realtime WebSocket API，同步当前原型接口说明；作者复核图中技术标注 |
+| 2026-09-25 | OpenAI Codex | 根据作者纠正恢复 vLLM-Omni 官方标识，保留已核对的核心接口标注；修正将底层 vLLM 调用等同于整个后端名称的错误推断，作者复核后端身份 |

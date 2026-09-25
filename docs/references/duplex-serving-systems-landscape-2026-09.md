@@ -13,6 +13,24 @@
 
 VoxServe 与 LiveServe 的相关段落于 2026-09-25 复核。KV 管理的详细比较入口见[文献笔记](closest-work-gap-analysis-2026-09.md)。
 
+<a id="realtime-ecosystem"></a>
+## 实时接口与交互生成实例
+
+以下一手来源于 2026-09-25 复核，记录公开接口与系统类型，不推定它们采用相同的历史状态模型。
+
+| 外部系统 | 一手来源支持的属性 | 限定 |
+| --- | --- | --- |
+| vLLM streaming requests / Realtime API | 官方介绍流式输入以及基于它的 Realtime WebSocket API，提供 `/v1/realtime` 接口；流式输入通过持续存在的 anchor request 保留会话，后续输入扩展累计上下文并复用已有 KV；[官方说明](https://vllm.ai/blog/2026-01-31-streaming-realtime) | 流式接口本身不证明某项跨周期 KV 管理方案已被集成 |
+| SGLang streaming sessions | 核心引擎具有跨请求保留会话 KV 的 streaming-session 实现；[源码](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/session/streaming_session.py)、[会话控制器](https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/session/session_controller.py) | 这是引擎会话能力，不等同于单独命名的 Realtime 产品；具体模型的增量输入适配与 KV 操作接口须另行核对 |
+| SGLang-Omni Realtime API | 官方模型使用文档提供 `--enable-realtime` 与 `/v1/realtime` WebSocket 的交互方式；[官方文档](https://sgl-project.github.io/sglang-omni/basic_usage/qwen3_omni.html) | Realtime 端点与完整原生双工、跨阶段持久状态能力不能画等号；[Full-Duplex Session Infrastructure RFC](https://github.com/sgl-project/sglang-omni/issues/2052) 中仍有进行中的集成工作 |
+
+
+接口命名参考（2026-09-25 核验）：vLLM v0.23.0 的 [`AsyncLLM`](https://github.com/vllm-project/vllm/blob/v0.23.0/vllm/v1/engine/async_llm.py) 接受 `AsyncGenerator[StreamingInput, None]` 作为流式输入，并在内部按 resumable request 处理；[`StreamingInput`](https://github.com/vllm-project/vllm/blob/v0.23.0/vllm/engine/protocol.py) 是官方输入数据类型。流式引擎接口与基于它构建的 Realtime WebSocket API 是不同接入层次。
+
+执行位置参考（2026-09-25 核验）：[vLLM 架构说明](https://docs.vllm.ai/en/latest/design/arch_overview/)区分 engine core 的请求调度循环与 GPU workers 的模型执行、GPU 内存管理职责；GPU 部署的推理后端包含主机端控制与设备端计算，不能把整个后端等同于一块 GPU memory。
+
+标识来源（2026-09-25 核验）：[vLLM 官方 logo](https://raw.githubusercontent.com/vllm-project/vllm/main/docs/assets/logos/vllm-logo-text-light.png)、[vLLM-Omni 官方 logo](https://raw.githubusercontent.com/vllm-project/vllm-omni/main/docs/source/logos/vllm-omni-logo.png)、[SGLang-Omni 官方 logo](https://raw.githubusercontent.com/sgl-project/sglang-omni/main/docs/_static/image/sgl-omni-logo.svg)、[TensorRT-LLM 官方文档中的 NVIDIA 标识](https://nvidia.github.io/TensorRT-LLM/_static/nvidia-logo-horiz-rgb-blk-for-screen.svg)。vLLM-Omni 是面向多模态模型的推理与服务框架，见[官方仓库](https://github.com/vllm-project/vllm-omni)；TensorRT-LLM 提供推理运行时与优化组件，见[官方仓库](https://github.com/NVIDIA/TensorRT-LLM)。产品及标识本身不证明支持某项跨请求 KV 驻留策略。
+
 ## 工作负载来源
 
 | 来源 | 数据或协议性质 | 使用限制 |
