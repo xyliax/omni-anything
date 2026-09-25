@@ -1,8 +1,8 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-Periodic interaction exposes repeated opportunities to release a session's idle KV and restore it before the next tick.
-Using those opportunities requires coordinating transfer time with the GPU space occupied by restoration destinations.
-\systemname combines uniform phase assignment with per-session eviction and restoration planning over a finite horizon, followed by infrequent revisions as histories and session populations change.
-The design seeks to increase service capacity while preserving retained history and meeting recurring soft deadlines.
-\placeholder{Measured capacity, latency, and costs, with workload, duration, and resource conditions.}
+\systemname uses cyclic KV restoration to share GPU capacity across periodic interaction sessions while preserving their selected histories.
+Its residency plan couples phase assignment, partial eviction, and restoration timing so that space released by idle state can prepare upcoming updates.
+The central constraint is both temporal and spatial: a restoration needs enough transfer time and a complete GPU destination before copying begins.
+Planning sizes session state at the configured maximum context and reuses the schedule as histories grow within that limit.
+\placeholder{Conclude with measured session-capacity gains and their latency and resource costs under the evaluated workloads, service objective, and observation durations.}

@@ -2,7 +2,12 @@
 \subsection{Backend Integration}
 \label{sec:implementation}
 
-The backend interface must expose request submission, execution completion, KV block identity, allocation, references, and copy readiness.
-\systemname coordinates these operations with the backend's existing block allocator so that memory accounting and validity have one consistent authority.
-The backend controls execution scheduling and any batching policy; session groups determine which work becomes eligible together.
-\placeholder{Verified integration: identify the backend and implemented planning and recovery paths, synchronization points, and remaining gaps relative to this design.}
+Integrating \systemname requires access to the execution and KV state used by the preceding checks.
+The backend must support request submission and execution-state notifications, identify KV blocks and their valid ranges, and coordinate allocation, references, and safe release with the memory manager.
+It must also expose when newly produced KV is safe to copy and respect copy-completion dependencies before using restored state.
+\systemname uses the backend's authoritative allocation and reference state so that residency management and model execution agree on which physical blocks are available.
+
+These interfaces allow the backend to retain control of execution scheduling and batching.
+The session manager submits eligible updates and consumes execution events; it does not drive each model step or require a group to execute as one batch.
+A backend's support for persistent sessions supplies part of this interface, but KV lifecycle coordination is also required.
+\placeholder{Verified implementation: backend and version, supported KV operations, synchronization with execution, and implemented planning and recovery paths relative to the design above.}

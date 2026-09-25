@@ -1,37 +1,34 @@
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Scheduling and KV allocation.}
-Orca schedules generation at iteration granularity, allowing batch membership to change as requests arrive and finish~\cite{yu2022orca}.
-PagedAttention maps logical KV blocks to noncontiguous physical storage, reducing fragmentation and enabling sharing in vLLM~\cite{kwon2023vllm}.
-vLLM also supports swapping and recomputation when memory pressure requires preemption.
-These techniques improve how active work uses computation and memory.
-The residency problem considered here remains when the valid KV retained by periodic sessions exceeds GPU capacity.
-\systemname coordinates when that state occupies the GPU between uses; it still needs an execution engine and allocator that use the resulting capacity efficiently.
+\paragraph{Periodic interaction serving.}
+Metronome studied memory exhaustion in periodic interaction serving and combined an in-engine KV window with deadline-aware admission~\cite{meng2026metronome}.
+Its window retains recent tokens and attention sinks, bounding per-session state, and its evaluation used phase-staggered input streams.
+\systemname addresses where the application's selected history resides between updates and when missing state returns to the GPU.
+Its scheduling decisions couple phases, eviction amounts, and restoration destinations under shared resource constraints.
+Residency scheduling can apply to full or bounded histories; comparisons hold the retention policy fixed to separate residency effects from changes in model history.
 
 \paragraph{State recovery during interruptions.}
-InferCept manages requests whose generation pauses for interactions with external tools or environments~\cite{abhyankar2024infercept}.
-It estimates interruption durations, chooses among preserving, swapping, and recomputing KV, and chunks recovery work to reduce interference with other requests.
-This work establishes that idle-state decisions should consider both memory occupancy and recovery cost.
-Our setting adds a recurring restoration target and, where permitted, control over session phases.
-The design uses these properties to coordinate repeated recovery with the allocation of its destinations.
+InferCept managed requests paused by interactions with tools or external environments~\cite{abhyankar2024infercept}.
+It estimated interruption durations and selected among preserving, swapping, and discarding KV for later recomputation, with pipelining and chunking to limit interference.
+It thus accounted for both idle memory occupancy and recovery cost.
+In periodic service, planned ticks supply recurring restoration targets, and applications may also permit phase assignment.
+\systemname uses those inputs to coordinate repeated recovery and destination allocation across sessions.
 
 \paragraph{Combining loading and recomputation.}
-Cake prepares cached prefixes by concurrently loading some KV chunks and recomputing others~\cite{jin2025cake}.
-Its division follows causal attention costs: recomputation proceeds from earlier positions while loading proceeds from later positions.
-This use of computation to supplement loading motivates the future extension discussed in Section~\ref{sec:discussion}.
-Periodic restoration additionally requires fitting repeated preparation into a shared schedule as retained histories grow.
+Cake prepared cached prefixes by concurrently loading some KV chunks and recomputing others~\cite{jin2025cake}.
+Its schedule rebuilt earlier positions while loading later ones, exploiting the increasing attention cost of later chunks.
+This work supports using computation to supplement loading when I/O is limiting.
+\systemname's current design schedules H2D recovery across periods; incorporating recomputation into that schedule remains the extension described in Section~\ref{sec:discussion}.
+
+\paragraph{Execution scheduling and KV allocation.}
+Orca introduced iteration-level scheduling so that batch membership could change as requests arrived and finished~\cite{yu2022orca}.
+PagedAttention mapped logical KV blocks to noncontiguous physical storage, reducing fragmentation and enabling sharing; vLLM also evaluated swapping and recomputation for preempted requests~\cite{kwon2023vllm}.
+These techniques provide efficient execution and memory allocation within a serving engine.
+\systemname operates across successive uses of retained state, coordinating its residency with future ticks while leaving model execution and batching to the backend.
 
 \paragraph{Latency-constrained serving.}
-DistServe separates prefill and decoding onto different GPUs and allocates resources to satisfy time-to-first-token and time-per-output-token objectives~\cite{zhong2024distserve}.
-Its design addresses interference between execution stages with different latency requirements.
-\systemname instead coordinates retained state across successive periods of an ongoing session, including time when that session performs no computation.
-Both designs require evaluating useful service under a latency objective rather than reporting throughput alone.
-
-\paragraph{Periodic interaction and bounded history.}
-Metronome studies memory exhaustion in periodic interaction serving and combines an in-engine KV window with deadline-aware admission~\cite{meng2026metronome}.
-Its window bounds state by retaining recent tokens and attention sinks.
-Its evaluation also uses phase-staggered input streams.
-\systemname manages the GPU residency of the application's selected history through partial eviction and advance restoration.
-Residency scheduling can apply to either full or bounded histories, trading host capacity and recurring recovery work for GPU capacity.
-A residency comparison holds the retention policy fixed so that its effect is measured separately from changes in retained history.
+DistServe separated prefill and decoding onto different GPUs and allocated resources against time-to-first-token and time-per-output-token objectives~\cite{zhong2024distserve}.
+It addressed interference between execution stages with different latency requirements.
+Our service objective measures completion against recurring session ticks and includes any waiting for retained state.
+Both approaches evaluate the load served within a latency objective, which is also the basis of the capacity metric in Section~\ref{sec:methodology}.

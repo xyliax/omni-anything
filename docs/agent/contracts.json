@@ -132,19 +132,32 @@
       "verification": []
     },
     {
+      "id": "CONTRACT-MAXIMUM-CONTEXT-PLANNING",
+      "rule": "design requirement, not verified implementation: plan capacity using each session's existing model/backend maximum context configuration, accounting for retained input and generation positions; runtime must not exceed this limit or silently shorten reference history to continue; planning at maximum context does not require simultaneous full GPU residency or allocation of nonexistent KV; reuse the plan as contexts grow within the limit, without a growth predictor, planning horizon, workload declarations, miss-tolerance parameters or a custom service-failure policy; measure periodic completion and overruns under the evaluated workload rather than infer timing guarantees from the context cap",
+      "owners": [
+        "docs/problem.md#service-objective",
+        "docs/system.md#maximum-context-planning",
+        "docs/system.md#planner-flow",
+        "docs/system.md#planning-updates",
+        "docs/experiments.md#service-and-capacity-metrics"
+      ],
+      "verification": []
+    },
+    {
       "id": "CONTRACT-RESOURCE-FEASIBILITY",
-      "rule": "analysis requirement, not measured capacity: time-aligned training motivates small typical generation per update but does not impose a hard token cap; compute slack must be established for all admitted sessions at the full-residency capacity boundary and must cover phase-dependent batching costs, transfer interference and scheduling delays; period times effective restoration bandwidth bounds restored bytes per period, while peak memory savings also depend on actual release-to-preallocation intervals; full eviction is infeasible when total restoration exceeds this budget or individual time-and-space constraints, not universally",
+      "rule": "analysis requirement, not measured capacity: time-aligned training motivates small typical generation per update but does not impose a hard token cap; compute slack must be established for all admitted sessions at the full-residency capacity boundary and must cover phase-dependent batching costs, transfer interference and scheduling delays; a maximum-context projection may derive each device's batch from its memory ceiling and estimate batched prefill/decode with explicit efficiency and KV-reuse assumptions, but its remaining budget is not measured idle time or a complete-pipeline guarantee, and weights shared across a batch do not imply shared session KV; period times effective restoration bandwidth bounds restored bytes per period, while peak memory savings also depend on actual release-to-preallocation intervals; full eviction is infeasible when total restoration exceeds this budget or individual time-and-space constraints, not universally",
       "owners": [
         "docs/problem.md#playback-paced-work",
         "docs/problem.md#slack-conditions",
         "docs/problem.md#bandwidth-memory-bound",
+        "docs/experiments.md#cross-hardware-projections",
         "docs/system.md#batching-tradeoff"
       ],
       "verification": []
     },
     {
       "id": "CONTRACT-CYCLIC-RESTORATION",
-      "rule": "design requirement, not implementation status: the session manager controls H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility; session groups are scheduling objects, and a group schedule retains per-session history and per-block safety conditions without requiring an atomic group transfer; group-wide versus per-session restoration allocation and the group compute-readiness boundary remain unresolved pending the author-requested comparison; design boundary: session groups organize residency scheduling, while the inference backend owns execution scheduling and model computation, including batching when used; continuous batching is not a required backend policy; backend replacement requires compatible execution-event and KV-state operations and is not a claim of existing multi-backend support; proactive cyclic KV recomputation is reserved for future work as a planner decision extension, with replay-capable backend execution and joint resource feasibility required before claiming support",
+      "rule": "design requirement, not implementation status: the session manager controls H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility; session groups are scheduling objects, and a group schedule retains per-session history and per-block safety conditions without requiring an atomic group transfer; selected execution policy: allocate each session restoration destination in full, count every complete queued or in-flight destination immediately, preserve planned allocation and copy order without partial destination holding or allocation bypass, and publish per-session readiness without a group execution barrier; these are design choices awaiting implementation and validation; design boundary: session groups organize residency scheduling, while the inference backend owns execution scheduling and model computation, including batching when used; continuous batching is not a required backend policy; backend replacement requires compatible execution-event and KV-state operations and is not a claim of existing multi-backend support; proactive cyclic KV recomputation is reserved for future work as a planner decision extension, with replay-capable backend execution and joint resource feasibility required before claiming support",
       "owners": [
         "docs/system.md#kv-prefetching",
         "docs/system.md#release-offset-scheduling",
@@ -152,6 +165,26 @@
         "docs/system.md#group-restoration-allocation",
         "docs/system.md#inference-backend-boundary",
         "docs/system.md#future-recomputation"
+      ],
+      "verification": []
+    },
+    {
+      "id": "CONTRACT-RESIDENCY-PLAN-REVISION",
+      "rule": "selected design policy, not verified implementation: plan at maximum context and revise on session arrivals or departures, without horizon renewal; preserve admitted phases and the slot grid; pause new restoration allocation and settle already allocated H2D operations before activating a versioned candidate after rechecking actual allocations and live execution/D2H references; replace only unstarted operations and settle old completion events by operation identity; reject infeasible new admissions, wait for resource events when restoration allocation is blocked, and use existing execution and copy error paths without adding a service-degradation policy",
+      "owners": [
+        "docs/system.md#planning-updates",
+        "docs/system.md#implementation-handoff"
+      ],
+      "verification": []
+    },
+    {
+      "id": "CONTRACT-EVALUATION-REPLAY",
+      "rule": "confirmed protocol, not implemented capability: use the three experiments owned by docs/experiments.md; pair systems on identical exogenous session schedules, input segments and timestamps; derive natural phases from fractional session arrival times without global tick rounding; generate arrivals independently of service completion, fix session duration, record planned and actual sends, do not retry rejected sessions or expose future departures to the planner; preserve original ticks after phase assignment and measure initial alignment and input-to-result delay; report admitted/rejected sessions and on-time/late/unfinished model work together; matched implementation ablations change one policy at a time",
+      "owners": [
+        "docs/experiments.md#evaluation-questions",
+        "docs/experiments.md#dynamic-arrival-experiment",
+        "docs/experiments.md#ablation-matrix",
+        "docs/experiments.md#measurement-semantics"
       ],
       "verification": []
     }

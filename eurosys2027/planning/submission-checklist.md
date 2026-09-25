@@ -14,7 +14,7 @@
 
 ## 内容与披露
 
-- [ ] 已按 [System 中的恢复分配决策](../../docs/system.md#group-restoration-allocation)完成方案比较和作者确认，并同步 Design 正文、图件与评估；未决时不得勾选。
+- [ ] [恢复分配决策](../../docs/system.md#group-restoration-allocation)与[计划修正](../../docs/system.md#planning-updates)已按作者授权选定；提交前核验实现与测量，并复核 Design 正文、图件和评估的一致性。
 - [ ] 每项贡献与已实现、已验证的内容一致；最近工作比较有原始引用。
 - [ ] 模型推导、诊断观察和正式结果分清；失败配置、代价与证据边界完整。
 - [ ] 原创性、并行投稿、相关稿件与 ACM 政策已核对；每作者每轮至多 3 篇投稿。

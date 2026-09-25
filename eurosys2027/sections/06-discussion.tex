@@ -1,35 +1,30 @@
 \section{Discussion and Limitations}
 \label{sec:discussion}
 
-\paragraph{Applications without phase control.}
-An application may expose future ticks while requiring fixed release phases.
-Advance restoration can still use that timing information, but the manager cannot redistribute demand by assigning phases.
-The benefit then depends on the supplied schedule and available memory.
-The phase ablation in Section~\ref{sec:eval-ablation} separates these two sources of benefit.
+The design's benefit depends on how much idle state can be reclaimed and restored within the service budget.
+Three conditions limit that opportunity: application timing, maximum-context planning, and the resources available for recovery.
 
-\paragraph{Finite-horizon admission.}
-A finite prediction horizon limits how far admission can anticipate history growth and interference.
-Smooth growth can permit infrequent revisions, but it does not guarantee that a feasible schedule exists indefinitely.
-If state keeps growing, memory, host capacity, or recovery time can eventually become limiting.
-The reported capacity is consequently tied to session duration, the prediction horizon, and the policy for handling infeasible revisions.
+\paragraph{Application timing and phase control.}
+An application may expose future ticks while fixing its release phases.
+Advance restoration can use those ticks, but phase assignment then provides no additional control over demand.
+With different periods or unequal histories, evenly spaced phases also need not produce evenly distributed transfer or compute demand.
+Furthermore, a predicted tick does not guarantee that new input arrives on time.
+Late input and execution backlog reduce the useful idle interval, and restoring historical KV cannot remove those sources of delay.
 
-\paragraph{Future work: recomputation.}
-\systemname currently plans recovery through H2D transfers.
-Separating planning from execution provides a way to incorporate KV recomputation when transfer bandwidth becomes limiting.
-The planner could add a decision variable for how much evicted KV to rebuild from retained inputs, jointly scheduling this work with H2D restoration.
-Execution would require a backend that supports replay and reports when reconstructed KV becomes valid.
+\paragraph{Planning at maximum context.}
+Sizing session state at the configured context limit allows the schedule to be reused as histories grow.
+It can reserve more capacity than currently short sessions need and therefore admit fewer of them.
+The context limit bounds retained state; measured completion latency still depends on the workload, batching, and transfer costs.
 
-Feasibility would depend on compute slack across all admitted sessions and space for reconstructed KV and temporary work.
-Both forms of recovery would need to finish by the next tick while leaving enough computation time for sessions to meet their soft deadlines.
-We leave this extension and its evaluation to future work.
-
-\paragraph{Workload and platform dependence.}
+\paragraph{Resource balance and topology.}
 A small retained history leaves little memory to reclaim, and a short interval between uses leaves little time to restore it.
 Effective transfer bandwidth, host-copy availability, and batching efficiency determine the useful eviction budget.
-Different periods or execution profiles can also produce unequal demands despite uniformly spaced phases.
-Uniform spacing spreads release times but does not optimize for these differences in resource demand.
+When restoration spans multiple devices, the model must track destination capacity on each device and contention along each transfer path, including shared host-memory channels and interconnects.
+The effective bandwidth in Equation~\ref{eq:transfer-budget} must reflect that topology; summing nominal per-device bandwidths can overestimate available service.
 
-\paragraph{Transfers across multiple devices.}
-With multiple GPUs, restoration may share PCIe switches, host-memory channels, and other links.
-The effective bandwidth in Equation~\ref{eq:transfer-budget} must reflect contention on the paths used by the plan; adding nominal per-device bandwidths can overestimate the available service.
-Extending the planner requires tracking each constrained path together with the destination capacity on each device.
+\paragraph{Future work: recomputation.}
+The current residency design restores state through H2D transfers.
+A further planning dimension would choose which evicted ranges to reconstruct from retained inputs and which to load from host memory.
+This extension would require backend replay support, space for reconstructed KV and temporary work, and compute slack across all admitted sessions.
+Recovery would still need to finish before use while preserving the computation budget for normal updates.
+The joint transfer and recomputation policy and its evaluation remain future work.

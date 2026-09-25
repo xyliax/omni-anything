@@ -3,22 +3,18 @@
 
 \begin{table*}[t]
   \centering
-  \caption{Cross-hardware analysis of the KV-capacity boundary (framework; values pending).
-  $G_{\mathrm{KV}}$ excludes weights, other model state, and runtime allocations; $L_{\mathrm{mem}}$ is defined in Equation~\ref{eq:memory-before-compute}.
-  The predicted cycle cost covers all $N$ sessions, with ranges reflecting sensitivity to execution efficiency and workload variation.
-  Evidence types will distinguish measurements from calibrated projections.
-  Dashes denote unavailable values, and all bottleneck assessments remain pending.}
+  \caption{Estimated backbone compute time and cycle usage for MiniCPM-o 4.5 at its configured context limit of 40,960 positions.
+  Each GPU batches its memory-limited session count for a one-second update.}
   \label{tab:hardware-capacity-projection}
-  \begin{tabular}{lccccl}
+  \begin{tabular}{lrrrr}
     \toprule
-    GPU configuration & \shortstack{Estimated KV pool\\$G_{\mathrm{KV}}$ (GiB)} & \shortstack{Capacity boundary\\$L_{\mathrm{mem}}$ (positions/session)} & \shortstack{Predicted cycle cost\\$\widehat C_N(L_{\mathrm{mem}})/T$ (range)} & \shortstack{Evidence\\type} & Assessment \\
+    GPU (capacity) & \shortstack{Memory BW\\(TB/s)} & \shortstack{Batch size\\$N_{\mathrm{mem}}$} & \shortstack{Compute time\\(ms)} & \shortstack{Cycle used\\(\%)} \\
     \midrule
-    A100 40GB PCIe & \textemdash & \textemdash & \textemdash & Pending & Pending \\
-    L40S 48GB & \textemdash & \textemdash & \textemdash & Pending & Pending \\
-    RTX 5090 32GB & \textemdash & \textemdash & \textemdash & Pending & Pending \\
-    A100 80GB PCIe & \textemdash & \textemdash & \textemdash & Pending & Pending \\
-    H100 80GB PCIe & \textemdash & \textemdash & \textemdash & Pending & Pending \\
-    RTX 4090 24GB & \textemdash & \textemdash & \textemdash & Pending & Pending \\
+    A100 SXM (80GB) & 2.04 & 10 & 375 & 37.5 \\
+    H100 SXM (80GB) & 3.35 & 10 & 225 & 22.5 \\
+    RTX PRO 6000 Blackwell Server (96GB) & 1.60 & 12 & 559 & 55.9 \\
+    H200 SXM (141GB) & 4.80 & 20 & 289 & 28.9 \\
+    MI300X (192GB) & 5.30 & 29 & 366 & 36.6 \\
     \bottomrule
   \end{tabular}
 \end{table*}
@@ -71,9 +67,34 @@ This is the margin that can absorb the computation and interference costs of mem
 The resulting schedule must also satisfy each session's deadline.
 \placeholder{Measure complete periodic work at the full-residency capacity limit, including the distribution of per-update generation, context lengths, batching, and phase-dependent execution costs.}
 
-Table~\ref{tab:hardware-capacity-projection} provides a framework for examining this condition across hardware configurations with a common model, precision, period, session count, and workload.
-It pairs the estimated capacity boundary with the predicted fraction of the cycle needed to execute the workload at that boundary.
-The execution estimates require calibration and independent validation; peak hardware specifications alone do not establish that the workload finishes within the period.
+Table~\ref{tab:hardware-capacity-projection} fixes the public backbone context limit at 40,960 positions and solves for the number of resident sessions, rather than fixing concurrency and varying context.
+The speech decoder's separate 4,096-position limit is also included in the memory reservation~\cite{openbmb2026minicpmconfig}.
+The combined KV reservation is $S\approx5.86$\,GiB per session, with another $R=20$\,GiB assumed for weights and other allocations.
+Approximating nominal GPU capacities as GiB budgets, the memory-only ceiling is $N_{\mathrm{mem}}=\lfloor(M-R)/S\rfloor$.
+Each row then batches all $N_{\mathrm{mem}}$ sessions for an update near the context limit; the initial history leaves space for the new positions so the limit is not exceeded.
+This is a capacity-saturating batch assumption, not a claim that the GPU achieves peak arithmetic throughput or that this batch is feasible under every phase arrangement.
+Device capacities and bandwidths follow vendor specifications~\cite{nvidia2021a100,nvidia2023h100,nvidia2026rtxpro,nvidia2026h200,amd2025mi300x}.
+
+We estimate backbone prefill and decode by separating linear layers from attention and applying a roofline model to each component~\cite{nvidia2023performance}.
+For component $j$, with byte traffic $D_j$ and operation count $O_j$, the time estimate is
+\begin{equation}
+  \widehat t_j=\max\left(\frac{D_j}{\eta_B B},\frac{O_j}{\eta_F F}\right),
+  \label{eq:batched-cost-estimate}
+\end{equation}
+where $B$ is rated local-memory bandwidth and $F$ is a dense BF16 matrix-throughput reference.
+The table uses $\eta_B=0.5$ and $\eta_F=0.25$ as explicit scenario assumptions.
+The backbone's projection and MLP matrices contain about 6.95 billion parameters and its output head another 0.62 billion, giving about 15.1\,GB of BF16 matrix weights per forward pass~\cite{openbmb2026minicpmconfig}.
+Weights are read once for the whole batch, while the attention traffic includes each session's own KV.
+The prefill estimate processes ten positions together, reuses their historical KV, and computes logits only for the last position; four sequential decode forwards follow, including a final state update when needed.
+Compute time is the sum of prefill and decode; cycle used is this time divided by the one-second period.
+The RTX matrix reference is approximately 240\,TFLOP/s, inferred from its FP32 rating and the GB202 dense BF16/FP32-accumulation ratio, rather than its advertised low-precision AI rate~\cite{nvidia2026rtxpro,nvidia2025blackwell}.
+The RTX row takes longer than A100 and H100 in this model because it combines lower memory bandwidth with a larger batch and more private KV traffic.
+These rows compare each GPU at its own memory ceiling, not at a common batch size.
+
+This conditional model places backbone work below the one-second period on all five configurations, but the remainder is not measured GPU idle time or a full-pipeline deadline guarantee.
+Using 40--70\% bandwidth and 15--40\% matrix efficiency instead yields approximately 266--476, 161--282, 397--710, 205--366, and 260--463\,ms in table order; these are assumption ranges, not confidence intervals.
+KV reuse is also material: doubling the modeled attention traffic raises the RTX estimate to about 1.01\,s.
+Usable memory, actual batching and traffic, input encoding, speech generation, and runtime overhead require measurement before these estimates can establish the complete-workload condition in Equation~\ref{eq:memory-before-compute}.
 
 
 \subsection{Bandwidth Limits on Memory Reuse}

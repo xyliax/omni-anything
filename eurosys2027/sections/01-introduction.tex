@@ -73,9 +73,8 @@ After a session completes an update, \systemname evicts part of its idle KV and 
 The plan coordinates phases, eviction amounts, and restoration times so that space released by one session can accommodate another's restoration (Figure~\ref{fig:comparison}(b)).
 The goal is to serve more concurrent sessions while preserving their retained histories and meeting the same soft deadline targets.
 
-As session histories grow, a previously feasible schedule may no longer satisfy memory, transfer, or compute constraints.
-At admission, \systemname therefore plans over a finite lookahead interval, accounting for expected KV growth, computation, transfers, and GPU allocation.
-It reuses this plan across updates, with infrequent revisions to account for history growth and changes in the set of admitted sessions.
-These checks cover only the lookahead interval, so the server must reassess resource needs as sessions continue.
+\systemname plans KV demand at each session's configured maximum context length, which input and generation must respect.
+The recurring schedule accounts for computation, transfers, and GPU allocation, while runtime operations cover only the history actually retained.
+It reuses this plan as histories grow within their limits and revises it when sessions join or leave.
 
 \placeholder{Final contributions and measured results: identify the configurations where KV capacity limits concurrency while compute time remains; establish the benefit attributable to coordinating phases, eviction amounts, and restoration timing; report concurrency and deadline-miss rates against full residency and on-demand restoration under matched service objectives.}

@@ -22,7 +22,7 @@
 
 | 发现 | 观察与限定 | 依据 | 待补 |
 | --- | --- | --- | --- |
-| <a id="finding-d1"></a>FINDING-D1 | 历史记录报告 GPU KV 池接近耗尽而周期计算仍有余量的配置点；支持继续检验容量动机，不足以给出公平协议下的可行区间或普遍结论 | `EVIDENCE-LEGACY-BASELINE`（历史诊断，复现资格受限） | Q1 受控容量扫描，同步观测实际分配、模型进度、排队与计算 |
+| <a id="finding-d1"></a>FINDING-D1 | 历史记录报告 GPU KV 池接近耗尽而周期计算仍有余量的配置点；支持继续检验容量动机，不足以给出公平协议下的可行区间或普遍结论 | `EVIDENCE-LEGACY-BASELINE`（历史诊断，复现资格受限） | [实验一受控容量扫描](experiments.md#capacity-experiment)，同步观测实际分配、模型进度、排队与计算 |
 | <a id="finding-d2"></a>FINDING-D2 | 不同会话数与上下文组合在接近相同总 KV token 数时触及池边界，提示固定模型几何下以字节需求解释容量；共享、碎片、目标预分配与实际历史长度仍需单独记账 | `EVIDENCE-LEGACY-BASELINE`（历史诊断） | 实际物理分配与状态字节的对应及预测误差 |
 | <a id="finding-d5"></a>FINDING-D5 | 可用 KV 池受模型权重、activation 与运行时保留空间影响，应使用实际池预算与分配轨迹而非设备标称显存；数值依赖运行配置 | `EVIDENCE-LEGACY-BASELINE`（资源统计解释） | 正式配置下的内存分解 |
 

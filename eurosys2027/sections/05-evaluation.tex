@@ -1,103 +1,112 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-The evaluation asks whether coordinating phases and KV restoration increases session capacity under a fixed service objective, and which resource limits that increase.
-It separates the main capacity comparison from the measurements needed to explain it: memory pressure, restoration delay, mechanism ablations, and behavior as histories grow.
-\placeholder{Experimental results are pending. Specify the evaluated models, workloads, platforms, software versions, and repetition protocol before reporting measurements.}
+The evaluation tests whether lower peak GPU KV residency translates into more periodic work completed on time, and quantifies the latency and transfer costs.
+Three experiments examine capacity, service under session arrivals and departures, and the contributions of phase assignment and restoration timing.
+\placeholder{Results are pending. Report the evaluated model, input and output workload, platform, software versions, and verified implementation coverage.}
 
 \subsection{Methodology}
 \label{sec:methodology}
 
-\paragraph{Workload and comparison controls.}
-A residency comparison holds the model, precision, input content, retained history, and generation work fixed.
-The controls also match batching limits, scheduling policies, and resource budgets except for the variable under study.
-Retention policies are workload parameters; each residency comparison preserves the selected policy and its resulting history.
-Workload parameters include the period, session duration, context-length range, and input and output configuration.
-
 \paragraph{Compared systems.}
-Full residency establishes capacity and latency without recovery.
-On-demand host restoration exposes the cost of putting recovery on the execution path.
-Recomputation provides a second way to recover missing state when the required historical inputs are available.
-Comparisons with \systemname use the same generation workload and include the phase and restoration ablations described below.
-\placeholder{Named external baselines, exact configurations, host-copy policies, and any adaptations needed for the periodic workload.}
+We compare three configurations: GPU full residency, on-demand host restoration, and \systemname.
+Full residency retains the same reference history on the GPU and rejects new sessions beyond a static admission limit determined from the common maximum context and independent calibration.
+It uses naturally staggered session clocks and a suitable backend batching configuration.
+On-demand restoration uses the same host-copy and partial-eviction implementation as \systemname, but restores missing KV when current work needs it.
+This configuration isolates the contribution of advance restoration within the shared implementation.
+\systemname combines residency planning, phase assignment, and restoration before the next tick.
+Each system uses its own admission limit under the same resource and service constraints; rejected sessions are counted and are not automatically retried.
 
-\paragraph{Service capacity.}
-The main metric is the largest concurrent session population that satisfies the specified deadline-miss and failure criteria over the observation interval.
-Offered, admitted, and completed work are reported separately, so refusing more load cannot appear as a latency improvement.
-Deadline violations use $c(i,k)>r(i,k+1)$, and latency distributions use $c(i,k)-r(i,k)$.
-The analysis also records initial phase-alignment delay and accumulated backlog.
-Progress measurements distinguish legitimate silence from missing generation work, which a timely empty response can conceal.
-\placeholder{Allowed miss rate, session-failure criteria, observation interval, load sweep, repetitions, and uncertainty reporting.}
+\paragraph{Workload controls.}
+Comparisons fix the model and precision, maximum context, history-retention policy, period, original input content and timestamps, and per-session generation settings.
+At equal concurrency, we also check the actual input, generation, and retained history.
+Capacity comparisons hold offered work fixed and measure how much each system completes.
+Input streams use reproducible content and per-session offsets, avoiding identical streams that could inflate cross-session reuse.
+Initial histories and measurement durations are matched, and retained input and generation positions must remain within the context limit.
+Backend settings and resource budgets are recorded, including any differences required by the mechanisms.
+Each data point starts a fresh worker; independent calibration is separate from the repeated measurement runs.
 
-\paragraph{Resource measurements.}
-GPU memory measurements include all KV allocations, particularly destinations whose copies have not completed.
-Valid content, evicted bytes, and host-copy storage are recorded separately.
-Transfer measurements distinguish waiting for space, queueing for the copy stream, copying, and completion handling.
-Compute measurements cover the work required by each micro-turn and its interference with transfers.
-These measurements connect a change in session capacity to the resource it consumes.
+\paragraph{Completion and latency.}
+Let $c(i,k)$ denote completion of model generation associated with update $k$ of session $i$, and let $r(i,k)$ be its planned tick.
+An update is on time when $c(i,k)\leq r(i,k+1)$; its periodic completion latency is $c(i,k)-r(i,k)$.
+We report on-time, late, and unfinished updates alongside latency distributions and offered, admitted, rejected, and completed sessions.
+Rejected sessions are unserved demand, rather than deadline misses among admitted sessions.
+Delayed submission does not move the original deadline.
+Initial phase-alignment waiting, input backlog, and delivery latency from the original input clock remain visible.
+RPC returns and previously buffered output do not establish completion of new model work.
+Failed or timed-out runs retain their completed and unfinished work under the common observation interval.
 
-\subsection{Capacity and Service Latency}
+\paragraph{Resources and validation.}
+Peak KV occupancy counts physical GPU blocks unavailable to other sessions, including restoration destinations from allocation onward; shared blocks count once.
+We also record host-copy storage, H2D and D2H bytes, restoration waits, and actual batch shapes.
+Detailed traces at selected points distinguish allocation, copying, and scheduling waits, with profiling overhead checked separately from the main runs.
+Before performance measurements, short checks compare KV content and model results across eviction and restoration and verify session termination and resource release.
+The checks record controls for nondeterminism and distinguish state correctness from timely completion.
+
+\subsection{Capacity and Service Cost}
 \label{sec:eval-main}
 
-The main comparison varies concurrency and session duration to locate the service limit of each system.
-Latency and deadline violations at equal offered load show whether recovery introduces a cost before capacity is exhausted.
-At each system's capacity limit, the allocation and execution traces identify whether memory, transfers, computation, or growing backlog prevents further admission.
-\placeholder{Supported concurrency and service-latency distributions for all systems, with completed work and failure outcomes.}
+The first experiment compares all three systems at five concurrency points spanning low load, the full-residency boundary, and higher offered concurrency, with three independent runs per point.
+Each run uses a fixed session population with staggered input clocks and records histories growing toward the common context limit.
+The same runs provide equal-concurrency resource comparisons, capacity curves, and measurements of how costs change with context length.
+Low-load points expose overheads when little additional capacity is needed.
 
-\paragraph{The full-residency limit.}
+Long-history initialization can shorten a controlled comparison when its state fits during setup.
+It uses the same reconstructible history and excludes initialization output from service measurements.
+If the highest concurrency cannot initialize all histories while resident, the entire sweep starts from a common shorter history and grows through real input and generation over a matched duration.
+The comparison records actual context lengths and preserves room for subsequent work rather than silently truncating history.
+
+\paragraph{Interpreting capacity.}
 \label{sec:eval-capacity-bound}
-The motivating measurement varies retained history and concurrency together.
-A memory-limited operating point requires evidence that KV allocation prevents additional service while the corresponding computation still fits within the period.
-Session-level idle intervals alone do not establish spare compute capacity across the workload.
-Near the memory boundary, the measurements report the complete workload's execution time per period and the remaining fraction of the period, rather than inferring slack from a device-utilization counter.
-Calibration and validation use separate configurations to test Equation~\ref{eq:memory-before-compute}, including regions where it predicts no slack.
-An additional-work experiment tests whether the observed budget can accommodate more session work while preserving the service objective.
-\placeholder{Joint allocation and execution traces at the full-residency limit, predicted versus measured slack, and additional work completed within the same deadline.}
+Near the full-residency limit, joint allocation and execution observations test whether KV capacity prevents additional service while the aggregate periodic work still leaves compute budget.
+The additional work completed by \systemname then tests whether that budget remains usable after restoration and changes in batching.
+A protected baseline may continue serving admitted sessions promptly while rejecting additional sessions.
+A capacity gain requires \systemname to complete additional sessions' work on time, together with a report of the associated latency and resource costs.
+We retain the full curves rather than classify configurations using an added deadline-miss tolerance.
+\placeholder{Report admitted and rejected sessions, on-time/late/unfinished updates, completion latency, peak GPU KV occupancy, host storage, transfer traffic, and variation across runs. Show the time and context-length trajectories at the capacity boundary.}
+
+\subsection{Dynamic Session Arrivals and Departures}
+\label{sec:eval-dynamic}
+
+The second experiment compares full residency and \systemname using the same open-loop session schedule.
+Successive session interarrival times are exponentially distributed with rate $\lambda$.
+Each session lasts for a fixed duration $\tau$ and replays its assigned input stream at the original rate.
+The schedule records each session's arrival, duration, content identifier, and content offset, together with the random seed.
+Neither new arrivals nor ongoing input wait for earlier work to complete.
+Planned and actual send times expose delays introduced by the load generator.
+
+\paragraph{Natural staggering.}
+For a session arriving at time $s_i$, input for its first period becomes available at $s_i+T$, followed by periodic input at $s_i+2T,\ldots$.
+These session-relative clocks retain their fractional offsets rather than being rounded to a shared global tick.
+Random arrivals therefore produce naturally staggered phases and a mixture of session ages.
+\systemname receives the same input segments at the same original times and may buffer them for its assigned phases within the application's timing flexibility.
+Its initial alignment wait and input-to-result delay are included in the measurements.
+The planner does not receive the generator's future arrivals or departure times.
+
+\paragraph{Load and observation.}
+We use three arrival rates covering low load, the full-residency boundary, and higher load, with three independently seeded schedules per rate replayed across both systems.
+The product $\lambda\tau$ provides a reference for average offered concurrency after startup, rather than the number actually admitted.
+The arrival window spans at least two session lifetimes to include departures and replacement arrivals.
+After new arrivals stop, existing sessions continue to their scheduled input end; remaining work is accounted for under the common termination rule.
+Draining is reported separately from throughput during offered load, and context-limit termination is distinguished from execution failure.
+\placeholder{Report admission and actual completion under the three arrival rates, with latency and unfinished work. Plot active sessions, input backlog, context growth, and KV occupancy over time, including costs during plan transitions.}
 
 \subsection{Mechanism Ablations}
 \label{sec:eval-ablation}
 
-The ablations isolate phase assignment from advance restoration.
-The first comparison holds the restoration policy fixed and changes aligned releases to uniformly staggered releases.
-The second keeps phases fixed and compares three recovery policies: on-demand restoration, prefetching after submission, and restoration planned before the next tick.
-Their combination tests whether spreading demand improves the memory and transfer schedule beyond either action alone.
+The third experiment uses one or two representative boundary points from the capacity sweep.
+Two additional variants reuse \systemname's implementation: natural phases with advance restoration, and prefetching after input submission with the assigned phases.
+Together with the three main systems, these give five configurations in total.
+Matched main-system runs are reused where their workloads and controls agree.
 
-A further comparison holds the phase schedule fixed while varying eviction budgets and restoration lead time.
-It tests the coupling in Section~\ref{sec:opportunity}: too little eviction leaves memory occupied, whereas excessive eviction or early allocation can make the schedule infeasible.
-Host-copy policy, retained history, and transfer implementation remain fixed within each comparison.
-\placeholder{Ablation results: session capacity, peak allocation, transfer utilization, deadline violations, and the selected per-session budgets.}
+\paragraph{Phase assignment.}
+The first comparison holds concurrency, history, eviction budgets, host-copy policy, and advance restoration fixed, and compares natural session phases with \systemname's assigned phases.
+It measures whether active phase assignment improves peak allocation and periodic completion beyond the staggering already provided by independent session clocks.
+Actual batch shapes and execution costs capture the cost of changing those phases.
 
-\paragraph{Restoration on the critical path.}
+\paragraph{Restoration timing.}
 \label{sec:eval-latency}
-For each micro-turn, the analysis measures how much restoration finishes before its tick and how much delays computation.
-Allocation waiting, copy-stream queueing, transfer time, and post-transfer scheduling are distinguished.
-This decomposition tests whether the design removes recovery delay or moves it to an earlier queue.
-\placeholder{Restoration timelines and latency decomposition at matched load, including waiting before submission.}
-
-\subsection{History Growth and Plan Revision}
-\label{sec:eval-model}
-
-Admission predictions are compared with execution over configurations and traces not used for calibration.
-The comparison covers per-period KV growth, transfer duration, computation time, and peak allocation.
-Prediction error is reported against the horizon and scheduling margins used to make the admission decision.
-
-Continuous runs span multiple planning horizons to test service beyond the initial admission decision.
-One experiment keeps the session population fixed while histories grow; another introduces departures and new admissions.
-Together they distinguish gradual correction from population changes.
-The relevant outcomes include revision frequency and cost, service around each revision, and the treatment of sessions when a new feasible plan cannot be found.
-\placeholder{Prediction errors, revision behavior, and continuous service across horizons; a successful initial horizon alone does not establish sustained capacity.}
-
-\subsection{Correctness and Operating Limits}
-\label{sec:eval-correctness}
-
-Correctness comparisons preserve the same history and model inputs as the reference execution.
-They exercise state round trips and overlapping demand, restoration, eviction, and plan changes.
-For copying, the correctness criterion is preservation of KV content; any recomputation path additionally requires a numerical and output-equivalence criterion.
-\placeholder{Correctness criteria and results, including delayed copies, allocation pressure, and concurrent operations.}
-
-\paragraph{Overheads.}
-\label{sec:eval-limits}
-The sensitivity analysis varies the period, retained history, usable KV capacity, effective transfer bandwidth, and host capacity.
-These experiments identify where recovery consumes the available slack or releases too little memory to increase service capacity.
-The comparison includes scheduling and host-backup overhead, along with the effect of staggering on batching efficiency.
-\placeholder{Measured overheads and limits, including late input and transfer contention.}
+The second comparison fixes phases and the other residency settings, and changes only the trigger: current demand, input submission, or advance restoration for the next tick.
+For each update, traces associate destination allocation, copy start and completion, tick, execution start, and generation completion.
+These events test whether earlier restoration reduces dependent work's wait and how much GPU space it occupies in advance.
+\placeholder{Report the two paired comparisons: peak KV occupancy, completion counts and latency, restoration waits, and the event timelines that explain them.}

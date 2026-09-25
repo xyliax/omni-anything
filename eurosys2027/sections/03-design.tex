@@ -1,112 +1,174 @@
 \section{System Design}
 \label{sec:design}
 
+\systemname turns the idle intervals identified in Section~\ref{sec:problem} into a recurring schedule for sharing GPU KV capacity.
+The schedule couples three decisions: when each session's update is released, how much of its KV to evict, and when to restore that state.
+Restoration targets the next tick so that the following update can use its period for computation.
+Meeting this target removes a source of waiting; meeting the update's soft deadline also requires sufficient execution time after the tick.
+
 \subsection{Architecture and Execution Cycle}
 \label{sec:design-overview}
 
-\systemname coordinates session phases, eviction budgets, and restoration timing to reuse GPU space between updates.
-It operates above an inference backend, which remains responsible for execution scheduling and model computation.
-Batch formation, when used, remains a backend policy; the architecture does not require continuous batching.
-A residency planner constructs the plan at admission and revises it as resource demands change.
-A session manager follows the plan, using ticks, execution events, and KV readiness to submit work to the backend.
-A KV memory manager tracks allocation, valid copies, and references, while a KV transfer engine executes asynchronous copies.
-The session manager issues eviction and restoration requests to the memory manager, which submits transfer requests with valid sources and allocated destinations.
-A transfer completion reports a finished copy; KV readiness is published only after all required ranges are valid for the corresponding session.
-These components separate planning decisions from the safe execution of each cycle.
+Figure~\ref{fig:design_overview} shows four logical components above the inference backend.
+The \emph{residency planner} produces a plan at admission and revises it as resource demands change.
+The plan specifies session groups and phases, per-session eviction budgets, and restoration timing.
+The \emph{session manager} follows this plan, maintaining periodic progress and coordinating KV preparation with request submission.
 
-Consider one session in Figure~\ref{fig:motivation}.
-At its tick, historical KV is ready on the GPU; the backend processes new input and generates the next output.
-Newly retained KV is backed up to host memory.
-After the selected ranges are no longer in use and their host copies are valid, \systemname releases their GPU storage.
-Other sessions can use this space until the manager allocates a destination and restores the evicted state before the next tick.
-Figure~\ref{fig:comparison}(b) shows this cycle across staggered sessions.
+The \emph{KV memory manager} carries out residency operations using the backend's allocation and reference state.
+It identifies safely reclaimable blocks, obtains restoration destinations, and tracks which GPU and host copies are valid.
+The \emph{KV transfer engine} executes the resulting asynchronous copies and reports their outcomes.
+The inference backend schedules submitted work and performs model computation, including batch formation when used.
+Thus, the planner selects the residency schedule, while the other components enforce it against actual execution and memory state.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/figure-design.pdf}
+  \caption{\systemname coordinates KV residency above the inference backend.
+  The planner sets the residency schedule; the session manager follows it, and the memory manager and transfer engine perform safe reclamation and copying.
+  Thin blue arrows show incremental device-to-host (D2H) backing during computation; thick purple arrows show scheduled H2D restoration.
+  Solid, hatched, and empty KV blocks indicate valid state, allocated restoration targets awaiting completion, and missing state without an allocation.
+  On the right, successive groups restore KV while others compute or wait; white gaps indicate no H2D transfer.
+  Group states and durations are schematic, and a group need not execute as one batch.}
+  \label{fig:design_overview}
+  \Description{Four management components coordinate an inference backend and GPU KV for session groups A through D.
+  Groups A and B create incremental host copies while group C restores missing KV from host memory.
+  A schematic timeline shows restorations for groups C, D, A, and B.}
+\end{figure*}
+
+Consider a session in group C whose idle KV has been partially evicted.
+At the planned restoration time, the session manager requests its missing state.
+The memory manager obtains the destination space, and the transfer engine copies the state from host memory.
+Once all historical KV required by the next update is valid on the GPU, the memory manager reports readiness.
+
+The session manager submits the update when its tick has arrived, its input is available, and any conflicting prior execution has finished.
+During computation, newly retained KV can enter the incremental host-backup path.
+After computation, safely backed and unreferenced ranges can be released again, supplying space for later restorations.
+This is the cyclic reuse illustrated in Figure~\ref{fig:comparison}(b).
 
 \subsection{Session Groups and Phase Assignment}
 \label{sec:design-offsets}
 
-\systemname divides a common period $T$ into $S$ phase slots, with release offsets $\phi_j=jT/S$ for $j=0,\ldots,S-1$.
-Sessions assigned to the same slot form a session group and become eligible for execution at the same phase.
-Each occupied slot can contain multiple sessions; the design does not require one slot per session.
-Sessions retain separate histories and eviction budgets, and the backend forms execution batches from the eligible work.
-A session group is therefore a scheduling unit, with no requirement that all members execute as one fixed batch or transfer atomically.
+Phase assignment uses the timing flexibility allowed by the application.
+For sessions with a common period $T$, \systemname divides the period into $S$ evenly spaced slots.
+Session $i$ assigned to slot $j$ has phase $\phi_i=jT/S$, for $j=0,\ldots,S-1$, and ticks
+\[
+  r(i,k)=t_0+\phi_i+kT,
+\]
+where $t_0$ is the common time origin and $k$ indexes updates.
+Sessions in the same slot form a \emph{session group}; they share a release phase but retain separate histories and eviction budgets.
+The group organizes residency scheduling, while the backend selects execution batches from eligible work.
+Uniform spacing distributes release times without guaranteeing equal transfer demand or simultaneous execution within a group.
 
 \paragraph{Trading batching efficiency for memory reuse.}
 Aligning every session to the same phase makes more work available for batching, but also concentrates demand for resident KV and restoration.
 Staggering groups distributes that demand and lets their eviction intervals supply space for one another.
 It can reduce batch sizes and increase total execution cost through additional model iterations and weight accesses.
-Grouping multiple sessions at each phase preserves opportunities for batching while avoiding a single synchronized burst.
-For roughly balanced groups, increasing $S$ reduces the number of sessions available per group from $N$ toward $N/S$.
-The planner must choose this tradeoff using the backend's measured execution costs.
+Assigning multiple sessions to each slot retains opportunities for batching.
+For $N$ sessions in roughly balanced groups, each phase releases about $N/S$ sessions, although actual batches depend on the backend and current readiness.
 
 The goal is to preserve the service target while reducing peak memory use.
 Let $C_{\mathrm{aligned}}$ and $C_{\mathrm{grouped}}$ denote the complete periodic execution costs for the two release patterns at the same history length and workload.
 The extra cost $C_{\mathrm{grouped}}-C_{\mathrm{aligned}}$, together with transfer interference and scheduling delays, must fit within the original margin $T-C_{\mathrm{aligned}}$.
-The short generation bursts described in Section~\ref{sec:request-classes} explain why a moderate batching penalty can leave useful slack.
-Admission checks this margin and each session's completion time under the proposed grouping.
-Initial phase alignment and any resulting input delay count toward the service cost.
+The short generation bursts described in Section~\ref{sec:request-classes} motivate this tradeoff; admission must check execution costs under the candidate grouping and each session's deadline.
+Initial phase-alignment waiting is recorded separately, and later submission delays do not move the ticks.
 
 \subsection{Joint Residency Planning}
 \label{sec:design-planning}
 
-The planner chooses phase assignments, per-session eviction amounts, and restoration times over a finite lookahead horizon $H$.
-It uses the configured period, retained state, expected growth, execution costs under the proposed groups, host capacity, and effective transfer service.
-A free phase slot is insufficient for admission: the proposed sessions must fit the compute budget, individual transfer windows, and instantaneous GPU capacity.
-Equation~\ref{eq:memory-gain} shows why transfer utilization alone does not establish a capacity benefit; the planner must reduce peak allocation.
+The planner sizes each session's KV demand at the maximum context length configured in the model and backend.
+Input and generation must respect that limit, including all positions retained by the reference history policy.
+This approach accounts for future state growth when selecting the recurring schedule.
+It can admit fewer currently short sessions, but allows the plan to be reused as their histories grow within the limit.
+
+The planner combines this demand with session periods, execution costs under the configured workload and candidate groupings, GPU KV capacity, host capacity, and effective transfer service.
+Its output couples group assignments, per-session eviction budgets, and restoration times within the recurring schedule.
+Planning at maximum context does not require every session's KV to remain resident simultaneously; runtime copies and allocations cover only existing state.
+A candidate must fit the complete workload's compute budget and each session's deadline, as well as the time and space constraints below.
+As Equation~\ref{eq:memory-gain} shows, using more transfer bandwidth is useful only if the resulting eviction intervals reduce peak GPU allocation.
 
 \paragraph{Eviction budgets.}
-An eviction budget $e_i$ limits the amount of safely recoverable KV released from session $i$.
+An eviction budget $e_i$ limits the bytes of safely recoverable KV released from session $i$ in a cycle.
 It need not cover the entire history.
-As Section~\ref{sec:opportunity} shows, full eviction eventually exceeds the transfer budget as retained state grows.
+As Section~\ref{sec:opportunity} shows, full eviction becomes infeasible when the retained state exceeds the available restoration budget.
 Partial eviction keeps the excess resident and gives the planner control over each restoration's duration and destination size.
 A useful budget must free enough memory to matter while leaving a feasible return path.
 
 \paragraph{Restoration timing and space.}
-Let $r_{i,k+1}$ be the next tick and $u_i$ the planned restoration start.
-Given the effective bandwidth assigned to the copy, the estimate $u_i+e_i/\widehat B_i+\delta_i\le r_{i,k+1}$ must include queueing, completion, and safety allowances in $\delta_i$.
-The individual estimates must agree with a feasible shared transfer schedule and Equation~\ref{eq:transfer-budget}.
-At every point, total physical GPU allocation must remain within $G_{\mathrm{KV}}$.
-This accounting includes the entire destination of each copy from the time it is allocated, with shared blocks counted once.
-Starting early can shorten the interval of reclaimed space even when it makes the transfer easier to finish.
+For the restoration preceding tick $r(i,k+1)$, let $u_i$ be the planned trigger time and $\widehat B_i$ the estimated effective bandwidth available to that restoration.
+A budget check takes the form
+\[
+  u_i+\frac{e_i}{\widehat B_i}+\delta_i\le r(i,k+1),
+\]
+where $\delta_i$ accounts for queueing, completion handling, and a safety margin.
+These estimates must describe a feasible shared transfer schedule: independent estimates that each assume the full link bandwidth are insufficient.
+Equation~\ref{eq:transfer-budget} supplies an aggregate necessary condition, while individual recovery windows constrain the order and timing.
 
-The planner therefore checks when earlier groups release space as well as when later groups need it.
-It must account for expected history growth throughout $H$; a plan that fits the current state may cease to fit before the horizon ends.
-\placeholder{Joint planning algorithm: selection of group count and horizon, session assignment, safe eviction ranges, resource estimates and margins, and the time-and-space feasibility check.}
+Space must be available when a restoration obtains its destination, even though the copy has not finished.
+The planner therefore accounts for each entire destination from allocation until release, together with resident history and newly generated KV; shared physical blocks count once.
+Total allocation must remain within $G_{\mathrm{KV}}$ throughout the recurring schedule.
+An earlier restoration gives the transfer more time but shortens the interval during which its state frees GPU space.
+The plan must consequently match releases by preceding groups to allocations for upcoming groups, accounting for state and host-copy storage at the configured context limits.
+\placeholder{Joint planning algorithm at maximum context: group count, session assignment, eviction budgets, restoration order and timing, cost estimates, and the time-and-space feasibility check.}
 
 \subsection{Safe Eviction and Scheduled Restoration}
 \label{sec:design-idle}
 \label{sec:design-correctness}
 
+Runtime execution enforces the plan without treating predicted availability as permission to access or free a block.
+The memory manager distinguishes physical allocation, valid content, and references from computation or copying.
+Three steps govern the transition from idle state to the next update.
+
 \paragraph{Backing and releasing state.}
-The memory manager incrementally creates host copies of newly retained KV; valid copies of unchanged history can be reused across periods.
-Backing up state does not release its GPU allocation.
-Eviction requires both a complete host copy and the absence of conflicting execution or transfer references.
-For a shared physical block, all references must permit reclamation.
-These conditions preserve the application's selected history while changing where its KV resides.
+Incremental host backing runs during inference as newly retained blocks become safe to copy.
+Each session can accumulate such blocks and issue asynchronous D2H copies without waiting for its entire update to finish.
+Completed host copies of unchanged history are reused across cycles, so later backups cover newly retained state rather than repeatedly copying the whole history.
+The memory manager extends valid host coverage only after a successful copy.
+
+Backing up KV does not itself reclaim GPU space.
+After an update completes, the memory manager checks the ranges selected for eviction against the budget and restoration plan.
+A block can be released only if its host copy is valid and all execution, sharing, and transfer references permit reclamation.
+If a copy or reference is still outstanding, reclamation waits; only space actually released becomes available for reuse.
+These checks preserve the selected history while making its idle GPU allocation available to other sessions.
 
 \paragraph{Allocating and copying.}
 \label{sec:design-prefetch}
-The session manager requests restoration at the planned time.
-The memory manager allocates the full destination before submitting a copy to the transfer engine.
-Space reclaimed from another group's idle state can satisfy this allocation.
-An ongoing copy already occupies GPU capacity, but its contents become usable only after completion is published.
-\placeholder{Choose and justify the restoration allocation boundary: whole-group reservation or per-session allocation under the group schedule; specify readiness and recovery when a later allocation cannot proceed.}
+At the planned restoration time, the memory manager checks which required ranges remain missing and confirms their host coverage.
+It allocates the complete missing destination for one session before submitting H2D copying, potentially using space released by another group.
+The transfer engine queues H2D copies in the plan's session order; incremental D2H copies may overlap them.
+Several sessions can have complete destinations allocated while their copies await execution or completion.
+This choice avoids reserving an entire group's destinations before its first session can restore, at the cost of additional allocation decisions and possible waiting between sessions.
+
+If the complete target cannot be allocated, the operation waits without holding a partial destination or reserving space for later sessions.
+Resource changes trigger retries; the runtime reports a timing risk when waiting threatens the planned recovery window.
+It does not bypass the blocked session under the current plan.
+This policy can cause head-of-line blocking, so the planner must check the resulting order and allocation timeline.
+Every allocated destination counts toward capacity immediately, including completed restorations waiting for their ticks.
 
 \paragraph{Resuming computation.}
-The backend may access restored KV only after all required ranges are valid for the correct session and logical positions.
-Concurrent demand, prefetching, and eviction must share a consistent view of allocation and content validity.
-If space or transfer service is unavailable at the planned time, the manager must reassess completion before allowing dependent computation.
-Demand restoration can recover missing state, but its delay remains part of service latency and can cause a deadline miss.
-No timeout permits reading unfinished KV or reusing a referenced block.
+On successful transfer completion, the memory manager validates the operation's identity and publishes the corresponding GPU ranges as valid.
+It reports KV readiness only when every historical range required by the update is available.
+Readiness is per session: a restored session need not wait for the rest of its group before becoming eligible for submission.
+Cancellation, duplicate requests, or plan changes cannot allow an old completion to publish state for a different operation or session.
+Readiness checking and acquiring execution references must be coordinated with eviction so that submitted work retains access to its state.
+
+KV readiness and the tick are separate conditions for submission.
+An early restoration waits for the tick and the update's other execution conditions; a tick that arrives before restoration finishes leaves dependent computation waiting.
+On-demand restoration can recover missing state, but the resulting delay remains part of latency measured from the original tick.
+A missed timing target never permits computation to read unfinished KV.
 
 \subsection{Plan Reuse and Revision}
 \label{sec:design-revisions}
 
-The planner reuses its plan across updates when state growth remains sufficiently predictable over the horizon.
-Per-cycle checks enforce current space, reference, and readiness conditions without reselecting every phase and budget.
-Accumulated history growth requires infrequent revisions; session arrivals and departures can require larger adjustments.
-Keeping some KV resident limits transfer traffic, but that resident portion can still grow and eventually exhaust the available capacity.
+The planner reuses a plan as histories grow within their configured limits and revises it when sessions arrive or depart.
+Context growth alone does not require periodic replanning.
+Existing sessions keep their phases and the current slot grid; the revision changes future eviction budgets and restoration timing and places new sessions on that grid.
 
-Revisions must account for allocations and transfers already in progress.
-A new plan cannot release a referenced block or turn an unfinished copy into valid state.
-Feasibility within $H$ therefore supports only that planning horizon, with continued service requiring reassessment.
-\placeholder{Revision triggers, horizon extension, transition between plans with in-flight work, and service policy when no feasible revision exists.}
+To activate a candidate, the runtime pauses new restoration allocations and lets operations with allocated H2D targets finish or settle safely.
+It then rechecks the candidate against current allocations and references, including the time needed for the transition.
+If the check succeeds, it advances the plan version and replaces only operations that have not started.
+Computation and D2H backing can continue across the transition, with their references and completion events preserved.
+This boundary simplifies switching but can add waiting to the restoration queue.
+
+If a candidate cannot accommodate a new session, admission is rejected and the existing plan remains in use.
+Blocked allocations wait for resource events, and copy or execution errors follow the existing error paths.
+Updates retain their original ticks, so recovery waits remain visible in the measured completion latency.
