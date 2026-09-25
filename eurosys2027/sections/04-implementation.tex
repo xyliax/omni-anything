@@ -1,6 +1,8 @@
-\section{Implementation}
+% Included after System Design; this is a subsection of that section.
+\subsection{Backend Integration}
 \label{sec:implementation}
 
-\placeholder{Verified implementation details: serving engine and version; integration of session phases with execution; KV allocation and host-copy tracking; H2D scheduling and completion events; plan revision and recovery paths. Identify which parts of Section~\ref{sec:design} are implemented and which remain design proposals.}
-
-\placeholder{Comparison infrastructure: shared execution components, baseline adaptations, timing instrumentation, and measured instrumentation overhead.}
+The backend interface must expose request submission, execution completion, KV block identity, allocation, references, and copy readiness.
+\systemname coordinates these operations with the backend's existing block allocator so that memory accounting and validity have one consistent authority.
+The backend controls execution scheduling and any batching policy; session groups determine which work becomes eligible together.
+\placeholder{Verified integration: identify the backend and implemented planning and recovery paths, synchronization points, and remaining gaps relative to this design.}

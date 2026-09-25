@@ -34,8 +34,8 @@ encoder 输入在引擎步内调度并 eager 执行。encoder CUDA graph 机制�
 
 - 流式输入的每个新 chunk 经 `AsyncLLM._add_streaming_input_request` 与 `process_inputs(resumable=True)` 进入同一内部请求；`Scheduler._update_request_as_session` 折叠时丢弃上一段末尾已采样、未回喂的 token（停止瞬间 `num_computed_tokens == num_tokens - 1`，截断后二者相等）。因此保持 `num_computed_tokens` 的恢复路径恰好调度新 chunk 的 token 数。
 - `num_computed_tokens == 0` 的请求走重匹配分支：GPU prefix hash 命中加 connector 后缀命中，两者都只按完整 block 计数。未写满的 block 从不进入 hash 表（`cache_full_blocks` 只处理满块），也无法 host 备份（`SimpleCPUOffloadConnector` 的 eager store 按 `confirmed_tokens // block_size * block_size` 对齐存储，且当前步写满的块要到下一步才发出存储）；`update_state_after_alloc` 断言外部命中 token 数按 block 对齐。connector 只匹配紧接 GPU 前缀之后的连续后缀，位于 CPU 覆盖段之后的 GPU 缓存块不可达。
-- 由此，`free(request)` 之后重入的请求可恢复前缀恰为 `16 * floor((C - 1) / 16)` 个 token（C 为停止时的 computed 数，block size 16）：C 非整块时缺口是被销毁的尾部残块，C 整块时缺口是错过存储窗口的最后一个满块。
+- 可恢复前缀取决于完整块、已确认的主机覆盖和引用状态。尾部未满块或备份滞后可能引发重算；不能仅由停止时的 computed-token 数给出精确恢复长度。历史轨迹中的候选公式及未解释样本见 FINDING-E4。
 
 ## 与本仓库的关系
 
-baseline worker 在引擎几何参数（模型、显存比例、`max_model_len`、`max_num_seqs`）之外只设置 `enforce_eager=False`；Pilarius worker 另外启用 prefix caching 与 CPU offload connector，并在 eviction 模式下强制同步调度。两者的组批与 CUDA graph 行为一致，全部来自上述默认值。本仓负载下的实测后果（图覆盖、步耗时结构、恢复 prefill 余量）由 [`docs/findings.md`](../findings.md) 的 FINDING-E1 至 FINDING-E4 持有。
+本仓配置差异由[实验协议](../experiments.md#executed-decode-difference)维护；实际批形状和 CUDA Graph 分派不能由共用默认值推定一致。图覆盖、步耗时与恢复缺口的历史观察见 [`docs/findings.md`](../findings.md) 的 FINDING-E1 至 FINDING-E4。

@@ -19,7 +19,7 @@ The design uses these properties to coordinate repeated recovery with the alloca
 \paragraph{Combining loading and recomputation.}
 Cake prepares cached prefixes by concurrently loading some KV chunks and recomputing others~\cite{jin2025cake}.
 Its division follows causal attention costs: recomputation proceeds from earlier positions while loading proceeds from later positions.
-The extension in Section~\ref{sec:discussion} builds on this use of computation to supplement loading.
+This use of computation to supplement loading motivates the future extension discussed in Section~\ref{sec:discussion}.
 Periodic restoration additionally requires fitting repeated preparation into a shared schedule as retained histories grow.
 
 \paragraph{Latency-constrained serving.}
@@ -32,6 +32,6 @@ Both designs require evaluating useful service under a latency objective rather 
 Metronome studies memory exhaustion in periodic interaction serving and combines an in-engine KV window with deadline-aware admission~\cite{meng2026metronome}.
 Its window bounds state by retaining recent tokens and attention sinks.
 Its evaluation also uses phase-staggered input streams.
-\systemname preserves the history selected by the application and varies its GPU residency through partial eviction and advance restoration.
-This trades host capacity and recurring recovery work for GPU capacity.
-The approaches therefore make different retention and resource choices; a performance comparison must either hold retained history fixed or report the effect of changing it.
+\systemname manages the GPU residency of the application's selected history through partial eviction and advance restoration.
+Residency scheduling can apply to either full or bounded histories, trading host capacity and recurring recovery work for GPU capacity.
+A residency comparison holds the retention policy fixed so that its effect is measured separately from changes in retained history.

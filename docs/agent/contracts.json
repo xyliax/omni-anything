@@ -69,10 +69,12 @@
     },
     {
       "id": "CONTRACT-KV-STATE-AUTHORITY",
-      "rule": "activity, physical allocation, valid content, confirmed host coverage, bidirectional transfer state and shared references are separate dimensions; allocation or a store cursor does not establish copy completion; block pools, transfer events and runtime references determine state",
+      "rule": "activity, physical allocation, valid content, confirmed host coverage, bidirectional transfer state and shared references are separate dimensions; allocation or a store cursor does not establish copy completion; block pools, transfer events and runtime references determine state; design interface: transfer submission, successful transfer completion, publication of valid KV and session readiness are distinct; late or duplicate events must not update unrelated or reused state",
       "owners": [
         "docs/system.md",
-        "engines/conveyor/worker/engine_patch/omni_state.py"
+        "engines/conveyor/worker/engine_patch/omni_state.py",
+        "docs/system.md#component-interface-contracts",
+        "docs/system.md#implementation-handoff"
       ],
       "verification": []
     },
@@ -130,12 +132,26 @@
       "verification": []
     },
     {
+      "id": "CONTRACT-RESOURCE-FEASIBILITY",
+      "rule": "analysis requirement, not measured capacity: time-aligned training motivates small typical generation per update but does not impose a hard token cap; compute slack must be established for all admitted sessions at the full-residency capacity boundary and must cover phase-dependent batching costs, transfer interference and scheduling delays; period times effective restoration bandwidth bounds restored bytes per period, while peak memory savings also depend on actual release-to-preallocation intervals; full eviction is infeasible when total restoration exceeds this budget or individual time-and-space constraints, not universally",
+      "owners": [
+        "docs/problem.md#playback-paced-work",
+        "docs/problem.md#slack-conditions",
+        "docs/problem.md#bandwidth-memory-bound",
+        "docs/system.md#batching-tradeoff"
+      ],
+      "verification": []
+    },
+    {
       "id": "CONTRACT-CYCLIC-RESTORATION",
-      "rule": "design requirement, not implementation status: the session manager controls H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility",
+      "rule": "design requirement, not implementation status: the session manager controls H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility; session groups are scheduling objects, and a group schedule retains per-session history and per-block safety conditions without requiring an atomic group transfer; group-wide versus per-session restoration allocation and the group compute-readiness boundary remain unresolved pending the author-requested comparison; design boundary: session groups organize residency scheduling, while the inference backend owns execution scheduling and model computation, including batching when used; continuous batching is not a required backend policy; backend replacement requires compatible execution-event and KV-state operations and is not a claim of existing multi-backend support; proactive cyclic KV recomputation is reserved for future work as a planner decision extension, with replay-capable backend execution and joint resource feasibility required before claiming support",
       "owners": [
         "docs/system.md#kv-prefetching",
         "docs/system.md#release-offset-scheduling",
-        "docs/system.md#planning-updates"
+        "docs/system.md#planning-updates",
+        "docs/system.md#group-restoration-allocation",
+        "docs/system.md#inference-backend-boundary",
+        "docs/system.md#future-recomputation"
       ],
       "verification": []
     }

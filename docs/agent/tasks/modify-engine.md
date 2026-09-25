@@ -4,7 +4,7 @@
 
 1. 根 `AGENTS.md` 的 `Research Classification` 与 `Change Transactions`；
 2. 目标 evaluated system 最近一层 `AGENTS.md`；
-3. `docs/system.md`；
+3. `docs/system.md`，优先读 `#logical-architecture`、`#component-interface-contracts`、`#operational-flow`、`#implementation-handoff` 与 `#open-design-decisions`；
 4. `docs/agent/system-map.json`、`dynamic-edges.json`、`contracts.json` 与 `change-impact.json`；
 5. 目标 source 及其直接 runtime dependency。
 

@@ -1,14 +1,11 @@
 \begin{abstract}
-Emerging interaction models sustain long-lived full-duplex sessions in which input and output overlap.
-In periodic service, a model processes newly accumulated input in fixed-duration micro-turns and decides whether and when to respond.
-After a micro-turn finishes, its historical key--value (KV) state can remain idle until the next update, yet still occupy GPU memory.
-As retained history grows, full residency can exhaust GPU capacity while the combined work of admitted sessions still leaves time within each period.
-Offloading idle KV frees capacity, but restoring it on demand puts recovery on the next update's critical path.
-The periodic schedule provides advance notice of the next update, making it possible to plan restoration before demand.
-We present the design of \systemname, a serving system for memory multiplexing through cyclic KV restoration, without truncating the history retained by the application.
-Where the application permits, \systemname staggers session phases, evicts recoverable KV after use, and schedules its restoration from host memory before the next update.
-Space released by one session can then accommodate another session's restoration.
-The plan limits eviction to the volume that the shared link can restore in time and accounts for each restoration's full GPU allocation before copying begins.
-\placeholder{Evaluation result: \systemname serves XX times as many concurrent sessions as full residency and YY times as many as the strongest evaluated baseline [name], under the same service objective and matched generation work.
-Report the workload, observation duration, and deadline-miss rates.}
+Serving full-duplex interaction models requires maintaining ongoing sessions in which input and output can overlap.
+In periodic service, each update processes new input and generates output as needed, while historical key--value (KV) state persists between updates.
+As contexts grow, keeping this state on the GPU can exhaust memory while the combined work of admitted sessions still leaves time within each period.
+Offloading idle KV frees capacity, but restoring it only when the next update arrives can delay computation and cause deadline misses.
+The periodic schedule makes the next update time known in advance, allowing restoration to be planned before demand.
+We present \systemname, a serving system for multiplexing GPU memory across periodic interaction sessions.
+Through cyclic KV restoration, \systemname reuses space released by idle sessions to prepare other sessions for their next updates.
+It coordinates these restorations with session execution, accounting for both shared transfer capacity and GPU memory availability.
+\placeholder{Measured session capacity and deadline-miss rates under matched service objectives and generation work, with workload and observation duration.}
 \end{abstract}

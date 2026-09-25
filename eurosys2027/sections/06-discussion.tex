@@ -13,20 +13,23 @@ Smooth growth can permit infrequent revisions, but it does not guarantee that a 
 If state keeps growing, memory, host capacity, or recovery time can eventually become limiting.
 The reported capacity is consequently tied to session duration, the prediction horizon, and the policy for handling infeasible revisions.
 
-\paragraph{Using spare computation for recovery.}
-Recomputation could extend cyclic restoration when H2D bandwidth becomes limiting.
-After using a selected KV range, the manager could release it and rebuild it before the next tick from retained historical inputs.
-This would be a recurring recovery choice, not only a fallback after a failed transfer.
-Its compute budget must come from slack across the admitted workload; the idle interval of one session is insufficient if other sessions occupy the GPU.
+\paragraph{Future work: recomputation.}
+\systemname currently plans recovery through H2D transfers.
+Separating planning from execution provides a way to incorporate KV recomputation when transfer bandwidth becomes limiting.
+The planner could add a decision variable for how much evicted KV to rebuild from retained inputs, jointly scheduling this work with H2D restoration.
+Execution would require a backend that supports replay and reports when reconstructed KV becomes valid.
 
-Combining loading with recomputation is established in prior work.
-Cake recomputes earlier prefix chunks while loading later chunks, exploiting the lower attention cost of earlier positions~\cite{jin2025cake}.
-For multimodal sessions, applying such a division also requires the appropriate replay inputs, positions, dependencies, and temporary memory.
-A shorter period reduces the time available for both transfers and recomputation, so it does not by itself favor recomputation.
-\placeholder{Cyclic recomputation design: retained replay inputs, eligible ranges, activation conditions, and joint compute, transfer, and memory budgeting.}
+Feasibility would depend on compute slack across all admitted sessions and space for reconstructed KV and temporary work.
+Both forms of recovery would need to finish by the next tick while leaving enough computation time for sessions to meet their soft deadlines.
+We leave this extension and its evaluation to future work.
 
 \paragraph{Workload and platform dependence.}
 A small retained history leaves little memory to reclaim, and a short interval between uses leaves little time to restore it.
 Effective transfer bandwidth, host-copy availability, and batching efficiency determine the useful eviction budget.
 Different periods or execution profiles can also produce unequal demands despite uniformly spaced phases.
 Uniform spacing spreads release times but does not optimize for these differences in resource demand.
+
+\paragraph{Transfers across multiple devices.}
+With multiple GPUs, restoration may share PCIe switches, host-memory channels, and other links.
+The effective bandwidth in Equation~\ref{eq:transfer-budget} must reflect contention on the paths used by the plan; adding nominal per-device bandwidths can overestimate the available service.
+Extending the planner requires tracking each constrained path together with the destination capacity on each device.

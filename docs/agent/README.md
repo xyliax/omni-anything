@@ -7,6 +7,7 @@
 | 任务 | 读取 |
 | --- | --- |
 | 论文措辞与结构 | 目标正文、`docs/PAPER.md`、`eurosys2027/AGENTS.md`；事实按域查 owner |
+| Design 写作或实现交接 | [系统设计](../system.md#logical-architecture) → [运行流程与伪代码](../system.md#operational-flow) → [未决设计](../system.md#open-design-decisions)；代码任务继续按 modify-engine 读取实现入口与验收要求 |
 | 问题或设计讨论 | `docs/problem.md` 或 `docs/system.md` 的相关节；证据按需查 Findings |
 | 理解运行路径 | [understand-runtime](tasks/understand-runtime.md) |
 | 修改引擎 | [modify-engine](tasks/modify-engine.md) |

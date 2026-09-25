@@ -11,7 +11,7 @@ It separates the main capacity comparison from the measurements needed to explai
 \paragraph{Workload and comparison controls.}
 A residency comparison holds the model, precision, input content, retained history, and generation work fixed.
 The controls also match batching limits, scheduling policies, and resource budgets except for the variable under study.
-Changing the retention policy changes what later computation can access, so comparisons across retention policies require separate quality measurements.
+Retention policies are workload parameters; each residency comparison preserves the selected policy and its resulting history.
 Workload parameters include the period, session duration, context-length range, and input and output configuration.
 
 \paragraph{Compared systems.}
@@ -51,7 +51,7 @@ A memory-limited operating point requires evidence that KV allocation prevents a
 Session-level idle intervals alone do not establish spare compute capacity across the workload.
 Near the memory boundary, the measurements report the complete workload's execution time per period and the remaining fraction of the period, rather than inferring slack from a device-utilization counter.
 Calibration and validation use separate configurations to test Equation~\ref{eq:memory-before-compute}, including regions where it predicts no slack.
-An additional-work experiment tests whether the observed budget can accommodate more session work or supported recomputation while preserving the service objective.
+An additional-work experiment tests whether the observed budget can accommodate more session work while preserving the service objective.
 \placeholder{Joint allocation and execution traces at the full-residency limit, predicted versus measured slack, and additional work completed within the same deadline.}
 
 \subsection{Mechanism Ablations}

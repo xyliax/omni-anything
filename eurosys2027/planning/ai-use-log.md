@@ -130,3 +130,23 @@
 | 2026-09-25 | OpenAI Codex | 按作者要求恢复图 2 单栏排版；核验 Thinking Machines Lab 原文，在引言及术语表补充 micro-turns 来源与正式引用；作者复核表述和图件 |
 | 2026-09-25 | OpenAI Codex | 对照 vLLM、DistServe 及作者指定的 nature-skills 重写 Abstract、Introduction 和 Background，吸收作者提供的摘要优点，保留技术前提与结果占位并更新 PDF；作者复核最终措辞、机制含义与结果 |
 | 2026-09-25 | OpenAI Codex | 使用 figure-designer 技能提出 Design 图的分层布局，制作并保存可编辑 Draw.io 讨论稿及导出 PDF；图件未接入正文，作者复核图示语义、最终布局与图注 |
+| 2026-09-25 | OpenAI Codex | 按作者命名表统一 V3 图件、术语表与设计职责，引入 session group 调度对象并保留逐会话和逐 block 条件；作者复核分组语义、组件边界和图示 |
+| 2026-09-25 | OpenAI Codex | 按作者要求重排 figure.drawio 的 design 页：压缩双栏图高度，以背景色表示组状态，简化传输与控制标签，并增加带空隙的 H2D 活动示意条；作者复核最终布局、状态含义及图注 |
+| 2026-09-25 | OpenAI Codex | 按作者意见修改 Abstract 和 Introduction 的开头及直接相关的历史裁剪表述，核验 Moshi、TML 和 Qwen 的时间量并补充引用；把组级恢复分配边界登记为收尾必查的未决设计；作者确认分配方案、周期来源和最终论文表述 |
+| 2026-09-25 | OpenAI Codex | 迭代 design 页的组件职责与连线，以 planner、cycle scheduler、KV memory manager 和 KV transfer engine 区分规划、调度、块安全和异步复制，同步术语与 Design 表述；作者复核职责边界，组级恢复分配方案仍待确定 |
+| 2026-09-25 | OpenAI Codex | 精修 design 页的 group 与 shared host memory 矩形边框，删除 Schematic，将 H2D 活动列改为带传输标记和空闲间隙的 Busy / Idle 轨道；讨论 planner、scheduler 与 session manager 的职责关系，作者复核最终组件层级与图示 |
+| 2026-09-25 | OpenAI Codex | 按作者补充核实 Metronome 的 2 s 周期来源；依据 MiniCPM-o 4.5 技术报告，将引言量级例子改为包含输入与输出的十分钟音频对话，记录持续双向流及输出速率假设，区分主干 KV 估算与整机显存上界，更新 PDF；作者复核最终措辞与例子假设 |
+| 2026-09-25 | OpenAI Codex | 使用作者指定的 nature-writing 和 nature-polishing，对 Introduction 做段落反向提纲、问题链衔接及语言复核；移开上下文裁剪比较，将 phase 定义放入方法概述，核对 vLLM 与 DistServe 的图引用句法并更新 PDF；作者复核论证顺序、技术含义和结果占位 |
+| 2026-09-25 | OpenAI Codex | 将 design 页改为 Pilarius 四组件与外部 inference backend 两层，明确 continuous batching 归后端、session group 归驻留调度；核对矩形边框和导出，同步术语、设计正文及边界契约；作者复核后端对接能力与最终图示 |
+| 2026-09-25 | OpenAI Codex | 按作者决定将主动周期性重算明确留作 future work，记录在 Planner 中增加恢复方式分配决策的扩展方向及执行前提；同步机制说明、论文待办、评估边界、契约和 Discussion/Related Work，移除本轮重算算法占位并更新 PDF；作者复核扩展表述 |
+| 2026-09-25 | OpenAI Codex | 按作者要求逐段润色 Introduction 及两幅图注，修正应用主体、周期与 KV 空闲窗口措辞，明确外部 KV 估算假设和联合恢复规划的表达；结合问题与设计 owner 核对语义并查阅原始引用，保留结果占位；作者复核最终文字、引用与技术含义 |
+| 2026-09-25 | OpenAI Codex | 按作者指定的叙事顺序重写 Introduction 开头：近期双工模型、交互能力与用户体验、从单次请求到 interaction session，再接周期执行和历史 KV；核验 GPT-Live 与 Seeduplex 官方资料并补充引用，按作者补充引入 Thinking Machines 的 time-aligned micro-turns，小幅调整 Abstract 起句以保持术语一致且避免重复；作者复核最终叙事、引用与措辞 |
+| 2026-09-25 | OpenAI Codex | 联读 Abstract 与 Introduction，核验模型时间粒度和 Metronome 服务负载周期的来源，评审 interaction session、history/context 及开头的重复表达并提供精简建议；作者决定周期例子的取舍并复核最终表述 |
+
+## 2026-09-25 — Background、System Design 与章节结构修订
+
+- 工具：Codex；按 tech-paper-template 与 pre-submission-reviewer 的逻辑及语言检查方法修订。
+- 工作：重写 Background 的播放节奏、容量边界与带宽收益论证；依据作者说明区分时间对齐训练与硬 token cap；核验 MiniCPM-o 一手来源和固定版本公开实现的阶段耗时；将编号公式缩减为三个核心关系；明确分组错相位的批处理代价、全量恢复限制与预分配对峰值收益的影响。第三节改为 System Design，原独立 Implementation 缩为 Backend Integration 小节，并在 Discussion 补充共享传输路径的限制。同步问题、设计、外部参数与规划 owner；未改 Introduction、Abstract 或 Evaluation 正文。
+- 作者复核责任：确认工作量与模型行为的表述、外部量级算例及理论假设；补充目标并发和历史长度下的完整周期测量、联合规划算法及恢复分配方案。公开阶段数据和条件推导不作为本系统实测结果。
+| 2026-09-25 | OpenAI Codex | 精修 design 页的接口标签、透明文字、planner 图标与线型图例，改用紫色 H2D 并将 backend 简化为单个实线框；在系统设计 owner 中补齐接口语义、状态安全与实现验收入口，保留未决算法与分配边界；作者复核图示和实现契约 |
+| 2026-09-25 | OpenAI Codex | 落实 Introduction 精简，清理研究文档、论文草稿与外部笔记中的过时状态、重复评述和无依据断言，核对代码差异、原始来源、链接及术语；保留未决设计和证据限制，作者复核最终研究表述 |
