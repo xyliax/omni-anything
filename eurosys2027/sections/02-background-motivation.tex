@@ -3,19 +3,19 @@
 
 \begin{table*}[t]
   \centering
-  \caption{Estimated backbone execution time and fraction of the period used by MiniCPM-o 4.5 at its configured context limit of 40,960 positions.
+  \caption{Estimated backbone execution time for MiniCPM-o 4.5 at its configured context limit of 40,960 positions.
   Each GPU processes a batch containing as many sessions as its memory can hold, with one update per second.
-  The estimates assume 80\% bandwidth efficiency and 25\% compute efficiency.}
+  The central estimates assume 80\% bandwidth efficiency and 25\% compute efficiency; the sensitivity ranges vary these efficiencies over 40--80\% and 15--40\%, respectively.}
   \label{tab:hardware-capacity-projection}
   \begin{tabular}{lrrrr}
     \toprule
-    GPU (capacity) & \shortstack{Memory BW\\(TB/s)} & \shortstack{Batch size\\$N_{\mathrm{mem}}$} & \shortstack{Execution time\\(ms)} & \shortstack{Period used\\(\%)} \\
+    GPU (capacity) & \shortstack{Memory BW\\(TB/s)} & \shortstack{Batch size\\$N_{\mathrm{mem}}$} & \shortstack{Execution time\\(ms)} & \shortstack{Efficiency sensitivity\\(ms)} \\
     \midrule
-    A100 SXM (80GB) & 2.04 & 10 & 241 & 24.1 \\
-    H100 SXM (80GB) & 3.35 & 10 & 141 & 14.1 \\
-    RTX PRO 6000 Blackwell Server (96GB) & 1.60 & 12 & 360 & 36.0 \\
-    H200 SXM (141GB) & 4.80 & 20 & 185 & 18.5 \\
-    MI300X (192GB) & 5.30 & 29 & 233 & 23.3 \\
+    A100 SXM (80GB) & 2.04 & 10 & 241 & 234--476 \\
+    H100 SXM (80GB) & 3.35 & 10 & 141 & 141--282 \\
+    RTX PRO 6000 Blackwell Server (96GB) & 1.60 & 12 & 360 & 349--710 \\
+    H200 SXM (141GB) & 4.80 & 20 & 185 & 180--365 \\
+    MI300X (192GB) & 5.30 & 29 & 233 & 229--463 \\
     \bottomrule
   \end{tabular}
 \end{table*}
@@ -26,19 +26,19 @@
 
 An interaction session repeatedly processes new input while retaining history across updates.
 For a session with period $T$, each update is released at a tick and has a soft deadline at the next tick.
-Service latency includes both waiting and execution; delaying submission does not move the deadline.
+Update latency is measured from its scheduled tick to completion, including any delay before submission.
 Once an update stops accessing its historical KV, that state can remain idle until the next update, even while the output is still playing.
 This interval creates an opportunity to reclaim GPU space while preserving the session's history.
 
-Speech illustrates why an update can finish well before playback ends.
+Speech illustrates why computing an update can take less time than playing its output.
 In models trained for time-aligned interaction, generation follows playback progress: each update typically produces content for the corresponding playback interval.
 For example, MiniCPM-o 4.5 trains on text and speech assigned to temporal chunks and uses Time-Aligned Interleaving to adjust generation to accumulated playback progress~\cite{cui2026minicpmo45}.
 A long response therefore unfolds across updates, with new input incorporated along the way.
 Playback determines the useful pace of generation, while the hardware can compute that content much faster.
 
-For example, a one-second update in MiniCPM-o 4.5 contains ten incoming audio positions and about three to four generated text tokens at normal speaking speed, excluding prompt and control positions~\cite{cui2026minicpmo45}.
-Its public llama.cpp-omni implementation reports an audio prefill stage of about 21\,ms and a backbone decoding cost of about 38\,ms/token on an RTX 4090 in F16~\cite{llamacppomni2026readme}.
-Combining these figures gives an estimated 114--152\,ms of backbone decoding per second of speech, about 6.6--8.8 times the playback rate, or 135--173\,ms with the reported prefill stage included.
+For example, a one-second update in MiniCPM-o 4.5 processes ten encoded audio positions and generates about three to four text tokens at normal speaking speed, excluding prompt and control positions~\cite{cui2026minicpmo45}.
+Its public llama.cpp-omni implementation reports an audio prefill stage of about 21\,ms and a backbone decoding cost of about 38\,ms/token on an RTX 4090 in FP16~\cite{llamacppomni2026readme}.
+Combining these figures gives an estimated 114--152\,ms of backbone decoding per second of speech, or 135--173\,ms including the reported prefill stage.
 The reported stage timings omit speech synthesis and runtime overhead, and leave batch size and retained context length unspecified.
 Complete update time must therefore be measured at the target concurrency and history length.
 
@@ -48,24 +48,23 @@ Complete update time must therefore be measured at the target concurrency and hi
 
 Playback pacing keeps typical generation per update small, while the retained history accumulates over successive updates.
 A session can therefore accumulate a large KV cache even when each update adds only a small amount of work and state.
-Keeping that cache on the GPU throughout the cycle consumes capacity even while the session is idle.
+Keeping that cache on the GPU throughout the period consumes capacity even while the session is idle.
 Training does not impose a strict per-update token cap, and attention becomes more expensive as history grows.
 The available compute slack therefore depends on both the workload and its execution cost.
 
 The relevant comparison is between the memory and computation required by all admitted sessions.
-Consider $N$ sessions with a common period, $L$ retained positions each, and $\kappa$ KV bytes per position, with no KV sharing.
-Let $G_{\mathrm{KV}}$ be the GPU capacity available for KV after other allocations, and let $C_N(L)$ be the time needed to complete one update for every session under the chosen execution policy.
-It includes input processing, generation, and runtime overhead, with batching accounted for.
-Ignoring allocation rounding, memory binds first when
+Consider $N$ sessions with a common period $T$, a maximum retained length of $L$ positions per session during an update, and $\kappa$ KV bytes per position, with no KV sharing.
+Let $G_{\mathrm{KV}}$ be the GPU capacity available for KV after other allocations.
+Let $C_N(L)$ be the total execution time required for one update from every session under the chosen grouping and batching policy.
+It includes input processing, generation, and runtime overhead, counting overlapping execution once and excluding idle gaps between scheduled releases.
+Ignoring allocation rounding, the full-residency capacity limit leaves execution slack when
 \begin{equation}
   L_{\mathrm{mem}}=\frac{G_{\mathrm{KV}}}{N\kappa},
   \qquad C_N(L_{\mathrm{mem}})<T.
   \label{eq:memory-before-compute}
 \end{equation}
-The remaining budget is $T-C_N(L_{\mathrm{mem}})$.
-Admission must verify the condition in Equation~\ref{eq:memory-before-compute}: all sessions' work fits within the period even when full residency fills the KV pool.
-The remaining time can absorb the computation and interference costs of memory multiplexing.
-The resulting schedule must also satisfy each session's deadline.
+The remaining aggregate execution budget is $T-C_N(L_{\mathrm{mem}})$.
+Memory multiplexing must fit its additional execution and interference costs within this budget while also satisfying individual deadlines, restoration windows, and allocation constraints.
 \placeholder{Measure complete periodic work at the full-residency capacity limit, including the distribution of per-update generation, context lengths, batching, and phase-dependent execution costs.}
 
 % external-reference-begin: cross-model-cycle-usage
@@ -93,31 +92,29 @@ The resulting schedule must also satisfy each session's deadline.
 
 Table~\ref{tab:hardware-capacity-projection} uses the public backbone context limit of 40,960 positions to estimate how many sessions fit in GPU memory.
 The speech decoder's separate 4,096-position limit is also included in the memory reservation~\cite{openbmb2026minicpmconfig}.
-The combined KV reservation is $S\approx5.86$\,GiB per session; we assume another $R=20$\,GiB for weights and other allocations.
-Approximating nominal GPU capacities as GiB budgets, the memory-only ceiling is $N_{\mathrm{mem}}=\lfloor(M-R)/S\rfloor$.
+The combined KV reservation is $K_{\mathrm{sess}}\approx5.86$\,GiB per session; we assume another $R=20$\,GiB for weights and other allocations.
+Let $M$ be the GPU memory budget, approximating nominal capacities as GiB.
+With $G_{\mathrm{KV}}=M-R$, the memory-only session limit is $N_{\mathrm{mem}}=\lfloor G_{\mathrm{KV}}/K_{\mathrm{sess}}\rfloor$.
 Each row assumes that all $N_{\mathrm{mem}}$ sessions form one batch near the context limit, with enough room in each history for the update's new positions.
-This batch fills the available KV capacity; achievable compute throughput and batch formation depend on execution efficiency and session phases.
+This is the largest batch that fits within the KV memory budget.
 Device capacities and bandwidths follow vendor specifications~\cite{nvidia2021a100,nvidia2023h100,nvidia2026rtxpro,nvidia2026h200,amd2025mi300x}.
 
 We estimate backbone prefill and decode by separating linear layers from attention and applying a roofline model to each component~\cite{nvidia2023performance}.
-For component $j$, with byte traffic $D_j$ and operation count $O_j$, the time estimate is
-\begin{equation}
-  \widehat t_j=\max\left(\frac{D_j}{\eta_B B},\frac{O_j}{\eta_F F}\right),
-  \label{eq:batched-cost-estimate}
-\end{equation}
-where $B$ is rated local-memory bandwidth and $F$ is a dense BF16 matrix-throughput reference.
-We assume bandwidth efficiency $\eta_B=0.8$ and compute efficiency $\eta_F=0.25$ throughout both tables.
-The backbone's projection and MLP matrices contain about 6.95 billion parameters and its output head another 0.62 billion, giving about 15.1\,GB of BF16 matrix weights per forward pass~\cite{openbmb2026minicpmconfig}.
+For component $j$, with byte traffic $D_j$ and floating-point operation count $O_j$, the time estimate is
+\[
+  \widehat t_j=\max\left(\frac{D_j}{\eta_B B_{\mathrm{mem}}},\frac{O_j}{\eta_F F}\right),
+\]
+where $B_{\mathrm{mem}}$ is rated GPU memory bandwidth and $F$ is a dense BF16 matrix-throughput reference.
+The central estimates in both tables assume bandwidth efficiency $\eta_B=0.8$ and compute efficiency $\eta_F=0.25$, without empirical calibration.
 Weights are read once for the whole batch, while the attention traffic includes each session's own KV.
-The prefill estimate processes ten positions together, reuses their historical KV, and computes logits only for the last position; four sequential decode forward passes follow, including a final state update when needed.
-The table reports the total prefill and decode time, both in milliseconds and as a percentage of the one-second period.
-For RTX, we use approximately 240\,TFLOP/s, inferred from its FP32 rating and the GB202 ratio of dense BF16 throughput with FP32 accumulation to FP32 throughput~\cite{nvidia2026rtxpro,nvidia2025blackwell}.
-The RTX estimate is higher than those for A100 and H100 because it combines lower memory bandwidth with a larger batch and more per-session KV traffic.
-Batch sizes differ because each GPU is evaluated at its own memory ceiling.
+For MiniCPM-o, each modeled update consists of a ten-position incremental prefill followed by four sequential decode forward passes.
+The component times are summed over these stages; parameter counts and traffic accounting appear in the supplementary material.
+The RTX estimate is higher than those for A100 and H100 because it combines lower memory bandwidth with a larger batch and therefore more total KV traffic.
 
 Under these assumptions, estimated backbone execution time, including memory-access costs, is below one second in all five configurations.
-Varying bandwidth efficiency over 40--80\% and compute efficiency over 15--40\% gives approximately 234--476, 141--282, 349--710, 180--365, and 229--463\,ms in table order; these ranges describe sensitivity to the assumed efficiencies.
+Table~\ref{tab:hardware-capacity-projection} also reports sensitivity to the assumed efficiencies for each GPU.
 KV reuse also affects the estimate: doubling the modeled attention traffic raises the RTX estimate to about 643\,ms at the assumed efficiencies, or 1.01\,s if bandwidth efficiency also falls to 50\%.
+Staggering sessions can reduce batch sizes and increase weight traffic and total execution time, consuming part of the estimated margin.
 Establishing the complete-workload condition in Equation~\ref{eq:memory-before-compute} requires measurements of usable memory, actual batching and traffic, input encoding, speech generation, and runtime overhead.
 
 
@@ -127,9 +124,9 @@ These are illustrative resource estimates.
 The added backbones are the 3B and 7B Qwen2.5-Omni Thinkers and Moshi's temporal Transformer~\cite{qwen2025omni3bconfig,qwen2025omni7bconfig,defossez2024moshi,kyutai2026moshiconfig}.
 For Qwen, we assume a one-second incremental update with 25 encoded audio positions and four text decode forward passes; the input rate follows its audio representation, while the update period and decode count are workload assumptions~\cite{xu2025qwenomni}.
 Moshi instead advances its temporal backbone once per native 80\,ms frame.
-We reserve each model's auxiliary KV separately and assume 16, 28, and 20\,GiB for weights and other allocations for Qwen 3B, Qwen 7B, and Moshi, respectively.
-Execution time excludes their input encoders and speech-output modules, including Moshi's depth Transformer, as in Table~\ref{tab:hardware-capacity-projection}.
-In the one-second scenarios, these estimates leave substantial time outside backbone execution across several model sizes and KV geometries.
+The supplementary material details auxiliary KV reservations and other memory budgets.
+As in Table~\ref{tab:hardware-capacity-projection}, these estimates exclude input encoders and speech-output modules; for Moshi, the omitted stages include the depth Transformer.
+In the one-second scenarios, estimated backbone execution uses only part of the period across models with different sizes and KV footprints.
 All backbone estimates in Table~\ref{tab:cross-model-cycle-usage} fit within their periods under the assumed efficiencies.
 For Moshi at its memory ceiling, the RTX estimate is about 74.2\,ms, leaving only 5.8\,ms of its 80\,ms period for omitted stages.
 With compute efficiency fixed, reducing bandwidth efficiency to 70\% or 50\% raises that backbone estimate to 104.7\% or 146.6\% of the period.
@@ -140,8 +137,10 @@ The compute slack available for memory multiplexing therefore depends on the wor
 \subsection{Bandwidth Limits on Memory Reuse}
 \label{sec:opportunity}
 
-Offloading replaces continuous GPU residency with repeated restoration.
-If session $i$ evicts $e_i$ bytes per period and $B_{\mathrm{eff}}$ is the effective H2D bandwidth available for restoration, the total volume restored per period must satisfy
+Periodic eviction and restoration allow idle KV to spend part of each period in host memory.
+Consider a steady-state schedule with a common period $T$, fixed history sizes, and no shared KV.
+Let $e_i$ be the bytes evicted from session $i$ and restored once per period, and let $B_{\mathrm{eff}}$ be the effective H2D bandwidth available for restoration.
+The total restoration volume must satisfy
 \begin{equation}
   E=\sum_i e_i \le B_{\mathrm{eff}}T.
   \label{eq:transfer-budget}
@@ -161,17 +160,19 @@ Partial eviction allows the server to retain the state that cannot be restored i
 
 \paragraph{From transferred bytes to usable capacity.}
 Evicted KV saves GPU space from the moment it is freed until its restoration destination is allocated.
-For a steady-state schedule with fixed history sizes and no shared KV, let $w_i$ be the average time within a period that session $i$'s $e_i$ evicted bytes occupy no GPU space.
+For session $i$, let $w_i$ be the duration of this interval averaged over its $e_i$ evicted bytes, so $0\le w_i\le T$.
 Let $\Delta G_{\mathrm{peak}}$ be the reduction in peak allocation relative to full residency and $\overline{\Delta G}$ the average reduction over the period.
 Then
 \begin{equation}
-  \Delta G_{\mathrm{peak}}
-  \le \overline{\Delta G}
-  =\frac{1}{T}\sum_i e_i w_i
-  \le B_{\mathrm{eff}}T.
+  \begin{aligned}
+    \Delta G_{\mathrm{peak}}
+    &\le \overline{\Delta G}
+    =\frac{1}{T}\sum_i e_i w_i \\
+    &\le E\le B_{\mathrm{eff}}T.
+  \end{aligned}
   \label{eq:memory-gain}
 \end{equation}
-Thus, $B_{\mathrm{eff}}T$ is an upper bound on the GPU capacity saved through memory multiplexing.
-The capacity gain depends on the duration and overlap of the eviction intervals.
+Thus, $B_{\mathrm{eff}}T$ bounds the reduction in peak GPU KV allocation through memory multiplexing.
+The capacity gain depends on the duration and overlap of these intervals.
 Earlier destination allocation shortens these intervals.
 Staggering sessions lets one session's eviction free space for another's restoration, provided that overlapping allocations fit in GPU memory and execution fits within the available time.

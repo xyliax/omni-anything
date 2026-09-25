@@ -7,14 +7,14 @@ We refer to each ongoing interaction as an \emph{interaction session}.
 
 We study interaction sessions that advance through periodic updates, each processing new input and generating output as needed.
 For example, Moshi operates on 80\,ms audio frames, while Thinking Machines Lab's TML-Interaction-Small organizes input and output into 200\,ms \emph{time-aligned micro-turns}~\cite{defossez2024moshi,thinkingmachines2026interactionmodels}.
-Each session retains its history across updates.
+A single response can span  updates, allowing new input to influence generation before the response ends.
+The server must therefore preserve each session's history across updates, including intervals when that session is not executing.
 
 To reuse history across updates, the server caches attention keys and values (KV), whose footprint grows with the retained context.
 For MiniCPM-o 4.5, retaining ten minutes of continuous input and output at ten encoded audio positions and four generated text tokens per second requires an estimated 1.2\,GiB of BF16 backbone KV~\cite{cui2026minicpmo45,openbmb2026minicpmconfig}.
 % 2 (K and V) * 36 layers * 8 KV heads * 128 dimensions * 2 bytes = 144 KiB/position.
 % 600 s * (10 input audio positions/s + 4 output text tokens/s) * 144 KiB = 1.153564453125 GiB.
 % This counts backbone KV for both streams, excluding control/prompt tokens and other modules.
-
 Under \emph{full residency}, the KV for each session's retained history stays on the GPU, occupying memory even when the session is not accessing it (Figure~\ref{fig:motivation}).
 As histories grow across concurrent sessions, their combined KV footprint can exhaust GPU KV capacity while their computation still fits within each period.
 We target this regime, where reclaiming the GPU space occupied by idle KV could allow the server to accommodate more sessions.
@@ -36,10 +36,9 @@ InferCept, for example, chooses among retaining, swapping, and recomputing KV fo
 For periodic interaction sessions, the next update's scheduled release time is known in advance.
 Each update has a soft deadline at the start of the following period.
 If restoration starts only when an update is released, computation that depends on the evicted state must wait for the transfer, which can cause a deadline miss (Figure~\ref{fig:comparison}(a)).
-
 This timing information allows the server to restore KV before it is needed.
-We call the start of each period a \emph{tick}; restoration targets the next tick.
-By keeping idle KV in host memory and restoring it before the next tick, the server can reuse the same GPU space across sessions.
+A \emph{tick} marks the start of each period; KV restoration is scheduled to finish before the next tick.
+Keeping idle KV in host memory between updates allows the server to reuse the same GPU space across sessions.
 We refer to this reuse as \emph{memory multiplexing}.
 
 Restoration scheduling must account for both transfer time and GPU space.
@@ -74,6 +73,6 @@ This coordination expands effective KV capacity to serve more concurrent session
 To reuse a schedule as histories grow, \systemname plans for the KV required at each session's configured maximum context length.
 The total retained context, including new input and generated output, must stay within this limit.
 The recurring schedule accounts for computation, transfers, and GPU allocation, while runtime operations act on the history actually retained.
-\systemname reuses this plan as histories grow within their limits and revises it when sessions join or leave.
+\systemname revises the plan when sessions join or leave.
 
 \placeholder{Final contributions and measured results: identify the configurations where KV capacity limits concurrency while compute time remains; establish the benefit attributable to coordinating phases, eviction amounts, and restoration timing; report concurrency and deadline-miss rates against full residency and on-demand restoration under matched service objectives.}

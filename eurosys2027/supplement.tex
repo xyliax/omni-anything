@@ -21,8 +21,42 @@
 
 \maketitle
 
-\section{Additional Methodology}
-\draftplaceholder{Add reproducibility details that do not fit in the main paper.}
+\section{Backbone Cost Estimation}
+
+The resource estimates in the main paper use public model configurations and device specifications.
+They estimate backbone prefill and decode time at the largest batch that fits within each GPU's assumed memory budget.
+The central estimates assume 80\% memory bandwidth efficiency and 25\% compute efficiency, without empirical calibration.
+
+\paragraph{Memory reservations.}
+MiniCPM-o 4.5's backbone uses 144\,KiB of BF16 KV per retained position, giving 5.625\,GiB at its configured limit of 40,960 positions~\cite{openbmb2026minicpmconfig}.
+Its speech decoder adds a separate reservation of 0.234375\,GiB at its 4,096-position limit.
+The combined reservation is therefore $K_{\mathrm{sess}}=5.859375$\,GiB per session.
+We assume $R=20$\,GiB for weights and other allocations and approximate each GPU's nominal capacity as a GiB budget $M$.
+The memory-only session limit is $N_{\mathrm{mem}}=\lfloor(M-R)/K_{\mathrm{sess}}\rfloor$.
+
+\paragraph{Work and traffic accounting.}
+The backbone's projection and MLP matrices contain about 6.95 billion parameters and its output head another 0.62 billion, occupying about 15.1\,GB in BF16~\cite{openbmb2026minicpmconfig}.
+Each batched forward pass reads these matrix weights once, while attention reads each session's own historical KV.
+The prefill stage processes ten encoded audio positions together, assumes reuse of historical KV across those queries, and computes logits only for the last position.
+Four sequential decode forward passes follow, including a final state update when needed.
+The update begins with enough unused context positions to accommodate these additions; attention cost is approximated at the configured context limit.
+We apply the roofline estimate separately to the projection and MLP matrices, the output head, and attention, then sum their times over prefill and decode.
+Input encoding, speech generation, and runtime overhead require separate measurement.
+
+\paragraph{Compute reference and sensitivity.}
+For the RTX PRO 6000 Blackwell Server, we use approximately 240\,TFLOP/s as the dense BF16 reference.
+This value is inferred from its FP32 rating and the GB202 ratio of dense BF16 throughput with FP32 accumulation to FP32 throughput~\cite{nvidia2026rtxpro,nvidia2025blackwell}.
+The efficiency ranges in the main paper vary bandwidth efficiency from 40\% to 80\% and compute efficiency from 15\% to 40\%, holding batch size and workload fixed.
+The lower and upper execution-time endpoints use efficiency pairs $(0.80,0.40)$ and $(0.40,0.15)$, respectively.
+These ranges describe sensitivity to assumptions, not measurement uncertainty.
+
+\paragraph{Other model configurations.}
+The cross-model estimates use the public configurations of the 3B and 7B Qwen2.5-Omni Thinkers and Moshi's temporal Transformer~\cite{qwen2025omni3bconfig,qwen2025omni7bconfig,defossez2024moshi,kyutai2026moshiconfig}.
+For the Qwen models, a one-second incremental update contains 25 encoded audio positions and four text decode forward passes; the period and decode count are workload assumptions~\cite{xu2025qwenomni}.
+Moshi advances its temporal backbone once per native 80\,ms frame.
+We reserve each model's auxiliary KV separately and assume 16, 28, and 20\,GiB for weights and other allocations for Qwen 3B, Qwen 7B, and Moshi, respectively.
+The per-session auxiliary KV reservations are 0.375, 1.5, and 0.0078125\,GiB, respectively.
+The estimates exclude input encoders and speech-output modules, including Moshi's depth Transformer.
 
 \section{Additional Results}
 \draftplaceholder{Add supporting analyses after the corresponding formal evidence is accepted.}
