@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-EVALUATION-READINESS",
+  "date": "2026-09-25",
+  "question": "Can the manager eliminate copy launch delays, can GPU capture be disabled, how portable is MiniCPM-o 4.5, and what protocol should measure session capacity?",
+  "configuration_profile": {
+    "type": "Source and external primary-document audit; no serving experiment",
+    "runtime": "Installed locked vLLM environment; current two first-party workers",
+    "external_review_date": "2026-09-25"
+  },
+  "change": "Add candidate protocols, readiness gates and model adaptation boundaries to docs/experiments.md. No runtime, model/environment lock, trace artifact or accepted performance finding changed.",
+  "result": {
+    "copy_control": "SessionManager.advance calls adapter.restore; CopyService already owns persistent H2D/D2H streams and submits independently of model steps. Moving backend.launch to the manager thread would not remove its native-call cost. Submission optimization and pipeline/contending-load calibration are proposed, not implemented.",
+    "profiler_configuration_checks": [
+      {
+        "gpu_trace": false,
+        "trace": false,
+        "CUPTI_requested": false,
+        "CPU_scheduler_requested": false,
+        "GPU_artifact_required": false,
+        "transfer_log_enabled": true
+      },
+      {
+        "gpu_trace": false,
+        "trace": true,
+        "CUPTI_requested": false,
+        "CPU_scheduler_requested": true,
+        "GPU_artifact_required": false,
+        "transfer_log_enabled": true
+      },
+      {
+        "gpu_trace": true,
+        "trace": true,
+        "CUPTI_requested": true,
+        "CPU_scheduler_requested": true,
+        "GPU_artifact_required": true,
+        "transfer_log_enabled": true
+      }
+    ],
+    "profiler_check_method": "Construct ConveyorConfig(session_manager=True, retained_prefix_blocks=128, duration_s=30) for each flag pair, validate, inspect worker_environment and required_artifact_names. No directories or GPU work created.",
+    "model_readiness": "Installed MiniCPMO4_5 supports the Qwen3-based audio-input model path and load_weights skips tts. Current project still binds model ID/revision/geometry, Qwen prompt tokens and audio wrapper. vLLM-Omni was not installed. Upstream MiniCPM-o model card and vLLM-Omni native duplex docs were inspected; no claim that our KV adapter runs on that stack.",
+    "runtime_model_source_sha256": "848bec1d8e40d21e820584e38a978e11680d86cac4cf328aefe20c0d9c0256c8",
+    "evaluation_owner_sections": [
+      "docs/experiments.md#capacity-evaluation-proposal",
+      "docs/experiments.md#copy-submission-experiment",
+      "docs/experiments.md#evaluation-harness-gaps",
+      "docs/experiments.md#candidate-model-integration"
+    ],
+    "dataset_review": "Primary sources describe CANDOR and Fisher two-person tracks and MagicData speaker-separated recordings. No corpus downloaded or empirical lifetime distribution fitted. MagicData download-page license and Chinese sample-size discrepancy are retained as access/metadata limits, not silently resolved using the paper."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-EVALUATION-READINESS",
+    "EVIDENCE-PREFETCH-SUBMISSION-AUDIT"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "All SLO thresholds, synthetic lifetime parameters and sample sizes in the experiment owner are proposed values, not frozen user decisions or measured findings.",
+    "No MiniCPM-o weights, native duplex multi-session run, model-output equivalence or KV integration was tested.",
+    "Existing client and frame/output instrumentation do not establish per-cycle model completion or dynamic admission; the planned benchmark is not implemented.",
+    "The earlier copy audit localizes overhead to host submission but does not separately time CUDA batch API internals and host scheduling."
+  ]
+}

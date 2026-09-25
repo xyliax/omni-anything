@@ -60,3 +60,11 @@ def gpu_monitor_command(gpu: int, sample_period_s: float) -> list[str]:
         "--format=csv,noheader,nounits",
         f"-lms={int(sample_period_s * 1000)}",
     ]
+
+
+def apply_gpu_activity(env: dict[str, str], run_dir: Path) -> None:
+    env["OMNI_GPU_ACTIVITY"] = str(run_dir / "gpu_activity.json")
+
+
+def apply_transfer_observation(env: dict[str, str], run_dir: Path) -> None:
+    env["OMNI_TRANSFER_EVENTS"] = str(run_dir / "transfer_events.jsonl")

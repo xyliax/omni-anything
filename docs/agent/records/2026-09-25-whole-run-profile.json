@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-WHOLE-RUN-PROFILE",
+  "date": "2026-09-25",
+  "question": "Can GPU profiling cover the entire business run without a mid-run stop/export, and does group transfer feasibility block admission independently of a session count limit?",
+  "configuration_profile": {
+    "model": {
+      "id": "Qwen/Qwen2.5-Omni-7B",
+      "input_adapter": "qwen25_omni",
+      "kv_geometry": {
+        "bytes_per_token": 57344,
+        "dtype_bytes": 2,
+        "head_dim": 128,
+        "num_kv_heads": 4,
+        "num_layers": 28
+      },
+      "output_path": "audio_input_text_output",
+      "preset": "qwen25_omni",
+      "revision": "ae9e1690543ffd5c0221dc27f79834d0294cba00"
+    },
+    "engine": {
+      "copy_submission": "optimized",
+      "enforce_eager": false,
+      "evict_tail_blocks": 0,
+      "eviction_delay_s": 1.2,
+      "gpu_memory_utilization": 0.75,
+      "host_offload_gib": 4,
+      "ingest_workers": 8,
+      "initial_context_tokens": 0,
+      "kv_pool_gib": 2,
+      "max_model_len": 8192,
+      "max_num_batched_tokens": null,
+      "max_num_seqs": 8,
+      "prefetch": "off",
+      "prefetch_min_free": 0.1,
+      "resident_control": false,
+      "resident_limit": null,
+      "restore_lead_s": 0.04,
+      "retained_prefix_blocks": 1,
+      "session_manager": true,
+      "slots": 2,
+      "startup_timeout_s": 360,
+      "sync_scheduling": false
+    },
+    "admission": {
+      "cohort": [
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-0",
+          "seed": 777
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-1",
+          "seed": 778
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-2",
+          "seed": 779
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-3",
+          "seed": 780
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-4",
+          "seed": 781
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 20,
+          "id": "group-5",
+          "seed": 782
+        }
+      ],
+      "profile": {
+        "compute_s": 0.25,
+        "d2h_blocks_per_s": 13000,
+        "gpu_reserve_blocks": 128,
+        "growth_blocks_per_period": 6,
+        "h2d_blocks_per_s": 13000,
+        "horizon_s": 8,
+        "host_reserve_blocks": 16,
+        "initial_blocks": 16,
+        "max_evict_blocks": 192,
+        "max_sessions": 16,
+        "safety_s": 0.004,
+        "transfer_overhead_s": 0.003
+      }
+    },
+    "observations": {
+      "gpu_trace": true,
+      "gpu_trace_scope": "whole_business_run",
+      "kv_log_period_s": 0.2,
+      "per_iteration": true,
+      "per_request": true,
+      "residency": true,
+      "scheduler": true,
+      "trace": true
+    },
+    "input": "seeded synthetic PCM",
+    "platform": "shared RTX 3090"
+  },
+  "change": [
+    "Runner starts capture before client launch and stops/exports only after client exit; removed timed capture option.",
+    "Add explicit control IPC and lifecycle tests.",
+    "Show actual finite-cohort makespan rather than watchdog duration in profile."
+  ],
+  "result": {
+    "completed_sessions": 6,
+    "offered_sessions": 6,
+    "makespan_s": 46.650104155763984,
+    "observed_gpu_activity_extent_s": 43.93245601654053,
+    "h2d_transfers": 60,
+    "attributed_kv_transfers": 207,
+    "byte_mismatches": 0,
+    "unattributed_h2d_transfers": 0,
+    "admission": "With max_sessions=16, first four sessions occupy two groups of two; session five waits with reason restore_window; sessions five and six join slot zero after its previous members are released.",
+    "validation": "terminal success; required artifacts valid; source patch applies; raw hashes match; browser profile loads without JS errors"
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-WHOLE-RUN-PROFILE"
+  ],
+  "affects_findings": [
+    "FINDING-T1",
+    "FINDING-T5"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Shared device and profiling perturbation; not a main performance run.",
+    "First-to-last activity extent differs from business makespan: idle time has no GPU activities.",
+    "Old truncated profile removed; its original diagnostic numbers remain historical only."
+  ]
+}

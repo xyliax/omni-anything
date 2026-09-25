@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-MINICPM-PERIOD-BUDGET",
+  "date": "2026-09-25",
+  "question": "Does the selected MiniCPM per-period text budget propagate consistently through generation, delivery and matched-system configuration?",
+  "configuration_profile": {
+    "model": {
+      "id": "openbmb/MiniCPM-o-4_5",
+      "input_adapter": "minicpm_o45",
+      "kv_geometry": {
+        "bytes_per_token": 147456,
+        "dtype_bytes": 2,
+        "head_dim": 128,
+        "num_kv_heads": 8,
+        "num_layers": 36
+      },
+      "output_path": "audio_input_text_output",
+      "preset": "minicpm_o45",
+      "revision": "503e754207c94da6bb26850b4469f367c9ea3582"
+    },
+    "engine": {
+      "copy_submission": "optimized",
+      "enforce_eager": true,
+      "evict_tail_blocks": 0,
+      "eviction_delay_s": 1.2,
+      "gpu_memory_utilization": 0.75,
+      "host_offload_gib": 1,
+      "ingest_workers": 8,
+      "initial_context_tokens": 0,
+      "kv_pool_gib": 0.5,
+      "max_model_len": 3072,
+      "max_num_batched_tokens": 512,
+      "max_num_seqs": 4,
+      "prefetch": "off",
+      "prefetch_min_free": 0.1,
+      "resident_control": false,
+      "resident_limit": null,
+      "restore_lead_s": 0.15,
+      "retained_prefix_blocks": 1,
+      "session_manager": true,
+      "slots": 1,
+      "startup_timeout_s": 360,
+      "sync_scheduling": false
+    },
+    "admission": {
+      "cohort": [
+        {
+          "arrival_s": 0,
+          "duration_s": 14,
+          "id": "mini-0",
+          "seed": 4500
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 14,
+          "id": "mini-1",
+          "seed": 4501
+        }
+      ],
+      "profile": {
+        "compute_s": 0.35,
+        "d2h_blocks_per_s": 2000,
+        "gpu_reserve_blocks": 16,
+        "growth_blocks_per_period": 6,
+        "h2d_blocks_per_s": 2000,
+        "horizon_s": 6,
+        "host_reserve_blocks": 16,
+        "initial_blocks": 16,
+        "max_evict_blocks": 8,
+        "max_sessions": 2,
+        "safety_s": 0.01,
+        "transfer_overhead_s": 0.003
+      }
+    },
+    "observations": {
+      "gpu_trace": false,
+      "gpu_trace_scope": "off",
+      "kv_log_period_s": 0.2,
+      "per_iteration": true,
+      "per_request": true,
+      "residency": true,
+      "scheduler": true,
+      "trace": true
+    },
+    "workload": {
+      "chunk_ms": 20,
+      "context_growth_tokens_per_period": null,
+      "duration_s": 90,
+      "max_audio_chunks": 64,
+      "output_token_cap": 8,
+      "period_ms": 2000,
+      "sessions": 2
+    },
+    "platform": {
+      "gpu": {
+        "driver": "580.95.05",
+        "index": 3,
+        "memory_mib": 24576,
+        "name": "NVIDIA GeForce RTX 3090",
+        "pci_bus_id": "00000000:AF:00.0",
+        "uuid": "GPU-4de6f6ed-95ca-f7eb-8394-f1822712fff3"
+      },
+      "host": {
+        "cpu": "x86_64",
+        "hostname": "heming-g6.cs.hku.hk",
+        "machine": "x86_64",
+        "platform": "Linux-6.8.0-1037-gcp-x86_64-with-glibc2.35"
+      }
+    },
+    "input": "Two seeded synthetic PCM sessions sharing one slot; no replay of a conversational corpus.",
+    "budget_rationale": "Choose the upper end of the technical report normal speech rate: four text tokens per second times the existing two-second harness period. This is an evaluation choice, not a model hard limit.",
+    "budget_source": "https://arxiv.org/html/2604.27393v1#S2"
+  },
+  "change": [
+    "Select output_token_cap per model in shared workload configuration.",
+    "Route the same budget to worker generation, gateway delivery and manifest for both Pilarius and matched resident control.",
+    "Keep the existing Qwen workload and input-dependent audio encoding length."
+  ],
+  "result": {
+    "model_completions": 14,
+    "generated_tokens_per_input": [
+      8
+    ],
+    "delivered_tokens_per_session": {
+      "1": 56,
+      "2": 56
+    },
+    "delivery_cap_violations": 0,
+    "group_summary": {
+      "schema_version": 1,
+      "timing_scope": "CPU queue and valid-KV publication; not DMA",
+      "maximum_active_sessions": 2,
+      "maximum_group_members": {
+        "0": 2
+      },
+      "released_sessions": 2,
+      "planner_reviews": {
+        "feasible": 6
+      },
+      "cap_violations": [],
+      "unmatched_h2d": [],
+      "unpublished_h2d": [],
+      "late_windows": 0
+    },
+    "submitted_copies": {
+      "D2H": 23,
+      "H2D": 14
+    },
+    "completed_sessions": 2,
+    "err": 0,
+    "makespan_s": 17.915799167007208,
+    "validation": "Terminal success and validation valid; all raw hashes verified; source patch applies to recorded commit; profile opens without JavaScript errors.",
+    "tests": "Root pytest: 123 passed, 4 opt-in skips, 36 subtests passed; budget propagation test covers both models and both matched systems."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-MINICPM-PERIOD-BUDGET"
+  ],
+  "affects_findings": [
+    "FINDING-T6"
+  ],
+  "supersedes": [
+    "RECORD-2026-09-25-MINICPM-GROUP-SERVING"
+  ],
+  "remaining_uncertainty": [
+    "Short run on a shared GPU with eager execution, synthetic input and uncalibrated admission costs; no formal capacity or throughput claim.",
+    "Fixed per-period backbone text workload; native duplex speech generation and TTS are outside this run.",
+    "Prior integration record preserves weight verification and preprocessing validation; its superseded raw result is removed."
+  ]
+}

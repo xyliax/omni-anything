@@ -375,6 +375,10 @@ pyrightconfig.json
 !results/**/
 !results/**/*.log
 
+# New run payloads stay on the producing machine; source pulls must not fetch
+# large GPU captures. Evidence metadata and records remain tracked.
+/results/*/*/
+
 # .context: keep digests/notes; large binaries stay local
 .context/**/*.pdf
 .context/**/*.pptx

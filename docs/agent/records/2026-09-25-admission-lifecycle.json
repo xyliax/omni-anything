@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-ADMISSION-LIFECYCLE",
+  "date": "2026-09-25",
+  "question": "Does finite-cohort admission wait for model output and physical cleanup before reusing a phase slot?",
+  "configuration_profile": {
+    "model": "Qwen2.5-Omni-7B Thinker",
+    "gpu": "shared RTX 3090; functional check only",
+    "gpu_memory_utilization": 0.75,
+    "max_model_len": 8192,
+    "max_num_seqs": 4,
+    "kv_pool_gib": 0.5,
+    "host_offload_gib": 1,
+    "session_manager": true,
+    "retained_prefix_blocks": 1,
+    "trace": true,
+    "gpu_trace": false,
+    "admission_profile": {
+      "horizon_s": 8,
+      "compute_s": 0.12,
+      "initial_blocks": 16,
+      "growth_blocks_per_period": 6,
+      "max_evict_blocks": 4,
+      "h2d_blocks_per_s": 2000,
+      "d2h_blocks_per_s": 2000,
+      "transfer_overhead_s": 0.02,
+      "safety_s": 0.02,
+      "gpu_reserve_blocks": 16,
+      "host_reserve_blocks": 16,
+      "max_sessions": 1
+    },
+    "offered_sessions": 3,
+    "audio_duration_s": 4.2,
+    "input": "distinct seeded synthetic PCM"
+  },
+  "change": "Merge upstream four-component design, implement conservative ResidencyPlanner, FIFO gateway lifecycle, managed readiness, final-output drain, confirmed resource release and finite-cohort client.",
+  "result": {
+    "terminal_state": "success",
+    "validation_valid": true,
+    "completed": 3,
+    "errors": 0,
+    "slots": [
+      0,
+      0,
+      0
+    ],
+    "all_generated_output_drained": true,
+    "published_transfers": 30,
+    "periodic_reviews_feasible": true,
+    "lifecycle_order": "gateway log shows admitted s1, released s1, admitted s2, released s2, admitted s3, released s3; waiting reason=session_limit",
+    "retention": "Debug artifacts removed after inspection; existing user-facing profile retained.",
+    "final_source_checks": {
+      "pytest": "102 passed, 3 optional tests skipped, 28 subtests passed; includes Go race detector",
+      "explicit_audio_tests": "4 passed in the locked CPU environment, including terminal-fragment encoder validity",
+      "explicit_cuda_tests": "1 passed, discontiguous multi-layer physical KV roundtrip",
+      "paper_check": "not run: latexmk is unavailable; upstream paper.pdf retained"
+    }
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-ADMISSION-LIFECYCLE-CHECK"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Profile numbers are uncalibrated functional-check settings, not a paper evaluation configuration.",
+    "Physical multi-session high-pressure fairness, long-session SLOs, arbitrary batching token equality and baseline cohort pairing remain unverified.",
+    "Frontend drain acknowledgement uses this fixed-output-cap harness; variable-length native duplex outputs require their own completion identity.",
+    "The final confirmed-backing credit and allocator-reserve admission guards were added after the short live check and verified with CPU regression tests; they have not been evaluated for capacity under concurrent long-session GPU load."
+  ]
+}

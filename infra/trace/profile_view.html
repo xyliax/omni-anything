@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Session Manager · Execution Profile</title>
+<style>
+:root{color-scheme:dark;--bg:#0c111b;--panel:#121b29;--line:#273348;--muted:#99abc1;--ink:#e6edf7;--accent:#5de0d4}
+[hidden]{display:none!important}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}header{padding:24px 28px 16px;border-bottom:1px solid var(--line)}.eyebrow{font:11px ui-monospace,monospace;letter-spacing:2px;color:var(--accent)}h1{font-size:25px;letter-spacing:-.6px;margin:7px 0 5px;font-weight:650}.sub{color:var(--muted);font-size:12px}#run{font-family:ui-monospace,monospace;word-break:break-all}.stats{display:flex;gap:30px;margin-top:18px}.stat b{font:22px ui-monospace,monospace;display:block}.stat span{color:var(--muted);font-size:11px}.bar{padding:12px 20px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:var(--panel);border-bottom:1px solid var(--line)}button,select,input{font:12px system-ui;color:var(--ink);background:#1b2739;border:1px solid #35465f;border-radius:5px;padding:7px 10px}button{cursor:pointer}button:hover,button.active{background:#204a50;border-color:#4ddacb}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent)}input[type=number]{width:82px}#search{width:165px}.spacer{flex:1}.legend{display:flex;gap:15px;padding:10px 23px;color:#bdcbdc;font-size:11px;flex-wrap:wrap}.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:0;border-top:1px solid var(--line)}.plot{min-width:0;position:relative}#axis{display:block;width:100%;height:32px;background:#121b29;position:sticky;top:0;z-index:2}#scroller{max-height:calc(100vh - 325px);min-height:220px;overflow-y:auto;overflow-x:hidden}#timeline{display:block;width:100%;touch-action:none;cursor:crosshair}aside{background:#111927;border-left:1px solid var(--line);padding:20px;min-width:0;max-height:calc(100vh - 293px);overflow:auto}aside h2{font-size:14px;margin:0 0 12px;overflow-wrap:anywhere}aside p{color:var(--muted);font-size:12px}.row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #263246;padding:7px 0;font-size:12px}.row span{color:var(--muted)}.row b{text-align:right;font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;max-width:65%}.stages{margin:16px 0;border-left:2px solid #3e576f;padding-left:13px}.stage{font-size:12px;margin:11px 0}.stage small{display:block;font:11px ui-monospace,monospace;color:var(--muted)}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);font-size:10px}summary{cursor:pointer;color:var(--muted);font-size:12px}footer{padding:12px 24px;color:var(--muted);font-size:11px;border-top:1px solid var(--line)}#tip{display:none;position:fixed;pointer-events:none;z-index:5;padding:9px 12px;background:#eef5ff;color:#152338;border-radius:6px;box-shadow:0 8px 25px #0008;max-width:440px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}#message{padding:40px;color:var(--accent)}.note{color:#efc086}.help{line-height:1.9}.key{font-family:ui-monospace,monospace;color:var(--accent)}@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr) 240px}header{padding:18px}.stats{gap:18px}.bar{padding:10px}.legend{gap:9px}aside{padding:13px}}
+</style>
+<header>
+<div class="eyebrow">PILARIUS / EXECUTION PROFILE</div>
+<h1>Session Manager · 执行时间线</h1>
+<div class="sub" id="run">正在载入本地 profile…</div>
+<div class="stats"><div class="stat"><b id="sessions">—</b><span>sessions</span></div><div class="stat"><b id="duration">—</b><span id="durationLabel">配置输入时长</span></div><div class="stat"><b id="capture">—</b><span>已记录 GPU 活动的时间范围</span></div><div class="stat"><b id="copies">—</b><span>窗口内已关联 KV copies</span></div><div class="stat"><b id="status">—</b><span>运行验证终态</span></div></div>
+</header>
+<div class="bar">
+<button id="gpu">GPU 观测窗口</button><button id="business">业务全程</button><button id="all">含预热 / 初始化</button><button id="firstCopy">首笔 KV H2D</button><button id="longestGap">最长调度间隔</button>
+<span class="spacer"></span><select id="session" aria-label="筛选 session"><option value="0">全部 sessions</option></select><input id="search" placeholder="搜索事件 / copy ID" aria-label="搜索事件">
+<button id="left" title="向前平移">←</button><button id="right" title="向后平移">→</button><button id="zoomIn" title="放大">＋</button><button id="zoomOut" title="缩小">−</button>
+<select id="clock" aria-label="时间轴时钟"><option value="input">相对首个输入</option><option value="perfetto">Perfetto 时钟</option></select><input id="start" type="number" step="0.01" aria-label="起始秒数"><span class="sub">至</span><input id="end" type="number" step="0.01" aria-label="结束秒数"><span class="sub">s</span><button id="apply">定位</button>
+</div>
+<div class="legend"><span><i style="background:#65b9ef"></i>GPU kernel</span><span><i style="background:#46d6b2"></i>H2D</span><span><i style="background:#f5ad63"></i>D2H</span><span><i style="background:#ac94ed"></i>prefill</span><span><i style="background:#557dc9"></i>decode</span><span><i style="background:#c3d6f3"></i>输入 / 特征提取</span><span><i style="background:#ef7a99"></i>逐出事件</span><span><i style="background:#536277"></i>CPU 提交 / 等待</span></div>
+<div id="message">正在解压 profile 数据…</div>
+<div class="layout" id="layout" hidden>
+<div class="plot"><canvas id="axis"></canvas><div id="scroller"><canvas id="timeline"></canvas></div></div>
+<aside><h2 id="detailTitle">点选事件，查看执行细节</h2><div id="details"><p class="help">从上到下依次为 GPU streams、CopyService、Gateway 和各 session 的输入、调度、KV 活动。<br><br>滚轮：缩放时间轴<br>拖动：平移<br>悬浮：查看真实时长<br>点选：查看身份与关联传输<br><br><span class="key">首笔 KV H2D</span> 可直接展开一次恢复的 CPU 提交和 GPU 执行。</p></div></aside>
+</div>
+<footer><span id="clockNote"></span>GPU 轨道使用 CUPTI 设备活动；scheduler 轨道是 CPU 观察窗口。灰色斜线区域超出已记录 GPU 活动范围，不表示设备空闲。轨道名称表示已观测用途，原始 device / context / stream 编号保留在事件详情。极短事件以最小像素显示，实际时长以悬浮和详情为准。此为执行诊断，未标定 profiling 开销。</footer>
+<div id="tip"></div>
+<script id="profile-data" type="application/octet-stream">__PROFILE_DATA__</script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), COLORS={kernel:'#65b9ef',h2d:'#46d6b2',d2h:'#f5ad63',prefill:'#ac94ed',decode:'#557dc9',input:'#c3d6f3',evict:'#ef7a99',host:'#536277',window:'#2c847b',tick:'#dbe5f2',other:'#78899f'};
+let data, tracks=[],lo=0,hi=1,width=1000,selected=null,filter=0,query='',frame=0,clockOffset=0,selectedGap=null;
+const labelWidth=205,rowHeight=27,gap=8;
+let rows=[],hitRows=[],drag=null;
+const number=(v,n=3)=>Number(v).toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n});
+const ms=v=>v<.00001?number(v*1e6,3)+' µs':number(v*1000,3)+' ms';
+const mib=v=>number(v/1048576,3)+' MiB';
+const stamp=v=>number(v+clockOffset,6)+' s';
+const color=e=>{const n=e[2],a=e[3];if(n.includes('EVICT')||a.event==='evicted')return COLORS.evict;if(n==='tick')return COLORS.tick;if(n.startsWith('KV '))return COLORS.window;if(n.startsWith('submit ')||a.event)return COLORS.host;if(a.direction==='H2D'||n.includes('HtoD'))return COLORS.h2d;if(a.direction==='D2H'||n.includes('DtoH'))return COLORS.d2h;if(n.startsWith('prefill'))return COLORS.prefill;if(n==='decode')return COLORS.decode;if(['feature extraction','ingest queue','loop handoff','admit'].includes(n))return COLORS.input;if(a.timing_scope==='CUPTI GPU activity')return n.startsWith('Memcpy')||n.startsWith('Memset')?COLORS.other:COLORS.kernel;return COLORS.other;};
+const reqs=e=>(e[3].requests||[]).join(', ');
+const matches=e=>{const id=/^#(\d+)$/.exec(query),found=id?String(e[3].transfer_id)===id[1]:(!query||(e[2]+' '+reqs(e)+' #'+(e[3].transfer_id??'')).toLowerCase().includes(query));return found&&(!filter||!(e[3].requests||[]).length||(e[3].requests||[]).some(r=>new RegExp('^s'+filter+'e').test(r)));};
+function setRange(a,b){if(!Number.isFinite(a)||!Number.isFinite(b)||b-a<.000001)return;lo=a;hi=b;$('start').value=(lo+clockOffset).toFixed(6);$('end').value=(hi+clockOffset).toFixed(6);document.querySelectorAll('.bar button.active').forEach(b=>b.classList.remove('active'));schedule();}
+function preset(id){const v=id==='gpu'?data.gpu_extent:id==='all'?data.bounds:data.business;if(v){setRange(v[0],v[1]);$(id).classList.add('active');}}
+function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;draw();});}
+function setupCanvas(c,w,h){const d=devicePixelRatio||1;c.width=Math.round(w*d);c.height=Math.round(h*d);c.style.height=h+'px';const ctx=c.getContext('2d');ctx.scale(d,d);return ctx;}
+function x(t){return labelWidth+(t-lo)/(hi-lo)*(width-labelWidth-14);}
+function draw(){
+ width=$('axis').getBoundingClientRect().width;tracks=data.tracks.filter(t=>!t.session||!filter||t.session===filter);rows=[];let y=5,previous='';
+ for(const t of tracks){const section=t.session?'s'+t.session:t.scope==='gpu'?'gpu':t.scope==='counter'?'counter':'host';if(section!==previous){y+=gap;previous=section;}rows.push({track:t,y});y+=rowHeight;}
+ const ctx=setupCanvas($('timeline'),width,y+8),axis=setupCanvas($('axis'),width,32);ctx.fillStyle='#0c111b';ctx.fillRect(0,0,width,y+8);axis.fillStyle='#121b29';axis.fillRect(0,0,width,32);hitRows=[];
+ const raw=(hi-lo)/8,power=10**Math.floor(Math.log10(raw)),unit=[1,2,5,10].find(v=>v*power>=raw)*power;
+ axis.font='11px ui-monospace, monospace';axis.fillStyle='#a7bad0';axis.fillText(($('clock').value==='perfetto'?'Perfetto':'相对输入')+' / seconds',12,21);
+ for(let t=Math.ceil((lo+clockOffset)/unit)*unit;t<=hi+clockOffset;t+=unit){const xx=x(t-clockOffset);axis.fillText(number(t,Math.max(0,Math.min(6,-Math.floor(Math.log10(unit))))),xx+3,21);ctx.strokeStyle='#233043';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(xx,0);ctx.lineTo(xx,y+8);ctx.stroke();}
+ for(const {track:t,y:yy}of rows){
+  ctx.fillStyle='#142031';ctx.fillRect(0,yy,width,rowHeight-2);ctx.fillStyle='#bacadd';ctx.font='11px system-ui';ctx.fillText(t.label,12,yy+17,labelWidth-23);ctx.save();ctx.beginPath();ctx.rect(labelWidth,yy,width-labelWidth-14,rowHeight-2);ctx.clip();
+  if(selectedGap&&t.scope==='scheduler'){const[a,b]=selectedGap;ctx.fillStyle='#6b4d273f';ctx.fillRect(x(a),yy,x(b)-x(a),rowHeight-2);ctx.strokeStyle='#e6b779';ctx.setLineDash([3,3]);for(const v of [a,b]){ctx.beginPath();ctx.moveTo(x(v),yy);ctx.lineTo(x(v),yy+rowHeight-2);ctx.stroke();}ctx.setLineDash([]);}
+  if(t.scope==='gpu'){
+   const cover=data.gpu_extent;
+   const segments=cover?[[lo,Math.min(hi,cover[0])],[Math.max(lo,cover[1]),hi]]:[[lo,hi]];
+   for(const[a,b]of segments){if(b<=a)continue;const left=x(a),right=x(b);ctx.fillStyle='#242b36';ctx.fillRect(left,yy,right-left,rowHeight-2);ctx.save();ctx.beginPath();ctx.rect(left,yy,right-left,rowHeight-2);ctx.clip();ctx.strokeStyle='#3b4554';for(let h=left-rowHeight;h<right;h+=11){ctx.beginPath();ctx.moveTo(h,yy+rowHeight);ctx.lineTo(h+rowHeight,yy);ctx.stroke();}ctx.restore();if(right-left>130){ctx.fillStyle='#a4afbd';ctx.fillText('未覆盖 GPU 活动',left+10,yy+17);}}
+  }
+  const hits=[];
+  if(t.scope==='counter'){
+   let last=null;ctx.strokeStyle=COLORS.h2d;ctx.lineWidth=1.5;ctx.beginPath();
+   for(const e of t.events){if(e[0]<lo){last=e;continue;}if(e[0]>hi)break;const value=e[3].percent;if(last){ctx.lineTo(x(e[0]),yy+23-last[3].percent*.2);}else ctx.moveTo(x(e[0]),yy+23-value*.2);ctx.lineTo(x(e[0]),yy+23-value*.2);last=e;hits.push({e,l:x(e[0])-3,r:x(e[0])+3});}ctx.stroke();
+  }else for(const e of t.events){
+   if(e[0]>hi)break;if(e[0]+e[1]<lo)continue;
+   let left=Math.max(labelWidth,x(e[0])),right=Math.min(width-14,x(e[0]+e[1]));if(right<left)continue;
+   const isSelected=selected&&(e===selected.e||(e[3].transfer_id!=null&&e[3].transfer_id===selected.e[3].transfer_id));
+   ctx.globalAlpha=matches(e)?1:.14;ctx.fillStyle=color(e);
+   if(e[4]==='i'){ctx.beginPath();ctx.moveTo(left,yy+4);ctx.lineTo(left+3,yy+11);ctx.lineTo(left,yy+19);ctx.lineTo(left-3,yy+11);ctx.fill();hits.push({e,l:left-3,r:left+3});}
+   else{const w=Math.max(.65,right-left);ctx.fillRect(left,yy+5,w,17);hits.push({e,l:left,r:left+w});if(w>63){ctx.save();ctx.beginPath();ctx.rect(left,yy,w,23);ctx.clip();ctx.fillStyle='#071625';ctx.font='10px system-ui';ctx.fillText(e[2],left+4,yy+17);ctx.restore();}}
+   if(isSelected){ctx.globalAlpha=1;ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.strokeRect(left-1,yy+3,Math.max(4,right-left)+2,20);}ctx.globalAlpha=1;
+  }
+  ctx.restore();hitRows.push({t,y:yy,hits});
+ }
+ window.profileReady=true;
+}
+function hit(ev){const rect=$('timeline').getBoundingClientRect(),px=ev.clientX-rect.left,py=ev.clientY-rect.top;const row=hitRows.find(r=>py>=r.y&&py<r.y+rowHeight);if(!row||px<labelWidth)return null;const hits=row.hits.filter(h=>px>=h.l&&px<=h.r&&matches(h.e));if(!hits.length)return null;hits.sort((a,b)=>a.e[1]-b.e[1]);return{e:hits[0].e,t:row.t};}
+function line(parent,label,value){const row=document.createElement('div');row.className='row';const l=document.createElement('span'),v=document.createElement('b');l.textContent=label;v.textContent=value;row.append(l,v);parent.append(row);}
+function show(item){
+ selected=item;selectedGap=null;const e=item.e,a=e[3],panel=$('details');panel.replaceChildren();$('detailTitle').textContent=e[2];line(panel,'轨道',item.t.label);line(panel,'相对输入',number(e[0],6)+' s');line(panel,'Perfetto 时刻',number(e[0]+data.perfetto_offset_s,6)+' s');line(panel,'事件时长',e[4]==='i'?'瞬时标记':ms(e[1]));if(item.t.scope==='gpu')line(panel,'原始 GPU 标识','device '+(a.device??'?')+' / context '+(a.context??'?')+' / stream '+(a.stream??'?'));if(reqs(e))line(panel,'请求',reqs(e));if(a.bytes!=null)line(panel,'实际 copy 字节',mib(a.bytes));if(a.logical_kv_bytes!=null)line(panel,'逻辑 KV 字节',mib(a.logical_kv_bytes));
+ if(a.transfer_id!=null){
+  const id=String(a.transfer_id),c=data.transfers[id];line(panel,'Transfer ID','#'+id);
+  if(c){const device=c.gpu||[];if(device.length){const total=device.reduce((sum,r)=>sum+r[1],0),bytes=device.reduce((sum,r)=>sum+(r[3].bytes||0),0);line(panel,'GPU 活动时长合计',ms(total));line(panel,'GPU payload 合计',mib(bytes));if(c.submitted)line(panel,'提交 / GPU 字节',c.submitted[3].bytes===bytes?'一致':'不一致');}else{const p=document.createElement('p');p.className='note';p.textContent='该 transfer 未关联到捕获窗口内的 GPU 活动；不能据此判断传输失败。';panel.append(p);}if(c.queued&&c.published)line(panel,'排队 → 状态发布',ms(c.published[0]-c.queued[0]));
+   const stages=document.createElement('div');stages.className='stages';const points=[];
+   if(c.queued)points.push(['CPU 排队',c.queued[0]]);if(c.submitted)points.push(['CPU 提交区间',c.submitted[0],c.submitted[1]]);for(const r of device)points.push(['GPU '+(r[3].direction||'copy'),r[0],r[1]]);if(c.device_complete_observed)points.push(['CPU 观察到完成',c.device_complete_observed[0]]);if(c.published)points.push(['发布有效状态',c.published[0]]);
+   for(const[label,time,duration]of points.sort((a,b)=>a[1]-b[1])){const s=document.createElement('div');s.className='stage';s.textContent=label;const small=document.createElement('small');small.textContent=stamp(time)+(duration!=null?' · '+ms(duration):'');s.append(small);stages.append(s);}panel.append(stages);
+   const button=document.createElement('button');button.textContent='放大此传输';button.onclick=()=>focusCopy(id);panel.append(button);
+  }
+ }
+ const note=document.createElement('p');note.textContent=item.t.scope==='gpu'?'设备区间来自 CUPTI。':item.t.scope==='scheduler'?'此条是 scheduler 相邻观察间隔，不能等同于 GPU kernel duration。':'此条是 CPU 观察事件或窗口。';panel.append(note);
+ const details=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='原始事件属性';pre.textContent=JSON.stringify(a,null,2);details.append(summary,pre);panel.append(details);schedule();
+}
+function showGap(){
+ const gaps=data.schedule_gaps;if(!gaps.length)return;selected=null;selectedGap=gaps.reduce((a,b)=>b[1]-b[0]>a[1]-a[0]?b:a);const[a,b]=selectedGap,panel=$('details');panel.replaceChildren();$('detailTitle').textContent='最长模型调度记录间隔';
+ line(panel,'两次记录间隔',number(b-a,3)+' s');line(panel,'Perfetto 时钟',number(a+data.perfetto_offset_s,3)+' → '+number(b+data.perfetto_offset_s,3)+' s');line(panel,'相对输入',number(a,3)+' → '+number(b,3)+' s');
+ if(data.gpu_extent)line(panel,'最后记录的 GPU 活动',number(data.gpu_extent[1]+data.perfetto_offset_s,3)+' s / Perfetto');
+ const note=document.createElement('p');note.className='note';note.textContent='高亮的是连续两次 CPU 调度记录之间的间隔。它不等于已测量的 GPU 空闲时间，也不能单凭间隔确定原因。斜线部分没有 GPU 活动覆盖。';panel.append(note);const pad=Math.max(.5,(b-a)*.25);setRange(a-pad,b+pad);$('scroller').scrollTop=0;
+}
+function focusCopy(id){const c=data.transfers[id];if(!c)return;const points=[c.queued,c.submitted,...(c.gpu||[]),c.device_complete_observed,c.published].filter(Boolean),a=Math.min(...points.map(e=>e[0])),b=Math.max(...points.map(e=>e[0]+e[1])),pad=Math.max((b-a)*.45,.005);setRange(a-pad,b+pad);}
+async function init(){
+ const bytes=Uint8Array.from(atob($('profile-data').textContent.trim()),c=>c.charCodeAt(0));const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));data=JSON.parse(await new Response(stream).text());
+ const title=(data.config.engine?.session_manager?'Session Manager':'Execution Profile')+' · 执行时间线';document.querySelector('h1').textContent=title;document.title=title;
+ $('run').textContent=data.run_id+'  ·  '+(data.config.model?.id||'model unspecified')+'  ·  本地自包含文件';$('sessions').textContent=data.sessions.length;$('duration').textContent=(data.cohort_makespan_s!=null?number(data.cohort_makespan_s,3):(data.config.workload?.duration_s??'—'))+' s';$('durationLabel').textContent=data.cohort_makespan_s!=null?'实际 cohort 总耗时':'配置输入时长';$('capture').textContent=data.gpu_extent?number(data.gpu_extent[1]-data.gpu_extent[0],3)+' s':'未采集';$('copies').textContent=data.captured_kv_transfers;$('status').textContent=data.status;
+ for(const sid of data.sessions){const o=document.createElement('option');o.value=sid;o.textContent='Session '+sid;$('session').append(o);}
+ $('message').hidden=true;$('layout').hidden=false;
+ $('clockNote').textContent='Perfetto '+number(data.perfetto_offset_s,3)+' s = 首个正常周期输入 0 s。';
+ $('longestGap').disabled=!data.schedule_gaps.length;$('longestGap').onclick=showGap;
+ $('clock').onchange=()=>{clockOffset=$('clock').value==='perfetto'?data.perfetto_offset_s:0;setRange(lo,hi);if(selected)show(selected);else if(selectedGap)showGap();};
+ for(const id of ['gpu','business','all'])$(id).onclick=()=>preset(id);$('gpu').disabled=!data.gpu_extent;
+ $('firstCopy').onclick=()=>{const lane=data.tracks.find(t=>t.scope==='gpu'&&t.events.some(e=>e[3].direction==='H2D'&&e[3].transfer_id!=null));if(!lane)return;const e=lane.events.find(e=>e[3].direction==='H2D'&&e[3].transfer_id!=null);show({e,t:lane});focusCopy(String(e[3].transfer_id));};
+ $('session').onchange=()=>{filter=Number($('session').value);schedule();};$('search').oninput=()=>{query=$('search').value.toLowerCase();schedule();};$('apply').onclick=()=>setRange(Number($('start').value)-clockOffset,Number($('end').value)-clockOffset);
+ $('zoomIn').onclick=()=>setRange(lo+(hi-lo)*.25,hi-(hi-lo)*.25);$('zoomOut').onclick=()=>setRange(lo-(hi-lo)*.5,hi+(hi-lo)*.5);$('left').onclick=()=>setRange(lo-(hi-lo)*.2,hi-(hi-lo)*.2);$('right').onclick=()=>setRange(lo+(hi-lo)*.2,hi+(hi-lo)*.2);
+ $('timeline').addEventListener('wheel',ev=>{const r=$('timeline').getBoundingClientRect();if(ev.clientX-r.left<labelWidth)return;ev.preventDefault();const fraction=Math.max(0,Math.min(1,(ev.clientX-r.left-labelWidth)/(width-labelWidth-14))),at=lo+fraction*(hi-lo),size=(hi-lo)*Math.exp(ev.deltaY*.002);setRange(at-size*fraction,at+size*(1-fraction));},{passive:false});
+ $('timeline').onpointerdown=ev=>{if(ev.button!==0)return;drag={x:ev.clientX,lo,hi,moved:false};$('timeline').setPointerCapture(ev.pointerId);};
+ $('timeline').onpointermove=ev=>{if(drag){const delta=(ev.clientX-drag.x)/(width-labelWidth-14)*(drag.hi-drag.lo);if(Math.abs(ev.clientX-drag.x)>4)drag.moved=true;if(drag.moved)setRange(drag.lo-delta,drag.hi-delta);$('tip').style.display='none';return;}const item=hit(ev);if(!item){$('tip').style.display='none';return;}const e=item.e;$('tip').textContent=e[2]+'\n'+stamp(e[0])+'  ·  '+(e[4]==='i'?'瞬时标记':ms(e[1]))+(e[3].bytes?'  ·  '+mib(e[3].bytes):'')+(e[3].transfer_id!=null?'\nCopy #'+e[3].transfer_id:'');$('tip').style.display='block';$('tip').style.left=Math.min(ev.clientX+14,innerWidth-460)+'px';$('tip').style.top=Math.min(ev.clientY+14,innerHeight-130)+'px';};
+ $('timeline').onpointerup=ev=>{if(drag&&!drag.moved){const item=hit(ev);if(item)show(item);}drag=null;};$('timeline').onpointercancel=()=>{drag=null;};$('timeline').onpointerleave=()=>{$('tip').style.display='none';};
+ new ResizeObserver(schedule).observe($('axis'));preset(data.gpu_extent?'gpu':'business');
+}
+init().catch(error=>{$('message').textContent='无法打开 profile：'+error.message+'。请使用支持 DecompressionStream 的新版 Chrome / Edge / Firefox。';console.error(error);});
+</script>
+</html>

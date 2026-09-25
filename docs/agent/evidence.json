@@ -3,11 +3,407 @@
   "run_sources": {
     "RUN-BASELINE-RETAINED": {
       "root": "results/baseline",
-      "manifest_sha256": "8b08b3155286d245f8314c8a57e8319984ded38417cfabf48dfa9f50f49d2a6c"
+      "manifest_sha256": "8b08b3155286d245f8314c8a57e8319984ded38417cfabf48dfa9f50f49d2a6c",
+      "availability": "removed",
+      "run_id": "20260814_103653_paringest-n8-seed4096",
+      "removed_on": "2026-09-25",
+      "removal_reason": "The old unequal-cap comparison was retired after first-party generation budgets were unified and regression-tested; the current Session Manager profile supersedes the legacy Conveyor diagnostic.",
+      "historical_record": "docs/agent/records/2026-09-01-exec-model-step-timing.json",
+      "source_reconstruction": "Original dirty runs lacked source patches; raw artifacts have now been removed under results retention policy. Historical summaries remain, not independently recomputable from current results."
     },
     "RUN-CONVEYOR-RETAINED": {
       "root": "results/conveyor",
-      "manifest_sha256": "6c9825c693f20c04b927c90aff494298200265b1c5fd9b9bda80011c62584731"
+      "manifest_sha256": "6c9825c693f20c04b927c90aff494298200265b1c5fd9b9bda80011c62584731",
+      "availability": "removed",
+      "run_id": "20260812_200208_park-cleanwarm-r2",
+      "removed_on": "2026-09-25",
+      "removal_reason": "The old unequal-cap comparison was retired after first-party generation budgets were unified and regression-tested; the current Session Manager profile supersedes the legacy Conveyor diagnostic.",
+      "historical_record": "docs/agent/records/2026-09-01-exec-model-step-timing.json",
+      "source_reconstruction": "Original dirty runs lacked source patches; raw artifacts have now been removed under results retention policy. Historical summaries remain, not independently recomputable from current results."
+    },
+    "RUN-H2D-COPY-TIMING-LEGACY": {
+      "root": "results/conveyor",
+      "run_id": "20260908_092012_diag-copy-timing2",
+      "manifest_sha256": "fd6efce5664b69c0f2f15b7b1bfd012e530db7888fa40c20d529d1ff201b5262",
+      "status_sha256": "7cb58fd5a25afb6036c7c42de428d6fdb426aae2b29f75afa5b531d196e15272",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Superseded temporary copy-timing instrumentation; current attributed GPU profile replaces this debugging artifact.",
+      "historical_record": "docs/agent/records/2026-09-24-h2d-window-audit.json",
+      "source_reconstruction": "Raw artifacts and dirty patch removed under results retention policy; historical record only, not independently recomputable."
+    },
+    "RUN-SESSION-MANAGER-SMOKE": {
+      "root": "results/conveyor",
+      "run_id": "20260924_221956_session-manager-gpu-smoke",
+      "manifest_sha256": "db63af3040972f066e6dbc0d67ef599b84e28b9a9bf1e467f258b06c3b2f027f",
+      "status_sha256": "b7c155ffdc8a9686fc02f279b6ae03dc67cfeb0b55c382bd1d24b3b24f5128bf",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Agent smoke test completed; successful eight-session delivery supersedes its purpose.",
+      "historical_record": "docs/agent/records/2026-09-24-session-manager-gpu.json",
+      "source_reconstruction": "Raw artifacts and dirty patch removed under results retention policy; historical record only, not independently recomputable."
+    },
+    "RUN-SESSION-MANAGER-CALLBACK-FAILURE": {
+      "root": "results/conveyor",
+      "run_id": "20260924_222828_session-manager-gpu-n8",
+      "manifest_sha256": "e00092feef7f787a402435b44bde0956d15ea21440e93d1820b0736d3910f440",
+      "status_sha256": "b18d344541bb3290a5582ebffca65430ed2e8cc5f1e509f7062722c6487dc961",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Callback identity bug fixed and validated by regression and successful eight-session rerun.",
+      "historical_record": "docs/agent/records/2026-09-24-session-manager-gpu.json",
+      "source_reconstruction": "Raw artifacts and dirty patch removed under results retention policy; historical record only, not independently recomputable."
+    },
+    "RUN-SESSION-MANAGER-GPU": {
+      "root": "results/conveyor",
+      "run_id": "20260924_223115_session-manager-gpu-n8-fixed",
+      "manifest_sha256": "f52a4016e0e799cc6259a29fc233b6a73d2896837beb2234996b3c527aa56cfc",
+      "status_sha256": "a790c4c860bb9f701c9559385666ee32c8bd7f824e732f74d3814f899d4ad895",
+      "artifact_sha256": {
+        "client.json": "d6766c41559de50d6747cd86aa2d6a8554d7c79b7bdf5d029adefbe0209dabeb",
+        "client.txt": "a74887493aeeaa3e06325f460d836e748fd4da79d4deae7660187e8a593358d7",
+        "gateway.log": "18742bb15932e63fa16767d5a26c6f46665ea21c611d3aa3d5aac0d5bd63801a",
+        "gateway_ticks.log": "78d3aaab7a47008a58b02e0d64461648afeea850449a375c4ad7abe8c9f132e2",
+        "gpu.csv": "fdb28373a76d417f8ccd342d7def9a11df256ff951e2ff908b43908dea7a2ed3",
+        "gpu_activity.json": "2c8fbd40ac5184565c1f7b9cab49e86d18525dcf8be0807d2ddbbbe24e00f604",
+        "kv.log": "e3bb00b5ab8d64f4aafa0b30049de0a287c8f9539d3944d2ed5ae23d320716ba",
+        "kv_events.log": "830b7a6f718eb97d283b67e88fa2497389dde47c5a4a5439c4b4c0c666e78c66",
+        "manifest.json": "f52a4016e0e799cc6259a29fc233b6a73d2896837beb2234996b3c527aa56cfc",
+        "per_iteration.log": "927485de4937dacd7d21adb82c6c6b6c902e3559cb65b4396cc70d6acbcb77fe",
+        "per_request.log": "1876af0191d7591a6373f7ad44e30bef3e2c4f27ad864b202c6f47b3668d62fc",
+        "residency.log": "9abf28951bbe00dfcbe534f455d8642eeeb9de6e121e6ee5725993db62c112ee",
+        "scheduler.log": "4ad658a48c08d78bf67ce182b76d034281cd69e6df322934d8af4561ad0cf4cf",
+        "source.patch": "ddf25c415485b0504986b3e47b9e91a638df071e2adcaa06d044ceffedea4e6b",
+        "transfer_events.jsonl": "89362fd44f2b79df5c24553d496a6fe65bf4ff69eb453e7937df9bbc1bfd6644",
+        "worker.log": "76ca28aeb6641c4b0413732799834f29c71e0a7db876f4b02720785182873221"
+      },
+      "source_reconstruction": "Original source and timing summaries remain in historical records; raw artifacts and source patch were removed under the user retention policy.",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Long-window audio feature padding bug fixed, numeric regression and new serving profile validated; replaced by RUN-AUDIO-FEATURES-BOUNDED.",
+      "historical_record": "docs/agent/records/2026-09-25-session-manager-flow-audit.json"
+    },
+    "RUN-AUDIO-FEATURES-BOUNDED": {
+      "root": "results/conveyor",
+      "run_id": "20260925_011335_audio-features-bounded",
+      "manifest_sha256": "7fda111718930c0fd11d4af208183f231dc6941f4170ae29f9141516c094ae21",
+      "status_sha256": "b53500d50e48578267d267f49ee6b1db3caf37a0d1a5bb163e74455514b350bc",
+      "artifact_sha256": {
+        "client.json": "fe23d6d5f53baf83f4d947888752dc3e85f8da8aa344bff24e677e4523c64ff6",
+        "client.txt": "3bf6f1b0b4b6115bc902cba8bc49adb52c6289b59d4db38be012bf94231d9bd4",
+        "gateway.log": "2a86429c8ab90c443955a0f0cfe3a4b7055e301910509945ff02c64833b87a6c",
+        "gateway_ticks.log": "69ef17e1a961a7f410ba2cbfb6ccf3fa12555b1b090be55567139580d533671d",
+        "gpu.csv": "071025a7385a9506eaae7b97b226955c12050b938b9bd060b707f45fc240e77c",
+        "gpu_activity.json": "c200031c4e758ac30bb9cbe3f854b445124642059d00f56b6e3c16e3eeaaa40a",
+        "kv.log": "38ffea35a24b024e8c51211cefa4390b0e56514ee442bedac259dea7f42dd032",
+        "kv_events.log": "1f7a84e726faf5ef2ab1e5bb95d82ae659f02de56fe2670939036674caeaddea",
+        "manifest.json": "7fda111718930c0fd11d4af208183f231dc6941f4170ae29f9141516c094ae21",
+        "per_iteration.log": "b0b5a1d5dfd7380aee3a8d25d5949b155594aec5a5da6607b5399c8320286589",
+        "per_request.log": "7422fb51e28075b246c4156d55696e7ba1281afc0bc8d1b558b9066605addea6",
+        "residency.log": "1e48be94136dea22814fdacc110593f0eb0abbccf16d5a4e0d24301e1bfa34ec",
+        "scheduler.log": "7eac0b226fa61f5f76500ef4fe801d2a96a2ea77dd314a35e45b46e18b2ef327",
+        "source.patch": "3e834b83765e888c43979bad1ac97abe0e009b226358c772950c6c611193e4c6",
+        "transfer_events.jsonl": "865f9bfa7b2ebb07f7a1371c620275b18860eb658576d288acf07cda70994a63",
+        "worker.log": "509161114f65aa232652aaee6945a61a9f6e7e0dd4b5588a911bb4e413212050"
+      },
+      "availability": "removed",
+      "source_reconstruction": "Historical records retain earlier observations; removed raw artifacts/source patch are no longer independently recomputable.",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Copy submission stall fixed and new user-facing GPU profile validated; superseded buggy execution and derived profile removed."
+    },
+    "RUN-AUDIO-FEATURES-BASELINE-CHECK": {
+      "root": "results/baseline",
+      "run_id": "20260925_011608_audio-features-check",
+      "manifest_sha256": "43c474d1594d70bc8d977902da7632f1c4721e0818c3b618a6354598463a9f6f",
+      "status_sha256": "751a7d0ee41dab42a3340aeff18ae8fd07ac58cd23e36285593afd3104381869",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Temporary first-party baseline integration check completed; not a user deliverable or matched performance comparison.",
+      "historical_record": "docs/agent/records/2026-09-25-audio-features-bounded.json",
+      "source_reconstruction": "Raw temporary artifacts removed; pass/fail and configuration preserved in the record."
+    },
+    "RUN-ADMISSION-LIFECYCLE-CHECK": {
+      "root": "results/conveyor",
+      "run_id": "20260925_040241_admission-debug",
+      "availability": "removed",
+      "removed_on": "2026-09-25",
+      "manifest_sha256": "cb2a7277c58b749ccb96c6951d4cdf7b70c89123cc7889b5185294afd0a76c25",
+      "status_sha256": "05dbb5a547dd7d1170c6c1fbe3f3ad858db2c8e4aba025ff7abbaf233aa05581",
+      "removal_reason": "Agent functional debug run completed; removed under user results-retention discipline.",
+      "historical_record": "docs/agent/records/2026-09-25-admission-lifecycle.json",
+      "source_reconstruction": "Dirty source patch existed during validation; debug raw artifacts and patch were removed. Historical record only, not independently recomputable."
+    },
+    "RUN-COPY-SUBMIT-NATIVE": {
+      "root": "results/conveyor",
+      "run_id": "20260925_050122_copy-submit-native",
+      "manifest_sha256": "293f841b524e66fc895fda2207d3a03ba1926e89db91292edb52ceb2ea92b9ac",
+      "status_sha256": "c5a93f98d674514d78b0407334c0fd36dae37e95f3abdcee26aba264922d80d9",
+      "availability": "removed",
+      "historical_record": "docs/agent/records/2026-09-25-copy-submission-fix.json",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Old high-overhead descriptor path removed after verified fix; comparison retained as historical diagnostic summary.",
+      "source_reconstruction": "Summary and hashes preserved in record/registry; raw artifacts and source patch removed, not independently recomputable."
+    },
+    "RUN-COPY-SUBMIT-OPTIMIZED": {
+      "root": "results/conveyor",
+      "run_id": "20260925_051237_copy-submit-optimized",
+      "manifest_sha256": "0bd7729205b66c79edc9c30bb0e62b621d86ed03a0d62e7b7d79e63dad27ea01",
+      "status_sha256": "d4faa581865a889706362ed16f5e69efa197508287841f73e27333f16e691b9b",
+      "availability": "retained",
+      "historical_record": "docs/agent/records/2026-09-25-copy-submission-fix.json",
+      "artifact_sha256": {
+        "client.json": "2f2e90d38acfe1bd7d58e6e20b4a86e58878e42ea40352c5082fd4437fb91bed",
+        "client.txt": "06db06f3b5c9af42b73b06778b68f101ace1bd6044acf8c17e3fbbee720c002e",
+        "gateway.log": "87a1bff3f53b4f9bc0ff8882d5a039815152a3d956251b25aa605f8a26832063",
+        "gateway_ticks.log": "dead986e24580f879548d3fc0f3bbcfc84438440e6856f9f05d575b0dff3ee10",
+        "gpu.csv": "628993ef2f3805118ef3effa8f9c2f1e97c22ac547b7983f731baee26eb86401",
+        "kv.log": "da1c8f887ff373b577f75da1fa929dd743ea4140194171375bc26966445367c0",
+        "kv_events.log": "cf9dbd140f7ae0cf478c3f8607b42d8dc3dcf6ca253055a80b3e40aa3c9a5968",
+        "manifest.json": "0bd7729205b66c79edc9c30bb0e62b621d86ed03a0d62e7b7d79e63dad27ea01",
+        "per_iteration.log": "19ce8a83d0ff5dcbf07081b2ad7e03be62b7a89ddbc9221cf50de70d3b1cfbae",
+        "per_request.log": "56f96c1a33184b63e0ee22b6d13d2f58bd21c55427f2e0debc3a286d45e86bd9",
+        "residency.log": "9f2ab63cdd95212038207f1e50c237a80cf763764cdde2a24274355bb8a78a75",
+        "scheduler.log": "a140065308ba022f36d3f52e1199f5945d290b19f403e56c809e7b0b475930e4",
+        "source.patch": "c15219dc3729b13b55d8fee9631f7843f815eb9ee0fad8ee43d73dc4bb7f7a44",
+        "transfer_events.jsonl": "80f41f24698165f8e5824deea5d97dea980c84e9fbeb85cbddc95ddebda9ac6b",
+        "worker.log": "89718187aec27509520cae25a6448084036776791a163ea4a78a8071bc075a6b"
+      },
+      "retention_reason": "Current profiler-off serving verification of optimized copy submission; distinct from device-trace diagnostic.",
+      "source_reconstruction": "Apply source.patch to manifest git commit; all raw hashes verified and git apply --check passed against an archived checkout.",
+      "distribution": "Local artifacts on the original producing machine; excluded from Git source distribution. Transfer the complete run and verify hashes for remote reanalysis."
+    },
+    "RUN-COPY-SUBMIT-PROFILE": {
+      "root": "results/conveyor",
+      "run_id": "20260925_051419_copy-submit-profile",
+      "manifest_sha256": "a3caba032a8fede20204ebe5826bcd40c7cfb9425c25a484f05c993d2f835fa3",
+      "status_sha256": "cf7a8d353cf4c01c1866a242588be0ad57b6fa0dcd465fdf7e1cb03c65646c83",
+      "availability": "removed",
+      "historical_record": "docs/agent/records/2026-09-25-copy-submission-fix.json",
+      "artifact_sha256": {
+        "client.json": "fe83d354dde7644248441e4866f27c08215bc3f74d8b90f27d31f57db132b8eb",
+        "client.txt": "5c510f07b6e598ee55c2b8cd8eadd3819cc7ff6ebd807303cc71ed06fc159ddb",
+        "gateway.log": "2a4f1cea8003408dd670dbe384885bcac0bd031eb2878b28e124e3b127208691",
+        "gateway_ticks.log": "cb4c0260a15611dc7c324d39c2dde3aa1f6a83630744c10ba9d69a6ac7fe0e34",
+        "gpu.csv": "6044a8c21aa157597d41fa893127d5dd82ecec824212edf98d2561f406099e49",
+        "gpu_activity.json": "5d89d960d27ca2c1c2d5568eae6f7eba498c8ef7447346866b17ed5d4cd4a266",
+        "kv.log": "4a0fdeeee96532e3505cd85b494bc73634bc3bb03f81b2dfe816332794e6549e",
+        "kv_events.log": "23e876e78af31d0ae67ba9097128db7d3e562771e30d80506985b2ca7364d38c",
+        "manifest.json": "a3caba032a8fede20204ebe5826bcd40c7cfb9425c25a484f05c993d2f835fa3",
+        "per_iteration.log": "b72913c1b8da482bcb602b681d652c5355813d69477f5b5a1fdae47869570cc2",
+        "per_request.log": "e6c30d537be4c3098df5d16f0ba011ea11037f04bf23aeadb2dbaca70eabee3e",
+        "residency.log": "33a23b1620b562be948f08b582844512ae326876c2426a8397792bbc3b520165",
+        "scheduler.log": "4e1ccede67e60c8f5da7cb2aa7bbaa0c351bae4132d1132375b69fd02d0a9e11",
+        "source.patch": "b957271b37f92b642d41e73b2616604bc8118a1914e9ce1abf8fff0a567e1831",
+        "transfer_events.jsonl": "a866572805c9db42d809d75f6921e01079c6c38dc01aa89e7c3a85a279dbee8a",
+        "worker.log": "8062ed8d303c91c805d3d01281da718eab71e69e62d631c5b26fbe2179c62ef3"
+      },
+      "source_reconstruction": "Raw artifacts, source patch and obsolete presentation removed. Original numbers remain in dated record only.",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Timed GPU capture interrupted business cadence; full-business control fixed and verified, replaced by RUN-WHOLE-RUN-PROFILE."
+    },
+    "RUN-CAPACITY-RESIDENT-CHECK": {
+      "root": "results/baseline",
+      "run_id": "20260925_052216_capacity-resident-n12-seed11",
+      "manifest_sha256": "4b83379e211a819b61f5c48c8d04fe9bc6f3f71c5510bae1a03341e5d3a8c10b",
+      "status_sha256": "c8d12e06af16a53aa2683e54d315b92188eb1bcb5f03a2dc08001cc9232bdb24",
+      "availability": "removed",
+      "historical_record": "docs/agent/records/2026-09-25-capacity-toolchain.json",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Temporary functional check completed; raw artifacts removed under user retention discipline.",
+      "source_reconstruction": "Summary and hashes preserved in record/registry; raw artifacts and source patch removed, not independently recomputable."
+    },
+    "RUN-CAPACITY-PILARIUS-CHECK": {
+      "root": "results/conveyor",
+      "run_id": "20260925_052318_capacity-pilarius-n12-seed11",
+      "manifest_sha256": "554698a7555ce08dd65551eee4d0791e6e424302c9312f2abe0c02011864e62a",
+      "status_sha256": "a76c78decd58d2880d6f3522a9ad4633896185f2b514339b660a5810b363b03c",
+      "availability": "removed",
+      "historical_record": "docs/agent/records/2026-09-25-capacity-toolchain.json",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Temporary functional check completed; raw artifacts removed under user retention discipline.",
+      "source_reconstruction": "Summary and hashes preserved in record/registry; raw artifacts and source patch removed, not independently recomputable."
+    },
+    "RUN-GROUP-WINDOW-LONG": {
+      "root": "results/conveyor",
+      "run_id": "20260925_060726_group-window-long",
+      "availability": "retained",
+      "manifest_sha256": "87ab8386dd91c0f219a6c565ab644162f2b8edd599088bbd2b0ce3b1e01465ee",
+      "status_sha256": "4b5ee220e9de4557f1fa77660a9c4da7214b1699cfc5bb203dbbbc5a7bd141a1",
+      "artifact_sha256": {
+        "client.json": "e96ddb87dca2be52ba1727386d491b2f18d55358b6aa6c3826aca4a70a29f4be",
+        "client.txt": "99c66b912fcd2923eef38715b2aa8d6f019ee42c69cd8220fa73543cd18df992",
+        "gateway.log": "a31a2298df78da0e1c68774f51e7b9cd2ac866a16ae3a03fe4b38471ba2fdd3b",
+        "gateway_frames.jsonl": "35f83e6bebd8e7a8d6906f82f976dfb170d31709dbf48b3ac649f8caa48ac957",
+        "gateway_ticks.log": "9149e741c8f11029ae275531b42a34ad0a72974609a83c5ed00472c48c256300",
+        "gpu.csv": "886c0c8c86c402ce6bed508e2475aa0150f4b3d5ec36d00abe97f0c057963427",
+        "kv.log": "36a4b2fb40467b412f1184f3581b86df7ffe63acf249b59ded2c1d56acfbf1b6",
+        "kv_events.log": "06f1bc29dc724612478a788b14abef1b9fd9c75ccc3e8493ee67ea72f901b0f9",
+        "manifest.json": "87ab8386dd91c0f219a6c565ab644162f2b8edd599088bbd2b0ce3b1e01465ee",
+        "per_iteration.log": "01f5e988af12112f7532197733f68713ada216795e99198f368bd6bb5f5b8489",
+        "per_request.log": "21552913361d34bf024db00f1bc514446dcd16993018ecff32afc96e3cb41f3c",
+        "residency.log": "bd6fd9f61d076e36d95feda068b8fdd4d8102e828e4a11c95e2883677236b565",
+        "scheduler.log": "a9c9de762b755027f119904c31e80b5f739151bd7b2b3a6dd78aed9bcf825bb6",
+        "service_events.jsonl": "0182fe120e4c13b613ea187f8ce8db8f17e632f1ecb0ae7d0b14a7f03e27b35a",
+        "source.patch": "2efd0b7baec46a8721a3b868df124eb92d139b959684bef7773ffe184a1e2eea",
+        "transfer_events.jsonl": "2f782aa9492c7984bb529b683723cf8b141292d564616c1243ea57568f1683eb",
+        "worker.log": "c9bb1cf844c88e5615eaf14ecdecb6002012fb465910c67332a05af70189e091"
+      },
+      "historical_record": "docs/agent/records/2026-09-25-group-window-long.json",
+      "retention_reason": "User-requested long multi-member group execution, measured cap and timing risk.",
+      "source_reconstruction": "Every recorded raw hash verified; source.patch applies to manifest commit in an archived checkout.",
+      "presentation": {
+        "directory": "derived/cohort",
+        "profile": "profile.html",
+        "perfetto": "timeline.trace.json.gz",
+        "artifact_sha256": {
+          "profile.html": "a829af4538dcc5ef077c2a8ed8fd82c050abb668b16cdc5d1406e5fb93e93fa0",
+          "timeline.trace.metadata.json": "937330fc24e87d63113bfba83c7fd0684e0f64c3943f94ae5c8385e04aec27f8",
+          "profile.metadata.json": "f3848d5981d83ed4efadd9ac3b9b1d4f8a6937e752219ffb3a27072c9e79ba90",
+          "timeline.trace.json.gz": "42d34b7e1e3796669ff121479e7d6ad3cf8228c466441add53631e1a19b5dfff"
+        }
+      },
+      "derived_artifact_sha256": {
+        "derived/group_windows.json": "89ff4ef96a96bd340b9a387343f90259fc9e79ff64a9e025172b0e50d1e56ab6"
+      },
+      "distribution": "Local artifacts on the original producing machine; excluded from Git source distribution. Transfer the complete run and verify hashes for remote reanalysis."
+    },
+    "RUN-WHOLE-RUN-PROFILE": {
+      "root": "results/conveyor",
+      "run_id": "20260925_062043_whole-run-group-profile",
+      "availability": "retained",
+      "manifest_sha256": "693cc8cacaef748c7a4daf567c9f80fb0061ad676e27fed77b1cdf99c51f929b",
+      "status_sha256": "71b4eed39d9581c9a2f6cd48ec0780544660fe8e6272746b81fbe0e83ea406e6",
+      "artifact_sha256": {
+        "client.json": "6d001da531ef8b7758d53db80935d2425a3cef8fe825e6ade1d6fd26c0c5ff34",
+        "client.txt": "c23dd486c20425fb91c64085fd3567815c3ece7eb6de81a0902680b2c5d0b2ed",
+        "gateway.log": "edf685f16d30b50821fe9ec2d94a8aca4c28863d604e2bf1d54b022b0f748e28",
+        "gateway_frames.jsonl": "527c45ca21f9750841033456d1f5a6290160baa0fe67a3bd23f20f5e67c0d5af",
+        "gateway_ticks.log": "e8fcad2b2e24139f7cbabc43898c108eb30e18c17d76ec861936bf6c52648ff3",
+        "gpu.csv": "2bfbd6a6dc4cc8156c7c698b8aae0dcd026b4f487b9c3d352de60c5ee974b08b",
+        "gpu_activity.json": "18713c72f47e63162bdd6e3d3433ef4d57b03599707926432df815dced45592f",
+        "gpu_trace_start.log": "6bdfa7f34ddb40ec9659f15e5f143cb50bcbbe47400887d2e03fd80c0c829de5",
+        "gpu_trace_stop.log": "fa727112c2b24f087b4afcc83c2764903766194bdf6adaa0973406cb90134324",
+        "kv.log": "82f8408c4f6a0e0e18b100be5399927ff35de04a28f1a7637cd1b5789481aab3",
+        "kv_events.log": "81e055cba9998cc712dcf0cfd8f8fa39ec78e4c8b4a0547e2f4a3b4f5dbf0d38",
+        "manifest.json": "693cc8cacaef748c7a4daf567c9f80fb0061ad676e27fed77b1cdf99c51f929b",
+        "per_iteration.log": "c15016d791c9645d4fda537fc57204878372594e1cc1f249bd0d8acee027675b",
+        "per_request.log": "d220f877a5392d805377f5d977c045327e02884efad615ea662c28dd6508c390",
+        "residency.log": "c6178038cffd71960f8f2832c2a6ac1cf407d5278752c6032d784f8b8ddaf20b",
+        "scheduler.log": "856c7f82762b57128c90001e73f968b913e35898ebb1d8691084663328cc02c2",
+        "service_events.jsonl": "7c12598f65bee20931980822c29ded9c945d94e8aae36e93a872fc0952b641ee",
+        "source.patch": "51c2c932cf286f6d75551210029f0bb6062bc6734f487736aad248222b75a6b4",
+        "transfer_events.jsonl": "d60ce8503e1b96622193ede4d25af8a0a52269e567b8222e1ef3eb3143e33dda",
+        "worker.log": "4a865e4d1eba06d66982ebf346f9c07b5443fc96b9a3fec2122de3ff05429da8"
+      },
+      "historical_record": "docs/agent/records/2026-09-25-whole-run-profile.json",
+      "retention_reason": "Current full-business GPU execution visualization and restore-window admission evidence.",
+      "source_reconstruction": "Every recorded raw hash verified; source.patch applies to manifest commit in an archived checkout.",
+      "presentation": {
+        "directory": "derived/cohort",
+        "profile": "profile.html",
+        "perfetto": "timeline.trace.json.gz",
+        "artifact_sha256": {
+          "profile.html": "f075b7889f8e1b34894a160ad36856205f98652d5744624c7f6d5a80a16bd938",
+          "timeline.trace.metadata.json": "f4189f4606995405289917ddba484f997554488dd875d23ea58fa0feaff3f1ec",
+          "profile.metadata.json": "388ea5c585a5b06c719e880b741725d2bc6454b305617f3e19b5359818767a38",
+          "timeline.trace.json.gz": "aaee6af7542aab61d8a21a4ccb3c24870b36de1a01a2d8dd1b9a00e9b397246c"
+        }
+      },
+      "distribution": "Local artifacts on the original producing machine; excluded from Git source distribution. Transfer the complete run and verify hashes for remote reanalysis."
+    },
+    "RUN-GROUP-WINDOW-MARGIN": {
+      "root": "results/conveyor",
+      "run_id": "20260925_064000_group-window-measured-margin",
+      "availability": "removed",
+      "manifest_sha256": "a2a51f8e7c8e51d1c07a502de33784051f31f2bd295189a7914276416922babd",
+      "status_sha256": "0d0073c843a230f282b4aa86bbcab7233bfa972e7bc0ec1029545417cb2b8935",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Agent cost-margin verification finished; retain concise record, not another debugging result directory.",
+      "historical_record": "docs/agent/records/2026-09-25-group-window-margin.json",
+      "source_reconstruction": "Raw artifacts and captured dirty patch removed; numerical summary cannot be independently recomputed from current results."
+    },
+    "RUN-MINICPM-POOL-CHECK": {
+      "root": "results/conveyor",
+      "run_id": "20260925_064720_minicpm-group-serving",
+      "availability": "removed",
+      "manifest_sha256": "11849fba6e0b0ed60fa3b3a73868b26d7ef14a9e113f578671c9de21a8d31961",
+      "status_sha256": "4a5a3f52ea66e564800c9585640cbbb078faa72f096dba4547353a762e91c04d",
+      "removed_on": "2026-09-25",
+      "removal_reason": "MiniCPM BF16 geometry requires 0.5625 GiB for context 4096; explicit pool was 0.5 GiB. Corrected diagnostic context to 3072 and added pre-startup per-model geometry guard.",
+      "historical_record": "docs/agent/records/2026-09-25-minicpm-group-serving.json",
+      "source_reconstruction": "Failed debug output removed; configuration rejection and fix preserved in record and regression test."
+    },
+    "RUN-MINICPM-GROUP-SERVING": {
+      "root": "results/conveyor",
+      "run_id": "20260925_065023_minicpm-group-serving",
+      "availability": "removed",
+      "manifest_sha256": "770bed9ea729830e3bc89dda492353a8bb47e64e54cc48a94291488c17696edb",
+      "status_sha256": "bdb5a4eb924f9152c1d12d81d0b3ea00845a222976f57ccddaeb9dfc539d0312",
+      "artifact_sha256": {
+        "client.json": "2da9366e4a1a52e4e2a91f89ca0172aeb95ccdb15b7054b1348509d24de6b086",
+        "client.txt": "04444a489194f43be9d2cfc840872613d13e38132ce449bb885250f48dbd5e80",
+        "gateway.log": "344b6dee03b826e8c898deb1cbd2e86a33afa4e5b23c012b6f085fc2dc2e51a2",
+        "gateway_frames.jsonl": "ba72434cbb24016a49916083dfbfba0cbf9a62237f8d4d4a238229bbee3cb088",
+        "gateway_ticks.log": "dfedd7c79a6e621c4f88b209a3a7930882680a933c63c1134e58ace1ed8a04cd",
+        "gpu.csv": "f55ed331b88e8da4ea96d54a19bff1a0d1f6b95cf71cd7928845ea6be4e10196",
+        "kv.log": "25d4fd259010a6b748f809504bbb0d27d50568acd6ea81d6b890000d52294de3",
+        "kv_events.log": "354c9c51e838860c95655af06179762737f9c2a551b05b696616a4e564b42161",
+        "manifest.json": "770bed9ea729830e3bc89dda492353a8bb47e64e54cc48a94291488c17696edb",
+        "per_iteration.log": "2ff9232da0c39039f773de8b2c6227f0faccd99790059151c7c06a58102a7500",
+        "per_request.log": "49c24c97b60aa76bcbfdeb7327ce6c91f0e4be64a9015f845d6444b8d08f05fc",
+        "residency.log": "196509436128e24c3573362ff16e464bb97c376cc574b1d24a78af95e3089412",
+        "scheduler.log": "2c0b9c3a5a5caa81d78067aae0410bb8b23ee624bd9f525dbd141291dd3a2f20",
+        "service_events.jsonl": "18a96f1dd6fb5131e47add048a638c26a40118985f94841d7790cd7806852ce8",
+        "source.patch": "613bf90f6cfb98af793ece4ddfdfb4b1a3cc2a352ce31e5578ea78bb92d2ac3e",
+        "transfer_events.jsonl": "d7b59e41392dc1869de9bdea498ec4a9aff94f641f91270d7db16fb0b3cc3989",
+        "worker.log": "40954d5fd9cd61bdfb380aea9e9020e30ca35b358d28f9da16c935ea90a13499"
+      },
+      "historical_record": "docs/agent/records/2026-09-25-minicpm-group-serving.json",
+      "source_reconstruction": "Raw artifacts and presentation removed; the original integration record retains historical observations and weight-verification hashes.",
+      "removed_on": "2026-09-25",
+      "removal_reason": "Superseded by the selected per-model periodic budget and its validated execution; removed under user result-cleanup discipline."
+    },
+    "RUN-MINICPM-PERIOD-BUDGET": {
+      "root": "results/conveyor",
+      "run_id": "20260925_072404_minicpm-period-budget",
+      "availability": "retained",
+      "manifest_sha256": "51f32043002f5aa55ae2f45a068bb0b3dc030cd247fbb99c56581c52753b3860",
+      "status_sha256": "330595d40e0414c8e63bd2ebeff94b4c6e69068ae867973c84eb7c0cdfbfda31",
+      "artifact_sha256": {
+        "client.json": "4cdaca8c633ecabcaa990025818c070ec97bb277516bd4e7682ab2c2eed4d08b",
+        "client.txt": "0432f56719e4203037b458ee286838a745191a2e19ce4943f95cf427b8690052",
+        "gateway.log": "d482d70217f187a8f1b6f96586077000cf0539434829fb7a3a95c59305275913",
+        "gateway_frames.jsonl": "e7f450f60f768c31aeaac66c9e4beebe86add52e337ce94f468f2c7f4e98a9d6",
+        "gateway_ticks.log": "0a9dd0aa396678a84954c9712c512c17ca7ada2c476d9ae774aea3f316efeeb4",
+        "gpu.csv": "3a27e1c6ae896e4986c6fde6348c9ab3ad4922f341aa2aa22910673eee9950eb",
+        "kv.log": "b822ebe0cbce21dcfa2035ffcc3703dd32a5537eb6bb32aba46cc0115f31ea84",
+        "kv_events.log": "a935f7e59eb0f6e6dd91e142c0356d6836d3e8f3d740dd7580da504611a8b822",
+        "manifest.json": "51f32043002f5aa55ae2f45a068bb0b3dc030cd247fbb99c56581c52753b3860",
+        "per_iteration.log": "fb50598e02e233dfdd4ac90c58dd83a95dab897678a311b30d32d28964d4f204",
+        "per_request.log": "5047ac38d01d586a6b2a6d59c8cc46d69d324ad59f2cb6d5a63d2ccc86eee466",
+        "residency.log": "dfedd1b5fa403b69ac7d9061a80845d0cd1095430d1009fbbe1a7453daa9eeaa",
+        "scheduler.log": "c61bca88d2dcc02551b1cf174eb1e42a5711eeeb07f5f39a91c8b1d8eec638c5",
+        "service_events.jsonl": "1ae7bcfe967bd6a5b4c6afd11354c593619bc34a4f29973e600b08eeeaa29093",
+        "source.patch": "cac02a9fa2c59f1bf71c80a2c68f611bb87e51c97565c68ebc3fb828d3c5db1d",
+        "transfer_events.jsonl": "01d3fa384966743669098dfc49c6e52f53a8024d6f85bdaf4867e661621d21f4",
+        "worker.log": "56be9a76b31e806d4720b5b7969c53433659a3678a378d17ffad69a9ce675595"
+      },
+      "historical_record": "docs/agent/records/2026-09-25-minicpm-period-budget.json",
+      "retention_reason": "Current user-reviewable second-model execution with the selected periodic text budget and two sessions in one group.",
+      "source_reconstruction": "All recorded raw hashes verified; source.patch applies to manifest commit in an archived checkout.",
+      "presentation": {
+        "directory": "derived",
+        "profile": "profile.html",
+        "perfetto": "timeline.trace.json.gz",
+        "artifact_sha256": {
+          "group_windows.json": "809ac3c98025929f3d6b3518d4b38a69e1a2c3a28a1f3d743b9eab4a8779eef2",
+          "profile.html": "17d8a294a44efe576a25e72ac1bc526f8121eacca20b7c8eb5992d87685b888f",
+          "profile.metadata.json": "7ca2077fe45d0942de7a2b8c161cec94c578e068a03a88022719c0865756402a",
+          "timeline.trace.json.gz": "8743146b73e589c79b14d9f9d819d09e76b93d69ae267d0ff7a70bc079048895",
+          "timeline.trace.metadata.json": "49046671afbef3feb81aaa18a2d165f09880388625edbbcc469b251a4595ee5c"
+        }
+      },
+      "distribution": "Local artifacts on the original producing machine; excluded from Git source distribution. Transfer the complete run and verify hashes for remote reanalysis."
     }
   },
   "role_definitions": {
@@ -15,7 +411,8 @@
     "diagnostic": "reconstructable non-formal evidence; dirty runs require a retained patch artifact",
     "legacy-unreconstructable": "historical evidence with incomplete run reproducibility; raw-data availability, statistic recomputability and source reconstruction must be assessed separately in reproducibility; never formal merely because some statistics can be recomputed",
     "source-audit": "current source supports semantic claims only, not measured performance",
-    "external-source-audit": "dated external or pinned sources that must be rechecked before current-state citation"
+    "external-source-audit": "dated external or pinned sources that must be rechecked before current-state citation",
+    "historical-record": "Historical observation summary after raw artifacts were deliberately removed; not independently recomputable or formal performance evidence."
   },
   "evidence": [
     {
@@ -44,7 +441,7 @@
     },
     {
       "id": "EVIDENCE-H1-COMPARISON",
-      "role": "legacy-unreconstructable",
+      "role": "historical-record",
       "supports": [
         "FINDING-H1"
       ],
@@ -56,9 +453,13 @@
         {
           "kind": "run",
           "ref": "RUN-CONVEYOR-RETAINED"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "both retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; not formal under the current protocol"
+      "reproducibility": "Raw run directories removed under results retention policy after the unequal-cap comparison was retired. Historical observations remain in findings and experiment records; current results cannot independently reproduce the statistics. Fresh matched runs are required."
     },
     {
       "id": "EVIDENCE-H2-METRICS",
@@ -107,7 +508,7 @@
     },
     {
       "id": "EVIDENCE-H4-RESIDENCY",
-      "role": "legacy-unreconstructable",
+      "role": "historical-record",
       "supports": [
         "FINDING-H4"
       ],
@@ -119,14 +520,18 @@
         {
           "kind": "run",
           "ref": "RUN-CONVEYOR-RETAINED"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "retained manifests are dirty and lack patch artifacts; the baseline run predates per-session delivery records and fails current acceptance; rerun clean before a formal paper claim",
+      "reproducibility": "Raw run directories removed under results retention policy after the unequal-cap comparison was retired. Historical observations remain in findings and experiment records; current results cannot independently reproduce the statistics. Fresh matched runs are required.",
       "interpretation_limits": "Finite diagnostic occupancy trace only; no unbounded-time stability or matched-workload capacity claim."
     },
     {
       "id": "EVIDENCE-H5-CRITICAL-PATH",
-      "role": "legacy-unreconstructable",
+      "role": "historical-record",
       "supports": [
         "FINDING-H5"
       ],
@@ -139,14 +544,18 @@
           "kind": "legacy-record",
           "path": "docs/agent/legacy-experiment-log.md",
           "date": "2026-08-12"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "diagnostic timing only",
+      "reproducibility": "Raw run directories removed under results retention policy after the unequal-cap comparison was retired. Historical observations remain in findings and experiment records; current results cannot independently reproduce the statistics. Fresh matched runs are required.",
       "interpretation_limits": "Issue-to-completion-report timing can include engine waiting; do not treat it as pure DMA duration or assume all input preparation is serialized with it."
     },
     {
       "id": "EVIDENCE-H6-INITIAL-CONTEXT",
-      "role": "legacy-unreconstructable",
+      "role": "historical-record",
       "supports": [
         "FINDING-H6"
       ],
@@ -163,9 +572,13 @@
         {
           "kind": "source",
           "path": "engines/conveyor/worker/engine_patch/omni_evict.py"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "current source retains the semantics; the retained run predates the current formal provenance rule"
+      "reproducibility": "Raw run directories removed under results retention policy after the unequal-cap comparison was retired. Historical observations remain in findings and experiment records; current results cannot independently reproduce the statistics. Fresh matched runs are required."
     },
     {
       "id": "EVIDENCE-EXEC-MODEL-AUDIT",
@@ -201,7 +614,7 @@
     },
     {
       "id": "EVIDENCE-STEP-TIMING-RETAINED",
-      "role": "legacy-unreconstructable",
+      "role": "historical-record",
       "supports": [
         "FINDING-E1",
         "FINDING-E2",
@@ -222,7 +635,7 @@
           "path": "docs/agent/records/2026-09-01-exec-model-step-timing.json"
         }
       ],
-      "reproducibility": "numbers recomputable from retained scheduler.log and per_iteration.log; both runs are dirty and fail current formal acceptance; baseline timings are throughput-attributed under async scheduling and lower-bound true step latency",
+      "reproducibility": "Raw run directories removed under results retention policy after the unequal-cap comparison was retired. Historical observations remain in findings and experiment records; current results cannot independently reproduce the statistics. Fresh matched runs are required.",
       "interpretation_limits": "Graph-limit counts do not establish every prefill execution mode; scheduler wall-clock attribution is not GPU busy fraction; decode p50 summaries disagree slightly across records; the tail formula has nonmatching samples. Recompute before using these as quantitative paper results."
     },
     {
@@ -244,6 +657,616 @@
       ],
       "reproducibility": "raw prefetch run is not retained; current source supports semantics only and performance evidence must be rerun",
       "interpretation_limits": "Source paths use push-triggered prefetch and do not establish future-grid scheduling, exhaustive fallback correctness or a net latency benefit."
+    },
+    {
+      "id": "EVIDENCE-H2D-COPY-TIMING-LEGACY",
+      "role": "legacy-unreconstructable",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-H2D-COPY-TIMING-LEGACY"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-24-h2d-window-audit.json"
+        }
+      ],
+      "reproducibility": "Raw debug directory removed on 2026-09-25 under results retention policy. Only the historical audit summary and manifest/status hashes remain; its statistics can no longer be recomputed from retained artifacts. The legacy instrumentation patch was already unavailable before removal.",
+      "interpretation_limits": "The 536 backend event rows and 558 completed per-request L/R windows have different sampling units and no recorded event-to-request mapping. gpu_copy_ms is a legacy field name, not proof of pure DMA time. Do not add field medians or subtract them from the request-window median."
+    },
+    {
+      "id": "EVIDENCE-H2D-WINDOW-SOURCE-AUDIT",
+      "role": "source-audit",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py",
+          "sha256": "a6918ffe4f1c5a7e14aac4607df9b692db6f31feed0f8bf3a2ec55f1cd73c0ca"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_evict.py",
+          "sha256": "414ab55ed40c745489d22ed02e8e6534eaa78bde5448b9aa7651b832af9b8705"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_prefetch.py",
+          "sha256": "5dd8ce594000888bdbcc18cb5e390e02c0dd0dee608894be94f53d7ce8d84739"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_prefetch_transport.py",
+          "sha256": "a82ad47b7c18f3a2d986cc74fe42aab9b9173d98e353f0a0152471ed86716464"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/gateway/main.go",
+          "sha256": "05a797a964137a10db045cf9a69aba8e0a6e682097d858f53cd15929f76ca1a6"
+        },
+        {
+          "kind": "source",
+          "path": "eurosys2027/sections/03-design.tex",
+          "sha256": "8d0091caa3e81ed075f3c2631c98b123b3e047fb13d257cd620c9c3b06961ae4"
+        },
+        {
+          "kind": "source",
+          "path": "eurosys2027/sections/04-implementation.tex",
+          "sha256": "4ef754b868d8b329d68c5ed534ac032b9218f3844d086e65e9b1fc6024390d2d"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed vllm==0.23.0: v1/simple_kv_offload/worker.py",
+          "sha256": "cfc416891139e3b57f3a9d1cf9138274fdff9ef515b3aa8e260c96f367243a71"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed vllm==0.23.0: v1/simple_kv_offload/copy_backend.py",
+          "sha256": "50341c543413a511a291e926b72c6769d9a444cbb71f4fad700d24233a744d47"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed vllm==0.23.0: v1/simple_kv_offload/cuda_mem_ops.py",
+          "sha256": "887d927d590e509a13fc129275c1108522f56c79fb797b9e23f119d6e0929183"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed vllm==0.23.0: v1/worker/kv_connector_model_runner_mixin.py",
+          "sha256": "24008c05392ef08897cbb3261350663cf59f3fb4ad779d48d654dd9195ceafb6"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed vllm==0.23.0: v1/core/sched/scheduler.py",
+          "sha256": "9ae1491f57a6294e32416b93ef2ea68107fa0d65c3a4d7f745f1261012f735e9"
+        }
+      ],
+      "reproducibility": "Read-only source audit on 2026-09-24; source hashes pin the inspected implementation. The paper describes planning requirements beyond the implemented push-triggered prototype. This audit does not establish runtime performance or full concurrency correctness."
+    },
+    {
+      "id": "EVIDENCE-SESSION-MANAGER-GPU",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-T1"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-SESSION-MANAGER-GPU"
+        }
+      ],
+      "reproducibility": "Earlier raw run removed after audio-padding fix; dated records preserve observations. EVIDENCE-COPY-SUBMISSION-FIX owns current retained device observations.",
+      "interpretation_limits": "Functional short-run diagnostics with heavy profiling, not matched performance comparisons or admission-capacity/SLO evidence. The profiler emitted an external initialization-thread warning, so coverage is established by observed device activities and byte checks, not assumed complete. No full model-output equivalence, instrumentation-overhead calibration, or high-pressure lifetime proof."
+    },
+    {
+      "id": "EVIDENCE-SESSION-MANAGER-CALLBACK-FAILURE",
+      "role": "historical-record",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-SESSION-MANAGER-CALLBACK-FAILURE"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-24-session-manager-gpu.json"
+        }
+      ],
+      "reproducibility": "Failed raw directory removed on 2026-09-25 after the callback bug was fixed, regression-tested and superseded by EVIDENCE-SESSION-MANAGER-GPU. The dated record retains the failure description; the failed run itself is no longer reconstructable.",
+      "interpretation_limits": "A native load-completion closure captured the request variable later reassigned for the same dispatch store batch. H2D completion then promoted the wrong request and hit a scheduler status assertion. Fixed by separate immutable per-direction request tuples and covered by a bidirectional-dispatch regression. Not a performance point."
+    },
+    {
+      "id": "EVIDENCE-SESSION-MANAGER-FLOW-AUDIT",
+      "role": "source-audit",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py",
+          "sha256": "0e4839c1ecb0bd2077ce86ea53e2dc17df5ce7da0bbc5b7292db4f9876610541"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/session_manager.py",
+          "sha256": "6502cbc87e7a03b48a9a6ce01098e10ddf603a39758c918dc49603ec31c7bf56"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/manager_adapter.py",
+          "sha256": "08daca789f1f83d3eb76d5aae181b6d932198a38c024ff7240c39eaf874c4603"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/copy_service.py",
+          "sha256": "d9221de4ea95a4c2379cb029fea0c7b3dcbcbd93f5854f3dd51b0324afd8528d"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/omni_evict.py",
+          "sha256": "cd49ed03ff9a178f3f4124437c968864c43dc89440fa948c922306aebaf967e3"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/gateway/main.go",
+          "sha256": "1432d6df01bb25026037ee25a0dba77aa6b6e72333b38bba1e2281c2b076cffb"
+        },
+        {
+          "kind": "source",
+          "path": "infra/trace/perfetto.py",
+          "sha256": "97322ea4b0713f6ce53a9f454ad42c5eeedfeda878a4ebddc0c95e52e4378aee"
+        },
+        {
+          "kind": "source",
+          "path": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
+          "sha256": "1281bf4e24a2e4f8b32ad367a1fcacff2aa9ac2a60b85781050a5b620fc4a484"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/v1/engine/input_processor.py",
+          "sha256": "c5673988c0f7cfec268220e3f044e718702c015a4f236c020937cfd40a793f15"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/v1/engine/core.py",
+          "sha256": "cf9cbde601afb80925254aae814033abeab3817f9c4fe7bf01ca92edc9d10c2d"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/v1/engine/core_client.py",
+          "sha256": "e41fe15caa59dfd289ae212b3eaefc20c34be87a72e779df03d970f9714b793d"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/v1/worker/gpu_model_runner.py",
+          "sha256": "6250ca0670c4593aa2f7c4567c9c71d6cb3d8182624a985d4d4e33d5bf054666"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/model_executor/models/qwen2_5_omni_thinker.py",
+          "sha256": "a44493b40800c5ec9fc96c56a616bfd4220aaed175902056d5e04ab0022f90c7"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/entrypoints/speech_to_text/realtime/serving.py",
+          "sha256": "b2e576df42dfb3d2fcebb171c5c91ab0536024ae6ba6f480a13f2d9e310bfc80"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: transformers/models/qwen2_5_omni/processing_qwen2_5_omni.py",
+          "sha256": "08405b7ae62a8dc412a8c97572ad9d162d0b95dcc9d48952db973783f5e29458"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: transformers/models/whisper/feature_extraction_whisper.py",
+          "sha256": "c209e669fae0ea5de92e1846d8790e3d6d66ce28f4cd4071789c2eec88c84a66"
+        },
+        {
+          "kind": "external-source",
+          "ref": "Qwen/Qwen2.5-Omni-7B revision ae9e1690543ffd5c0221dc27f79834d0294cba00 preprocessor_config.json",
+          "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-session-manager-flow-audit.json"
+        }
+      ],
+      "reproducibility": "Dated source audit and CPU shape observation; former GPU-run timing is now historical-only because its raw run was replaced after the feature-padding fix. The record preserves the analysis and original measurements.",
+      "interpretation_limits": "Confirms code ordering and padded CPU input size; does not measure component latency fractions, net performance, or full model-output equivalence."
+    },
+    {
+      "id": "EVIDENCE-AUDIO-FEATURE-PADDING",
+      "role": "source-audit",
+      "supports": [
+        "FINDING-E5"
+      ],
+      "sources": [
+        {
+          "kind": "source",
+          "path": "engines/conveyor/gateway/main.go",
+          "sha256": "1432d6df01bb25026037ee25a0dba77aa6b6e72333b38bba1e2281c2b076cffb"
+        },
+        {
+          "kind": "source",
+          "path": "engines/baseline/worker/stream_server.py",
+          "sha256": "a74a7fa356179d170a3becf782fb52601405fb779bd144bf3103f30de7a9fe99"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py",
+          "sha256": "e6efcc3607723d4251f0b7240d5811f6d20f51e8b54215bf266a7e06de4928cb"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: transformers/models/qwen2_5_omni/processing_qwen2_5_omni.py",
+          "sha256": "08405b7ae62a8dc412a8c97572ad9d162d0b95dcc9d48952db973783f5e29458"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: transformers/models/whisper/feature_extraction_whisper.py",
+          "sha256": "c209e669fae0ea5de92e1846d8790e3d6d66ce28f4cd4071789c2eec88c84a66"
+        },
+        {
+          "kind": "external-source",
+          "ref": "installed locked worker environment: vllm/model_executor/models/qwen2_5_omni_thinker.py",
+          "sha256": "a44493b40800c5ec9fc96c56a616bfd4220aaed175902056d5e04ab0022f90c7"
+        },
+        {
+          "kind": "external-source",
+          "ref": "Qwen/Qwen2.5-Omni-7B revision ae9e1690543ffd5c0221dc27f79834d0294cba00 preprocessor_config.json",
+          "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-audio-feature-padding.json"
+        }
+      ],
+      "reproducibility": "Pinned source audit and direct CPU shape observation with probe inputs and hooks specified in the record. No inference timing or performance claim; temporary probe output was removed.",
+      "interpretation_limits": "Audits the current preprocessing path and confirms extra padded CPU work. No corrected implementation or measured serving speedup yet."
+    },
+    {
+      "id": "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-E5",
+        "FINDING-T1"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-AUDIO-FEATURES-BOUNDED"
+        },
+        {
+          "kind": "source",
+          "path": "engines/audio_features.py",
+          "sha256": "6bbc97c02d5fe5859f0125c1456983380ab90de00ad3e33d3dd7ca3ecd348f8b"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-audio-features-bounded.json"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-AUDIO-FEATURES-BASELINE-CHECK"
+        }
+      ],
+      "reproducibility": "Historical observations retained in dated records; raw source run and presentation removed after copy-submission fix. Current device observations use EVIDENCE-COPY-SUBMISSION-FIX. Numerical audio regression remains executable in tests/test_audio_features.py.",
+      "interpretation_limits": "IS/IE measures complete CPU input processing, not isolated GPU encoder time. Historical before/after numbers are single runs; profiler finalization still stalls EngineCore and the callback-thread warning remains. Local CPU timings are a diagnostic microbenchmark, not service-capacity evidence."
+    },
+    {
+      "id": "EVIDENCE-RESIDENCY-SAMPLING-AUDIT",
+      "role": "historical-record",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-AUDIO-FEATURES-BOUNDED"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-residency-sampling-audit.json"
+        },
+        {
+          "kind": "source",
+          "path": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
+          "sha256": "1281bf4e24a2e4f8b32ad367a1fcacff2aa9ac2a60b85781050a5b620fc4a484"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/session_manager.py",
+          "sha256": "6502cbc87e7a03b48a9a6ce01098e10ddf603a39758c918dc49603ec31c7bf56"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/manager_adapter.py",
+          "sha256": "08daca789f1f83d3eb76d5aae181b6d932198a38c024ff7240c39eaf874c4603"
+        },
+        {
+          "kind": "source",
+          "path": "infra/trace/perfetto.py",
+          "sha256": "97322ea4b0713f6ce53a9f454ad42c5eeedfeda878a4ebddc0c95e52e4378aee"
+        }
+      ],
+      "reproducibility": "Historical observations retained in dated records; raw source run and presentation removed after copy-submission fix. Current device observations use EVIDENCE-COPY-SUBMISSION-FIX. Numerical audio regression remains executable in tests/test_audio_features.py.",
+      "interpretation_limits": "The user subsequently confirmed the previous trace, EVIDENCE-SESSION-MANAGER-GPU. This audit's exact timestamps and interval statistics concern the newer run only; EVIDENCE-PREVIOUS-TRACE-RESIDENCY-AUDIT corrects applicability to the user question. Same-time sampled drops do not establish same-time mutations or per-session power changes."
+    },
+    {
+      "id": "EVIDENCE-PREVIOUS-TRACE-RESIDENCY-AUDIT",
+      "role": "historical-record",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-SESSION-MANAGER-GPU"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-previous-trace-residency.json"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-profile-scheduling-gap.json"
+        }
+      ],
+      "reproducibility": "Selected events and the recovered temporary preview payload's hash are recorded. Embedded run identity, GPU activity count and capture endpoint match the historical run. Original raw evidence remains removed; obsolete temporary preview files were also cleaned after extraction.",
+      "interpretation_limits": "Derived millisecond timestamps establish separate eviction events, not exact device activity boundaries. The recovered preview contains no per-session residency counters: a shared snapshot is a plausible explanation for the reported joint drop, not a verified old counter timestamp. No runtime change or performance claim."
+    },
+    {
+      "id": "EVIDENCE-PREFETCH-SUBMISSION-AUDIT",
+      "role": "historical-record",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-AUDIO-FEATURES-BOUNDED"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-prefetch-submission-audit.json"
+        }
+      ],
+      "reproducibility": "Historical observations retained in dated records; raw source run and presentation removed after copy-submission fix. Current device observations use EVIDENCE-COPY-SUBMISSION-FIX. Numerical audio regression remains executable in tests/test_audio_features.py.",
+      "interpretation_limits": "The dominant gap is before DMA within host submission; native batch API duration is not captured, and the CPU preparation probe cannot separate driver work from host scheduling. No formal performance claim or full-run GPU coverage."
+    },
+    {
+      "id": "EVIDENCE-EVALUATION-READINESS",
+      "role": "source-audit",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-evaluation-readiness.json"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/conveyor/config.py",
+          "sha256": "f1f1fe971a0eeddcbc1e3a42ef70ffef9cdbb6033195d0db99da124ce8eb4b73"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/conveyor/runner.py",
+          "sha256": "45a475c30c7bbe3d8bb6db1dd8060a0c30522833f569a8c655fcb5f9c5afaadd"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/shared/model.py",
+          "sha256": "7a347ee6789dba371478bd92f8608bd9671a912fb122c585b0f24d25a1d3e0a7"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/shared/workload.py",
+          "sha256": "b01c96ac8168ddcfaeed057e8b280679d2abb988dedff8431c2c35298a2c341c"
+        },
+        {
+          "kind": "source",
+          "path": "engines/audio_features.py",
+          "sha256": "6bbc97c02d5fe5859f0125c1456983380ab90de00ad3e33d3dd7ca3ecd348f8b"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/stream_server.py",
+          "sha256": "e6d9ff46387ecd0003ebb11a8c03a9fee465f8de9a4cd2f4b7e67a574fd4e028"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/session_manager.py",
+          "sha256": "6502cbc87e7a03b48a9a6ce01098e10ddf603a39758c918dc49603ec31c7bf56"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/copy_service.py",
+          "sha256": "d9221de4ea95a4c2379cb029fea0c7b3dcbcbd93f5854f3dd51b0324afd8528d"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/manager_adapter.py",
+          "sha256": "08daca789f1f83d3eb76d5aae181b6d932198a38c024ff7240c39eaf874c4603"
+        },
+        {
+          "kind": "external-source",
+          "url": "https://huggingface.co/openbmb/MiniCPM-o-4_5",
+          "reviewed_on": "2026-09-25"
+        },
+        {
+          "kind": "external-source",
+          "url": "https://github.com/vllm-project/vllm-omni/blob/main/docs/design/fullduplex.md",
+          "reviewed_on": "2026-09-25"
+        },
+        {
+          "kind": "external-source",
+          "url": "https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html",
+          "reviewed_on": "2026-09-25"
+        }
+      ],
+      "reproducibility": "Local source hashes, model-source hash and three CPU-only configuration probes are recorded. Candidate evaluation parameters have one owner in docs/experiments.md; no serving or benchmark result.",
+      "interpretation_limits": "Native duplex upstream support is not local adapter compatibility. Main-branch external documents may change; pin before integration. Capacity requires per-cycle SLO instrumentation and the proposed harness work."
+    },
+    {
+      "id": "EVIDENCE-ADMISSION-LIFECYCLE-CHECK",
+      "role": "historical-record",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-ADMISSION-LIFECYCLE-CHECK"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-admission-lifecycle.json"
+        }
+      ],
+      "reproducibility": "Historical functional-check record only; debug raw artifacts removed.",
+      "interpretation_limits": "Three short synthetic-audio sessions with one admission reservation on a shared GPU. No calibrated capacity, comparison, long-session stability or token-equivalence claim."
+    },
+    {
+      "id": "EVIDENCE-COPY-SUBMISSION-FIX",
+      "role": "diagnostic",
+      "supports": [
+        "FINDING-T1",
+        "FINDING-T2"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-COPY-SUBMIT-NATIVE"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-COPY-SUBMIT-OPTIMIZED"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-COPY-SUBMIT-PROFILE"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-copy-submission-fix.json"
+        }
+      ],
+      "reproducibility": "Optimized profiler-off raw run remains with verified hashes and reconstructable patch. Native high-overhead run and timed GPU profile removed under bug/superseded retention policy; those numerical comparisons remain historical. EVIDENCE-WHOLE-RUN-PROFILE owns current device observations.",
+      "interpretation_limits": "Single paired short diagnostic on a shared device, not formal matched-system performance or capacity. Original timed CUPTI capture had a mid-business export; current capture lifecycle is separately verified."
+    },
+    {
+      "id": "EVIDENCE-CAPACITY-TOOLCHAIN-CHECK",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-T3"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-CAPACITY-RESIDENT-CHECK"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CAPACITY-PILARIUS-CHECK"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-capacity-toolchain.json"
+        }
+      ],
+      "reproducibility": "Agent functional-check runs and dependent aggregate removed after validation; configuration and check outcomes preserved in record. Current CLI, schema and regressions implement the repeatable protocol.",
+      "interpretation_limits": "Uncalibrated costs, short observation horizon, one seed and shared GPU; does not estimate maximum stable concurrency, prove net gain or qualify as formal evidence."
+    },
+    {
+      "id": "EVIDENCE-GROUP-WINDOW-LONG",
+      "role": "diagnostic",
+      "supports": [
+        "FINDING-T4"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-GROUP-WINDOW-LONG"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-group-window-long.json"
+        }
+      ],
+      "reproducibility": "Raw artifacts, source patch and user presentation retained; hashes and patch applicability verified.",
+      "interpretation_limits": "Shared GPU, seeded synthetic audio and uncalibrated cost profile; functional and timing diagnostic, not formal maximum concurrency or throughput evidence."
+    },
+    {
+      "id": "EVIDENCE-WHOLE-RUN-PROFILE",
+      "role": "diagnostic",
+      "supports": [
+        "FINDING-T1",
+        "FINDING-T5"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-WHOLE-RUN-PROFILE"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-whole-run-profile.json"
+        }
+      ],
+      "reproducibility": "Raw artifacts, source patch and user presentation retained; hashes and patch applicability verified.",
+      "interpretation_limits": "Shared GPU, seeded synthetic audio and uncalibrated cost profile; functional and timing diagnostic, not formal maximum concurrency or throughput evidence."
+    },
+    {
+      "id": "EVIDENCE-GROUP-WINDOW-MARGIN",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-T4"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-GROUP-WINDOW-MARGIN"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-group-window-margin.json"
+        }
+      ],
+      "reproducibility": "Historical follow-up record only; debug raw directory removed per user discipline.",
+      "interpretation_limits": "Measured follow-up with a more conservative explicit cost profile, not formal performance or cross-device calibration."
+    },
+    {
+      "id": "EVIDENCE-MINICPM-GROUP-SERVING",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-T6"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-MINICPM-GROUP-SERVING"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-MINICPM-POOL-CHECK"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-minicpm-group-serving.json"
+        }
+      ],
+      "reproducibility": "Superseded raw artifacts and presentation removed. Historical record retains integration observations; current model-budget execution is EVIDENCE-MINICPM-PERIOD-BUDGET.",
+      "interpretation_limits": "Two sessions on one shared slot with a fixed text-output budget; no native duplex/TTS, cross-hardware, graph-mode, formal capacity or model-quality claim."
+    },
+    {
+      "id": "EVIDENCE-MINICPM-PERIOD-BUDGET",
+      "role": "diagnostic",
+      "supports": [
+        "FINDING-T6"
+      ],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-MINICPM-PERIOD-BUDGET"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-minicpm-period-budget.json"
+        }
+      ],
+      "reproducibility": "Successful raw artifacts, reconstruction patch and current user presentation retained; hashes, patch applicability and browser loading verified.",
+      "interpretation_limits": "Selected per-period text workload on one shared GPU; no native speech-output, formal capacity or throughput claim."
     }
   ]
 }

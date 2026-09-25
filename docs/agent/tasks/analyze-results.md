@@ -19,6 +19,8 @@
 7. 分别判断执行状态、观测有效性、机制是否实际被使用和服务目标；失败 run 可以支持失效边界，零预取须区分无需求、门控和故障。
 8. 标记数字是实测、模拟器标定、线性外推还是冻结先验，并写清配置域。
 
+启用 GPU capture 时，另查 `gpu_activity.json` 与 `transfer_events.jsonl`：按 transfer ID 核对提交与设备活动字节，分别报告 CPU 排队、GPU memcpy 区间及完成观察延迟；保留未关联活动和窗口边界。解析规则与计时限制由 `infra/trace/AGENTS.md`、`docs/experiments.md#profiling` 持有。
+
 ## Field Semantics
 
 以下为纯读数语义字段的逐项解释。`deadline_met` 与 `gpu_ms` 因跨系统语义或执行路径差异直接影响公平性与结果解释，由 [docs/experiments.md](../../experiments.md#implementation-diagnostics) 持有；`E/B/L/R` 事件的解释见上文 Analysis Order 第 6 步，不在此重复。
@@ -32,3 +34,5 @@
 ## Output Discipline
 
 单个 run 的新观察先进入结构化 record；只有被接受的结论才能更新 finding card 和 evidence alias。不要仅凭 cadence 检查通过、单次 `deadline_met`、输出达到上限或 short output 就推断 correctness、freshness 或 playback QoE。
+
+报告前按 [结果保留规则](../../../results/README.md#retention-rules) 检查整个结果目录，清理已完成用途的调试产物及被替代结果，同步证据可用性与依赖引用。

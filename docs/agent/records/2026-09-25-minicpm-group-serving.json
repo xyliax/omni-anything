@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-MINICPM-GROUP-SERVING",
+  "date": "2026-09-25",
+  "question": "Can a second pinned model execute the shared manager/copy/admission path using additive model-specific input adapters?",
+  "configuration_profile": {
+    "model": {
+      "id": "openbmb/MiniCPM-o-4_5",
+      "input_adapter": "minicpm_o45",
+      "kv_geometry": {
+        "bytes_per_token": 147456,
+        "dtype_bytes": 2,
+        "head_dim": 128,
+        "num_kv_heads": 8,
+        "num_layers": 36
+      },
+      "output_path": "audio_input_text_output",
+      "preset": "minicpm_o45",
+      "revision": "503e754207c94da6bb26850b4469f367c9ea3582"
+    },
+    "engine": {
+      "copy_submission": "optimized",
+      "enforce_eager": true,
+      "evict_tail_blocks": 0,
+      "eviction_delay_s": 1.2,
+      "gpu_memory_utilization": 0.75,
+      "host_offload_gib": 1,
+      "ingest_workers": 8,
+      "initial_context_tokens": 0,
+      "kv_pool_gib": 0.5,
+      "max_model_len": 3072,
+      "max_num_batched_tokens": 512,
+      "max_num_seqs": 4,
+      "prefetch": "off",
+      "prefetch_min_free": 0.1,
+      "resident_control": false,
+      "resident_limit": null,
+      "restore_lead_s": 0.15,
+      "retained_prefix_blocks": 1,
+      "session_manager": true,
+      "slots": 1,
+      "startup_timeout_s": 360,
+      "sync_scheduling": false
+    },
+    "admission": {
+      "cohort": [
+        {
+          "arrival_s": 0,
+          "duration_s": 14,
+          "id": "mini-0",
+          "seed": 4500
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 14,
+          "id": "mini-1",
+          "seed": 4501
+        }
+      ],
+      "profile": {
+        "compute_s": 0.35,
+        "d2h_blocks_per_s": 2000,
+        "gpu_reserve_blocks": 16,
+        "growth_blocks_per_period": 6,
+        "h2d_blocks_per_s": 2000,
+        "horizon_s": 6,
+        "host_reserve_blocks": 16,
+        "initial_blocks": 16,
+        "max_evict_blocks": 8,
+        "max_sessions": 2,
+        "safety_s": 0.01,
+        "transfer_overhead_s": 0.003
+      }
+    },
+    "observations": {
+      "gpu_trace": false,
+      "gpu_trace_scope": "off",
+      "kv_log_period_s": 0.2,
+      "per_iteration": true,
+      "per_request": true,
+      "residency": true,
+      "scheduler": true,
+      "trace": true
+    },
+    "platform": {
+      "driver": "580.95.05",
+      "index": 3,
+      "memory_mib": 24576,
+      "name": "NVIDIA GeForce RTX 3090",
+      "pci_bus_id": "00000000:AF:00.0",
+      "uuid": "GPU-4de6f6ed-95ca-f7eb-8394-f1822712fff3"
+    },
+    "input": "Two seeded synthetic PCM sessions, fourteen seconds each, one shared slot; fixed 25 text tokens per two-second input."
+  },
+  "change": [
+    "Add model presets and input adapters; preserve existing Qwen templates and default.",
+    "Bound MiniCPM Whisper padding per call without mutating shared extractor state; preserve processor deepcopy/reconstruction.",
+    "Expose model runtime limits and route same model choice through capacity pairing.",
+    "Check obvious KV-pool versus maximum-context contradictions before launching GPU worker."
+  ],
+  "result": {
+    "group_summary": {
+      "schema_version": 1,
+      "timing_scope": "CPU queue and valid-KV publication; not DMA",
+      "maximum_active_sessions": 2,
+      "maximum_group_members": {
+        "0": 2
+      },
+      "released_sessions": 2,
+      "planner_reviews": {
+        "feasible": 6
+      },
+      "cap_violations": [],
+      "unmatched_h2d": [],
+      "unpublished_h2d": [],
+      "late_windows": 0
+    },
+    "physical_bytes_per_block": [
+      2359296
+    ],
+    "submitted_copies": {
+      "D2H": 35,
+      "H2D": 14
+    },
+    "model_completions": 14,
+    "generated_tokens": [
+      25
+    ],
+    "validation": "terminal success, raw hashes verified, source patch applies, actual block bytes match selected preset",
+    "makespan_s": 17.91515624895692,
+    "completed_sessions": 2,
+    "err": 0,
+    "weight_verification": {
+      "source": "Official OpenBMB ModelScope mirror, checked against HF pinned revision LFS SHA256 metadata",
+      "revision": "503e754207c94da6bb26850b4469f367c9ea3582",
+      "shards": [
+        {
+          "name": "model-00001-of-00004.safetensors",
+          "size": 5273477136,
+          "sha": "30c40b9a10386c1bc404568d8829e5aada2e3501d9de6fb46ff80451aff7e077"
+        },
+        {
+          "name": "model-00002-of-00004.safetensors",
+          "size": 5301855080,
+          "sha": "fe0faef420aca8f771bec1f9fcfaae01206c56b8e64e4429a1ff500c962fbf96"
+        },
+        {
+          "name": "model-00003-of-00004.safetensors",
+          "size": 5301855048,
+          "sha": "5d0b20153f9bfa88ebcd1cb6bbd5b7cac4c217b3cafb137a291a1b380d8b7821"
+        },
+        {
+          "name": "model-00004-of-00004.safetensors",
+          "size": 2866549964,
+          "sha": "f61addf4747c94fedcaee059e5d9918ed15543beec494404139a99f2f86c9b31"
+        }
+      ]
+    },
+    "preprocessing_validation": "Actual pinned MiniCPMOProcessor reconstructs and emits 200 valid feature frames for two seconds. Whisper valid-frame numerical comparison passed at atol=rtol=1e-6 for silence, random signals and right-boundary impulse.",
+    "initial_configuration_failure": "MiniCPM BF16 geometry requires 0.5625 GiB for context 4096; explicit pool was 0.5 GiB. Corrected diagnostic context to 3072 and added pre-startup per-model geometry guard.",
+    "tests": "Root pytest: 122 passed, 4 opt-in skips; locked real audio tests: 6 passed; physical CUDA KV roundtrip passed; Go race tests passed."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-MINICPM-GROUP-SERVING"
+  ],
+  "affects_findings": [
+    "FINDING-T6"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Short fixed-budget audio-input/text-output harness, not native full-duplex speech generation or TTS.",
+    "Single shared GPU; graph mode, higher concurrency, long context and other GPU architectures are not validated for the second model.",
+    "No model-quality, full-token-equivalence or formal capacity claim.",
+    "Weights verified; no runtime dependency upgrade and no changes to third_party pins."
+  ]
+}

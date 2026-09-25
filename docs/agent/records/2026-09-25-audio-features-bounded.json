@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-AUDIO-FEATURES-BOUNDED",
+  "date": "2026-09-25",
+  "question": "Can the current periodic worker avoid computing log-mel features over the full padded audio window while preserving valid input features?",
+  "configuration_profile": {
+    "model": "Qwen/Qwen2.5-Omni-7B",
+    "revision": "ae9e1690543ffd5c0221dc27f79834d0294cba00",
+    "runtime": "Locked Transformers 4.57.6 / torch 2.11.0 / vLLM 0.23.0",
+    "serving": "Eight sessions, 30 seconds, 2-second period, output budget 25, initial context 4096, retained prefix 128 blocks, independent Session Manager, 0.15-second restore lead, GPU 3 RTX 3090, 8-second GPU activity capture.",
+    "baseline_integration": "Two sessions, 10 seconds, initial context 4096, trace enabled, same output budget and GPU; temporary check removed after validation.",
+    "comparison": "Before measurements are preserved in EVIDENCE-SESSION-MANAGER-FLOW-AUDIT; current raw execution is EVIDENCE-AUDIO-FEATURES-BOUNDED. Both pipeline populations include complete normal-session tuples after the first normal P and exclude the warmup sentinel; 1 ms timestamp resolution."
+  },
+  "change": [
+    "Add engines/audio_features.py shared by both first-party workers, installed before AsyncLLM initialization.",
+    "Set only the current HF call audio_kwargs.max_length from actual resampled samples plus n_fft/2, rounded up to hop_length and bounded by the original model limit. No fixed-period cropping or cached-processor mutation.",
+    "Keep explicit max_length, normalization and dither on the upstream path.",
+    "Replace the previous buggy profile with the current validated profile and remove the temporary baseline check."
+  ],
+  "result": {
+    "classification": "Implementation optimization, not a KV research mechanism.",
+    "numerical_validation": {
+      "command": "OMNI_TEST_AUDIO=1 .venv-vllm023/bin/python -m unittest tests.test_audio_features -v",
+      "status": "3 tests passed",
+      "inputs": "Gaussian signals of 640, 31999, 32000, 32001 and 64123 samples; silence; end impulse; unequal-length batch; separate arithmetic/thread-isolation/model-limit contract checks.",
+      "feature_tolerance": {
+        "atol": 1e-06,
+        "rtol": 1e-06
+      },
+      "audio_token_ids": "identical to upstream",
+      "two_second_stft_samples": {
+        "before": 4800000,
+        "after": 32320
+      },
+      "valid_feature_frames": 200
+    },
+    "cpu_processor_microbenchmark": {
+      "torch_threads": 1,
+      "waveform_samples": 32000,
+      "seed": 25,
+      "benchmark": "HF whole processor, repeated alternating old/new calls, one warmup per worker and mode, CPU only",
+      "results_by_workers": {
+        "1": {
+          "original": {
+            "n": 8,
+            "p50_ms": 235.27897894382477,
+            "p95_ms": 328.5253308713436,
+            "samples_ms": [
+              328.5253308713436,
+              271.2211273610592,
+              230.593491345644,
+              208.1664241850376,
+              232.72101022303104,
+              205.46765252947807,
+              239.73405733704567,
+              237.8369476646185
+            ]
+          },
+          "bounded": {
+            "n": 8,
+            "p50_ms": 2.9584039002656937,
+            "p95_ms": 7.614292204380035,
+            "samples_ms": [
+              2.8996430337429047,
+              7.614292204380035,
+              3.161769360303879,
+              2.6187188923358917,
+              3.0171647667884827,
+              2.6309750974178314,
+              3.0373837798833847,
+              2.6221107691526413
+            ]
+          }
+        },
+        "8": {
+          "original": {
+            "n": 64,
+            "p50_ms": 371.7081416398287,
+            "p95_ms": 416.6473615914583,
+            "samples_ms": [
+              348.11414405703545,
+              350.8531302213669,
+              363.95134776830673,
+              380.8119632303715,
+              378.52258794009686,
+              382.260512560606,
+              375.22619403898716,
+              355.75637966394424,
+              371.79333344101906,
+              359.7144950181246,
+              369.4657236337662,
+              341.2338066846132,
+              343.419736251235,
+              327.59820856153965,
+              356.03025928139687,
+              362.60843090713024,
+              365.2731832116842,
+              333.08819122612476,
+              372.30924144387245,
+              362.5327032059431,
+              370.0031526386738,
+              377.36017256975174,
+              378.2663866877556,
+              338.53799290955067,
+              380.43498806655407,
+              369.5553671568632,
+              365.6468391418457,
+              347.88363613188267,
+              353.1285636126995,
+              370.67350931465626,
+              386.0502652823925,
+              360.5731762945652,
+              362.930653616786,
+              356.7798361182213,
+              354.4459752738476,
+              381.57882913947105,
+              375.78402645885944,
+              379.1358731687069,
+              364.1225788742304,
+              367.36722849309444,
+              383.8376309722662,
+              371.6229498386383,
+              328.0384484678507,
+              356.28955997526646,
+              375.1508817076683,
+              357.87536203861237,
+              380.0023440271616,
+              346.3462460786104,
+              419.4285422563553,
+              384.79969277977943,
+              393.006045371294,
+              390.2781028300524,
+              419.64748315513134,
+              418.26740466058254,
+              416.6473615914583,
+              403.82130816578865,
+              401.280052959919,
+              378.97851690649986,
+              405.8804325759411,
+              388.6422645300627,
+              412.30654902756214,
+              414.13717716932297,
+              401.66209638118744,
+              379.25933860242367
+            ]
+          },
+          "bounded": {
+            "n": 64,
+            "p50_ms": 12.996411882340908,
+            "p95_ms": 32.618436962366104,
+            "samples_ms": [
+              15.713701024651527,
+              18.08035373687744,
+              22.508416324853897,
+              17.268218100070953,
+              15.846185386180878,
+              11.992145329713821,
+              11.125532910227776,
+              11.847781017422676,
+              11.577773839235306,
+              12.511219829320908,
+              11.834388598799706,
+              12.522121891379356,
+              13.62558826804161,
+              13.358565047383308,
+              15.687623992562294,
+              14.625772833824158,
+              16.439659520983696,
+              14.780901372432709,
+              14.217521995306015,
+              11.583898216485977,
+              12.513665482401848,
+              12.128647416830063,
+              12.247025966644287,
+              10.146236047148705,
+              8.802985772490501,
+              7.933223620057106,
+              10.388558730483055,
+              12.471204623579979,
+              11.926613748073578,
+              11.030035093426704,
+              13.0473542958498,
+              13.384111225605011,
+              33.34301523864269,
+              33.79867598414421,
+              32.7994879335165,
+              23.342957720160484,
+              32.618436962366104,
+              22.384099662303925,
+              9.025683626532555,
+              21.931272000074387,
+              12.92370818555355,
+              12.95098289847374,
+              17.790602520108223,
+              15.147872269153595,
+              9.110722690820694,
+              13.093149289488792,
+              16.915615648031235,
+              16.801265999674797,
+              12.579640373587608,
+              9.706379845738411,
+              13.153037056326866,
+              14.093074947595596,
+              13.041840866208076,
+              11.777129024267197,
+              10.92495396733284,
+              9.441455826163292,
+              10.977938771247864,
+              9.72767174243927,
+              13.422304764389992,
+              11.478552594780922,
+              14.19895514845848,
+              14.798983931541443,
+              12.046443298459053,
+              10.922536253929138
+            ]
+          }
+        }
+      }
+    },
+    "cpu_benchmark_limit": "Diagnostic only: host was not isolated, and the separate GPU runner was starting up. Warmup and alternating order reduce some variation but these are not formal performance samples.",
+    "serving_validation": {
+      "terminal": "success",
+      "validation_valid": true,
+      "issues": [],
+      "client_errors": 0,
+      "normal_pipeline": {
+        "IQ_IS": {
+          "n": 127,
+          "p50_ms": 0.0,
+          "p95_ms": 1.0,
+          "max_ms": 3.0
+        },
+        "IS_IE": {
+          "n": 127,
+          "p50_ms": 10.0,
+          "p95_ms": 41.0,
+          "max_ms": 59.0
+        },
+        "IE_IR": {
+          "n": 127,
+          "p50_ms": 0.0,
+          "p95_ms": 15.0,
+          "max_ms": 32.0
+        },
+        "IR_IA": {
+          "n": 127,
+          "p50_ms": 1.0,
+          "p95_ms": 5.0,
+          "max_ms": 12.0
+        }
+      },
+      "before_IS_IE_ms": {
+        "n": 127,
+        "p50": 288,
+        "p95": 462,
+        "max": 637
+      },
+      "measured_gpu_events": 127414,
+      "attributed_kv_transfers": 107,
+      "device_copy_bytes": "match submitted transfer bytes for every attributed transfer in capture"
+    },
+    "baseline_validation": {
+      "terminal": "success",
+      "validation_valid": true,
+      "issues": [],
+      "client_errors": 0
+    },
+    "profile": {
+      "entry": "derived/profile.html",
+      "browser_check": "Loaded with Playwright Chromium, status success, eight sessions, 107 attributed copies, no page errors; rendered timeline inspected.",
+      "source_patch": "git apply --check passed against archived manifest source commit.",
+      "remaining_capture_gap_s": 4.65,
+      "gap_interpretation": "Consecutive scheduler observations near capture finalization; not a measured GPU idle duration. Synchronous profiler stop/export remains outside this fix."
+    },
+    "repository_tests": "79 passed, 2 opt-in tests skipped, 23 subtests passed; the audio opt-in test was also run separately in the locked environment."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+    "EVIDENCE-AUDIO-FEATURE-PADDING",
+    "EVIDENCE-SESSION-MANAGER-FLOW-AUDIT"
+  ],
+  "affects_findings": [
+    "FINDING-E5",
+    "FINDING-T1"
+  ],
+  "supersedes": [
+    "RECORD-2026-09-25-AUDIO-FEATURE-PADDING"
+  ],
+  "remaining_uncertainty": [
+    "A short profiled run does not establish end-to-end latency, playback freshness, sustained capacity or full model-output equivalence.",
+    "The profiler callback-thread warning and synchronous finalization stall remain; captured activity is validated but not assumed exhaustive.",
+    "IS/IE includes all InputProcessor.process_inputs work and concurrency effects; it is not GPU encoder latency.",
+    "Alternative explicit preprocessing options retain upstream behavior and may still use a long window."
+  ]
+}

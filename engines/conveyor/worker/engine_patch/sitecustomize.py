@@ -21,6 +21,9 @@ Layout:
                         capacity-aware deferred-prefetch policy
 - ``omni_prefetch_transport.py`` transport adapter that rides vLLM's stock
                         offload load-event machinery
+- ``session_manager.py`` / ``manager_adapter.py`` independent per-session
+                        control and guarded vLLM pool integration
+- ``copy_service.py``    independent H2D/D2H submission and completion
 
 The next request uses vLLM's existing prefix-cache match; that path is not
 modified.
@@ -67,6 +70,37 @@ if os.environ.get("OMNI_PREFETCH"):
         omni_prefetch.apply()
     except Exception as error:
         _fail("prefetch initialization", error)
+        os._exit(78)
+
+if os.environ.get("OMNI_RESIDENT_ONLY"):
+    try:
+        import resident_adapter
+        resident_adapter.apply()
+    except Exception as error:
+        _fail("resident control initialization", error)
+        os._exit(78)
+elif os.environ.get("OMNI_SESSION_MANAGER"):
+    try:
+        import manager_adapter
+        manager_adapter.apply()
+    except Exception as error:
+        _fail("Session Manager initialization", error)
+        os._exit(78)
+
+if os.environ.get('OMNI_SERVICE_EVENTS'):
+    try:
+        from infra.trace.collectors.service_events import apply as apply_service_events
+        apply_service_events()
+    except Exception as error:
+        _fail('service event initialization', error)
+        os._exit(78)
+
+if os.environ.get("OMNI_GPU_ACTIVITY"):
+    try:
+        from infra.trace.collectors.gpu_activity import apply as apply_gpu_activity
+        apply_gpu_activity()
+    except Exception as error:
+        _fail("GPU activity initialization", error)
         os._exit(78)
 
 # Chain-load the scheduler-trace collector (this module shadows it on

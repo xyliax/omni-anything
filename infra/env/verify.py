@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -97,6 +98,47 @@ def runtime_issues(software: dict[str, Any]) -> list[str]:
     return issues
 
 
+def driver_issues(version: str) -> list[str]:
+    """CUDA 13.x requires the R580 driver family or newer."""
+    try:
+        if int(version.split('.')[0]) >= 580:
+            return []
+    except (ValueError, AttributeError):
+        pass
+    return [f'CUDA 13 runtime requires NVIDIA driver >= 580; found {version!r}']
+
+
+def collect_device(python: Path, gpu: int) -> dict[str, Any]:
+    """Small BF16 execution probe on exactly the requested physical device."""
+    try:
+        row = capture(['nvidia-smi', f'--id={gpu}',
+                       '--query-gpu=name,uuid,driver_version,memory.total',
+                       '--format=csv,noheader,nounits'])
+        name, uuid, driver, memory = (part.strip() for part in row.split(',', 3))
+        report = dict(index=gpu, name=name, uuid=uuid, driver=driver, memory_mib=int(memory))
+        report['issues'] = driver_issues(driver)
+        if report['issues']:
+            return report
+        script = '''
+import json, torch
+assert torch.cuda.is_bf16_supported(), 'BF16 is unavailable on this GPU'
+a = torch.ones((32, 32), device='cuda', dtype=torch.bfloat16)
+b = a @ a
+torch.cuda.synchronize()
+assert torch.equal(b.cpu(), torch.full((32, 32), 32, dtype=torch.bfloat16))
+print(json.dumps(dict(capability=torch.cuda.get_device_capability(),
+                     torch_arch_list=torch.cuda.get_arch_list(), bf16_execution=True)))
+'''
+        env = {**os.environ, 'CUDA_VISIBLE_DEVICES': uuid}
+        result = subprocess.run([str(python), '-c', script], env=env,
+                                capture_output=True, text=True, timeout=120, check=True)
+        report.update(json.loads(result.stdout))
+        return report
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        detail = getattr(exc, 'stderr', '') or str(exc)
+        return {'index': gpu, 'issues': [f'GPU execution check failed: {detail}']}
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -106,6 +148,7 @@ def main() -> int:
         default=root / ".venv-vllm023" / "bin" / "python",
         help="Python executable used to start the vLLM worker",
     )
+    parser.add_argument('--gpu', type=int, help='also verify driver and a small BF16 GPU operation')
     args = parser.parse_args()
     software = collect_software(args.worker_python.expanduser())
     issues = runtime_issues(software)
@@ -115,6 +158,10 @@ def main() -> int:
         "expected_packages": EXPECTED_PACKAGES,
         "software": software,
     }
+    if args.gpu is not None:
+        result['gpu'] = collect_device(args.worker_python.expanduser(), args.gpu)
+        issues.extend(result['gpu']['issues'])
+        result['valid'] = not issues
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["valid"] else 1
 

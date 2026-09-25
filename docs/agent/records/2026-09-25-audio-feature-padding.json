@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-AUDIO-FEATURE-PADDING",
+  "date": "2026-09-25",
+  "question": "Does each periodic input reprocess old audio, or perform feature extraction over an unnecessarily long padded waveform?",
+  "configuration_profile": {
+    "runtime": "Locked worker environment: Transformers 4.57.6, torch 2.11.0, vLLM 0.23.0",
+    "model": "Qwen/Qwen2.5-Omni-7B",
+    "revision": "ae9e1690543ffd5c0221dc27f79834d0294cba00",
+    "probe": "CPU-only AutoProcessor with independent two- and four-second float32 waveforms, 16 kHz, deterministic Gaussian samples from numpy.default_rng(20260925), standard audio placeholder; torch.stft and WhisperFeatureExtractor._torch_extract_fbank_features wrapped to observe shapes and zero tail. No serving run or results directory created."
+  },
+  "change": "Audit only for audio preprocessing; no feature-extractor configuration, model cache or installed dependency changed.",
+  "result": {
+    "observed": {
+      "torch_threads": 32,
+      "model_revision": "ae9e1690543ffd5c0221dc27f79834d0294cba00",
+      "chunk_length": 300,
+      "n_samples": 4800000,
+      "observations": [
+        {
+          "raw_seconds": 2,
+          "raw_samples": 32000,
+          "fbank_input_shape": [
+            1,
+            4800000
+          ],
+          "stft_input_shape": [
+            1,
+            4800000
+          ],
+          "stft_device": "cpu",
+          "zero_padding_samples": 4768000,
+          "stft_output_shape": [
+            1,
+            201,
+            30001
+          ],
+          "hf_features_shape": [
+            1,
+            128,
+            30000
+          ],
+          "valid_feature_frames": 200,
+          "vllm_masked_features_shape": [
+            128,
+            200
+          ]
+        },
+        {
+          "raw_seconds": 4,
+          "raw_samples": 64000,
+          "fbank_input_shape": [
+            1,
+            4800000
+          ],
+          "stft_input_shape": [
+            1,
+            4800000
+          ],
+          "stft_device": "cpu",
+          "zero_padding_samples": 4736000,
+          "stft_output_shape": [
+            1,
+            201,
+            30001
+          ],
+          "hf_features_shape": [
+            1,
+            128,
+            30000
+          ],
+          "valid_feature_frames": 400,
+          "vllm_masked_features_shape": [
+            128,
+            400
+          ]
+        }
+      ]
+    },
+    "source_confirmed": [
+      "The current first-party gateway sends audio accumulated since the previous tick and clears audioBuf; delayed ticks can accumulate more than one nominal period.",
+      "The worker sends only the current chunk in each StreamingInput; retained KV does not require repeating historical audio feature extraction.",
+      "Qwen2_5OmniProcessor forces padding=max_length. WhisperFeatureExtractor defaults max_length to n_samples before both STFT and mel computation.",
+      "The pinned model preprocessor config sets a long fixed window; the vLLM model processor applies feature_attention_mask only after the feature computation.",
+      "The trace IS/IE interval covers all InputProcessor.process_inputs, not an isolated STFT timer or GPU encoder event."
+    ],
+    "interpretation": "The excess work is CPU feature computation on a zero-padded waveform. GPU encoder inputs are masked back to valid feature frames. Shape ratios do not establish runtime speedups."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-AUDIO-FEATURE-PADDING"
+  ],
+  "affects_findings": [
+    "FINDING-E5"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "No runtime fix or concurrent serving performance comparison in this audit.",
+    "A short-padding fix must preserve valid features including STFT boundary behavior, accept actual chunk length, and avoid truncating audio collected across delayed ticks.",
+    "No assertion that every production chunk contains exactly two seconds: payload duration depends on buffering and actual tick timing."
+  ]
+}

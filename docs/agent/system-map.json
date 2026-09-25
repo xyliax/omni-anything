@@ -19,139 +19,414 @@
       "id": "baseline-entry",
       "kind": "cli",
       "path": "experiments/baseline/__main__.py",
-      "entrypoints": ["main", "parser"]
+      "entrypoints": [
+        "main",
+        "parser"
+      ]
     },
     {
       "id": "baseline-runner",
       "kind": "process-orchestrator",
       "path": "experiments/baseline/runner.py",
-      "entrypoints": ["collect_issues", "plan", "run"]
+      "entrypoints": [
+        "collect_issues",
+        "plan",
+        "run"
+      ]
     },
     {
       "id": "conveyor-entry",
       "kind": "cli",
       "path": "experiments/conveyor/__main__.py",
-      "entrypoints": ["main", "parser"]
+      "entrypoints": [
+        "main",
+        "parser"
+      ]
     },
     {
       "id": "conveyor-runner",
       "kind": "process-orchestrator",
       "path": "experiments/conveyor/runner.py",
-      "entrypoints": ["collect_issues", "plan", "run"]
+      "entrypoints": [
+        "collect_issues",
+        "plan",
+        "run"
+      ]
     },
     {
       "id": "run-workflow",
       "kind": "shared-orchestrator",
       "path": "infra/run/workflow.py",
-      "entrypoints": ["RunPlan", "execute"]
+      "entrypoints": [
+        "RunPlan",
+        "execute"
+      ]
     },
     {
       "id": "run-artifact-validation",
       "kind": "shared-validation",
       "path": "infra/run/artifacts.py",
-      "entrypoints": ["RunStore", "scan_client_health", "scan_worker_fatal"]
+      "entrypoints": [
+        "RunStore",
+        "scan_client_health",
+        "scan_worker_fatal"
+      ]
     },
     {
       "id": "baseline-gateway",
       "kind": "go-process",
       "path": "third_party/metronome/gateway-go/main.go",
-      "entrypoints": ["main"]
+      "entrypoints": [
+        "main"
+      ]
     },
     {
       "id": "conveyor-gateway",
       "kind": "go-process",
       "path": "engines/conveyor/gateway/main.go",
-      "entrypoints": ["main"]
+      "entrypoints": [
+        "main"
+      ]
     },
     {
       "id": "baseline-vanilla-worker",
       "kind": "python-process",
       "path": "third_party/metronome/worker/stream_server.py",
-      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+      "entrypoints": [
+        "Servicer.Step",
+        "StreamingEngine",
+        "main"
+      ]
     },
     {
       "id": "baseline-paringest-worker",
       "kind": "python-process",
       "path": "engines/baseline/worker/stream_server.py",
-      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+      "entrypoints": [
+        "Servicer.Step",
+        "StreamingEngine",
+        "main"
+      ]
     },
     {
       "id": "conveyor-worker",
       "kind": "python-process",
       "path": "engines/conveyor/worker/stream_server.py",
-      "entrypoints": ["Servicer.Step", "StreamingEngine", "main"]
+      "entrypoints": [
+        "Servicer.Step",
+        "StreamingEngine",
+        "main"
+      ]
     },
     {
       "id": "engine-patch-loader",
       "kind": "implicit-python-entry",
       "path": "engines/conveyor/worker/engine_patch/sitecustomize.py",
-      "entrypoints": ["sitecustomize module import"]
+      "entrypoints": [
+        "sitecustomize module import"
+      ]
     },
     {
       "id": "baseline-engine-fix-loader",
       "kind": "implicit-python-entry",
       "path": "engines/baseline/worker/engine_fix/sitecustomize.py",
-      "entrypoints": ["sitecustomize module import"]
+      "entrypoints": [
+        "sitecustomize module import"
+      ]
     },
     {
       "id": "kv-state-registry",
       "kind": "runtime-state",
       "path": "engines/conveyor/worker/engine_patch/omni_state.py",
-      "entrypoints": ["Registry", "SessionKVControl", "BlockCoverage"]
+      "entrypoints": [
+        "Registry",
+        "SessionKVControl",
+        "BlockCoverage"
+      ]
     },
     {
       "id": "kv-eviction-patch",
       "kind": "runtime-monkeypatch",
       "path": "engines/conveyor/worker/engine_patch/omni_evict.py",
-      "entrypoints": ["apply", "_evict_idle_kv"]
+      "entrypoints": [
+        "apply",
+        "_evict_idle_kv"
+      ]
     },
     {
       "id": "kv-prefetch-policy",
       "kind": "runtime-monkeypatch",
       "path": "engines/conveyor/worker/engine_patch/omni_prefetch.py",
-      "entrypoints": ["apply", "prefetch_kv", "kv_state"]
+      "entrypoints": [
+        "apply",
+        "prefetch_kv",
+        "kv_state"
+      ]
     },
     {
       "id": "kv-prefetch-transport",
       "kind": "runtime-monkeypatch",
       "path": "engines/conveyor/worker/engine_patch/omni_prefetch_transport.py",
-      "entrypoints": ["apply", "enqueue"]
+      "entrypoints": [
+        "apply",
+        "enqueue"
+      ]
     },
     {
       "id": "sustained-client-controller",
       "kind": "load-generator-controller",
       "path": "third_party/metronome/experiments/sustained_fd.py",
-      "entrypoints": ["main", "report"]
+      "entrypoints": [
+        "main",
+        "report"
+      ]
     },
     {
       "id": "sustained-client-shard",
       "kind": "load-generator-subprocess",
       "path": "third_party/metronome/experiments/sustained_fd.py",
-      "entrypoints": ["shard_main", "fd_session"]
+      "entrypoints": [
+        "shard_main",
+        "fd_session"
+      ]
     },
     {
       "id": "gpu-monitor",
       "kind": "external-process-command-factory",
       "path": "infra/trace/collect.py",
-      "entrypoints": ["gpu_monitor_command"]
+      "entrypoints": [
+        "gpu_monitor_command"
+      ]
     },
     {
       "id": "worker-observation",
       "kind": "shared-observation-producer",
       "path": "infra/trace/collectors/worker_obs.py",
-      "entrypoints": ["perreq_logger"]
+      "entrypoints": [
+        "perreq_logger"
+      ]
     },
     {
       "id": "engine-observation",
       "kind": "implicit-python-entry",
       "path": "infra/trace/collectors/vllm_scheduler_trace/sitecustomize.py",
-      "entrypoints": ["sitecustomize module import"]
+      "entrypoints": [
+        "sitecustomize module import"
+      ]
     },
     {
       "id": "trace-exporter",
       "kind": "offline-tool",
       "path": "infra/trace/perfetto.py",
-      "entrypoints": ["export", "main"]
+      "entrypoints": [
+        "export",
+        "main"
+      ]
+    },
+    {
+      "id": "profile-viewer",
+      "kind": "offline-tool",
+      "path": "infra/trace/profile.py",
+      "entrypoints": [
+        "build_profile",
+        "export",
+        "main"
+      ]
+    },
+    {
+      "id": "session-manager",
+      "kind": "control-thread",
+      "path": "engines/conveyor/worker/engine_patch/session_manager.py",
+      "entrypoints": [
+        "SessionPlan",
+        "SessionManager"
+      ],
+      "logical_role": "Session manager: periodic KV control, readiness reservation, execution events"
+    },
+    {
+      "id": "session-manager-adapter",
+      "kind": "runtime-monkeypatch",
+      "path": "engines/conveyor/worker/engine_patch/manager_adapter.py",
+      "entrypoints": [
+        "VllmKVMemoryManager",
+        "apply"
+      ],
+      "logical_role": "KV memory manager and backend resource adapter"
+    },
+    {
+      "id": "kv-copy-service",
+      "kind": "copy-thread",
+      "path": "engines/conveyor/worker/engine_patch/copy_service.py",
+      "entrypoints": [
+        "CopyService",
+        "CudaCopyBackend"
+      ],
+      "logical_role": "KV transfer engine"
+    },
+    {
+      "id": "gpu-activity-collector",
+      "kind": "shared-observation-producer",
+      "path": "infra/trace/collectors/gpu_activity.py",
+      "entrypoints": [
+        "GpuCapture",
+        "TransferObserver",
+        "apply"
+      ]
+    },
+    {
+      "id": "gpu-activity-parser",
+      "kind": "offline-tool",
+      "path": "infra/trace/gpu_activity.py",
+      "entrypoints": [
+        "parse_gpu_activity",
+        "parse_transfer_events",
+        "gpu_activity_issues",
+        "stream_labels"
+      ]
+    },
+    {
+      "id": "bounded-audio-preprocessing",
+      "kind": "shared-runtime-adapter",
+      "path": "engines/audio_features.py",
+      "entrypoints": [
+        "install_bounded_audio_padding",
+        "bounded_audio_length",
+        "install_minicpm_bounded_audio_padding",
+        "_BoundedWhisperFeatures"
+      ]
+    },
+    {
+      "id": "residency-planner",
+      "kind": "admission-policy",
+      "path": "engines/conveyor/worker/engine_patch/residency_planner.py",
+      "entrypoints": [
+        "AdmissionProfile",
+        "ResidencyPlanner.try_admit",
+        "ResidencyPlanner.revalidate",
+        "ResidencyPlanner.release"
+      ]
+    },
+    {
+      "id": "gateway-session-manager",
+      "kind": "control-loop",
+      "path": "engines/conveyor/gateway/session_manager.go",
+      "entrypoints": [
+        "GatewaySessionManager.advance",
+        "GatewaySessionManager.close",
+        "GatewaySessionManager.requestAdmission"
+      ]
+    },
+    {
+      "id": "finite-cohort-client",
+      "kind": "load-generator",
+      "path": "experiments/conveyor/cohort_client.py",
+      "entrypoints": [
+        "read_manifest",
+        "serve_one",
+        "run",
+        "main"
+      ]
+    },
+    {
+      "id": "copy-descriptor-submission",
+      "kind": "implementation",
+      "path": "engines/conveyor/worker/engine_patch/copy_descriptors.py",
+      "entrypoints": [
+        "contiguous_runs",
+        "copy_blocks",
+        "DriverEvents"
+      ]
+    },
+    {
+      "id": "resident-cohort-control",
+      "kind": "runtime-adapter",
+      "path": "engines/conveyor/worker/engine_patch/resident_adapter.py",
+      "entrypoints": [
+        "apply"
+      ]
+    },
+    {
+      "id": "gateway-input-identity",
+      "kind": "input-producer",
+      "path": "engines/conveyor/gateway/service_events.go",
+      "entrypoints": [
+        "stageFrames",
+        "serviceEvent"
+      ]
+    },
+    {
+      "id": "service-completion-collector",
+      "kind": "observation",
+      "path": "infra/trace/collectors/service_events.py",
+      "entrypoints": [
+        "emit",
+        "apply"
+      ]
+    },
+    {
+      "id": "service-slo-analysis",
+      "kind": "analysis",
+      "path": "infra/trace/service.py",
+      "entrypoints": [
+        "ServiceSLO",
+        "evaluate_run",
+        "evaluate"
+      ]
+    },
+    {
+      "id": "capacity-sweep",
+      "kind": "process-orchestrator",
+      "path": "experiments/conveyor/capacity.py",
+      "entrypoints": [
+        "main",
+        "summarize"
+      ]
+    },
+    {
+      "id": "model-input-adapters",
+      "kind": "runtime-adapter",
+      "path": "engines/model_inputs.py",
+      "entrypoints": [
+        "audio_adapter"
+      ]
+    },
+    {
+      "id": "run-trace-control",
+      "kind": "process-control",
+      "path": "engines/conveyor/worker/control.py",
+      "entrypoints": [
+        "main"
+      ]
+    },
+    {
+      "id": "group-window-analysis",
+      "kind": "analysis",
+      "path": "infra/trace/groups.py",
+      "entrypoints": [
+        "analyze",
+        "main"
+      ]
+    },
+    {
+      "id": "runtime-verifier",
+      "kind": "environment-probe",
+      "path": "infra/env/verify.py",
+      "entrypoints": [
+        "collect_software",
+        "collect_device",
+        "runtime_issues",
+        "main"
+      ]
+    },
+    {
+      "id": "machine-serving-check",
+      "kind": "process-orchestrator",
+      "path": "experiments/conveyor/check.py",
+      "entrypoints": [
+        "main",
+        "check_config",
+        "audit_run"
+      ]
     }
   ]
 }

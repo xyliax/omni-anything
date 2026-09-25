@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-24-H2D-WINDOW-AUDIT",
+  "date": "2026-09-24",
+  "question": "Why can H2D-looking Perfetto slices be much longer than payload/link-rate estimates, and which paper design requirements are implemented?",
+  "configuration_profile": "Offline analysis of EVIDENCE-H2D-COPY-TIMING-LEGACY, under its manifest model, workload and platform domain; current source and paper audit via EVIDENCE-H2D-WINDOW-SOURCE-AUDIT. No new GPU run.",
+  "change": "Label Perfetto L/R slices as scheduler-observed windows, expose endpoint semantics and manifest-derived logical KV bytes, and distinguish unobserved completion from a demonstrated transfer failure. Preserve original raw and derived artifacts.",
+  "result": "L/R timestamps span scheduler allocation/queueing to scheduler completion handling or waiting-request promotion. The current connector defers submission to get_finished after the model forward context, the DMA backend submits from a shared background queue, and CUDA completions are polled at iteration boundaries. Legacy log fields show a shorter gpu_copy_ms distribution, but their instrumentation and cross-layer event mapping are missing; no pure-DMA bandwidth or per-request additive decomposition is established.",
+  "analysis_method": {
+    "load_windows": "infra.trace.parse.parse_kv_events pairs FIFO by (request, trigger), excludes the warmup sentinel; window_ms = 1000 * (R - L). All completed windows in the retained run are included.",
+    "legacy_fields": "Parse OMNIDIAG load rows from worker.log without interpreting undocumented clock boundaries. They are backend event aggregates, not per-session samples.",
+    "statistics": "median = statistics.median; p95 = infra.trace.parse.percentile(values, 0.95), nearest index round((n-1)*0.95).",
+    "bytes": "logical_bytes = cpu_tok * manifest.config.model.kv_geometry.bytes_per_token; not measured bus bytes."
+  },
+  "measurements": {
+    "demand": {
+      "window_ms": {
+        "count": 79,
+        "min": 45.604944,
+        "median": 73.977947,
+        "p95": 159.59096,
+        "max": 206.763983
+      },
+      "cpu_tokens": {
+        "count": 79,
+        "min": 16,
+        "median": 32,
+        "p95": 8608,
+        "max": 8672
+      },
+      "unclosed": 0
+    },
+    "prefetch": {
+      "window_ms": {
+        "count": 479,
+        "min": 43.840885,
+        "median": 93.303204,
+        "p95": 125.439167,
+        "max": 172.346115
+      },
+      "cpu_tokens": {
+        "count": 479,
+        "min": 1968,
+        "median": 4288,
+        "p95": 6384,
+        "max": 8672
+      },
+      "unclosed": 0
+    },
+    "legacy_logged_fields": {
+      "nblk": {
+        "count": 536,
+        "min": 1.0,
+        "median": 260.0,
+        "p95": 445.0,
+        "max": 1084.0
+      },
+      "bg_lag_ms": {
+        "count": 536,
+        "min": 0.35,
+        "median": 17.695,
+        "p95": 28.79,
+        "max": 81.9
+      },
+      "gpu_copy_ms": {
+        "count": 536,
+        "min": 0.08,
+        "median": 35.25,
+        "p95": 56.26,
+        "max": 119.91
+      },
+      "detect_lag_ms": {
+        "count": 536,
+        "min": 8.86,
+        "median": 39.5,
+        "p95": 67.99,
+        "max": 95.07
+      }
+    },
+    "small_payload_example": {
+      "session": 5,
+      "trigger": "demand",
+      "cpu_tokens": 32,
+      "logical_bytes": 1835008,
+      "window_ms": 71.132898
+    }
+  },
+  "paper_code_correspondence": [
+    {
+      "paper": "Admission planning over a finite horizon with phase, eviction budgets and capacity checks",
+      "code": "Gateway assigns stable round-robin slots; no horizon-based feasibility planner or per-session transfer budget is implemented."
+    },
+    {
+      "paper": "Restore before the next tick using planned start time plus destination availability",
+      "code": "StreamingEngine.step pushes input then calls prefetch_kv; utility carries request ID only. Capacity deferral retries after eviction, without a future tick or planned start time."
+    },
+    {
+      "paper": "Select safely reclaimable ranges with confirmed valid host copies",
+      "code": "Retained-prefix eviction uses a fixed block threshold and tail margin. It reports host coverage after selection instead of intersecting the eviction set with confirmed coverage; uncovered suffixes can be recomputed."
+    },
+    {
+      "paper": "Manager controls H2D scheduling and shared transfer order",
+      "code": "Synthetic jobs enter the stock connector metadata and background DMA queue; no independent deadline-aware transfer scheduler exists."
+    },
+    {
+      "paper": "Deadline is current model generation completion relative to planned tick",
+      "code": "Step snapshots buffered output and returns immediately; inherited deadline_met measures service RPC timing, not current-period generation completion."
+    }
+  ],
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-H2D-COPY-TIMING-LEGACY",
+    "EVIDENCE-H2D-WINDOW-SOURCE-AUDIT"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Legacy diagnostic instrumentation is not retained. bg_lag_ms, gpu_copy_ms and detect_lag_ms cannot be assumed disjoint or pure device-copy intervals.",
+    "No request-to-copy-event correlation, per-copy physical byte count, or device timeline is retained. Copies can batch multiple requests and demand can overtake a prefetch.",
+    "Actual copy-stream queueing, block/layout fragmentation, CPU submission overhead, PCIe/NUMA effects and concurrent D2H/compute require fresh controlled profiling.",
+    "No new GPU performance run or implementation of the paper admission/restoration planner was performed. Existing findings remain unchanged."
+  ]
+}

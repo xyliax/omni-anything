@@ -27,7 +27,8 @@
     "exact_run_artifacts": "results/",
     "paper_work_plan": "docs/PAPER.md",
     "paper_submission_rules": "eurosys2027/planning/submission-checklist.md",
-    "ai_use_disclosure": "eurosys2027/planning/ai-use-log.md"
+    "ai_use_disclosure": "eurosys2027/planning/ai-use-log.md",
+    "shared_audio_preprocessing_implementation": "engines/audio_features.py"
   },
   "volatile_content": {
     "performance_numbers": [

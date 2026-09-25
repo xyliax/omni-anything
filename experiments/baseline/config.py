@@ -71,7 +71,7 @@ class BaselineConfig:
     def worker_python(self) -> Path:
         # Not resolve(): Python uses the invoked venv path (a symlink) to
         # discover pyvenv.cfg and its site-packages.
-        return self.root / platform.WORKER_PYTHON
+        return platform.worker_python(self.root)
 
     @property
     def client_shards(self) -> int:

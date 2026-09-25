@@ -38,7 +38,7 @@
 │       ├── evidence.json            # owner: EVIDENCE-* 到精确 run、hash 与 provenance 的解析
 │       ├── records/                 # 结构化实验过程记录（experiment_record_v1）
 │       └── legacy-experiment-log.md # owner: 历史实验过程；已冻结，只读
-├── engines/                         # baseline 与 conveyor 引擎本体；被 runner 按路径 spawn，禁止 import experiments
+├── engines/                         # baseline、conveyor 与共享音频前处理；引擎被 runner 按路径 spawn，禁止 import experiments
 ├── experiments/                     # 实验配置与 runner；负载/模型/平台公平性常量单份在 shared/
 ├── infra/                           # 与具体实验解耦的运行与观测设施
 │   ├── run/                         # 运行工作流、进程与 artifact；不认识具体实验名
@@ -72,7 +72,7 @@
 
 ## Change Transactions
 
-机制语义、状态机、进程拓扑、IPC、实验协议或指标口径的改动，必须在同一事务内同步对应 owner 文档、registry 与测试；路径级映射见 [`docs/agent/change-impact.json`](docs/agent/change-impact.json)。新诊断 run 保留 raw artifacts 和结构化 record，有保留价值时登记 evidence；接受新结论同步 evidence alias、record、finding card 与 current-state table；仅实现尚未验证的优化不得提前修改 findings 的性能状态。
+机制语义、状态机、进程拓扑、IPC、实验协议或指标口径的改动，必须在同一事务内同步对应 owner 文档、registry 与测试；路径级映射见 [`docs/agent/change-impact.json`](docs/agent/change-impact.json)。新诊断 run 在分析期间保存 raw artifacts；是否保留与何时清理遵循 [`results/README.md`](results/README.md#retention-rules)，有保留价值时登记 record 与 evidence；接受新结论同步 evidence alias、record、finding card 与 current-state table；仅实现尚未验证的优化不得提前修改 findings 的性能状态。
 
 ## Evidence Discipline
 
@@ -81,6 +81,7 @@
 - 结论性数字标明实测、模拟器标定、线性外推或冻结先验，并带模型/配置域限定。
 - formal evidence 要求 clean source；diagnostic evidence 可以 dirty，但必须保留可重建的 patch artifact；不满足新纪律的旧证据必须在 registry 中显式降级。
 - 成功以 `status.json` 终态和 validation 为准，exit 0 本身不构成成功。
+- 每次向用户报告前，必须执行 [`results/README.md` 的结果检查与清理纪律](results/README.md#retention-rules)；该文件是结果保留操作的唯一 owner。
 
 ## Documentation Style
 

@@ -34,20 +34,28 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 )
 
 type Session struct {
-	id       uint64
-	slot     int // release slot on the periodic wheel, fixed at admission
-	conn     *websocket.Conn
-	writeMu  sync.Mutex // gorilla allows one concurrent writer
-	mu       sync.Mutex // guards the fields below
-	audioBuf []byte
-	sr       int32
-	fullDup  bool // continuous full-duplex: process every tick from buffered audio, no turns
-	fdStart  time.Time
-	fdFirst  bool // first nonzero delivery seen (TTFA semantics)
-	alive    bool
+	id            uint64
+	slot          int // release slot on the periodic wheel, fixed at admission
+	conn          *websocket.Conn
+	writeMu       sync.Mutex // gorilla allows one concurrent writer
+	mu            sync.Mutex // guards the fields below
+	audioBuf      []byte
+	sr            int32
+	fullDup       bool // continuous full-duplex: process every tick from buffered audio, no turns
+	fdStart       time.Time
+	fdFirst       bool // first nonzero delivery seen (TTFA semantics)
+	alive         bool
+	admitted      bool
+	connectedAt   time.Time
+	blockedReason string
+	ending        bool
+	completed     bool
+	inputSequence uint64
+	inputFrames   []InputFrame
 }
 
 var (
@@ -57,7 +65,9 @@ var (
 	nextID         uint64
 	client         pb.InferenceClient
 	periodMS       = flag.Int("period-ms", 1000, "tick period")
-	slots          = flag.Int("slots", 8, "release slots per period; sessions are round-robin assigned at admission")
+	slots          = flag.Int("slots", 8, "phase slots per period; multiple sessions may share a slot")
+	admission      = flag.Bool("admission", false, "queue sessions until the residency planner accepts them")
+	manager        *GatewaySessionManager
 	outputTokenCap = flag.Int("output-token-cap", 25, "maximum output tokens consumed per session release")
 	port           = flag.String("port", "8902", "ws listen port")
 	worker         = flag.String("worker", "127.0.0.1:50051", "vLLM gRPC worker addr")
@@ -86,8 +96,12 @@ func tickTrace(wake time.Time, slot int, lateMs, sampleMs, grpcMs, gpuMs float64
 }
 
 func (s *Session) send(v any) {
+	if s.conn == nil {
+		return
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
+	_ = s.conn.SetWriteDeadline(time.Now().Add(time.Second))
 	_ = s.conn.WriteJSON(v)
 }
 
@@ -97,16 +111,21 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := atomic.AddUint64(&nextID, 1)
-	s := &Session{id: id, slot: int((id - 1) % uint64(*slots)), conn: c, sr: 16000, alive: true}
+	s := &Session{id: id, slot: int((id - 1) % uint64(*slots)), conn: c, sr: 16000,
+		alive: true, admitted: !*admission, connectedAt: time.Now()}
+	if *admission {
+		s.slot = -1
+	}
 	sessions.Store(id, s)
 	defer func() {
-		s.mu.Lock()
-		s.alive = false
-		s.mu.Unlock()
-		sessions.Delete(id)
+		manager.close(s)
 		c.Close()
 	}()
-	s.send(map[string]any{"type": "session.created", "session": map[string]any{"id": id}})
+	s.send(map[string]any{"type": "session.created", "session": map[string]any{"id": id},
+		"admission_required": *admission})
+	if *admission {
+		manager.enqueue(s)
+	}
 	c.SetReadLimit(8 << 20)
 	for {
 		_, data, err := c.ReadMessage()
@@ -140,11 +159,30 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		case "input_audio_buffer.append":
 			if raw, e := base64.StdEncoding.DecodeString(ev.Audio); e == nil {
 				s.mu.Lock()
+				if !s.admitted || s.ending {
+					s.mu.Unlock()
+					s.send(map[string]any{"type": "error", "error": "wait for session.admitted before sending audio"})
+					continue
+				}
 				s.audioBuf = append(s.audioBuf, raw...)
+				if frameLog != nil {
+					s.stageFrames(false)
+				}
 				s.mu.Unlock()
 			}
 		case "input_audio_buffer.commit":
 			// no-op: the tick loop drains the buffer when staging the frame
+		case "session.end":
+			if !*admission {
+				s.send(map[string]any{"type": "error", "error": "session.end requires managed admission"})
+				continue
+			}
+			s.mu.Lock()
+			s.ending = true
+			if frameLog != nil {
+				s.stageFrames(true)
+			}
+			s.mu.Unlock()
 		}
 	}
 }
@@ -159,7 +197,7 @@ func tickLoop() {
 	period := time.Duration(*periodMS) * time.Millisecond
 	slotPeriod := period / time.Duration(*slots)
 	budgetMs := float64(*periodMS)
-	t0 := time.Now()
+	t0 := manager.epoch.Add(-slotPeriod)
 	for k := int64(1); ; k++ {
 		slot := int((k - 1) % int64(*slots))
 		next := t0.Add(time.Duration(k) * slotPeriod)
@@ -171,24 +209,49 @@ func tickLoop() {
 		// as an output cap, not as a required delivery amount.
 		req := &pb.StepRequest{TokensPerTick: uint32(*outputTokenCap)}
 		var active []*Session
+		var ending []string
+		frameIDs := map[string]uint64{}
 		sessions.Range(func(_, v any) bool {
 			s := v.(*Session)
-			if s.slot != slot {
-				return true
-			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			if !s.alive || !s.fullDup {
+			if s.slot != slot || !s.alive || !s.admitted || !s.fullDup {
+				return true
+			}
+			if frameLog != nil {
+				var audio []byte
+				if len(s.inputFrames) > 0 {
+					frame := s.inputFrames[0]
+					if frame.Ready.After(next) {
+						return true
+					}
+					s.inputFrames = s.inputFrames[1:]
+					audio = frame.Audio
+					if s.fdStart.IsZero() {
+						s.fdStart = frame.Ready
+					}
+					frameIDs[fmt.Sprint(s.id)] = frame.Sequence
+					serviceEvent("input_release", s.id, frame.Sequence, map[string]any{
+						"release_ns": next.UnixNano(), "deadline_ns": next.Add(period).UnixNano(),
+						"slot": slot, "samples": len(audio) / 2})
+				} else if !s.ending {
+					return true
+				}
+				req.Sessions = append(req.Sessions, &pb.SessionInput{Sid: s.id, AudioPcm16: audio, SampleRate: uint32(s.sr)})
+				if s.ending && len(s.inputFrames) == 0 {
+					ending = append(ending, fmt.Sprint(s.id))
+				}
+				active = append(active, s)
 				return true
 			}
 			// A first slice below ~40ms of audio yields zero encoder output tokens and
 			// kills the session in the model runner (vLLM qwen2_5_omni "too short to be
 			// represented"). Hold the first fire until one slot-period of audio buffered;
 			// the session starts one period later on its own grid.
-			if !s.fdFirst && len(s.audioBuf) < int(s.sr)*2*(*periodMS / *slots)/1000 {
+			if !s.ending && !s.fdFirst && len(s.audioBuf) < int(s.sr)*2*(*periodMS / *slots)/1000 {
 				return true
 			}
-			if len(s.audioBuf) == 0 {
+			if len(s.audioBuf) == 0 && !s.ending {
 				return true
 			}
 			// CONTINUOUS full-duplex: sample the new audio since last tick, no turns.
@@ -203,6 +266,9 @@ func tickLoop() {
 				s.fdStart = time.Now()
 			}
 			req.Sessions = append(req.Sessions, in)
+			if s.ending {
+				ending = append(ending, fmt.Sprint(s.id))
+			}
 			active = append(active, s)
 			return true
 		})
@@ -213,10 +279,22 @@ func tickLoop() {
 		sampleMs := time.Since(tickT0).Seconds() * 1000
 		grpcT0 := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), stepTimeout)
+		frameJSON, _ := json.Marshal(frameIDs)
+		ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs(
+			"x-pilarius-frame-ids", string(frameJSON),
+			"x-pilarius-next-tick-ns", fmt.Sprint(next.Add(period).UnixNano()),
+			"x-pilarius-period-ns", fmt.Sprint(period.Nanoseconds()),
+			"x-pilarius-ending-sids", strings.Join(ending, ",")))
 		resp, err := client.Step(ctx, req)
 		cancel()
 		if err != nil {
 			log.Printf("Step error: %v", err)
+			if frameLog != nil {
+				for _, s := range active {
+					s.send(map[string]any{"type": "error", "error": fmt.Sprintf("input execution failed: %v", err)})
+					manager.close(s)
+				}
+			}
 			// keep the grid evidence gap-free: an errored firing still logs
 			// (n reflects staged sessions; no deliveries happened).
 			tickTrace(tickT0, slot, lateMs, sampleMs, 0, 0, nil)
@@ -257,6 +335,16 @@ func tickLoop() {
 			s.send(map[string]any{"type": "metronome.tick", "latency_ms": grpcMs,
 				"budget_ms": budgetMs, "deadline_met": rpcMet, "batch": batch,
 				"server_ttfa_ms": fdTtfa})
+			if o.Finished {
+				s.mu.Lock()
+				ended := s.ending
+				s.completed = ended
+				s.mu.Unlock()
+				if !ended {
+					s.send(map[string]any{"type": "error", "error": "backend session ended unexpectedly"})
+				}
+				manager.close(s)
+			}
 		}
 		tickTrace(tickT0, slot, lateMs, sampleMs, grpcMs, float64(resp.GpuMs), deliv)
 		if os.Getenv("GW_DEBUG") != "" {
@@ -271,6 +359,17 @@ func tickLoop() {
 
 func main() {
 	flag.Parse()
+	if *periodMS <= 0 || *slots <= 0 || *periodMS / *slots < 1 {
+		log.Fatal("period and slots must define a positive millisecond slot interval")
+	}
+	if path := os.Getenv("GW_SERVICE_EVENTS"); path != "" {
+		var err error
+		frameLog, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer frameLog.Close()
+	}
 	if p := os.Getenv("GW_TICKLOG"); p != "" {
 		if f, e := os.Create(p); e == nil {
 			tickLog = f
@@ -306,6 +405,10 @@ func main() {
 	if !ready {
 		log.Fatalf("worker at %s never became healthy", *worker)
 	}
+	manager = newSessionManager(*admission, time.Now().Add(time.Duration(*periodMS)*time.Millisecond/time.Duration(*slots)))
+	controlCtx, stopControl := context.WithCancel(context.Background())
+	defer stopControl()
+	go manager.run(controlCtx)
 	go tickLoop()
 
 	srv := &http.Server{Addr: ":" + *port, Handler: http.HandlerFunc(handle)}

@@ -6,8 +6,11 @@
 
 ```bash
 bash infra/env/setup.sh --help
+python -m experiments.conveyor.check --help
 python -m experiments.baseline --help
 python -m infra.trace.perfetto --help
 ```
 
 具体环境、配置和比较协议以 [`docs/experiments.md`](docs/experiments.md) 为准；当前可执行配置不自动成为最终论文的 workload、modality、output architecture、hardware 或 topology scope。
+
+新机器安装和运行检查见 [`infra/env/AGENTS.md`](infra/env/AGENTS.md#new-machine-setup)。

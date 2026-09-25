@@ -22,13 +22,14 @@
     },
     {
       "id": "CONTRACT-OUTPUT-CAP",
-      "rule": "the abstract generated-token count is distinct from gateway delivery; output_token_cap is a generation upper bound, never a minimum delivery requirement; both current first-party workers set ignore_eos=True and normally run to their unequal per-segment decode caps, which formal matched-system comparisons must equalize",
+      "rule": "the abstract generated-token count is distinct from gateway delivery; output_token_cap is selected per model by shared workload configuration and must agree across worker, gateway, manifest and matched systems; current first-party workers use it without surplus for every audio segment and stream-end flush, matching the per-period delivery budget; ignore_eos=True does not make the cap a minimum delivery requirement; initial-context preparation uses a separate one-token cap; audio encoding length remains input-dependent; historical unequal-cap runs must be rerun for matched comparisons",
       "owners": [
         "docs/experiments.md",
         "experiments/shared/workload.py"
       ],
       "verification": [
         "tests/test_configs.py",
+        "tests/test_model_inputs.py",
         "tests/test_run_validation.py"
       ]
     },
@@ -64,7 +65,9 @@
       ],
       "verification": [
         "tests/test_run_validation.py",
-        "tests/test_trace.py"
+        "tests/test_trace.py",
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
       ]
     },
     {
@@ -74,7 +77,8 @@
         "docs/system.md",
         "engines/conveyor/worker/engine_patch/omni_state.py",
         "docs/system.md#component-interface-contracts",
-        "docs/system.md#implementation-handoff"
+        "docs/system.md#implementation-handoff",
+        "engines/conveyor/worker/engine_patch/manager_adapter.py"
       ],
       "verification": []
     },
@@ -108,7 +112,9 @@
         "docs/experiments.md",
         "results/README.md"
       ],
-      "verification": []
+      "verification": [
+        "tests/test_run.py"
+      ]
     },
     {
       "id": "CONTRACT-NARRATIVE-SCOPE",
@@ -187,6 +193,163 @@
         "docs/experiments.md#measurement-semantics"
       ],
       "verification": []
+    },
+    {
+      "id": "CONTRACT-KV-LOAD-OBSERVATION",
+      "rule": "KV L/R slices measure scheduler-observed windows, not DMA time; demand ends at waiting-request promotion and prefetch at completion handling. Logical KV bytes may be derived only from the run manifest geometry; physical transfer bandwidth requires correlated copy events and actual copy bytes. An unmatched L means completion was not observed, not proof that DMA failed. Manager prefetch completion is recorded by the independent copy callback. CUPTI GPU activity durations remain separate from CPU windows and CUDA stream-event intervals; correlated physical payload bytes must match submission bytes.",
+      "owners": [
+        "docs/experiments.md#profiling",
+        "infra/trace/AGENTS.md"
+      ],
+      "verification": [
+        "tests/test_trace.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-SESSION-MANAGER-EXECUTION",
+      "rule": "The opt-in manager executes supplied per-session plans independently of model steps. Eviction selects complete confirmed-host-backed blocks with no competing GPU references. Idle retained blocks, host sources and in-flight destinations remain pinned; incomplete destinations are not published. Scheduler/pool mutation is locked, model execution is not. The adapter rejects async scheduling, multiple KV groups, speculative decoding and worker-side KV zeroing. No joint admission solver or deadline guarantee is implied.",
+      "owners": [
+        "docs/system.md#session-manager-execution",
+        "engines/conveyor/AGENTS.md"
+      ],
+      "verification": [
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py",
+        "tests/test_configs.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-BOUNDED-AUDIO-FEATURES",
+      "rule": "Default first-party audio preprocessing preserves valid mel features, mask lengths and audio token IDs while limiting padding to the actual resampled input plus the centered STFT right boundary, rounded to a hop. Keep original model-limit truncation; do not crop to the nominal period or mutate a shared processor. Explicit max_length, normalization and dither retain upstream behavior.",
+      "owners": [
+        "engines/audio_features.py",
+        "docs/experiments.md"
+      ],
+      "verification": [
+        "tests/test_audio_features.py",
+        "tests/test_run_validation.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-CONSERVATIVE-ADMISSION",
+      "rule": "Legacy diagnostic implementation; not the current maximum-context planning/open-loop evaluation contract. Implemented conservative candidate policy: existing phases and eviction budgets stay fixed; a free slot is insufficient; explicit finite-horizon compute, bidirectional copy, full-destination GPU allocation, host capacity and growth estimates must pass before admission. Profile calibration and general joint optimization remain separate work. Reviews publish risk, not lifetime guarantees. Runtime memory-saving credit is capped by confirmed recoverable non-shared backing; new sessions get no speculative credit, while transfer service still reserves the maximum future restoration budget.",
+      "owners": [
+        "docs/system.md#conservative-admission",
+        "engines/conveyor/worker/engine_patch/residency_planner.py"
+      ],
+      "verification": [
+        "tests/test_residency_planner.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-SESSION-LIFECYCLE",
+      "rule": "FIFO waits before model input; session.end drains final input and capped output; completion requires frontend final output and backend request/copy cleanup. Admission credit is retained during closing and cleanup failure. Late input/plan cannot resurrect a closed identity. Readiness reservations remain pinned until backend execution references are acquired.",
+      "owners": [
+        "engines/conveyor/AGENTS.md",
+        "docs/system.md#conservative-admission"
+      ],
+      "verification": [
+        "tests/test_admission_worker.py",
+        "tests/test_session_manager.py",
+        "engines/conveyor/gateway/session_manager_test.go"
+      ]
+    },
+    {
+      "id": "CONTRACT-COHORT-COMPLETION",
+      "rule": "Every offered manifest identity must complete exactly once; sending audio, socket disconnect and RPC return are not completion. Admission waiting and post-admission audio time remain distinct. Synthetic inputs are labelled. Per-cycle SLO uses the independent input-identity/completion collector. Fixed-cap drain does not establish arbitrary variable-length model support.",
+      "owners": [
+        "docs/experiments.md#finite-cohort-runner"
+      ],
+      "verification": [
+        "tests/test_cohort_client.py",
+        "tests/test_run_validation.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-GROUP-WINDOW-CEILING",
+      "rule": "A slot is a multi-session group. The sum of member eviction ceilings must fit its shared restore window, including overhead and safety. Actual safe eviction grows up to each ceiling; short histories cannot justify overcommitting future transfer capacity. Retained growth remains charged to GPU.",
+      "owners": [
+        "docs/system.md#conservative-admission"
+      ],
+      "verification": [
+        "tests/test_residency_planner.py",
+        "tests/test_session_manager.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-SERVICE-SLO",
+      "rule": "Legacy diagnostic SLO checker; not the current simplified evaluation protocol. Fixed sample-count input identities cross release/receive/ingest/compute completion. Deadlines use the frozen source sample-availability clock and earliest eligible planned tick plus period, never actual late arrival or submission. All N sessions start behind an admission barrier; uncompleted/unsubmitted inputs remain in denominator. Invalid measurement cannot establish a capacity boundary.",
+      "owners": [
+        "docs/experiments.md#stable-concurrency-runner"
+      ],
+      "verification": [
+        "tests/test_service_metrics.py",
+        "tests/test_admission_gateway.py",
+        "tests/test_cohort_client.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-COPY-DESCRIPTORS",
+      "rule": "Coalescing preserves every original physical mapping and only merges adjacent source and destination ranges. Bounded batches share one stream; lifetime and publication remain tied to the final device event. No host synchronization is added by the GIL-preserving submission wrapper.",
+      "owners": [
+        "docs/system.md#session-manager-execution"
+      ],
+      "verification": [
+        "tests/test_copy_descriptors.py",
+        "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-WHOLE-RUN-CAPTURE",
+      "rule": "GPU capture is off or enabled for the entire business run. Start completes before client launch; stop/export runs after client exit and before worker cleanup. No timed mid-run stop. Failed/incomplete export cannot pass validation.",
+      "owners": [
+        "infra/run/AGENTS.md",
+        "infra/trace/AGENTS.md",
+        "docs/experiments.md#profiling"
+      ],
+      "verification": [
+        "tests/test_run.py",
+        "tests/test_configs.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-MODEL-PRESET",
+      "rule": "A selected model preset pins checkpoint revision, input adapter and KV geometry together. Runtime allocations/physical transfer bytes come from actual tensors, not the previous model geometry. Fixed-budget audio-input/text-output support does not establish native duplex audio-output integration.",
+      "owners": [
+        "experiments/shared/model.py",
+        "engines/model_inputs.py",
+        "docs/experiments.md#candidate-model-integration"
+      ],
+      "verification": [
+        "tests/test_model_inputs.py",
+        "tests/test_run_validation.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-GROUP-WINDOW-OBSERVATION",
+      "rule": "Volume ceilings, actual restore timeliness and whole-input SLO are separate. In-flight copies are never cut off at window end; completed valid KV is required. Report late completion and unassociated transfers explicitly.",
+      "owners": [
+        "docs/system.md#conservative-admission",
+        "infra/trace/groups.py"
+      ],
+      "verification": [
+        "tests/test_group_windows.py",
+        "tests/test_session_manager.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-RUNTIME-PORTABILITY",
+      "rule": "Keep the hashed runtime profile and selected model revisions unchanged across machines. Default to GPU zero, allow a worker-venv override and Hugging Face cache environment variables; verify the actual driver, BF16 execution, model shards, physical KV roundtrip and multi-session lifecycle before experiments. Machine checks with uncalibrated costs do not establish H100 capacity or conformance to the latest planning protocol.",
+      "owners": [
+        "infra/env/AGENTS.md",
+        "experiments/shared/platform.py",
+        "infra/run/probes.py"
+      ],
+      "verification": [
+        "tests/test_portability.py",
+        "tests/test_session_manager_gpu.py",
+        "experiments/conveyor/check.py"
+      ]
     }
   ],
   "experiment_record_v1": {

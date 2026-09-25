@@ -19,4 +19,4 @@
 
 ## Acceptance
 
-成功执行以 `status.json` 终态和 validation 为准，不以 exit 0 为准；同时核对 runner 未完整覆盖的 manifest 语义和跨系统工作量。观测有效、机制被实际使用、服务目标达标分别判断。失败或零事件运行可以保留为边界分析，但不能计入成功性能点；实际交付低于 cap 本身不构成 correctness failure。
+成功执行以 `status.json` 终态和 validation 为准，不以 exit 0 为准；同时核对 runner 未完整覆盖的 manifest 语义和跨系统工作量。观测有效、机制被实际使用、服务目标达标分别判断。失败或零事件运行不能计入成功性能点；实际交付低于 cap 本身不构成 correctness failure。报告前按 [结果保留规则](../../../results/README.md#retention-rules) 检查并清理产物，不默认永久保留调试运行。

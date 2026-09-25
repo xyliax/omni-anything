@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-RESIDENCY-SAMPLING-AUDIT",
+  "date": "2026-09-25",
+  "question": "Is the KV residency sampling too coarse, and do session 1 and session 2 evict simultaneously near Perfetto seconds 46.2–46.4?",
+  "configuration_profile": {
+    "evidence_selection": "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+    "clock": "Retained derived Perfetto clock; first normal input is at 40.071 seconds. User-selected run/track confirmation was requested; analysis assumes the current retained trace.",
+    "sampler": "OMNI_STATLOG_PERIOD_S=0.2; shared Scheduler.schedule hook, not an independent timer."
+  },
+  "change": "Audit and measurement documentation only; no sampler, engine or derived artifact changed.",
+  "result": {
+    "sampling_intervals_ms": {
+      "population": "111 intervals between normal-phase residency rows after the first normal tick; rounded exported timestamps, p95 sorted index round((n-1)*0.95)",
+      "min": 202,
+      "p50": 246,
+      "p95": 267,
+      "max": 4835
+    },
+    "target_window": {
+      "session_1": {
+        "evict_perfetto_s": 45.706,
+        "next_observation_perfetto_s": 45.917,
+        "observed_blocks_before": 267,
+        "observed_blocks_after": 128,
+        "evicted_blocks": 138,
+        "observation_delay_ms_from_raw": 211.36
+      },
+      "session_2": {
+        "evict_perfetto_s": 45.957,
+        "next_observation_perfetto_s": 46.184,
+        "observed_blocks_before": 269,
+        "observed_blocks_after": 128,
+        "evicted_blocks": 140,
+        "observation_delay_ms_from_raw": 226.693
+      },
+      "actual_eviction_separation_ms_from_raw": 251.159,
+      "interpretation": "Both are already at 128 in the 46.2–46.4 window; the current trace does not show simultaneous falls there."
+    },
+    "aliasing_examples": [
+      {
+        "joint_counter_drop_perfetto_s": 56.646,
+        "session_1_evict_perfetto_s": 56.492,
+        "session_2_evict_perfetto_s": 56.495
+      },
+      {
+        "joint_counter_drop_perfetto_s": 63.936,
+        "session_1_evict_perfetto_s": 63.743,
+        "session_2_evict_perfetto_s": 63.864
+      }
+    ],
+    "code_semantics": [
+      "A single sample gives every live session the same timestamp; independently timed mutations between samples can become simultaneous counter changes.",
+      "SessionManager.advance independently considers all idle sessions and has no mutual-exclusion rule forbidding two sessions from being evicted close together.",
+      "Residency samples count request-owned block IDs or, without request ownership, the contiguous cached prefix. They are neither per-session watts nor a complete count of arbitrary disjoint/in-flight GPU blocks.",
+      "The power.draw field in gpu.csv is device-level; current trace does not provide per-session power attribution."
+    ]
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+    "EVIDENCE-RESIDENCY-SAMPLING-AUDIT"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "The user may be viewing a different run or track; the exact-window conclusion is conditional on the current retained Perfetto trace.",
+    "This audit identifies sampling limitations and two evictions, not general eviction correctness.",
+    "No finer sampling or event-driven physical-residency accounting has been implemented in this audit."
+  ]
+}

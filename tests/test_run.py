@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -18,10 +19,37 @@ from pathlib import Path
 
 from infra.run.artifacts import RunStore, scan_worker_fatal
 from infra.run.workflow import Launch, RunPlan, execute
+from infra.run.probes import collect_source_patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = ("alpha.log", "beta.json")
+
+
+class ProvenanceTests(unittest.TestCase):
+    def test_dirty_patch_reconstructs_tracked_and_new_sources_without_raw_results(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            def git(*args, **kwargs):
+                return subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, **kwargs)
+            git("init", "-q")
+            (root / "infra").mkdir()
+            tracked = root / "infra" / "existing.py"
+            tracked.write_text("old\n")
+            git("add", ".")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.org", "commit", "-qm", "base")
+            tracked.write_text("new\n")
+            added = root / "infra" / "added.py"
+            added.write_text("new source\n")
+            (root / "results").mkdir()
+            (root / "results" / "raw.json").write_text("raw evidence must not be embedded")
+            diff = collect_source_patch(root)
+            self.assertNotIn(b"raw evidence", diff)
+            git("restore", "infra/existing.py")
+            added.unlink()
+            git("apply", "-", input=diff)
+            self.assertEqual(tracked.read_text(), "new\n")
+            self.assertEqual(added.read_text(), "new source\n")
 
 
 def bash(script: str) -> tuple[str, ...]:
@@ -101,6 +129,18 @@ class WorkflowTests(unittest.TestCase):
         )
         # the whole run (manifest, startup, timeout, teardown) stays bounded
         self.assertLess(time.monotonic() - started, 30)
+
+    def test_controls_bracket_the_whole_client_and_worker_survives_export(self):
+        from dataclasses import replace
+        marker = self.tmp / 'capture-active'
+        done = self.tmp / 'client-done'
+        plan = self.plan(bash(f'test -e "{marker}" && touch "{done}" && echo client-done'))
+        plan = replace(plan,
+            before_client=(Launch('capture-start', bash(f'touch "{marker}"'), 'start.log', self.tmp),),
+            after_client=(Launch('capture-stop', bash(f'test -e "{done}" && test -e "{self.ready}" && rm "{marker}"'), 'stop.log', self.tmp),))
+        code, _ = execute(plan, ['test-controls'])
+        self.assertEqual(code, 0)
+        self.assertFalse(marker.exists())
 
     def test_client_shard_results_must_be_fresh_and_are_cleaned(self) -> None:
         scratch = self.tmp / "fixed-shard.json"

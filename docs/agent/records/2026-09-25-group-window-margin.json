@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-GROUP-WINDOW-MARGIN",
+  "date": "2026-09-25",
+  "question": "Does a conservative profile based on the observed restore cost avoid the measured late-restoration condition without changing eviction caps?",
+  "configuration_profile": {
+    "engine": {
+      "copy_submission": "optimized",
+      "enforce_eager": false,
+      "evict_tail_blocks": 0,
+      "eviction_delay_s": 1.2,
+      "gpu_memory_utilization": 0.75,
+      "host_offload_gib": 4,
+      "ingest_workers": 8,
+      "initial_context_tokens": 0,
+      "kv_pool_gib": 2,
+      "max_model_len": 8192,
+      "max_num_batched_tokens": null,
+      "max_num_seqs": 8,
+      "prefetch": "off",
+      "prefetch_min_free": 0.1,
+      "resident_control": false,
+      "resident_limit": null,
+      "restore_lead_s": 0.1,
+      "retained_prefix_blocks": 1,
+      "session_manager": true,
+      "slots": 2,
+      "startup_timeout_s": 360,
+      "sync_scheduling": false
+    },
+    "admission": {
+      "cohort": [
+        {
+          "arrival_s": 0,
+          "duration_s": 170,
+          "id": "calibrated-0",
+          "seed": 5001
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 170,
+          "id": "calibrated-1",
+          "seed": 5002
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 170,
+          "id": "calibrated-2",
+          "seed": 5003
+        },
+        {
+          "arrival_s": 0,
+          "duration_s": 170,
+          "id": "calibrated-3",
+          "seed": 5004
+        }
+      ],
+      "profile": {
+        "compute_s": 0.35,
+        "d2h_blocks_per_s": 5000,
+        "gpu_reserve_blocks": 128,
+        "growth_blocks_per_period": 6,
+        "h2d_blocks_per_s": 5000,
+        "horizon_s": 8,
+        "host_reserve_blocks": 16,
+        "initial_blocks": 16,
+        "max_evict_blocks": 192,
+        "max_sessions": 4,
+        "safety_s": 0.004,
+        "transfer_overhead_s": 0.003
+      }
+    },
+    "model": {
+      "id": "Qwen/Qwen2.5-Omni-7B",
+      "input_adapter": "qwen25_omni",
+      "kv_geometry": {
+        "bytes_per_token": 57344,
+        "dtype_bytes": 2,
+        "head_dim": 128,
+        "num_kv_heads": 4,
+        "num_layers": 28
+      },
+      "output_path": "audio_input_text_output",
+      "preset": "qwen25_omni",
+      "revision": "ae9e1690543ffd5c0221dc27f79834d0294cba00"
+    },
+    "observations": {
+      "gpu_trace": false,
+      "gpu_trace_scope": "off",
+      "kv_log_period_s": 0.2,
+      "per_iteration": true,
+      "per_request": true,
+      "residency": true,
+      "scheduler": true,
+      "trace": true
+    },
+    "platform": "shared RTX 3090; diagnostic, no CUPTI"
+  },
+  "change": "Use 100 ms lead and 5000 blocks/s transfer profile after measuring the original 40 ms stress configuration; unchanged 192-block per-session ceilings, two members per slot.",
+  "result": {
+    "completed_sessions": 4,
+    "makespan_s": 173.91201486997306,
+    "saturated_group_windows": 92,
+    "late_windows": 0,
+    "cap_violations": [],
+    "unpublished_h2d": [],
+    "unmatched_h2d": [],
+    "saturated_queue_to_publication_ms": {
+      "p50": 33.84709358215332,
+      "p95": 47.5014328956604,
+      "max": 48.46024513244629
+    },
+    "completed_model_inputs": 340,
+    "model_deadline_misses": 0,
+    "planner_reviews": {
+      "feasible": 44
+    },
+    "earlier_saturated_submission": {
+      "source": "EVIDENCE-GROUP-WINDOW-LONG",
+      "descriptor_p50": 3892,
+      "submit_wall_p50_ms": 21.102190017700195,
+      "submit_thread_p50_ms": 20.62356549999933,
+      "first_batch_return_p50_ms": 0.7264483720064163,
+      "interpretation": "Physical fragmentation grows descriptor work; first batch return is not first GPU activity, and the full submission interval can overlap DMA."
+    }
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-GROUP-WINDOW-MARGIN",
+    "EVIDENCE-GROUP-WINDOW-LONG"
+  ],
+  "affects_findings": [
+    "FINDING-T4"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "One follow-up on a shared device, not a calibrated universal upper bound or a controlled throughput comparison.",
+    "The diagnostic follow-up directory was removed under user cleanup discipline; summary only. Long stress and full-business GPU presentation remain retained."
+  ]
+}

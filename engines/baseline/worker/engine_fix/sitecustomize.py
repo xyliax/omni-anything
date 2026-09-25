@@ -14,9 +14,9 @@ params the worker actually sent for each segment — no KV eviction, no host cop
 scheduling change. The conveyor engine_patch carries the identical refresh
 inside its session-update wrapper (KV eviction runs); baseline runs no mechanism,
 so the fix lives standalone here. Behavior equivalence for non-initial context runs is
-kept by the worker's constant per-segment cap (output_token_cap+8): frozen-at-first-input
-and refreshed-per-chunk regimes then agree, so the frozen baseline's formal
-runs remain comparable.
+kept by the worker's constant per-segment cap (output_token_cap): frozen-at-first-input
+and refreshed-per-chunk regimes then agree. Historical runs with a different
+generation cap do not become matched-workload comparisons after this fix.
 
 Nothing is patched unless ``OMNI_SESSION_MAXTOKENS_FIX`` is set. Python
 imports only the FIRST ``sitecustomize`` on ``sys.path``, so this module

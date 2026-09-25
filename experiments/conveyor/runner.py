@@ -15,7 +15,10 @@ from typing import Any, Sequence
 from infra.run.artifacts import RunStore, make_run_id, scan_client_health, scan_worker_fatal
 from infra.run.probes import resolve_model_snapshot
 from infra.run.workflow import Launch, RunPlan, execute
-from infra.trace.collect import apply_scheduler_trace, gpu_monitor_command
+from infra.trace.collect import (
+    apply_scheduler_trace, apply_gpu_activity, apply_transfer_observation, gpu_monitor_command,
+)
+from infra.trace.gpu_activity import gpu_activity_issues, parse_transfer_events
 
 from .config import ConveyorConfig, model, platform, workload
 
@@ -27,13 +30,15 @@ CLIENT_WATCHDOG_SLACK_S = 120
 
 
 def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
-    snapshot = resolve_model_snapshot(model.ID, model.REVISION)
+    selected = model.PRESETS[config.model_preset]
+    snapshot = resolve_model_snapshot(selected['id'], selected['revision'])
     cmd = [
         str(config.worker_python),
         "-u",
         str(config.worker_path),
         "--model",
         str(snapshot),
+        '--model-family', selected['family'],
         "--port",
         str(platform.WORKER_PORT),
         "--gpu-mem",
@@ -43,7 +48,7 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
         "--max-num-seqs",
         str(config.max_num_seqs),
         "--output-token-cap",
-        str(workload.OUTPUT_TOKEN_CAP),
+        str(config.output_token_cap),
         "--max-audio-chunks",
         str(workload.MAX_AUDIO_CHUNKS),
         "--initial-context-tokens",
@@ -55,6 +60,10 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
     ]
     if config.kv_pool_gib is not None:   # optional exact-byte cap; default full pool
         cmd += ["--kv-pool-gib", str(config.kv_pool_gib)]
+    if config.enforce_eager:
+        cmd += ['--enforce-eager']
+    if config.max_num_batched_tokens is not None:
+        cmd += ['--max-num-batched-tokens', str(config.max_num_batched_tokens)]
     if config.sync_scheduling and not config.kv_eviction_enabled:
         cmd += ["--sync-scheduling"]
     if config.prefetch != "off":
@@ -72,7 +81,13 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
 
 def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
     env = os.environ.copy()
+    for key in ("OMNI_SESSION_MANAGER", "OMNI_GPU_ACTIVITY", "OMNI_GPU_TRACE_SECONDS",
+                "OMNI_TRANSFER_EVENTS", "OMNI_PREFETCH", "OMNI_RETAINED_PREFIX_BLOCKS",
+                "OMNI_HOLD_KV_EVICTION", "OMNI_KV_EVICTION", "OMNI_ADMISSION_PROFILE",
+                'OMNI_SERVICE_EVENTS', 'OMNI_SERVICE_PRELOAD', 'OMNI_RESIDENT_ONLY', 'OMNI_RESIDENT_LIMIT'):
+        env.pop(key, None)
     env.update({
+        'OMNI_COPY_SUBMISSION': config.copy_submission,
         "CUDA_VISIBLE_DEVICES": str(config.gpu),
         "HF_HUB_OFFLINE": "1",
         "VLLM_NO_USAGE_STATS": "1",
@@ -93,6 +108,22 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
             run_dir / "scheduler_errors.log",
             run_dir / "residency.log",
         )
+    if config.session_manager:
+        env["OMNI_SESSION_MANAGER"] = "1"
+        env["OMNI_RESTORE_LEAD_S"] = str(config.restore_lead_s)
+        env["OMNI_PREFETCH_MIN_FREE"] = str(config.prefetch_min_free)
+        apply_transfer_observation(env, run_dir)
+    if config.admission_profile:
+        env['OMNI_ADMISSION_PROFILE'] = str(Path(config.admission_profile).resolve())
+    if config.cohort_manifest:
+        env['OMNI_SERVICE_EVENTS'] = str(run_dir / 'service_events.jsonl')
+    if config.resident_control:
+        env['OMNI_RESIDENT_ONLY'] = '1'
+        env['OMNI_RESIDENT_LIMIT'] = str(config.resident_limit)
+        env['OMNI_RESTORE_LEAD_S'] = str(config.restore_lead_s)
+        env['OMNI_RETAINED_PREFIX_BLOCKS'] = '1'
+    if config.gpu_trace:
+        apply_gpu_activity(env, run_dir)
     if config.kv_eviction_enabled:
         # KV management lives in the spawned EngineCore process; inject it
         # by prepending the engine_patch dir AHEAD of the trace collector dir
@@ -113,15 +144,16 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
                 # Initial-context preloading is state construction. Release the
                 # hold at the barrier without evicting there.
                 env["OMNI_HOLD_KV_EVICTION"] = "1"
+    if config.kv_eviction_enabled or config.gpu_trace or config.cohort_manifest:
         patch_dir = config.root / "engines" / "conveyor" / "worker" / "engine_patch"
         env["PYTHONPATH"] = os.pathsep.join(
-            filter(None, [str(patch_dir), env.get("PYTHONPATH", "")])
+            filter(None, [str(patch_dir), str(config.root), env.get("PYTHONPATH", "")])
         )
     return env
 
 
 def gateway_command(config: ConveyorConfig) -> list[str]:
-    return [
+    cmd = [
         str(config.gateway_path),
         "--port",
         str(platform.GATEWAY_PORT),
@@ -132,17 +164,31 @@ def gateway_command(config: ConveyorConfig) -> list[str]:
         "--slots",
         str(config.slots),
         "--output-token-cap",
-        str(workload.OUTPUT_TOKEN_CAP),
+        str(config.output_token_cap),
     ]
+    if config.cohort_manifest:
+        cmd.append('--admission')
+    return cmd
 
 
-def gateway_environment(run_dir: Path) -> dict[str, str]:
+def gateway_environment(run_dir: Path, config=None) -> dict[str, str]:
     env = os.environ.copy()
     env["GW_TICKLOG"] = str(run_dir / "gateway_ticks.log")
+    env.pop('GW_SERVICE_EVENTS', None)
+    if config is not None and config.cohort_manifest:
+        env['GW_SERVICE_EVENTS'] = str(run_dir / 'gateway_frames.jsonl')
     return env
 
 
 def client_command(config: ConveyorConfig, run_id: str) -> list[str]:
+    if config.cohort_manifest:
+        return [str(config.worker_python), '-u',
+                str(config.root / 'experiments/conveyor/cohort_client.py'),
+                '--manifest', str(Path(config.cohort_manifest).resolve()),
+                '--uri', f'ws://127.0.0.1:{platform.GATEWAY_PORT}',
+                '--output', str(config.output_root / run_id / '.cohort-client.json'),
+                '--timeout', str(config.duration_s),
+                '--barrier', str(config.sessions if config.capacity_slo else 0)]
     return [
         str(config.worker_python),
         "-u",
@@ -274,7 +320,7 @@ def collect_issues(store: RunStore) -> list[str]:
         engine = manifest_config.get("engine", {})
         if not isinstance(engine, dict):
             engine = {}
-        if engine.get("prefetch", "off") != "off":
+        if engine.get("prefetch", "off") != "off" or engine.get("session_manager"):
             prefetched = 0
             with kv_events_log.open(encoding="utf-8", errors="replace") as handle:
                 for line in handle:
@@ -283,14 +329,64 @@ def collect_issues(store: RunStore) -> list[str]:
                         prefetched += 1
             if not prefetched:
                 issues.append("prefetch enabled but kv_events.log recorded zero prefetch loads")
+    observations = manifest_config.get("observations")
+    observations = observations if isinstance(observations, dict) else {}
+    engine = manifest_config.get("engine")
+    engine = engine if isinstance(engine, dict) else {}
+    if observations.get("gpu_trace"):
+        issues.extend(gpu_activity_issues(
+            store.file("gpu_activity.json"),
+            store.file("transfer_events.jsonl") if engine.get("session_manager") else None))
+    if engine.get("session_manager"):
+        try:
+            transfers = parse_transfer_events(store.file("transfer_events.jsonl"))
+            if any(row["event"] == "error" for row in transfers):
+                issues.append("Session Manager transfer service reported an error")
+            if any(row['event'] == 'plan_review' and not row.get('feasible') for row in transfers):
+                issues.append('admission plan review reported an infeasible forecast')
+            if not any(row["event"] == "published" and row.get("direction") == "H2D" for row in transfers):
+                issues.append("Session Manager recorded no completed H2D copies")
+        except (OSError, ValueError, KeyError, TypeError):
+            issues.append("invalid Session Manager transfer events")
+    admission = manifest_config.get('admission') or {}
+    if not isinstance(admission, dict):
+        issues.append('invalid admission manifest configuration')
+        admission = {}
+    if admission.get('cohort'):
+        try:
+            cohort = json.loads(store.file('client.json').read_text())
+            expected = {row['id'] for row in admission['cohort']}
+            completed = cohort['sessions']
+            if (cohort.get('kind') != 'finite_cohort'
+                    or cohort.get('total') != len(expected)
+                    or cohort.get('completed') != len(expected)
+                    or len(completed) != len(expected)
+                    or {row['id'] for row in completed} != expected
+                    or any(not row.get('completed') or row.get('err') for row in completed)):
+                issues.append('finite cohort did not complete every offered session')
+        except (OSError, ValueError, TypeError, KeyError):
+            issues.append('invalid finite-cohort client result')
+    if manifest_config.get('service_slo'):
+        from infra.trace.service import evaluate_run
+        metrics = evaluate_run(store.path, manifest_config)
+        store.write_json('service_metrics.json', metrics)
+        if metrics['verdict'] != 'pass':
+            issues.append('service SLO ' + metrics['verdict'] + ': ' + '; '.join(metrics['reasons']))
     return issues
+
+
+def trace_control(config, action):
+    return Launch(f'gpu_trace_{action}',
+        (str(config.worker_python), str(config.root / 'engines/conveyor/worker/control.py'),
+         '--address', f'127.0.0.1:{platform.WORKER_PORT}', '--action', f'gpu_trace_{action}'),
+        f'gpu_trace_{action}.log', cwd=config.root)
 
 
 def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
     run_dir = config.output_root / run_id
     ready_file = run_dir / ".worker-ready"
     return RunPlan(
-        experiment=config.experiment_name,
+        experiment='baseline' if config.resident_control else config.experiment_name,
         run_id=run_id,
         root=config.root,
         worker_python=config.worker_python,
@@ -312,7 +408,7 @@ def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
                 tuple(gateway_command(config)),
                 "gateway.log",
                 cwd=config.metronome_root,
-                env=gateway_environment(run_dir),
+                env=gateway_environment(run_dir, config),
             ),
             Launch(
                 "gpu_monitor",
@@ -327,10 +423,13 @@ def plan(config: ConveyorConfig, run_id: str) -> RunPlan:
             "client.txt",
             cwd=config.metronome_root,
         ),
+        before_client=(trace_control(config, 'start'),) if config.gpu_trace else (),
+        after_client=(trace_control(config, 'stop'),) if config.gpu_trace else (),
         client_timeout_s=config.duration_s + CLIENT_WATCHDOG_SLACK_S,
-        client_result=config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json",
+        client_result=(run_dir / '.cohort-client.json' if config.cohort_manifest else
+                       config.metronome_root / "results" / "sustained_fd" / f"{run_id}.json"),
         client_scratch_results=tuple(
-            Path("/tmp") / f"sfd_{index}.json" for index in range(config.client_shards)
+            Path("/tmp") / f"sfd_{index}.json" for index in range(0 if config.cohort_manifest else config.client_shards)
         ),
         required_artifacts=config.required_artifact_names(),
         collect_issues=collect_issues,

@@ -22,7 +22,7 @@ from typing import Any, Callable, Sequence
 
 from infra.env.verify import collect_software
 from infra.run.artifacts import SCHEMA_VERSION, RunStore, utc_now
-from infra.run.probes import collect_git, collect_gpu, collect_host, collect_third_party_pins
+from infra.run.probes import collect_git, collect_gpu, collect_host, collect_third_party_pins, collect_source_patch
 from infra.run.process import ProcessGroup, tail_text
 
 
@@ -71,9 +71,12 @@ class RunPlan:
     required_artifacts: tuple[str, ...] = ()
     collect_issues: Callable[[RunStore], list[str]] = _no_issues
     manifest_extra: dict[str, Any] = field(default_factory=dict)
+    before_client: tuple[Launch, ...] = ()
+    after_client: tuple[Launch, ...] = ()
+    control_timeout_s: int = 300
 
     def launches(self) -> tuple[Launch, ...]:
-        return (self.worker, *self.services, self.client)
+        return (self.worker, *self.services, *self.before_client, self.client, *self.after_client)
 
 
 def build_manifest(plan: RunPlan, argv: Sequence[str]) -> dict[str, Any]:
@@ -115,6 +118,7 @@ def _raise_interrupt(signum, frame):  # pragma: no cover - trivial trampoline
 def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
     """Execute one run and always leave a terminal ``status.json`` behind."""
     manifest = build_manifest(plan, argv)
+    source_patch = collect_source_patch(plan.root) if manifest["git"]["dirty"] else b""
     store = RunStore.create(plan.output_root, plan.run_id, manifest)
     processes = ProcessGroup()
     workflow_issues: list[str] = []
@@ -125,6 +129,9 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
     except ValueError:
         previous_sigterm = None
     try:
+        if source_patch:
+            with store.file("source.patch").open("xb") as handle:
+                handle.write(source_patch)
         store.write_status(
             state="running", phase="worker-startup", started_at=manifest["started_at"]
         )
@@ -134,6 +141,9 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
         )
         for service in plan.services:
             _start(processes, store, service)
+        for control in plan.before_client:
+            if _start(processes, store, control).wait(timeout=plan.control_timeout_s):
+                raise RuntimeError(f"pre-client control failed: {control.name}")
         store.write_status(state="running", phase="client", started_at=manifest["started_at"])
         for scratch in plan.client_scratch_results:
             scratch.unlink(missing_ok=True)
@@ -147,6 +157,14 @@ def execute(plan: RunPlan, argv: Sequence[str]) -> tuple[int, Path]:
             workflow_issues.append(
                 f"client exceeded its {plan.client_timeout_s}s watchdog and was terminated"
             )
+        # Finalizers may stop/export profiling only after the client has
+        # exited. A watchdog failure tears down instead of stopping capture
+        # while a still-live workload continues submitting work.
+        if client.poll() is not None:
+            store.write_status(state="running", phase="finalizing", started_at=manifest["started_at"])
+            for control in plan.after_client:
+                if _start(processes, store, control).wait(timeout=plan.control_timeout_s):
+                    workflow_issues.append(f"post-client control failed: {control.name}")
         missing_scratch = [
             path for path in plan.client_scratch_results if not path.is_file()
         ]

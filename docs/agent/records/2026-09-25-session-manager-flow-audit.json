@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-SESSION-MANAGER-FLOW-AUDIT",
+  "date": "2026-09-25",
+  "question": "What does the current Session Manager actually decouple, and what do feature extraction, loop handoff, admit, mixed encoder/decode steps and realtime mean in the current code?",
+  "configuration_profile": {
+    "runtime": "Installed vLLM 0.23.0 and Transformers 4.57.6; Qwen2.5-Omni snapshot selected by the retained GPU diagnostic manifest",
+    "evidence_selection": "EVIDENCE-SESSION-MANAGER-GPU",
+    "inspection": "Current first-party sources and installed dependency sources; retained-run timestamps; CPU-only processor shape probe with two seconds of zero-valued 16 kHz audio. No new inference run or results directory."
+  },
+  "change": "Audit only; document remaining EngineCore input-plan coupling and exact existing trace endpoint semantics. No runtime or exporter behavior changed.",
+  "result": {
+    "code_confirmed": [
+      "Managed input awaits session_plan utility completion before queue.put; EngineCore processes utility messages between synchronous model iterations.",
+      "Manager timer and CopyService submission/completion progress independently, but active/idle notifications and native D2H/demand-H2D descriptor generation still originate in scheduler lifecycle.",
+      "IS/IE surround all InputProcessor.process_inputs, IE/IR measure thread-to-loop resumption, and IR/IA ends after asynchronous request sending rather than scheduler acceptance.",
+      "The current GPUModelRunner executes multimodal encoding in _preprocess before the shared language-model forward; per-session schedule slices replicate the batch observation interval.",
+      "The custom Go gateway plus gRPC worker uses AsyncLLM.generate with StreamingInput; it does not invoke the installed OpenAIServingRealtime endpoint. Qwen2_5OmniThinkerForConditionalGeneration does not implement SupportsRealtime."
+    ],
+    "processor_shape_probe": {
+      "measurement_kind": "Direct CPU shape observation, not a latency benchmark",
+      "input_samples": 32000,
+      "sampling_rate_hz": 16000,
+      "configured_chunk_length_s": 300,
+      "stft_device": "cpu",
+      "stft_waveform_shape": [1, 4800000],
+      "input_features_shape": [1, 128, 30000],
+      "valid_feature_frames": 200,
+      "mechanism": "HF Qwen processor forces max_length padding; WhisperFeatureExtractor pads to n_samples before STFT and mel computation; the vLLM model processor applies the validity mask after feature computation."
+    },
+    "retained_pipeline_ms": {
+      "measurement_kind": "Measured wall-clock station differences from per_request.log, first normal P and later, complete station tuples, excluding warmup sentinel and preloading; 1 ms source timestamp resolution",
+      "samples": 127,
+      "percentile_method": "median; p95 at sorted index round((n-1)*0.95); includes zero-duration pairs",
+      "IQ_IS": {"p50": 0, "p95": 1, "max": 2},
+      "IS_IE": {"p50": 288, "p95": 462, "max": 637},
+      "IE_IR": {"p50": 0, "p95": 8, "max": 12},
+      "IR_IA": {"p50": 2, "p95": 2, "max": 5}
+    },
+    "mixed_batch_example": {
+      "measurement_kind": "Retained derived Perfetto clock; scheduler observation interval, not isolated GPU encoder duration",
+      "start_s": 42.013,
+      "end_s": 42.093,
+      "prefill_encoder_session": 4,
+      "prefill_scheduled_tokens": 64,
+      "decode_sessions": [8, 1, 2, 3],
+      "shared_interval_ms": 80
+    }
+  },
+  "verdict": "diagnostic",
+  "evidence": ["EVIDENCE-SESSION-MANAGER-GPU", "EVIDENCE-SESSION-MANAGER-FLOW-AUDIT"],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "No nested processor timing or CPU sampling profile: padding is verified extra work but its fraction of observed input processing latency is not measured; no speedup claim.",
+    "No isolated encoder timing for the 80 ms mixed batch; GPU kernel ownership is at the batch/request-set level.",
+    "Plan-utility wait lacks its own request-correlated start/end events; P-to-F also contains worker scheduling and queueing.",
+    "No new validation of full model-history equivalence, deadline-aware scheduling or automatic compute/transfer budget planning."
+  ]
+}

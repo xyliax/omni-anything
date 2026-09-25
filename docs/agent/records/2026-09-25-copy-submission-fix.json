@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-COPY-SUBMISSION-FIX",
+  "date": "2026-09-25",
+  "question": "Why does CPU copy submission delay useful H2D bandwidth, and does coalesced bounded submission remove the measured gap?",
+  "configuration_profile": {
+    "model": "Qwen2.5-Omni-7B audio-input Thinker-only",
+    "device": "Shared RTX 3090; another idle SGLang process retained about 3.8 GiB",
+    "sessions": 4,
+    "slots": 4,
+    "period_s": 2,
+    "output_cap": 25,
+    "duration_s": 16,
+    "initial_context_tokens": 4096,
+    "retained_prefix_blocks": 128,
+    "gpu_kv_gib": 2,
+    "host_kv_gib": 3,
+    "gpu_memory_utilization": 0.75,
+    "max_model_len": 8192,
+    "max_num_seqs": 8,
+    "primary_comparison_gpu_profiler": false,
+    "diagnostic_gpu_capture_s": 4
+  },
+  "change": [
+    "Coalesce only adjacent source and target physical ranges, submit at most 128 descriptors per batch.",
+    "Pair fresh unassigned GPU targets and host sources in physical order, then bind original content hashes; preserve logical request order through prefix lookup.",
+    "Keep short asynchronous driver and event calls under the GIL; no stream/device synchronize.",
+    "Record descriptor counts, first batch return, host wall/thread CPU and actual CUPTI activity separately."
+  ],
+  "result": {
+    "serving": {
+      "native": {
+        "bytes_range": [
+          117440512,
+          149553152
+        ],
+        "submission_ms": {
+          "n": 31,
+          "p50": 10.840654373168945,
+          "p95": 14.34779167175293,
+          "max": 14.401912689208984
+        },
+        "thread_ms": {
+          "n": 31,
+          "p50": 10.845138999999726,
+          "p95": 14.352871999999905,
+          "max": 14.408215000000002
+        },
+        "descriptors_range": [
+          3584,
+          4564
+        ]
+      },
+      "optimized": {
+        "bytes_range": [
+          117440512,
+          149553152
+        ],
+        "submission_ms": {
+          "n": 31,
+          "p50": 2.1123886108398438,
+          "p95": 4.117727279663086,
+          "max": 4.123926162719727
+        },
+        "thread_ms": {
+          "n": 31,
+          "p50": 2.114131999999991,
+          "p95": 4.118990999999905,
+          "max": 4.1251440000000805
+        },
+        "descriptors_range": [
+          56,
+          504
+        ],
+        "first_batch_ms": {
+          "n": 31,
+          "p50": 0.6513539701700211,
+          "p95": 1.046629622578621,
+          "max": 1.0943394154310226
+        }
+      },
+      "profile": {
+        "bytes_range": [
+          117440512,
+          150470656
+        ],
+        "submission_ms": {
+          "n": 28,
+          "p50": 2.1660327911376953,
+          "p95": 3.7221908569335938,
+          "max": 4.65703010559082
+        },
+        "thread_ms": {
+          "n": 28,
+          "p50": 2.1677314999999364,
+          "p95": 3.725569000000206,
+          "max": 4.658315999999996
+        },
+        "descriptors_range": [
+          84,
+          644
+        ],
+        "first_batch_ms": {
+          "n": 28,
+          "p50": 0.7185600697994232,
+          "p95": 0.9228792041540146,
+          "max": 0.9430740028619766
+        },
+        "gpu": [
+          {
+            "transfer_id": 26,
+            "bytes": 117440512,
+            "submit_to_gpu_ms": 1.2254714965820312,
+            "active_dma_ms": 9.559618,
+            "device_span_ms": 9.55963134765625
+          },
+          {
+            "transfer_id": 30,
+            "bytes": 120193024,
+            "submit_to_gpu_ms": 1.043081283569336,
+            "active_dma_ms": 9.782565,
+            "device_span_ms": 9.782552719116211
+          },
+          {
+            "transfer_id": 33,
+            "bytes": 119275520,
+            "submit_to_gpu_ms": 1.325845718383789,
+            "active_dma_ms": 9.706787,
+            "device_span_ms": 9.706735610961914
+          },
+          {
+            "transfer_id": 36,
+            "bytes": 118358016,
+            "submit_to_gpu_ms": 1.0635852813720703,
+            "active_dma_ms": 9.662915000000002,
+            "device_span_ms": 9.662866592407227
+          },
+          {
+            "transfer_id": 38,
+            "bytes": 121110528,
+            "submit_to_gpu_ms": 1.178741455078125,
+            "active_dma_ms": 9.872388,
+            "device_span_ms": 9.8724365234375
+          }
+        ]
+      }
+    },
+    "root_cause": "Per-block per-layer native descriptors impose host submission work. Reverse-order free targets prevented coalescing until fresh target assignment was reordered. In actual native serving wall and thread CPU are almost equal; GIL reacquisition is a separately demonstrated amplification path, not a claim that the real 10–12 ms gap was all scheduler waiting.",
+    "microprobe": {
+      "physical_bytes": 117440512,
+      "original_descriptors": 3584,
+      "coalesced_descriptors": 28,
+      "original_driver_ms": 2.84,
+      "coalesced_driver_ms": 0.036,
+      "original_stream_event_ms": 12.39,
+      "coalesced_stream_event_ms": 9.58,
+      "busy_python_thread_original_launch_ms": 55.66,
+      "busy_python_thread_optimized_launch_ms": 0.606,
+      "scope": "Isolated synthetic-buffer controlled perturbations, not serving throughput."
+    },
+    "focus_transfer": {
+      "id": 26,
+      "queued_to_submit_ms": 0.267744,
+      "submit_wall_ms": 1.458645,
+      "queued_to_published_ms": 12.708664,
+      "descriptors": 84
+    },
+    "validation": {
+      "root_pytest": "115 passed, 3 skipped, 28 subtests passed",
+      "cpu_test_environment": "LC_ALL=C.UTF-8 avoids unrelated Conda readline import crash under unavailable en_HK.UTF-8 locale",
+      "cuda_roundtrip": "Explicit multi-layer fragmented physical KV roundtrip passed",
+      "runs": "Terminal success and valid validation; every retained raw hash checked; both retained patches pass git apply --check against manifest commit"
+    }
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-COPY-SUBMISSION-FIX",
+    "EVIDENCE-PREFETCH-SUBMISSION-AUDIT"
+  ],
+  "affects_findings": [
+    "FINDING-T1",
+    "FINDING-T2"
+  ],
+  "supersedes": [
+    "RECORD-2026-09-25-PREFETCH-SUBMISSION-AUDIT"
+  ],
+  "remaining_uncertainty": [
+    "One paired diagnostic, not repeated formal performance; old faulty raw directory removed per user discipline.",
+    "No universal zero-delay launch guarantee; future fragmentation, contention and larger workload domains require calibration.",
+    "GPU capture covers a finite window; profiler stop still perturbs execution and is disabled for capacity runs."
+  ]
+}

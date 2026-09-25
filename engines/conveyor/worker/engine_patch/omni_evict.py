@@ -215,7 +215,7 @@ def apply() -> None:
 
     EngineCore.initial_context_finalize = initial_context_finalize
 
-    if _retained_prefix:
+    if _retained_prefix and not os.environ.get("OMNI_SESSION_MANAGER"):
         _original_stopped = Scheduler._handle_stopped_request
 
         def _handle_stopped_request(self, request):

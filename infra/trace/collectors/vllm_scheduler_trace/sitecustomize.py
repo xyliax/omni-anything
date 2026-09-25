@@ -40,6 +40,7 @@ import os
 import sys
 import time
 import traceback
+from contextlib import nullcontext
 
 
 TRACE_ENV = "OMNI_SCHEDULER_TRACE"
@@ -113,7 +114,7 @@ if trace_path or residency_path:
             if fields:
                 _residency.write(f"{now:.6f} {' '.join(fields)}\n")
 
-        def _traced_schedule(self):
+        def _record_schedule(self):
             output = _original_schedule(self)
             if _trace is not None:
                 try:
@@ -136,6 +137,10 @@ if trace_path or residency_path:
                 except Exception as error:
                     _report_error("residency", error)
             return output
+
+        def _traced_schedule(self):
+            with getattr(self, "_omni_lock", nullcontext()):
+                return _record_schedule(self)
 
         Scheduler.schedule = _traced_schedule
     except Exception as error:

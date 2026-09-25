@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-24-SESSION-MANAGER-GPU",
+  "date": "2026-09-24",
+  "question": "Can per-session eviction/restoration and copy progress be separated from model steps, with actual GPU copy timing and byte attribution?",
+  "configuration_profile": {
+    "model": "Qwen2.5-Omni-7B audio input, Thinker-only",
+    "device": "RTX 3090 GPU index 3",
+    "runtime": "locked vLLM 0.23 worker environment",
+    "sessions": [
+      2,
+      8
+    ],
+    "duration_s": 30,
+    "initial_context_tokens_requested": 4096,
+    "retained_prefix_blocks": 128,
+    "restore_lead_s": 0.15,
+    "gpu_trace_seconds_requested": 8,
+    "source_role": "dirty diagnostic; per-run source.patch retained"
+  },
+  "change": [
+    "Independent SessionManager timer/event loop and CopyService H2D/D2H streams; guarded scheduler/pool mutation without holding the lock during model execution.",
+    "Per-session logical block ranges and eviction caps; eviction intersects confirmed host coverage with exclusive GPU references; in-flight copies own source/destination references until completion.",
+    "Gateway planned tick/period metadata and utility plan handoff; native demand and incremental store descriptors dispatched before model execution.",
+    "Raw CUPTI kernel/memcpy activities, CPU transfer control events, actual payload bytes, and CUDA/Kineto attribution in Perfetto.",
+    "After an eight-session failure, separated load/store callback request tuples; reverse-order bidirectional completion regression added."
+  ],
+  "result": {
+    "two_session_smoke": {
+      "terminal": "success",
+      "evictions": 30,
+      "published_h2d": 28,
+      "published_d2h": 90,
+      "captured_kv_copies": 29,
+      "captured_byte_mismatches": 0
+    },
+    "eight_session_before_fix": {
+      "terminal": "failed",
+      "cause": "load completion used the store request list when both directions were dispatched together; scheduler status assertion"
+    },
+    "eight_session_after_fix": {
+      "terminal": "success",
+      "validation_issues": [],
+      "evictions": 102,
+      "published_h2d": 97,
+      "published_d2h": 298,
+      "gpu_activities": 117482,
+      "gpu_kernels": 111826,
+      "captured_h2d": 26,
+      "captured_d2h": 75,
+      "captured_byte_mismatches": 0
+    },
+    "smoke_h2d_example": {
+      "transfer_id": 16,
+      "bytes": 116523008,
+      "gpu_activity_ms": 9.525,
+      "cpu_queued_to_published_ms": 23.585,
+      "interpretation": "Different intervals for the same transfer; these are rounded measured values under profiling, not a speedup or peak-link measurement."
+    },
+    "verification": [
+      "All three retained raw artifact sets match status hashes; source.patch applies to each manifest base revision.",
+      "CPU regression suite includes timer progress without model steps, physical reference accounting, range/budget selection, host coverage gaps, sharing, capacity deferral, cancellation, bidirectional callbacks and trace attribution/bytes.",
+      "Opt-in physical GPU test: multilayer discontiguous D2H/H2D roundtrip is bit-exact and preserves non-target destinations; copy byte accounting matches tensor geometry.",
+      "Go gateway builds and go test ./... passes (no package test files).",
+      "Paper make check attempted; latexmk is not installed on this machine."
+    ]
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-SESSION-MANAGER-GPU",
+    "EVIDENCE-SESSION-MANAGER-CALLBACK-FAILURE"
+  ],
+  "affects_findings": [
+    "FINDING-T1"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Joint admission/bandwidth/space budget solver and growth-plan revision are not implemented; fixed lead time is a supplied execution plan.",
+    "Late input may cause duplicate demand recovery; byte-correct copy tests do not prove full retained-history or model-output equivalence.",
+    "No calibrated profiler overhead or matched capacity/SLO result; output buffers and native input handling retain prior limitations.",
+    "The profiler logs an external callback thread warning; observed memcpy/kernel activities are validated, but complete activity coverage is not assumed.",
+    "Short runs do not cover long-run capacity exhaustion, all cancellation timings or injected CUDA failures."
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-CAPACITY-TOOLCHAIN",
+  "date": "2026-09-25",
+  "question": "Does the paired finite-horizon stable-concurrency harness track real input completion, and do twelve sessions occupy four three-member groups?",
+  "configuration_profile": {
+    "type": "Functional GPU check, not performance evaluation",
+    "model": "Qwen2.5-Omni-7B audio-input Thinker-only",
+    "gpu": "Shared RTX 3090",
+    "concurrency": 12,
+    "slots": 4,
+    "resident_slots": 4,
+    "seed": 11,
+    "period_s": 2,
+    "output_cap": 25,
+    "session_duration_s": 14,
+    "warmup_s": 4,
+    "horizon_s": 6,
+    "window_s": 2,
+    "max_miss_ratio": 0.01,
+    "max_lag_periods": 1,
+    "max_consecutive_late": 2,
+    "gpu_kv_gib": 1,
+    "host_kv_gib": 2,
+    "admission_profile": {
+      "horizon_s": 6,
+      "compute_s": 0.08,
+      "initial_blocks": 16,
+      "growth_blocks_per_period": 6,
+      "max_evict_blocks": 8,
+      "h2d_blocks_per_s": 2000,
+      "d2h_blocks_per_s": 2000,
+      "transfer_overhead_s": 0.002,
+      "safety_s": 0.01,
+      "gpu_reserve_blocks": 16,
+      "host_reserve_blocks": 16,
+      "max_sessions": 3
+    },
+    "profile_limit_override": "max_sessions set to target concurrency; costs are deliberately uncalibrated functional inputs",
+    "gpu_profiler": false
+  },
+  "change": [
+    "Fixed sample-count frames with input identity spanning gateway, worker and actual EngineCore model completion.",
+    "Source-clock input readiness fixes deadlines independently of delayed arrival/release; missing and never-submitted frames remain in denominator.",
+    "Admission barrier, full drain, per-session sliding miss/lag checks and explicit pass/fail/invalid classification.",
+    "Paired matched_resident_control shares worker, gateway and schedule settings while removing all KV offload; it is not unchanged Metronome.",
+    "Capacity CLI performs fresh-worker repeated paired sweeps and reports maximum tested stable with a tested failure bracket.",
+    "Planner reserves sum of full group member eviction ceilings in a shared window; actual safe amount can grow to cap. Late first input retains initial backing reservation."
+  ],
+  "result": {
+    "runs": {
+      "RUN-CAPACITY-RESIDENT-CHECK": {
+        "completed": 12,
+        "errors": 0,
+        "group_sizes": {
+          "0": 3,
+          "1": 3,
+          "3": 3,
+          "2": 3
+        },
+        "metrics": {
+          "completion_latency": {
+            "completed_samples": 36,
+            "p50_ms": 721.40531,
+            "p95_ms": 1819.838269,
+            "p99_ms": 1819.915514
+          },
+          "first_missed_deadline_ns": null,
+          "frames": 36,
+          "horizon_s": 6,
+          "metric": "engine-observed compute completion by next planned release",
+          "miss_ratio": 0.0,
+          "misses": 0,
+          "observation_end_ns": 1790313790244638654,
+          "observation_start_ns": 1790313784244638654,
+          "reasons": [],
+          "schema_version": 1,
+          "target_concurrency": 12,
+          "verdict": "pass"
+        },
+        "source_revision": "e3ee5bfef921730a73b9bdac2255d09135702661"
+      },
+      "RUN-CAPACITY-PILARIUS-CHECK": {
+        "completed": 12,
+        "errors": 0,
+        "group_sizes": {
+          "0": 3,
+          "1": 3,
+          "3": 3,
+          "2": 3
+        },
+        "metrics": {
+          "completion_latency": {
+            "completed_samples": 36,
+            "p50_ms": 738.796944,
+            "p95_ms": 763.614144,
+            "p99_ms": 857.027455
+          },
+          "first_missed_deadline_ns": null,
+          "frames": 36,
+          "horizon_s": 6,
+          "metric": "engine-observed compute completion by next planned release",
+          "miss_ratio": 0.0,
+          "misses": 0,
+          "observation_end_ns": 1790313851548279575,
+          "observation_start_ns": 1790313845548279575,
+          "reasons": [],
+          "schema_version": 1,
+          "target_concurrency": 12,
+          "verdict": "pass"
+        },
+        "source_revision": "e3ee5bfef921730a73b9bdac2255d09135702661"
+      }
+    },
+    "aggregate": "Both systems pass the one tested point; no next tested failure, so no capacity maximum established.",
+    "regressions": "115 root tests passed, 3 skipped, 28 subtests passed; includes Go race tests, reverse free-queue/hash mapping, full-ceiling group admission, dropped input/deadline immutability and invalid-boundary checks."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-CAPACITY-TOOLCHAIN-CHECK"
+  ],
+  "affects_findings": [
+    "FINDING-T3"
+  ],
+  "supersedes": [
+    "RECORD-2026-09-25-EVALUATION-READINESS"
+  ],
+  "remaining_uncertainty": [
+    "Formal costs and SLO must be frozen; no high-pressure long-duration multi-seed capacity matrix has been run.",
+    "General heterogeneous re-planning and group-wide restoration allocation are not implemented by this bounded per-session policy.",
+    "Native variable-length duplex audio output requires separate termination/delivery events; this check is fixed-cap Thinker-only.",
+    "Temporary functional-check directories and dependent aggregate removed under user retention discipline."
+  ]
+}

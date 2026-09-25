@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-PROFILE-SCHEDULING-GAP",
+  "date": "2026-09-25",
+  "question": "Does the apparent pause near Perfetto second 50 represent a runtime failure or a profiling artifact?",
+  "configuration_profile": {
+    "evidence_selection": "Successful eight-session diagnostic within EVIDENCE-SESSION-MANAGER-GPU",
+    "model": "Qwen2.5-Omni-7B audio input, Thinker-only",
+    "source_role": "Retrospective analysis of retained dirty diagnostic with source.patch; no new model run"
+  },
+  "change": [
+    "Name GPU streams by explicitly attributed compute/copy role, retain original CUDA identifiers in event details, and keep unattributed copies distinct from KV copies.",
+    "Add named immutable presentation variants, Perfetto/input clock selection, and navigation to the largest business-phase CPU scheduling observation gap."
+  ],
+  "result": {
+    "measurement_kind": "Measured timestamps from the retained diagnostic; derived Perfetto clock with the recorded global shift",
+    "first_periodic_input_perfetto_s": 39.745,
+    "consecutive_schedule_records_perfetto_s": [47.789, 52.023],
+    "schedule_record_gap_s": 4.234,
+    "last_observed_gpu_activity_perfetto_s": 47.869748221028075,
+    "terminal": "success, validation valid",
+    "observations": [
+      "Scheduler records resume after the gap; worker output-token progress also resumes.",
+      "No new device activities are available after the captured range; GPU blank space cannot establish device idleness.",
+      "Source retained in source.patch synchronously stops the profiler and exports raw JSON from EngineCore utility processing. This is a blocking path at the capture boundary."
+    ],
+    "inference": "The scheduling gap is consistent with profiler finalization blocking EngineCore. This trace alone does not separate CUDA synchronization, profiler stop, trace processing and file export costs, or establish that every part of the gap has that cause."
+  },
+  "verdict": "diagnostic",
+  "evidence": ["EVIDENCE-SESSION-MANAGER-GPU"],
+  "affects_findings": ["FINDING-T1"],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "No independent stop/export timestamps or matched unprofiled replay in this retained evidence; attribution remains an inference.",
+    "Presentation changes do not remove synchronous profiler finalization overhead.",
+    "Existing profiler callback-thread warning and activity coverage limits remain; no performance or model-output correctness upgrade."
+  ]
+}

@@ -389,6 +389,12 @@ numactl --cpunodebind=0 --membind=0 ./nvbandwidth -d -b 512 -i 10 -t host_to_dev
 
 以下保留已登记原型的配置与诊断解释。运行前核验可执行配置、实际路径和 run manifest；旧登记状态不证明新设计已实现。证据与比较资格见 [已有证据](findings.md#evidence-scope)。
 
+<a id="machine-migration"></a>
+新机器部署和实际运行检查命令由 [环境操作入口](../infra/env/AGENTS.md#new-machine-setup) 持有。该检查复用锁定依赖，检测实际 GPU、模型文件、物理复制与会话生命周期；不把换卡功能通过当成成本标定或正式容量结论。
+
+<a id="finite-cohort-runner"></a><a id="stable-concurrency-runner"></a><a id="copy-submission-experiment"></a>
+旧诊断工具包括有限 cohort、带显式 SLO 的配对并发扫描及 copy 提交实现对照，命令见 [runner 操作说明](../experiments/conveyor/AGENTS.md)。它们仍使用有限前瞻成本 profile、排队或准入后开始播放等历史语义，尚未完整实现前文最大上下文、开放到达与拒绝协议；不得直接作为本轮正式评估入口。后续代码对齐以前，已有成功运行只按 Findings 中的诊断范围解释。
+
 <a id="configuration-domains"></a><a id="measured-stack"></a>
 ### 已登记原型配置
 
@@ -412,11 +418,15 @@ numactl --cpunodebind=0 --membind=0 ./nvbandwidth -d -b 512 -i 10 -t host_to_dev
 | 默认会话数 | 8 | 默认配置点 |
 | 默认运行时长 | 600 s | 有限观测期限 |
 | 输入 | 20 ms PCM chunks 按周期累计 | offered input |
-| 输出上限 M | 25 | harness 与消费上限；worker 差异见下表 |
+| 输出上限 M | 25 | 每周期预算、first-party worker 每段生成上限与交付上限一致；音频编码长度仍随输入变化 |
 | `CONTEXT_GROWTH_TOKENS_PER_PERIOD` | 78 | 当前容量分析配置常数，非已确认净保留增长；定义差异（FINDING-E4）见 [已有证据](findings.md#diagnostic-appendix-fairness-and-measurement) 执行成本诊断 |
 | 每 token KV 大小 | 56 KiB | 当前模型与精度的 KV 大小与布局 |
 
 可执行常量位于 `experiments/shared/workload.py`、`model.py` 与 `platform.py`。实际分词、生成和保留历史需要分别记录；恢复重算工作也另计。
+
+默认 cohort 输入由各条目 seed 生成确定性 PCM 噪声，用于系统负载与生命周期验证，不是双人对话数据集。`audio_path` 可指定真实 WAV，来源、采样、长度、offset 与 seed 记录在 cohort manifest。真实模型执行与合成输入须分别说明；固定噪声实验不能支持对话质量或真实交互分布的结论。
+
+平台由 runner 在启动时记录实际 GPU 名称、UUID、显存和驱动，不能由默认 GPU 索引推定设备。当前实现依赖 Linux/NVIDIA CUDA、BF16 与锁定 vLLM 私有接口；copy descriptor 的字节和 stride 来自实际 tensors。换卡须重新检查运行环境、可用 KV pool、计算/传输成本 profile 与并发 SLO，不沿用旧设备标定值作为服务保证。
 
 <a id="executed-decode-difference"></a>
 ### 生成工作量差异
@@ -424,12 +434,51 @@ numactl --cpunodebind=0 --membind=0 ./nvbandwidth -d -b 512 -i 10 -t host_to_dev
 | 登记系统 | 代码来源/用途 | worker 生成上限 | 其他需匹配的差异 |
 | --- | --- | --- | --- |
 | Upstream Metronome | 只读上游 pin，来源参照 | 上游行为 | 输入处理、runtime 与观测不同 |
-| matched Metronome baseline | 默认 paringest，对比候选 | M+8 | 默认调度、输出等待与 connector 行为 |
+| matched Metronome baseline | 默认 paringest，对比候选 | M | 默认调度、输出等待与 connector 行为 |
 | Pilarius | 机制原型 | M | 同步调度、无等待 Step、主机 connector |
 
-登记路径中的两个 first-party worker 均使用 `ignore_eos=True`，正常路径运行到不同 cap；模型长度边界和异常仍可能提前停止。Pilarius 即使关闭逐出也建立主机 offload connector；登记 baseline 没有同等同步调度配置接口。生成与保留规则影响状态增长，调度及输出等待影响计算成本，失败处理影响统计样本。修正差异后须重新采集公平对照。
+当前两个 first-party worker 的每段输入与流结束参数均使用同一输出预算，不再增加额外生成余量。二者均使用 `ignore_eos=True`；模型长度边界和异常仍可能提前停止，上限不构成最低交付要求。初始上下文预加载的单 token 输出属于测量前初始化，不计入周期交付。生成计算可以提前完成，周期节拍限制持续生产和消费的量；该预算不是音频编码长度或实测语音播放速率。
+
+两个 first-party worker 还共用 `engines/audio_features.py`：对重采样后的本次音频，仅补齐到覆盖 STFT 右边界且对齐 hop 的长度，不超过模型原始输入上限。输入长度随实际缓冲变化，不硬截为名义周期。比较前后须检查有效特征、音频 token 数和初始化路径；带显式长度、归一化或 dither 的其他调用保持上游行为。该修正属于实现优化，不是 KV 研究机制；旧长窗口前处理运行不作为修正后性能点。
+
+历史 baseline 使用更高生成上限的旧运行不因当前代码修正而成为公平对照，须重新采集。Pilarius 即使关闭逐出也建立主机 offload connector；登记 baseline 没有同等同步调度配置接口。生成与保留规则影响状态增长，调度及输出等待影响计算成本，失败处理影响统计样本，仍须分别控制。
 
 登记的 Pilarius 接口包括 gateway `--slots`、`--retained-prefix-blocks`、诊断用 `--evict-tail-blocks`、`--prefetch push` 和 `sync_scheduling`。它们不直接等于上文全部消融组；历史实现审计限制见 [已有证据](findings.md#implementation-audit-boundaries)，当前路径须在运行前核验。
+
+新增执行配置为 `--session-manager --retained-prefix-blocks K --restore-lead-s L`。该路径关闭 fixed-tail timer 与 legacy push prefetch，强制同步 scheduler；`L` 必须是周期内的正数。gateway 通过 gRPC metadata 传递计划下一 tick 与周期，缺少 metadata 的 managed input 会被拒绝。每会话区间与块数预算可由 `session_plan` utility 设置，当前 CLI 对各会话使用相同保留前缀；自动预算求解不在此配置内。
+
+`--gpu-trace` 自动启用普通 trace，覆盖完整业务运行：客户端启动前完成 capture 启动，客户端结束后才停止并导出。没有按秒截断的选项；默认关闭以免影响主要性能测量。具体 artifact 集合以 `experiments/conveyor/config.py` 及 manifest 为准。启动与收尾控制属于 runner 生命周期，不能在有业务输入时执行 profiler 导出。
+
+不传 `--gpu-trace` 时不启动 CUPTI/PyTorch GPU capture，`--trace` 可单独开启 CPU 日志。两者都不传也仍有运行状态、KV/transfer 日志以及 copy 正确性所需的 CUDA events/query；关闭 profiler 不等于删除异步完成依赖或保证零观测开销。正式容量实验须以统一的轻量完成指标计量，再用独立诊断 run 解释设备活动。
+
+<a id="candidate-model-integration"></a>
+### 候选模型接入：MiniCPM-o 4.5
+
+模型选择通过 `--model-preset qwen25_omni|minicpm_o45` 完成；`experiments/shared/model.py` 分别锁定权重 revision、输入适配器和 BF16 KV geometry，`engines/model_inputs.py` 持有音频 placeholder 与流式追加模板。共享 worker、准入、manager 和 copy 后端保持同一执行入口，配对容量工具也传递相同 preset。MiniCPM 的实际验证状态由 findings 与 evidence 持有，配置可选不等于所有模式均通过验收。
+
+第二模型验证入口为 [FINDING-T6](findings.md#finding-t6) 和 `EVIDENCE-MINICPM-PERIOD-BUDGET`；首个模型的长程分组与完整业务 GPU 观测分别由 FINDING-T4、FINDING-T5 持有。两种模型均未据这些诊断获得正式容量结论。
+
+本机锁定 vLLM 的 `model_executor/models/minicpmo.py` 已有 `MiniCPMO4_5` 分派和音频输入实现，其权重加载路径跳过 `tts`。MiniCPM 前处理使用单实例 Whisper 代理按输入长度限制补零；不修改共享 extractor，也不套用 Qwen placeholder。Session Manager adapter 仍依赖同步 UniProc、单 KV group 和 vLLM 私有生命周期接口。因此新模型除 preset 与输入适配器外，必须核对实际 KV layout 和流式生命周期；不承诺任意模型只改 ID 即可运行。
+
+当前第二模型接入目标是相同周期、固定文本预算的机制控制实验，不是原生双工模式。MiniCPM 的每周期上下文增长不沿用 Qwen 配置常数，需从实际编码、生成与保留历史测量。`--max-model-len`、`--max-num-seqs`、`--gpu-memory-utilization`、`--enforce-eager` 与 `--max-num-batched-tokens` 是显式记录的运行配置；不能为不同实验组暗中改变它们。
+
+每周期文本生成预算由 `experiments/shared/workload.py` 按模型选择，worker 生成、gateway 下发/交付和 manifest 共用同一数值；同一模型的 Pilarius 与 matched resident control 保持一致。当前选择如下，属于实验工作量配置，不是模型的硬性输出限制：
+
+| 模型 preset | 周期 | 每周期文本 token 预算 | 选择依据 |
+| --- | --- | --- | --- |
+| `qwen25_omni` | 2 秒 | 25 | 保留已确认的固定工作量 |
+| `minicpm_o45` | 2 秒 | 8 | [技术报告 §2](https://arxiv.org/html/2604.27393v1#S2)报告正常语速约每秒 3–4 次文本 decode，取上端每秒 4 个，乘以当前周期 |
+
+若修改周期，必须重新选择预算并记录；不能继续使用旧周期的每秒工作量解释。音频编码长度仍随输入变化。旧的第二模型接入诊断使用不同文本预算，其执行时间不作为当前配置的性能对照。
+
+| 接入目标 | 可复用部分 | 需要落实的适配与验证 |
+| --- | --- | --- |
+| 音频输入、主干文本输出的第二模型 | 已安装 vLLM 模型类；符合相同 KV/执行约束时的 manager 策略与 copy 后端 | model profile 与 revision、模板/processor、KV 几何、流式追加语义、采样/完成与初始化；逐块内容一致和多周期恢复验证 |
+| 原生语音双工 | [官方模型卡](https://huggingface.co/openbmb/MiniCPM-o-4_5)的 duplex 接口；[vLLM-Omni 示例](https://github.com/vllm-project/vllm-omni/blob/main/examples/online_serving/minicpmo/README.md)与[双工设计](https://github.com/vllm-project/vllm-omni/blob/main/docs/design/fullduplex.md) | 多阶段音频输出、长期 session/epoch/turn/取消及历史保留；对接各 KV owner 和最后访问/可逐出事件，重新校验 runtime patch 及异步生命周期 |
+
+上游 MiniCPM-o duplex 具有自己的周期决策和 streaming prefill/generate 接口；其 native 模式不能通过当前 Qwen 的固定预算 text-only 工作量模拟后就宣称已支持。vLLM-Omni 上游已有对应 duplex 服务路径，但本地未安装，也不属于现有环境锁；选择固定版本并隔离环境验证，不能静默升级当前 vLLM 环境或假定上游默认并发/内存预算就是容量上限。
+
+建议适配边界：model profile 持有模型与 processor、周期及输出语义；runtime adapter 提供 session/epoch、KV 几何、块分配、最后访问、主机覆盖和恢复完成；manager 消费这些事件与计划，不解析模型专有 token。首先验证上游 native 单会话，再在相同执行路径上接入全驻留和管理组，之后验证多会话、取消和逐出/恢复。语音 decoder/vocoder 等常驻开销及状态都计入资源预算；只管理主干 KV 时须明确其覆盖范围。参考实现存在滑动、压缩或截断时，两组保持同一保留语义，不能为制造容量优势单方关闭。
 
 <a id="initial-context-preloading"></a>
 ### 初始上下文预加载

@@ -16,7 +16,7 @@ in-flight speculative iteration could still write a block being evicted.
 This measured Qwen2.5-Omni path returns Thinker text tokens only. It does not
 run Talker/Code2Wav or produce PCM audio.
 """
-import argparse, asyncio, logging, os, sys, threading, time
+import argparse, asyncio, json, logging, os, sys, threading, time
 from concurrent import futures
 from pathlib import Path
 
@@ -33,6 +33,8 @@ import inference_pb2 as pb
 import inference_pb2_grpc as pb_grpc
 
 from infra.trace.collectors.worker_obs import perreq_logger, stat_logger_classes
+from infra.trace.collectors.service_events import emit as service_event
+from engines.model_inputs import audio_adapter
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [stream-worker] %(message)s")
 log = logging.getLogger("stream-worker")
@@ -50,7 +52,7 @@ _pev = perreq_logger()
 
 _INGEST_POOL = None
 
-def _patch_parallel_ingest(workers=8):
+def _patch_parallel_ingest(workers=8, model_family="qwen25_omni"):
     """Replace AsyncLLM._add_streaming_input_request with a copy whose per-chunk
     process_inputs is offloaded to a thread pool (sole change vs upstream 0.23)."""
     global _INGEST_POOL
@@ -60,7 +62,13 @@ def _patch_parallel_ingest(workers=8):
     from vllm.renderers.inputs.preprocess import extract_prompt_components
     from vllm.v1.engine.async_llm import AsyncLLM, InputStreamError
     from vllm.v1.engine.output_processor import RequestOutputCollector
+    from engines.audio_features import install_bounded_audio_padding
 
+    if model_family == "qwen25_omni":
+        install_bounded_audio_padding()
+    elif model_family == "minicpm_o45":
+        from engines.audio_features import install_minicpm_bounded_audio_padding
+        install_minicpm_bounded_audio_padding()
     _INGEST_POOL = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="ingest")
 
     async def _add_streaming_input_request(self, request_id, input_stream, sampling_params,
@@ -91,8 +99,10 @@ def _patch_parallel_ingest(workers=8):
             #   IR back on the loop · IA admitted to the engine
             sid = request_id[1:request_id.index("e")] if request_id.startswith("s") else request_id
             cancelled = False
+            frame = -int(bool(os.environ.get('OMNI_SERVICE_PRELOAD')))
             try:
                 async for input_chunk in input_stream:
+                    frame += 1
                     sp = input_chunk.sampling_params
                     if sp:
                         self._validate_streaming_input_sampling_params(sp)
@@ -118,6 +128,7 @@ def _patch_parallel_ingest(workers=8):
                     prompt_text, _, _ = extract_prompt_components(
                         self.model_config, input_chunk.prompt)
                     await self._add_request(req, prompt_text, None, 0, queue)
+                    service_event('engine_input', sid, frame)
                     _pev("IA", sid)
             except (asyncio.CancelledError, GeneratorExit):
                 cancelled = True
@@ -136,19 +147,20 @@ def _patch_parallel_ingest(workers=8):
     log.info("PARALLEL-INGEST patch applied: per-chunk process_inputs -> ThreadPoolExecutor(%d)",
              workers)
 
-# Qwen2.5-Omni audio chat template. Frame 1 opens the assistant turn after an instruction so the
-# model emits a REAL response (not chat-template filler); later frames append more audio. The
-# trailing newline after each audio placeholder avoids the mrope boundary (belt + FIX4).
-HEAD = "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n"
-APH = "<|audio_bos|><|AUDIO|><|audio_eos|>"
-INSTR = " Listen to the audio and answer any question in it."
-ASST = "<|im_end|>\n<|im_start|>assistant\n"
-TRAIL = "\n"
+
+def terminal_audio(arr, sample_rate, minimum_ms=40):
+    """Retain a tiny final fragment; Qwen needs enough frames for one embedding.
+
+    This declared input adapter appends at most 40 ms of silence, never drops
+    the tail and never reintroduces the old long feature-extraction window.
+    """
+    minimum = (sample_rate * minimum_ms + 999) // 1000
+    return np.pad(arr, (0, minimum - len(arr))) if len(arr) < minimum else arr
 
 
 class Session:
     __slots__ = ("queue", "tokens", "text", "consumed", "consumed_text", "frame",
-                 "done", "error", "task")
+                 "done", "error", "task", "runner_task", "closing", "pushes", "push_lock", "ending", "drained", "received")
 
     def __init__(self):
         self.queue: asyncio.Queue = asyncio.Queue()
@@ -160,6 +172,13 @@ class Session:
         self.done = False
         self.error = None
         self.task = None
+        self.runner_task = None
+        self.closing = False
+        self.pushes = set()
+        self.push_lock = asyncio.Lock()
+        self.ending = False
+        self.drained = False
+        self.received = 0
 
 
 class StreamingEngine:
@@ -168,12 +187,13 @@ class StreamingEngine:
     def __init__(self, model, gpu_mem, max_model_len, max_num_seqs, output_token_cap,
                  max_audio_chunks, initial_context_tokens=0, kv_pool_gib=None, host_offload_gib=24.0,
                  evict_tail_blocks=0, eviction_delay_s=1.2, sync_scheduling=False,
-                 prefetch="off"):
+                 prefetch="off", model_family='qwen25_omni', enforce_eager=False, max_num_batched_tokens=None):
         from vllm import SamplingParams
         from vllm.config import KVTransferConfig
         from vllm.engine.arg_utils import AsyncEngineArgs
         from vllm.v1.engine.async_llm import AsyncLLM
         self.SamplingParams = SamplingParams
+        self.input_adapter = audio_adapter(model_family)
         self.output_token_cap = output_token_cap
         self.initial_context_tokens = initial_context_tokens
         self.evict_tail_blocks = evict_tail_blocks
@@ -186,7 +206,10 @@ class StreamingEngine:
         self.prefetch = prefetch == "push"
         self.prefetch_refused_why: dict = {}
         self.prefetch_error = 0
+        self.managed = bool(os.environ.get("OMNI_SESSION_MANAGER") or os.environ.get('OMNI_RESIDENT_ONLY'))
         self.sessions: dict[int, Session] = {}
+        self.closed_sessions = set()
+        self.close_futures = {}
         self.loop = asyncio.new_event_loop()
         self.thr = threading.Thread(target=self._loop_forever, daemon=True)
         self.thr.start()
@@ -197,11 +220,17 @@ class StreamingEngine:
             kv_connector_extra_config={"cpu_bytes_to_use": int(host_offload_gib * (1 << 30))})
         engine_kwargs = dict(
             model=model, trust_remote_code=True, gpu_memory_utilization=gpu_mem,
-            max_model_len=max_model_len, enforce_eager=False, max_num_seqs=max_num_seqs,
+            max_model_len=max_model_len, enforce_eager=enforce_eager, max_num_seqs=max_num_seqs,
+            dtype='bfloat16',
             limit_mm_per_prompt={"audio": max_audio_chunks, "image": 0},
             enable_prefix_caching=True,
             kv_transfer_config=kv_xfer,
             mm_processor_cache_gb=0)   # cache off: no cross-thread LRU mutation (hits ~absent anyway)
+        if max_num_batched_tokens is not None:
+            engine_kwargs['max_num_batched_tokens'] = max_num_batched_tokens
+        if os.environ.get('OMNI_RESIDENT_ONLY'):
+            engine_kwargs.pop('kv_transfer_config')
+            engine_kwargs['async_scheduling'] = False
         if kv_pool_gib is not None:   # optional exact-byte pool cap (smoke test / pinned budget)
             engine_kwargs["kv_cache_memory_bytes"] = int(kv_pool_gib * (1 << 30))
         if sync_scheduling or evict_tail_blocks or os.environ.get("OMNI_KV_EVICTION"):
@@ -214,7 +243,7 @@ class StreamingEngine:
             # guard refuses it). Trade pipeline throughput for exactness here.
             engine_kwargs["async_scheduling"] = False
         args = AsyncEngineArgs(**engine_kwargs)
-        _patch_parallel_ingest(workers=int(os.environ.get("INGEST_WORKERS", "8")))
+        _patch_parallel_ingest(workers=int(os.environ.get("INGEST_WORKERS", "8")), model_family=model_family)
         fut = asyncio.run_coroutine_threadsafe(self._make_engine(args), self.loop)
         self.engine = fut.result()
         log.info("AsyncLLM streaming engine ready (model=%s)", model)
@@ -233,10 +262,13 @@ class StreamingEngine:
 
     # ---- per-session resident resumable request (unbounded append-to-resident-KV) ----
     async def _run_session(self, sid: int, st: Session):
+        if st.closing:
+            return
+        st.runner_task = asyncio.current_task()
         from vllm.engine.protocol import StreamingInput
         # base_sp only governs the stream-end flush request (never a live
         # segment; per-segment caps are set on each StreamingInput below).
-        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap + 8, ignore_eos=True)
+        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap, ignore_eos=True)
         async def gen():
             # Initial-context preloading grows every session before measurement.
             # Per-session unique text prevents cross-session prefix deduplication.
@@ -250,7 +282,7 @@ class StreamingEngine:
                 filler = " ".join(_r.choice(_vocab) for _ in range(int(self.initial_context_tokens / 1.6)))  # ~1.6 tok/word measured
                 _pev("INITCTX", sid, self.initial_context_tokens)
                 yield StreamingInput(
-                    prompt={"prompt": HEAD + f"[context {sid}] " + filler + INSTR + ASST},
+                    prompt={"prompt": self.input_adapter.preload(f"[context {sid}] " + filler)},
                     sampling_params=self.SamplingParams(temperature=0.0, max_tokens=1,
                                                         ignore_eos=True))
             # stream chunks (append-to-resident-KV, context grows unbounded)
@@ -261,8 +293,7 @@ class StreamingEngine:
                 arr, sr = item
                 st.frame += 1
                 _pev("F", sid, st.frame)
-                prompt = (HEAD + APH + INSTR + ASST) \
-                    if (st.frame == 1 and not self.initial_context_tokens) else (APH + TRAIL)
+                prompt = self.input_adapter.prompt(st.frame == 1 and not self.initial_context_tokens)
                 # This harness sets max_tokens to the configured per-period
                 # output cap. It is an upper bound, not a required delivery
                 # amount or a measured audio playback rate.
@@ -301,25 +332,39 @@ class StreamingEngine:
         return st
 
     # ---- sync Step bridge: push the new chunk, take whatever the previous slice produced ----
-    def step(self, sid_audio: dict, output_token_cap: int) -> tuple[dict, float]:
+    def step(self, sid_audio: dict, output_token_cap: int, cadence=None, frame_ids=None) -> tuple[dict, float]:
         t0 = time.perf_counter()
         out = {}      # sid -> (tokens, text_delta)
         for sid, (arr, sr) in sid_audio.items():
+            if sid in self.closed_sessions:
+                continue  # late Step must never recreate an ended session
             st = self._ensure(sid)
-            asyncio.run_coroutine_threadsafe(st.queue.put((arr, sr)), self.loop)
+            st.received += 1
+            if frame_ids is not None and sid < WARMUP_SID:
+                if frame_ids.get(str(sid)) != st.received:
+                    raise ValueError(f'input identity gap for session {sid}')
+                service_event('input_received', sid, st.received)
+            if self.managed and sid < WARMUP_SID:
+                if cadence is None:
+                    raise ValueError("Session Manager requires planned next-tick metadata")
+                asyncio.run_coroutine_threadsafe(self._managed_push(sid, st, arr, sr, cadence), self.loop)
+            else:
+                asyncio.run_coroutine_threadsafe(st.queue.put((arr, sr)), self.loop)
             _pev("P", sid)
             if self.prefetch and sid < WARMUP_SID:
-                # push-triggered: issue the prefetch NOW so the
-                # CPU->GPU copy overlaps this chunk's feature extraction
-                # (~70ms copy inside the ~270ms FE window, FINDING-H5).
+                # Issue push prefetch alongside input processing. The shorter
+                # bounded feature extraction is not guaranteed to hide H2D.
                 asyncio.run_coroutine_threadsafe(self._prefetch_after_push(sid), self.loop)
             if self.evict_tail_blocks and sid < WARMUP_SID:   # warmup sentinel never evicts KV
                 asyncio.run_coroutine_threadsafe(self._evict_after(sid), self.loop)
-            # One snapshot per field: the loop thread REBINDS st.tokens/st.text
-            # (never mutates), so each read below is a consistent list/str.
-            # Cursors advance by exactly what this delivery took — re-reading
-            # the live fields here would let a concurrent update mark tokens
-            # or text as consumed that were never delivered.
+        return self.collect_output(sid_audio, output_token_cap), (time.perf_counter() - t0) * 1000.0
+
+    def collect_output(self, session_ids, output_token_cap):
+        out = {}
+        for sid in session_ids:
+            st = self.sessions.get(sid)
+            if st is None:
+                continue
             tokens, text = st.tokens, st.text
             if len(tokens) > st.consumed:
                 new = tokens[st.consumed: st.consumed + output_token_cap]
@@ -327,7 +372,54 @@ class StreamingEngine:
                 out[sid] = (new, delta)
                 st.consumed += len(new)
                 st.consumed_text += len(delta)
-        return out, (time.perf_counter() - t0) * 1000.0
+        return out
+
+    def end_input(self, sid):
+        st = self.sessions.get(sid)
+        if st is None or st.ending:
+            return
+        st.ending = True
+        asyncio.run_coroutine_threadsafe(self._drain_input(sid, st), self.loop)
+
+    async def _drain_input(self, sid, st):
+        while not st.closing:
+            if not st.pushes and st.queue.empty():
+                result = await self.engine.engine_core.call_utility_async('session_drained', f's{sid}e1')
+                expected = st.frame * self.output_token_cap + int(bool(self.initial_context_tokens))
+                # EngineCore completion can precede frontend output delivery.
+                # This fixed-cap harness must observe the final output too.
+                if result['drained'] and len(st.tokens) >= expected:
+                    st.drained = True
+                    return
+            await asyncio.sleep(.01)
+
+    async def _managed_push(self, sid, st, arr, sr, cadence):
+        task = asyncio.current_task()
+        st.pushes.add(task)
+        try:
+            async with st.push_lock:
+                if st.closing:
+                    return
+                period_s, next_tick = cadence
+                await self.engine.engine_core.call_utility_async(
+                    "session_plan", f"s{sid}e1", period_s, next_tick,
+                    float(os.environ["OMNI_RESTORE_LEAD_S"]),
+                    int(os.environ["OMNI_RETAINED_PREFIX_BLOCKS"]))
+                if os.environ.get('OMNI_ADMISSION_PROFILE') or os.environ.get('OMNI_RESIDENT_ONLY'):
+                    while not st.closing:
+                        result = await self.engine.engine_core.call_utility_async(
+                            'session_ready', f's{sid}e1', str(next_tick))
+                        if result['ready']:
+                            break
+                        await asyncio.sleep(.01)
+                if not st.closing:
+                    await st.queue.put((arr, sr))
+        except Exception as exc:
+            st.error = f"Session Manager input failed: {exc!r}"
+            log.error("session %s ended: %s", sid, st.error)
+            st.done = True
+        finally:
+            st.pushes.discard(task)
 
     async def _prefetch_after_push(self, sid: int):
         """Issue ``prefetch_kv`` without blocking the service RPC.
@@ -368,16 +460,60 @@ class StreamingEngine:
             self.eviction_refused_why[reason] = self.eviction_refused_why.get(reason, 0) + 1
 
     def cancel(self, sid: int):
-        st = self.sessions.pop(sid, None)
+        self.begin_cancel(sid).result(timeout=8)
+        self.finish_cancel(sid)
+
+    def begin_cancel(self, sid: int):
+        self.closed_sessions.add(sid)
+        if sid not in self.close_futures:
+            st = self.sessions.get(sid)
+            if st is not None:
+                st.closing = True
+            self.close_futures[sid] = asyncio.run_coroutine_threadsafe(
+                self._close_session(sid, st), self.loop)
+        # The gateway retains its admission reservation until this succeeds.
+        # A timeout leaves the same close task running for an idempotent retry.
+        return self.close_futures[sid]
+
+    def finish_cancel(self, sid):
+        self.sessions.pop(sid, None)
+        self.close_futures.pop(sid, None)
+
+    async def _close_session(self, sid, st):
         if st is not None:
-            asyncio.run_coroutine_threadsafe(st.queue.put(None), self.loop)
+            for task in list(st.pushes):
+                task.cancel()
+            if st.pushes:
+                await asyncio.gather(*list(st.pushes), return_exceptions=True)
+            if st.runner_task is not None:
+                st.runner_task.cancel()
+                await asyncio.gather(st.runner_task, return_exceptions=True)
+            elif st.task is not None:
+                st.task.cancel()
+        await self.engine.abort(f's{sid}e1')
+        if self.managed:
+            while True:
+                result = await self.engine.engine_core.call_utility_async('session_release', f's{sid}e1')
+                if result['released']:
+                    break
+                await asyncio.sleep(.01)
+        if st is not None:
+            st.done = True
+
+    def admit(self, sid, period_s, slots, epoch):
+        if sid in self.closed_sessions:
+            raise ValueError('closed session identity')
+        future = asyncio.run_coroutine_threadsafe(
+            self.engine.engine_core.call_utility_async(
+                'session_admit', f's{sid}e1', period_s, slots, epoch), self.loop)
+        return future.result(timeout=8)
 
     def num_unfinished(self) -> int:
         return sum(1 for s in self.sessions.values() if not s.done)
 
     def finished(self, sid: int) -> bool:
         st = self.sessions.get(sid)
-        return bool(st and st.done)
+        return sid in self.closed_sessions or bool(st and (st.done or (st.drained and st.consumed >= len(st.tokens))))
 
     def total_tokens(self) -> int:
         return sum(len(s.tokens) for s in self.sessions.values())
@@ -398,8 +534,44 @@ class Servicer(pb_grpc.InferenceServicer):
         self.lock = threading.Lock()
 
     def Step(self, request, context):
+        metadata = dict(context.invocation_metadata())
+        control = metadata.get('x-pilarius-control')
+        if control in ('gpu_trace_start', 'gpu_trace_stop'):
+            try:
+                if not os.environ.get('OMNI_GPU_ACTIVITY') or request.sessions:
+                    raise ValueError('capture control requires configured capture and no input')
+                future = asyncio.run_coroutine_threadsafe(
+                    self.eng.engine.engine_core.call_utility_async(control), self.eng.loop)
+                future.result(timeout=280)
+                return pb.StepResponse()
+            except Exception as exc:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION, str(exc))
+        if control in ('admit', 'close'):
+            try:
+                if len(request.sessions) != 1:
+                    raise ValueError('control operation requires one session')
+                sid = request.sessions[0].sid
+                if control == 'admit':
+                    if not self.eng.managed:
+                        raise ValueError('admission requires managed mode')
+                    result = self.eng.admit(
+                        sid,
+                        int(metadata['x-pilarius-period-ns']) / 1e9,
+                        int(metadata['x-pilarius-slots']),
+                        int(metadata['x-pilarius-epoch-ns']) / 1e9)
+                    context.send_initial_metadata((('x-pilarius-admission', json.dumps(result)),))
+                    return pb.StepResponse()
+                with self.lock:
+                    close = self.eng.begin_cancel(sid)
+                close.result(timeout=8)  # never hold the Step lock across DMA drain
+                with self.lock:
+                    self.eng.finish_cancel(sid)
+                return pb.StepResponse(outputs=[pb.SessionOutput(sid=sid, finished=True)])
+            except Exception as exc:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION, str(exc))
         with self.lock:
             output_token_cap = int(request.tokens_per_tick or 1)
+            ending_ids = {int(sid) for sid in metadata.get('x-pilarius-ending-sids', '').split(',') if sid}
             cont = {}
             all_sids = []
             for s in request.sessions:
@@ -409,12 +581,32 @@ class Servicer(pb_grpc.InferenceServicer):
                 if s.audio_pcm16:
                     arr = np.frombuffer(s.audio_pcm16, dtype="<i2").astype("float32")
                     arr *= (1.0 / 32768.0)
-                    cont[s.sid] = (arr.copy(), int(s.sample_rate or 16000))
+                    sample_rate = int(s.sample_rate or 16000)
+                    if s.sid in ending_ids:
+                        arr = terminal_audio(arr, sample_rate, getattr(getattr(self.eng, "input_adapter", None), "min_audio_ms", 40))
+                    cont[s.sid] = (arr.copy(), sample_rate)
             outs, lat = ({}, 0.0)
             if cont:
-                outs, lat = self.eng.step(cont, output_token_cap)
+                cadence = None
+                if self.eng.managed:
+                    metadata = dict(context.invocation_metadata())
+                    try:
+                        cadence = (int(metadata["x-pilarius-period-ns"]) / 1e9,
+                                   int(metadata["x-pilarius-next-tick-ns"]) / 1e9)
+                    except (KeyError, ValueError):
+                        context.abort(grpc.StatusCode.INVALID_ARGUMENT, "missing or invalid planned tick metadata")
+                frame_ids = json.loads(metadata['x-pilarius-frame-ids']) if os.environ.get('OMNI_SERVICE_EVENTS') else None
+                outs, lat = self.eng.step(cont, output_token_cap, cadence, frame_ids)
+            # End follows the last staged input; an empty poll never creates
+            # another model update. Delivery remains capped once per tick.
+            for sid in ending_ids:
+                self.eng.end_input(sid)
+            outs.update(self.eng.collect_output([sid for sid in all_sids if sid not in cont], output_token_cap))
             resp = pb.StepResponse(gpu_ms=float(lat))
             for sid in all_sids:
+                st = self.eng.sessions.get(sid)
+                if st is not None and st.error:
+                    context.abort(grpc.StatusCode.INTERNAL, st.error)
                 tk, txt = outs.get(sid, ([], ""))
                 toks = [int(t) for t in tk]
                 resp.outputs.append(pb.SessionOutput(sid=sid, tokens=toks, text=txt,
@@ -453,6 +645,9 @@ def main():
     # is a second source of truth that silently drifts.
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
+    ap.add_argument('--model-family', choices=('qwen25_omni', 'minicpm_o45'), default='qwen25_omni')
+    ap.add_argument('--enforce-eager', action='store_true')
+    ap.add_argument('--max-num-batched-tokens', type=int)
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--gpu-mem", type=float, required=True)
     ap.add_argument("--max-model-len", type=int, required=True)
@@ -505,7 +700,8 @@ def main():
                           evict_tail_blocks=args.evict_tail_blocks,
                           eviction_delay_s=args.eviction_delay_s,
                           sync_scheduling=args.sync_scheduling,
-                          prefetch=args.prefetch)
+                          prefetch=args.prefetch, model_family=args.model_family,
+                          enforce_eager=args.enforce_eager, max_num_batched_tokens=args.max_num_batched_tokens)
     # warm: one short session so JIT/CUDA-graph cost is paid before advertising ready.
     # Step no longer waits for tokens, so poll the sentinel session until it produced one.
     try:

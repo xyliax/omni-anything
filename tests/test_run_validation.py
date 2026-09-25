@@ -7,11 +7,14 @@ output amount below the configured cap remains a diagnostic observation.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from experiments.baseline.runner import collect_issues as baseline_issues
@@ -44,6 +47,18 @@ class IssueScanTestCase(unittest.TestCase):
 
 
 class ConveyorIssueScanTests(IssueScanTestCase):
+    def test_finite_cohort_requires_every_offered_identity_to_finish(self):
+        import json
+        self.write('manifest.json', json.dumps({'config': {'admission': {'cohort': [{'id': 'a'}, {'id': 'b'}]}}}))
+        result = {'kind': 'finite_cohort', 'total': 2, 'completed': 1, 'err': 0,
+                  'sessions': [{'id': 'a', 'completed': True, 'err': 0}]}
+        self.write('client.json', json.dumps(result))
+        self.assertIn('finite cohort did not complete every offered session', conveyor_issues(self.store))
+        result['sessions'].append({'id': 'b', 'completed': True, 'err': 0})
+        result['completed'] = 2
+        self.write('client.json', json.dumps(result))
+        self.assertEqual(conveyor_issues(self.store), [])
+
     def test_healthy_run_yields_no_issues(self) -> None:
         self.write("worker.log", "2026-08-13 [stream-worker] step 8: 8 sessions, 3ms\n")
         self.write("gateway.log", "2026/08/13 [conveyor-gateway] WS on :8907\n")
@@ -267,6 +282,89 @@ class InitialContextFixTests(unittest.TestCase):
             spec = importlib.util.spec_from_file_location("engine_fix_under_test", ENGINE_FIX)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
+
+
+class StreamingOutputBudgetTests(unittest.TestCase):
+    """Exercise the worker -> streaming-engine sampling-parameter boundary."""
+
+    def test_every_segment_and_stream_end_use_the_delivery_budget(self) -> None:
+        async def exercise(worker, cap, initial_context_tokens):
+            submitted = []
+            defaults = []
+
+            class Engine:
+                async def generate(self, stream, sampling_params, request_id):
+                    defaults.append(sampling_params)
+                    async for item in stream:
+                        submitted.append(item)
+                        yield SimpleNamespace(outputs=[SimpleNamespace(token_ids=[], text="")])
+
+            engine = worker.StreamingEngine.__new__(worker.StreamingEngine)
+            engine.SamplingParams = SimpleNamespace
+            engine.engine = Engine()
+            engine.output_token_cap = cap
+            engine.initial_context_tokens = initial_context_tokens
+            if hasattr(worker, "audio_adapter"):
+                engine.input_adapter = worker.audio_adapter(family)
+            state = SimpleNamespace(queue=asyncio.Queue(), frame=0, error=None, done=False, closing=False)
+            # Unequal input lengths must not change the output budget.
+            audio = [([0.0] * 4, 16000), ([0.0] * 12, 16000)]
+            for item in (*audio, None):
+                state.queue.put_nowait(item)
+            await engine._run_session(1, state)
+            self.assertIsNone(state.error)
+            self.assertTrue(state.done)
+            self.assertEqual([p.max_tokens for p in defaults], [cap])
+            expected = ([1] if initial_context_tokens else []) + [cap, cap]
+            self.assertEqual([item.sampling_params.max_tokens for item in submitted], expected)
+            self.assertTrue(all(item.sampling_params.ignore_eos for item in submitted))
+            self.assertEqual([item.prompt["multi_modal_data"]["audio"]
+                              for item in submitted[-2:]], audio)
+
+        # Load the actual workers without importing CUDA or opening a gRPC server.
+        dependencies = {
+            "grpc": SimpleNamespace(),
+            "numpy": SimpleNamespace(),
+            "inference_pb2": SimpleNamespace(),
+            "inference_pb2_grpc": SimpleNamespace(InferenceServicer=object),
+            "vllm.engine.protocol": SimpleNamespace(StreamingInput=SimpleNamespace),
+        }
+        for system, family in (("baseline", None), ("conveyor", "qwen25_omni"), ("conveyor", "minicpm_o45")):
+            with mock.patch.dict(sys.modules, dependencies), mock.patch.object(sys, "path", sys.path[:]), \
+                    mock.patch.dict(os.environ):
+                os.environ.pop("PERREQ_LOG", None)
+                path = ROOT / "engines" / system / "worker" / "stream_server.py"
+                spec = importlib.util.spec_from_file_location(f"budget_test_{system}", path)
+                worker = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(worker)
+                for cap in (25, 7):
+                    for initial_context_tokens in (0, 32):
+                        with self.subTest(system=system, family=family, cap=cap, initial_context=initial_context_tokens):
+                            asyncio.run(exercise(worker, cap, initial_context_tokens))
+
+    def test_initial_context_stop_limit_is_replaced_by_the_period_budget(self) -> None:
+        class Scheduler:
+            def _update_request_as_session(self, session, update):
+                if update is not None:
+                    session.sampling_params = update.sampling_params
+                # Mimic the upstream bug: max_tokens stays at its initial value.
+
+        with mock.patch.dict(sys.modules, {
+            "vllm.v1.core.sched.scheduler": SimpleNamespace(Scheduler=Scheduler),
+        }), mock.patch.dict(os.environ, {"OMNI_SESSION_MAXTOKENS_FIX": "1"}):
+            os.environ.pop("OMNI_SCHEDULER_TRACE", None)
+            os.environ.pop("OMNI_RESIDENCY_LOG", None)
+            spec = importlib.util.spec_from_file_location("budget_test_engine_fix", ENGINE_FIX)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            session = SimpleNamespace(max_tokens=1)
+            scheduler = Scheduler()
+            for cap in (25, 25, 7):
+                scheduler._update_request_as_session(
+                    session, SimpleNamespace(sampling_params=SimpleNamespace(max_tokens=cap)))
+                self.assertEqual(session.max_tokens, cap)
+            scheduler._update_request_as_session(session, None)
+            self.assertEqual(session.max_tokens, 7)
 
 
 class WarmupSentinelTests(unittest.TestCase):

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-PREVIOUS-TRACE-RESIDENCY",
+  "date": "2026-09-25",
+  "question": "After the user confirmed the previous trace, did session 1 and session 2 evict simultaneously around Perfetto seconds 46.2–46.4?",
+  "configuration_profile": {
+    "evidence_selection": "EVIDENCE-SESSION-MANAGER-GPU",
+    "selection_correction": "The prior audit measured EVIDENCE-AUDIO-FEATURES-BOUNDED. Its exact timestamps and interval statistics do not describe the trace selected by the user.",
+    "model": "Qwen2.5-Omni-7B audio input, Thinker-only; eight sessions with Session Manager",
+    "kv_log_period_s": 0.2,
+    "clock": "Recovered preview uses first periodic input as zero. Add 39.745 seconds from RECORD-2026-09-25-PROFILE-SCHEDULING-GAP to obtain the previous Perfetto clock."
+  },
+  "change": "Evidence selection correction only; no runtime, sampler or retained result changed.",
+  "result": {
+    "recovered_source": {
+      "kind": "Temporary base64-gzip JSON payload used by the previous HTML preview",
+      "sha256": "f7241937fd5de72fb284165860add05bbbcc447329bac3fb0170a9ea08f8d162",
+      "identity_checks": [
+        "Embedded run_id matches the exact run resolved by EVIDENCE-SESSION-MANAGER-GPU.",
+        "117482 GPU activities match the earlier run record.",
+        "Last GPU activity at relative 8.124748221028076 seconds matches the previously recorded Perfetto endpoint after adding the recorded clock offset."
+      ],
+      "availability": "Selected event rows retained below; obsolete temporary preview assets removed after this audit. Original residency.log and full Perfetto counters were already removed under the results retention policy."
+    },
+    "recovered_eviction_events": [
+      {
+        "session": 1,
+        "relative_s": 6.399,
+        "perfetto_s": 46.144,
+        "name": "KV EVICT -138 blocks",
+        "args": {"owned_before": 267, "evicted": 138, "host_backed": 138, "pool_usage_drop": 0.0302}
+      },
+      {
+        "session": 2,
+        "relative_s": 6.548,
+        "perfetto_s": 46.293,
+        "name": "KV EVICT -141 blocks",
+        "args": {"owned_before": 270, "evicted": 141, "host_backed": 141, "pool_usage_drop": 0.0308}
+      }
+    ],
+    "eviction_event_separation_ms": 149,
+    "supporting_scheduler_observations": {
+      "session_1_last_schedule_start_before_eviction_perfetto_s": 46.116,
+      "session_2_subsequent_decode_schedule_starts_perfetto_s": [46.142, 46.169, 46.194, 46.218, 46.242, 46.266],
+      "scope": "CPU scheduler observations from the recovered preview, not GPU kernel completion timestamps."
+    },
+    "confirmed": "The previous trace contains distinct eviction events 149 ms apart. The embedded configuration specifies a 200 ms minimum residency sampling interval.",
+    "inference": "Schedule-triggered snapshots assign all sessions the same observation timestamp and can collapse these distinct mutations onto one counter update. This explains the reported appearance, but the precise old counter sample cannot be verified from the recovered preview."
+  },
+  "verdict": "diagnostic",
+  "evidence": ["EVIDENCE-SESSION-MANAGER-GPU", "EVIDENCE-PREVIOUS-TRACE-RESIDENCY-AUDIT"],
+  "affects_findings": [],
+  "supersedes": ["RECORD-2026-09-25-RESIDENCY-SAMPLING-AUDIT"],
+  "remaining_uncertainty": [
+    "Supersedes only the previous audit's applicability to the user-selected trace; that audit's measurements remain observations of the newer run.",
+    "Recovered event timestamps have millisecond resolution. The original raw logs and source patch are unavailable; the temporary derived payload is not a replacement for independently verifiable raw evidence.",
+    "Per-session residency samples are absent from the recovered preview, so the exact joint-drop timestamp and this run's actual sampling-interval distribution cannot be recomputed.",
+    "This identifies a sampling limitation and two separate eviction events; it does not establish general eviction correctness or implement finer residency accounting."
+  ]
+}

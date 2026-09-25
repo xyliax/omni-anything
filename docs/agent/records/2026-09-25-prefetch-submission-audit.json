@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-PREFETCH-SUBMISSION-AUDIT",
+  "date": "2026-09-25",
+  "question": "Why does a roughly 22 ms CPU prefetch window contain only 9.57 ms of GPU memcpy, and why does GPU capture end near Perfetto second 48?",
+  "configuration_profile": {
+    "evidence_selection": "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+    "source_role": "Read-only analysis of hash-verified retained raw artifacts; no new serving run",
+    "focus": {
+      "session": 6,
+      "transfer_id": 43,
+      "direction": "H2D"
+    },
+    "capture_seconds": 8.0,
+    "business_seconds": 30
+  },
+  "change": [
+    "English GPU stream labels and decode/prefill event names without sched prefixes.",
+    "Preserve CPU timing identity in an explicit timing_scope property; profile routing and gap detection use this property.",
+    "Only encoder-bearing prefill records carry the +encoder label.",
+    "Regenerate Perfetto and HTML in the english-labels presentation variant; remove superseded presentation artifacts after validation, retain all raw evidence."
+  ],
+  "result": {
+    "focus_transfer": {
+      "physical_bytes": 117440512,
+      "gpu_copy_bytes": 117440512,
+      "blocks": 128,
+      "window_display_ms": 22,
+      "raw_L_to_R_ms": 22.789955,
+      "gpu_memcpy_ms": 9.569854,
+      "before_gpu_ms": 11.906624,
+      "after_gpu_to_R_ms": 1.313448,
+      "L_to_queued_ms": 0.205517,
+      "queued_to_submission_start_ms": 0.164986,
+      "submission_call_ms": 12.004614,
+      "gpu_end_to_observed_ms": 1.008034,
+      "observed_to_R_ms": 0.305414,
+      "cuda_event_interval_ms": 20.765535354614258,
+      "raw_L_epoch": 1790298905.952246,
+      "raw_R_epoch": 1790298905.975036,
+      "raw_gpu_ts_us": 7331117964152.458,
+      "raw_gpu_base_ns": 1782967788000000000,
+      "interpretation": "Most excess wall time precedes device memcpy and lies in host submission, not the CopyService queue or the completion callback. Submission overlaps the start of DMA; do not add submission duration and full DMA duration as disjoint phases."
+    },
+    "submission_localization": {
+      "path": "CudaCopyBackend.launch -> vllm.v1.simple_kv_offload.cuda_mem_ops.copy_blocks -> _batch_memcpy_fn (cuMemcpyBatchAsync)",
+      "runtime_source_sha256": "887d927d590e509a13fc129275c1108522f56c79fb797b9e23f119d6e0929183",
+      "measured_host_gap_ms": 11.362416,
+      "gap_scope": "Between return of start cudaEventRecordWithFlags and the next cudaStreamIsCapturing before the end event; surrounds descriptor preparation and the batch-copy call.",
+      "CPU_preparation_probe": {
+        "method": "Same installed copy_blocks with _batch_memcpy_fn replaced by a no-op; synthetic 128-block descriptors, total 917504 bytes per block, 30 warmups then 100 samples; no CUDA transfer or allocation. Does not replay the original thread schedule.",
+        "28_segments_p50_ms": 0.043113,
+        "28_segments_max_ms": 0.064648,
+        "56_segments_p50_ms": 0.0561585,
+        "56_segments_max_ms": 0.083718
+      },
+      "post_capture_observation": "Host submission remains millisecond-scale after capture ends; examples transfer 187: 14.694 ms for 148635648 bytes and transfer 192: 14.567 ms for 150470656 bytes. Different sizes and conditions, not a controlled profiler on/off comparison.",
+      "inference": "Small descriptor-construction cost supports batch-copy submission or scheduling within that call as the dominant remaining candidate. Existing capture omits a cuMemcpyBatchAsync CPU API span, so driver processing, profiling overhead and host scheduling cannot be separately quantified."
+    },
+    "capture": {
+      "first_input_perfetto_s": 40.071,
+      "observed_gpu_perfetto_s": [
+        40.201322622299195,
+        48.19277192804968
+      ],
+      "raw_capture_bytes": 173352887,
+      "stop_path": "Worker _capture_gpu_activity awaits gpu_trace_start, sleeps the configured eight seconds, then calls gpu_trace_stop. EngineCore utility synchronously calls profiler.stop and export_chrome_trace.",
+      "consecutive_schedule_records_perfetto_s": [
+        48.109,
+        52.759
+      ],
+      "schedule_gap_s": 4.65,
+      "interpretation": "The endpoint is a configured short diagnostic window, not a CUDA tracing limit or GPU idle boundary. Stopping inside the business phase perturbs serving; this run does not provide full-run GPU coverage."
+    },
+    "validation": {
+      "raw_artifact_hashes": "all verified against successful status.json",
+      "unit_tests": "79 passed, 2 skipped, 23 subtests passed",
+      "render": "Chromium loaded local HTML without page errors; three English GPU lanes, eight CPU scheduler lanes, decode/prefill colors and gap detection verified",
+      "event_preservation": "All 136563 events preserve pid/tid/ph/time/duration; GPU bytes and attribution unchanged."
+    }
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-AUDIO-FEATURES-BOUNDED",
+    "EVIDENCE-PREFETCH-SUBMISSION-AUDIT"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "The raw profiler has no CPU cuMemcpyBatchAsync duration. The root is localized to submission, but attributing its whole wall interval solely to CUDA driver execution would exceed the evidence.",
+    "The CPU preparation probe is not an isolated serving replay or a performance finding. No GPU replay was started while all devices were occupied.",
+    "No runtime copy optimization or full-business GPU capture was implemented; presentation changes do not remove profiler-stop overhead."
+  ]
+}

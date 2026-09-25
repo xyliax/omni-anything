@@ -15,16 +15,18 @@ import gzip
 import hashlib
 import io
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
 from .bundle import ROOT, build_bundle, resolve_run
 from .parse import is_prefill
+from .gpu_activity import stream_labels
 
 
 TRACE_NAME = "timeline.trace.json.gz"
 METADATA_NAME = "timeline.trace.metadata.json"
-METADATA_SCHEMA_VERSION = 7
+METADATA_SCHEMA_VERSION = 10
 # Fallback duration for the final or isolated engine step (median decode step).
 DEFAULT_STEP_S = 0.021
 SEGMENT_GAP_S = 0.5
@@ -81,14 +83,16 @@ class TraceBuilder:
         duration_s: float,
         name: str,
         args: dict[str, Any] | None = None,
+        *,
+        precise: bool = False,
     ) -> None:
         self.events.append(
             {
                 "ph": "X",
                 "pid": pid,
                 "tid": tid,
-                "ts": self.micros(start_s),
-                "dur": max(self.micros(duration_s), 1),
+                "ts": start_s * 1_000_000 if precise else self.micros(start_s),
+                "dur": duration_s * 1_000_000 if precise else max(self.micros(duration_s), 1),
                 "name": name,
                 "args": args or {},
             }
@@ -146,9 +150,8 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
 
     HONESTY BOUNDARY: the lanes render the SCHEDULING timeline — each slice
     spans consecutive schedule() calls and is labeled with the batch content.
-    In steady state that width numerically equals the GPU execution time; at
-    transitions (around prefills) it does not, and no execution timestamps
-    exist in the evidence (FINDING-F3: never draw beyond the instrument).
+    This interval can contain CPU work and waits, including in steady state.
+    Device execution is rendered separately when CUPTI evidence is present.
     """
     steps = bundle.get("steps") or []
     if not steps:
@@ -168,13 +171,11 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                 # shape; anything larger is either initial-context preloading or a
                 # partially evicted/evicted region being RECOMPUTED instead of reloaded —
                 # flag it so a broken reload path shows on the timeline.
-                name = (
-                    f"sched prefill LARGE ({tokens} tokens)"
-                    if tokens > LARGE_PREFILL_TOKENS
-                    else f"sched prefill+encoder ({tokens} tokens)"
-                )
+                phase = "prefill+encoder" if encoder else "prefill"
+                size = " LARGE" if tokens > LARGE_PREFILL_TOKENS else ""
+                name = f"{phase}{size} ({tokens} tokens)"
             else:
-                name = "sched decode"
+                name = "decode"
             builder.slice(
                 1,
                 session,
@@ -182,6 +183,7 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                 duration,
                 name,
                 {
+                    "timing_scope": "CPU scheduler observation",
                     "tokens": tokens,
                     "encoder": bool(encoder),
                     "batch": len(entries),
@@ -225,12 +227,10 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                         {"ms": round((end - start) * 1000, 1)},
                     )
 
-    # KV management on the session lanes (kv_events.log, exact epoch alignment):
-    # a KV EVICT instant releases the session's grip and destroys its tail; the
-    # following "KV reload" slice is the CPU->GPU window on resume
-    # (WAITING_FOR_REMOTE_KVS admission -> completion). A reload slice that
-    # pushes into the compute slice — or a LARGE prefill instead of a reload —
-    # is the mechanism failing on-screen.
+    # L/R delimit scheduler-observed windows, not DMA execution. Demand R is
+    # emitted when the scheduler promotes the waiting request; prefetch R is
+    # emitted when it handles the copy completion and publishes cached blocks.
+    # Both windows can include dispatch, copy submission, and completion delay.
     for eviction in bundle.get("kv_evictions") or []:
         builder.instant(
             1,
@@ -246,11 +246,28 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                 ),
             },
         )
+    geometry = (
+        ((bundle.get("manifest") or {}).get("config") or {}).get("model") or {}
+    ).get("kv_geometry") or {}
+    bytes_per_token = geometry.get("bytes_per_token")
     for reload_event in bundle.get("reloads") or []:
-        # demand reloads sit on the resume critical path; prefetch loads are
-        # KV prefetches that should land INSIDE the FE window —
-        # name them apart so the overlap (or its failure) reads on sight.
-        kind = "KV prefetch" if reload_event.get("trigger") == "prefetch" else "KV reload"
+        trigger = reload_event.get("trigger", "demand")
+        kind = "KV prefetch window" if trigger == "prefetch" else "KV reload window"
+        args = {
+            "cpu_tok": reload_event["cpu_tok"],
+            "gpu_tok": reload_event["gpu_tok"],
+            "trigger": trigger,
+            "timing_scope": "scheduler-observed L-to-R window; not DMA duration",
+            "start_event": "prefetch queued" if trigger == "prefetch" else "load allocation",
+            "end_event": (
+                "prefetch completion handled" if trigger == "prefetch" else "request promotion"
+            ),
+        }
+        if type(bytes_per_token) is int and bytes_per_token > 0:
+            # Logical payload from this run's model, not measured PCIe traffic:
+            # batching, duplicate copies, padding, and layout require copy events.
+            args["logical_kv_bytes"] = reload_event["cpu_tok"] * bytes_per_token
+            args["bytes_basis"] = "cpu_tok * manifest.config.model.kv_geometry.bytes_per_token"
         if reload_event["end"] is not None:
             builder.slice(
                 1,
@@ -258,19 +275,15 @@ def add_engine(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
                 reload_event["time"],
                 reload_event["end"] - reload_event["time"],
                 f"{kind} ({reload_event['cpu_tok']} tok)",
-                {
-                    "cpu_tok": reload_event["cpu_tok"],
-                    "gpu_tok": reload_event["gpu_tok"],
-                    "trigger": reload_event.get("trigger", "demand"),
-                },
+                args,
             )
         else:
             builder.instant(
                 1,
                 reload_event["session"],
                 reload_event["time"],
-                f"{kind} started (never completed)",
-                {"cpu_tok": reload_event["cpu_tok"]},
+                f"{kind} (completion unobserved)",
+                args,
             )
     for backing in bundle.get("host_backing") or []:
         builder.instant(
@@ -386,10 +399,47 @@ def source_hashes(run_dir: Path) -> dict[str, dict[str, Any]]:
     }
 
 
-def export(source: str | Path) -> str:
+def add_gpu_activity(builder: TraceBuilder, bundle: dict[str, Any]) -> int:
+    activities = bundle.get("gpu_activities") or []
+    labels = stream_labels(activities)
+    lanes = {}
+    for row in activities:
+        key = (row["device"], row["context"], row["stream"])
+        if key not in lanes:
+            lanes[key] = len(lanes) + 1
+        lane = lanes[key]
+        builder.process(100, "GPU execution (CUPTI)")
+        builder.thread(100, lane, labels[key])
+        args = {**row["args"], "device": key[0], "context": key[1], "stream": key[2],
+                "activity_kind": row["category"], "stream_role": labels[key]}
+        builder.slice(100, lane, row["time"], row["duration"], row["name"], args, precise=True)
+    rows = bundle.get("transfer_events") or []
+    if rows:
+        builder.process(101, "Session Manager transfers (CPU control)")
+    for row in rows:
+        transfer = row.get("transfer_id", 0)
+        lane = {"H2D": 1, "D2H": 2}.get(row.get("direction"), 0)
+        builder.thread(101, lane, f"{row.get('direction', 'session')} control")
+        args = {k: v for k, v in row.items() if k not in ("time", "submit_start", "submit_end")}
+        if row["event"] == "submitted":
+            builder.slice(101, lane, row["submit_start"], row["submit_end"] - row["submit_start"],
+                          f"submit {row['direction']} #{transfer}", args)
+        else:
+            builder.instant(101, lane, row["time"], f"{row['event']} #{transfer}", args)
+    return len(activities)
+
+
+def derived_directory(run: Path, variant: str | None = None) -> Path:
+    """Keep revised presentations beside, without replacing, earlier exports."""
+    if variant is not None and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", variant):
+        raise ValueError("variant must be a simple name containing letters, digits, _ or -")
+    return run / "derived" / variant if variant is not None else run / "derived"
+
+
+def export(source: str | Path, *, variant: str | None = None) -> str:
     files = resolve_run(source)
+    output_dir = derived_directory(files.directory, variant)
     bundle = build_bundle(files.directory)
-    output_dir = files.directory / "derived"
     trace_path = output_dir / TRACE_NAME
     metadata_path = output_dir / METADATA_NAME
     collisions = [path for path in (trace_path, metadata_path) if path.exists()]
@@ -398,13 +448,16 @@ def export(source: str | Path) -> str:
 
     builder = TraceBuilder()
     engine_slices = add_engine(builder, bundle)
-    if not engine_slices:
+    gpu_activities = add_gpu_activity(builder, bundle)
+    if not engine_slices and not gpu_activities:
         raise MissingTimelineDataError(f"run {files.run_id!r} has no supported timeline data")
     shift_s = builder.shift_nonnegative()
 
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True, parents=True)
+    created = []
     try:
         with trace_path.open("xb") as raw:
+            created.append(trace_path)
             with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as compressed:
                 with io.TextIOWrapper(compressed, encoding="utf-8") as text:
                     json.dump(
@@ -420,17 +473,23 @@ def export(source: str | Path) -> str:
             "source_artifacts": source_hashes(files.directory),
             "events": len(builder.events),
             "engine_slices": engine_slices,
+            "gpu_activities": gpu_activities,
             "clock_alignment": bundle.get("clock_alignment"),
             "global_time_shift_s": shift_s,
             "bytes": trace_path.stat().st_size,
             "sha256": sha256(trace_path),
+            "generator_sources": {
+                name: sha256(Path(__file__).with_name(name))
+                for name in ("perfetto.py", "gpu_activity.py", "bundle.py", "parse.py")
+            },
         }
         with metadata_path.open("x", encoding="utf-8") as handle:
+            created.append(metadata_path)
             json.dump(metadata, handle, indent=2, sort_keys=True)
             handle.write("\n")
     except BaseException:
-        trace_path.unlink(missing_ok=True)
-        metadata_path.unlink(missing_ok=True)
+        for path in created:
+            path.unlink(missing_ok=True)
         raise
     return str(trace_path)
 
@@ -450,6 +509,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export experiment runs to Perfetto timelines.")
     parser.add_argument("runs", nargs="*", help="run path, experiment/run-id, or unique run ID")
     parser.add_argument("--all", action="store_true", help="export every retained run")
+    parser.add_argument("--variant", help="write a fresh named subdirectory under derived/")
     args = parser.parse_args()
     if not args.runs and not args.all:
         parser.error("provide at least one run or --all")
@@ -458,7 +518,7 @@ def main() -> None:
         sources = [*sources, *discover_runs()]
     for source in sources:
         try:
-            path = export(source)
+            path = export(source, variant=args.variant)
         except (FileExistsError, FileNotFoundError, MissingTimelineDataError, ValueError) as error:
             parser.error(str(error))
         print(f"wrote {path} ({Path(path).stat().st_size // 1024} KiB)")

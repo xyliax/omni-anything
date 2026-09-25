@@ -12,6 +12,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from .gpu_activity import parse_gpu_activity, parse_transfer_events
 
 from .parse import (
     is_prefill,
@@ -227,6 +228,20 @@ def build_bundle(source: str | Path) -> dict[str, Any]:
     if kv:
         bundle["kv"] = kv
     steps_origin, steps = parse_scheduler(files.scheduler)
+    gpu_activities = parse_gpu_activity(files.directory / "gpu_activity.json")
+    transfers = parse_transfer_events(files.directory / "transfer_events.jsonl")
+    origin = steps_origin
+    if gpu_activities:
+        origin = origin if origin is not None else min(r["time"] for r in gpu_activities)
+        bundle["gpu_activities"] = [{**row, "time": row["time"] - origin} for row in gpu_activities]
+    if transfers:
+        origin = origin if origin is not None else transfers[0]["time"]
+        bundle["transfer_events"] = [
+            {**row, "time": row["time"] - origin,
+             **({"submit_start": row["submit_start"] - origin,
+                 "submit_end": row["submit_end"] - origin} if "submit_start" in row else {})}
+            for row in transfers
+        ]
     if steps:
         bundle["steps"] = steps
         add_periodic_ticks(bundle)

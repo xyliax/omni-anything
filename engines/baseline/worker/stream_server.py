@@ -44,8 +44,8 @@ pre=<cumulative preemption count> per line.
 
 PARINGEST variant: additionally monkeypatches AsyncLLM._add_streaming_input_request so each
 chunk's input_processor.process_inputs runs in a ThreadPoolExecutor instead of synchronously on
-the event loop (vllm 0.23 async_llm.py handle_inputs blocks the loop ~265ms/chunk on this host,
-serializing all sessions' ingest). mm processor cache is disabled (mm_processor_cache_gb=0) to
+the event loop, which would serialize all sessions' ingest. Both first-party workers also
+bound audio padding through engines.audio_features. mm processor cache is disabled (mm_processor_cache_gb=0) to
 avoid cross-thread mutation of its LRU state; hits are ~absent when the inherited
 client uses a distinct starting position within each session's audio array, which
 prevents identical input windows from creating artificial prefix-cache reuse.
@@ -95,7 +95,9 @@ def _patch_parallel_ingest(workers=8):
     from vllm.renderers.inputs.preprocess import extract_prompt_components
     from vllm.v1.engine.async_llm import AsyncLLM, InputStreamError
     from vllm.v1.engine.output_processor import RequestOutputCollector
+    from engines.audio_features import install_bounded_audio_padding
 
+    install_bounded_audio_padding()
     _INGEST_POOL = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="ingest")
 
     async def _add_streaming_input_request(self, request_id, input_stream, sampling_params,
@@ -239,7 +241,7 @@ class StreamingEngine:
     # ---- per-session resident resumable request (unbounded append-to-resident-KV) ----
     async def _run_session(self, sid: int, st: Session):
         from vllm.engine.protocol import StreamingInput
-        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap + 8, ignore_eos=True)
+        base_sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap, ignore_eos=True)
         n = [0]
 
         async def gen():
@@ -268,15 +270,10 @@ class StreamingEngine:
                 _pev("F", sid, st.frame)
                 prompt = (HEAD + APH + INSTR + ASST) \
                     if (n[0] == 1 and not self.initial_context_tokens) else (APH + TRAIL)
-                # max_tokens is PER-SEGMENT (each chunk's update folds prior
-                # output into the prompt and clears the output count). The
-                # engine's stop check reads a value frozen at the FIRST input
-                # (upstream bug), so every formal run effectively capped each
-                # segment at output_token_cap+8 regardless of what was sent; declare that
-                # cap explicitly so behavior is IDENTICAL whether the frozen
-                # regime or the initial context-run refresh fix (engine_fix, injected
-                # only when --initial-context-tokens > 0) is in effect.
-                sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap + 8,
+                # Each audio segment uses the same generation and delivery budget.
+                # Initial-context runs refresh the engine's stop limit through
+                # engine_fix; otherwise the first segment already sets this cap.
+                sp = self.SamplingParams(temperature=0.0, max_tokens=self.output_token_cap,
                                          ignore_eos=True)
                 yield StreamingInput(
                     prompt={"prompt": prompt, "multi_modal_data": {"audio": (arr, sr)}},

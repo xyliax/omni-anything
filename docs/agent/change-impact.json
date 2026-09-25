@@ -3,51 +3,299 @@
   "rules": [
     {
       "id": "IMPACT-DESIGN-DOCUMENTATION",
-      "when": ["docs/problem.md", "docs/system.md", "docs/experiments.md"],
-      "inspect": ["docs/agent/contracts.json", "docs/PAPER.md", "eurosys2027/AGENTS.md"],
-      "verify": ["tests/test_narrative_scope.py"]
+      "when": [
+        "docs/problem.md",
+        "docs/system.md",
+        "docs/experiments.md"
+      ],
+      "inspect": [
+        "docs/agent/contracts.json",
+        "docs/PAPER.md",
+        "eurosys2027/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_narrative_scope.py"
+      ]
     },
     {
       "id": "IMPACT-MECHANISM-SEMANTICS",
-      "when": ["engines/conveyor/worker/engine_patch/**", "engines/conveyor/gateway/**"],
-      "inspect": ["docs/system.md", "docs/agent/contracts.json", "docs/agent/dynamic-edges.json", "engines/conveyor/AGENTS.md"],
-      "verify": ["tests/test_configs.py", "tests/test_run_validation.py"]
+      "when": [
+        "engines/conveyor/worker/engine_patch/**",
+        "engines/conveyor/gateway/**"
+      ],
+      "inspect": [
+        "docs/system.md",
+        "docs/agent/contracts.json",
+        "docs/agent/dynamic-edges.json",
+        "engines/conveyor/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_configs.py",
+        "tests/test_run_validation.py",
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
+      ]
     },
     {
       "id": "IMPACT-PROCESS-TOPOLOGY",
-      "when": ["experiments/*/runner.py", "experiments/*/config.py", "infra/run/**", "engines/**", "third_party/metronome/experiments/sustained_fd.py", "third_party/metronome/worker/stream_server.py"],
-      "inspect": ["docs/agent/system-map.json", "docs/agent/dynamic-edges.json", "docs/system.md"],
-      "verify": ["tests/test_run.py"]
+      "when": [
+        "experiments/*/runner.py",
+        "experiments/*/config.py",
+        "infra/run/**",
+        "engines/**",
+        "third_party/metronome/experiments/sustained_fd.py",
+        "third_party/metronome/worker/stream_server.py"
+      ],
+      "inspect": [
+        "docs/agent/system-map.json",
+        "docs/agent/dynamic-edges.json",
+        "docs/system.md"
+      ],
+      "verify": [
+        "tests/test_run.py"
+      ]
     },
     {
       "id": "IMPACT-EXPERIMENT-PROTOCOL",
-      "when": ["experiments/shared/**", "experiments/*/config.py"],
-      "inspect": ["docs/experiments.md", "docs/agent/contracts.json"],
-      "verify": ["tests/test_configs.py"]
+      "when": [
+        "experiments/shared/**",
+        "experiments/*/config.py"
+      ],
+      "inspect": [
+        "docs/experiments.md",
+        "docs/agent/contracts.json"
+      ],
+      "verify": [
+        "tests/test_configs.py"
+      ]
     },
     {
       "id": "IMPACT-RUN-VALIDATION",
-      "when": ["experiments/*/runner.py", "infra/run/artifacts.py", "infra/run/workflow.py", "engines/*/worker/stream_server.py", "engines/conveyor/gateway/**", "third_party/metronome/experiments/sustained_fd.py"],
-      "inspect": ["docs/experiments.md", "docs/agent/contracts.json", "experiments/baseline/AGENTS.md", "experiments/conveyor/AGENTS.md", "infra/run/AGENTS.md"],
-      "verify": ["tests/test_run.py", "tests/test_run_validation.py"]
+      "when": [
+        "experiments/*/runner.py",
+        "infra/run/artifacts.py",
+        "infra/run/workflow.py",
+        "engines/*/worker/stream_server.py",
+        "engines/conveyor/gateway/**",
+        "third_party/metronome/experiments/sustained_fd.py"
+      ],
+      "inspect": [
+        "docs/experiments.md",
+        "docs/agent/contracts.json",
+        "experiments/baseline/AGENTS.md",
+        "experiments/conveyor/AGENTS.md",
+        "infra/run/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_run.py",
+        "tests/test_run_validation.py"
+      ]
     },
     {
       "id": "IMPACT-METRIC-SEMANTICS",
-      "when": ["infra/trace/**", "engines/*/worker/stream_server.py"],
-      "inspect": ["docs/experiments.md", "docs/findings.md", "docs/agent/tasks/analyze-results.md", "infra/trace/AGENTS.md"],
-      "verify": ["tests/test_trace.py", "tests/test_run_validation.py"]
+      "when": [
+        "infra/trace/**",
+        "engines/*/worker/stream_server.py"
+      ],
+      "inspect": [
+        "docs/experiments.md",
+        "docs/findings.md",
+        "docs/agent/tasks/analyze-results.md",
+        "infra/trace/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_trace.py",
+        "tests/test_run_validation.py"
+      ]
     },
     {
       "id": "IMPACT-NEW-FINDING",
-      "when": ["accepted experiment record"],
-      "inspect": ["docs/findings.md", "docs/agent/evidence.json"],
+      "when": [
+        "accepted experiment record"
+      ],
+      "inspect": [
+        "docs/findings.md",
+        "docs/agent/evidence.json"
+      ],
       "verify": []
     },
     {
       "id": "IMPACT-NARRATIVE-SCOPE",
-      "when": ["AGENTS.md", "README.md", "docs/problem.md", "docs/system.md", "docs/findings.md", "docs/PAPER.md", "docs/experiments.md", "docs/papers/**", "docs/references/**", "eurosys2027/AGENTS.md", "eurosys2027/planning/**", "eurosys2027/sections/01-introduction.tex", "eurosys2027/sections/02-background-motivation.tex", "eurosys2027/sections/03-design.tex", "eurosys2027/sections/04-implementation.tex", "eurosys2027/sections/06-discussion.tex"],
-      "inspect": ["AGENTS.md", "docs/problem.md", "docs/experiments.md", "docs/findings.md", "docs/PAPER.md", "eurosys2027/AGENTS.md"],
-      "verify": ["tests/test_narrative_scope.py"]
+      "when": [
+        "AGENTS.md",
+        "README.md",
+        "docs/problem.md",
+        "docs/system.md",
+        "docs/findings.md",
+        "docs/PAPER.md",
+        "docs/experiments.md",
+        "docs/papers/**",
+        "docs/references/**",
+        "eurosys2027/AGENTS.md",
+        "eurosys2027/planning/**",
+        "eurosys2027/sections/01-introduction.tex",
+        "eurosys2027/sections/02-background-motivation.tex",
+        "eurosys2027/sections/03-design.tex",
+        "eurosys2027/sections/04-implementation.tex",
+        "eurosys2027/sections/06-discussion.tex"
+      ],
+      "inspect": [
+        "AGENTS.md",
+        "docs/problem.md",
+        "docs/experiments.md",
+        "docs/findings.md",
+        "docs/PAPER.md",
+        "eurosys2027/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_narrative_scope.py"
+      ]
+    },
+    {
+      "id": "IMPACT-AUDIO-PREPROCESSING",
+      "when": [
+        "engines/audio_features.py",
+        "engines/*/worker/stream_server.py"
+      ],
+      "inspect": [
+        "engines/AGENTS.md",
+        "docs/system.md",
+        "docs/experiments.md",
+        "docs/agent/contracts.json",
+        "docs/agent/dynamic-edges.json"
+      ],
+      "verify": [
+        "tests/test_audio_features.py",
+        "tests/test_run_validation.py"
+      ]
+    },
+    {
+      "id": "IMPACT-SESSION-ADMISSION",
+      "when": [
+        "engines/conveyor/worker/engine_patch/residency_planner.py",
+        "engines/conveyor/gateway/session_manager*",
+        "experiments/conveyor/cohort_client.py",
+        "engines/conveyor/worker/stream_server.py"
+      ],
+      "inspect": [
+        "docs/system.md#conservative-admission",
+        "docs/experiments.md#finite-cohort-runner",
+        "docs/agent/contracts.json",
+        "docs/agent/system-map.json",
+        "docs/agent/dynamic-edges.json"
+      ],
+      "verify": [
+        "tests/test_residency_planner.py",
+        "tests/test_session_manager.py",
+        "tests/test_admission_worker.py",
+        "tests/test_cohort_client.py",
+        "tests/test_admission_gateway.py",
+        "tests/test_run_validation.py"
+      ]
+    },
+    {
+      "id": "IMPACT-CAPACITY-SERVICE-METRICS",
+      "when": [
+        "infra/trace/service.py",
+        "infra/trace/collectors/service_events.py",
+        "engines/conveyor/gateway/service_events.go",
+        "experiments/conveyor/capacity.py",
+        "engines/conveyor/worker/engine_patch/resident_adapter.py"
+      ],
+      "inspect": [
+        "docs/experiments.md#stable-concurrency-runner",
+        "docs/agent/contracts.json",
+        "docs/agent/dynamic-edges.json"
+      ],
+      "verify": [
+        "tests/test_service_metrics.py",
+        "tests/test_configs.py",
+        "tests/test_admission_worker.py",
+        "tests/test_admission_gateway.py"
+      ]
+    },
+    {
+      "id": "IMPACT-COPY-SUBMISSION",
+      "when": [
+        "engines/conveyor/worker/engine_patch/copy_descriptors.py",
+        "engines/conveyor/worker/engine_patch/copy_service.py"
+      ],
+      "inspect": [
+        "docs/system.md#session-manager-execution",
+        "docs/experiments.md#copy-submission-experiment",
+        "docs/agent/contracts.json"
+      ],
+      "verify": [
+        "tests/test_copy_descriptors.py",
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "IMPACT-MODEL-ADAPTERS",
+      "when": [
+        "engines/model_inputs.py",
+        "experiments/shared/model.py",
+        "experiments/shared/workload.py"
+      ],
+      "inspect": [
+        "docs/experiments.md#candidate-model-integration",
+        "engines/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_model_inputs.py",
+        "tests/test_run_validation.py",
+        "tests/test_audio_features.py"
+      ]
+    },
+    {
+      "id": "IMPACT-RUN-TRACE-LIFECYCLE",
+      "when": [
+        "engines/conveyor/worker/control.py",
+        "infra/run/workflow.py"
+      ],
+      "inspect": [
+        "infra/run/AGENTS.md",
+        "infra/trace/AGENTS.md",
+        "docs/experiments.md#profiling"
+      ],
+      "verify": [
+        "tests/test_run.py",
+        "tests/test_configs.py"
+      ]
+    },
+    {
+      "id": "IMPACT-GROUP-ANALYSIS",
+      "when": [
+        "infra/trace/groups.py"
+      ],
+      "inspect": [
+        "docs/system.md#conservative-admission",
+        "infra/trace/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_group_windows.py"
+      ]
+    },
+    {
+      "id": "IMPACT-RUNTIME-PORTABILITY",
+      "when": [
+        "infra/env/**",
+        "experiments/shared/platform.py",
+        "infra/run/probes.py",
+        "experiments/conveyor/check.py"
+      ],
+      "inspect": [
+        "infra/env/AGENTS.md",
+        "docs/experiments.md#machine-migration",
+        "docs/agent/contracts.json"
+      ],
+      "verify": [
+        "tests/test_portability.py",
+        "tests/test_configs.py",
+        "tests/test_run.py",
+        "tests/test_session_manager_gpu.py"
+      ]
     }
   ]
 }

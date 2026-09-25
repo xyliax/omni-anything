@@ -23,6 +23,29 @@ def collect_git(root: Path) -> dict[str, Any]:
     }
 
 
+def collect_source_patch(root: Path) -> bytes:
+    """Reconstruct first-party diagnostics, including newly added source files.
+
+    Raw results are never embedded recursively. Untracked files outside the
+    source/documentation directories are not treated as executable inputs.
+    """
+    patch = subprocess.check_output(
+        ["git", "diff", "--binary", "HEAD", "--", ".", ":!results/**"], cwd=root)
+    untracked = subprocess.check_output(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z", "--",
+         "engines", "experiments", "infra", "tests", "docs"], cwd=root)
+    for raw in untracked.split(b"\0"):
+        if not raw:
+            continue
+        result = subprocess.run(
+            ["git", "diff", "--no-index", "--binary", "--", "/dev/null", os.fsdecode(raw)],
+            cwd=root, capture_output=True)
+        if result.returncode not in (0, 1):
+            raise RuntimeError(f"cannot capture untracked source patch: {os.fsdecode(raw)}")
+        patch += result.stdout
+    return patch
+
+
 def collect_third_party_pins(root: Path) -> dict[str, str]:
     pins: dict[str, str] = {}
     for repo_file in sorted((root / "third_party").glob("*/.gitrepo")):
@@ -66,6 +89,14 @@ def collect_gpu(gpu: int) -> dict[str, Any]:
         return {"index": gpu, "error": str(exc)}
 
 
+def model_cache_root() -> Path:
+    """Match huggingface_hub's cache environment precedence without importing it."""
+    default_home = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'huggingface'
+    hf_home = Path(os.environ.get('HF_HOME', default_home))
+    legacy_cache = os.environ.get('HUGGINGFACE_HUB_CACHE', str(hf_home / 'hub'))
+    return Path(os.environ.get('HF_HUB_CACHE', legacy_cache)).expanduser()
+
+
 def resolve_model_snapshot(model: str, revision: str) -> Path:
     """The HF-cache snapshot for a pinned revision — the revision lock's enforcement point.
 
@@ -74,7 +105,7 @@ def resolve_model_snapshot(model: str, revision: str) -> Path:
     string "None" as its model path.
     """
     cache_name = "models--" + model.replace("/", "--")
-    cache = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub"
+    cache = model_cache_root()
     snapshot = cache / cache_name / "snapshots" / revision
     if not revision or not snapshot.is_dir():
         raise RuntimeError(
@@ -82,3 +113,24 @@ def resolve_model_snapshot(model: str, revision: str) -> Path:
             f"(expected {snapshot}); run `bash infra/env/setup.sh --download-models` first"
         )
     return snapshot
+
+
+def model_snapshot_issues(snapshot: Path) -> list[str]:
+    """Reject incomplete downloads before a costly worker launch."""
+    import json
+    required = {'config.json', 'tokenizer_config.json', 'preprocessor_config.json'}
+    if not any((snapshot / name).is_file() for name in ('tokenizer.json', 'tokenizer.model')):
+        required.add('tokenizer.json')
+    index = snapshot / 'model.safetensors.index.json'
+    if index.is_file():
+        try:
+            weights = json.loads(index.read_text())['weight_map']
+            if not weights:
+                raise ValueError('empty weight map')
+            required.update(weights.values())
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return [f'invalid safetensors index: {index}: {exc}']
+    else:
+        required.add('model.safetensors')
+    return [f'missing or empty model file: {snapshot / name}' for name in sorted(required)
+            if not (snapshot / name).is_file() or (snapshot / name).stat().st_size == 0]
