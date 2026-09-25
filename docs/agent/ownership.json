@@ -27,7 +27,6 @@
     "exact_run_artifacts": "results/",
     "paper_work_plan": "docs/PAPER.md",
     "paper_submission_rules": "eurosys2027/planning/submission-checklist.md",
-    "ai_use_disclosure": "eurosys2027/planning/ai-use-log.md",
     "shared_audio_preprocessing_implementation": "engines/audio_features.py"
   },
   "volatile_content": {
@@ -57,8 +56,8 @@
     "docs/agent/*.json": "paths, ids, bindings and verification without independent research claims",
     "docs/PAPER.md": "section tasks, figure status and unresolved writing dependencies; link factual owners rather than duplicate designs, results or historical reviews",
     "docs/agent/records/": "immutable historical measurements and verdicts; corrections use superseding records",
-    "docs/references/": "dated external-source notes, not project mechanisms or novelty verdicts; MiniCPM-o 4.5 worked-example parameters are maintained in minicpm-o-4.5-kv-geometry.md",
+    "docs/references/": "dated external-source notes, not project mechanisms or novelty verdicts; MiniCPM-o 4.5 and GPU parameters are maintained in minicpm-o-4.5-kv-geometry.md; cross-model geometry and external timing sources are maintained in periodic-model-cost-sources.md",
     ".claude/": "local tool settings only; project instructions are rooted in AGENTS.md, with no parallel role-memory layer",
-    "eurosys2027/planning/": "submission checklist and AI-use disclosure only; research tasks live in docs/PAPER.md or their factual owners"
+    "eurosys2027/planning/": "submission checklist only; research tasks live in docs/PAPER.md or their factual owners"
   }
 }

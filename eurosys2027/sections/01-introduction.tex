@@ -1,31 +1,29 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Full-duplex interaction is an emerging direction in human--AI communication, with recent models such as OpenAI's GPT-Live and ByteDance's Seeduplex~\cite{openai2026gptlive,bytedance2026seeduplex}.
+Recent models such as OpenAI's GPT-Live and ByteDance's Seeduplex support full-duplex human--AI interaction~\cite{openai2026gptlive,bytedance2026seeduplex}.
 By listening while speaking and adapting to interruptions, these models let users clarify or redirect a conversation without waiting for a response to finish.
-At the serving layer, we treat each ongoing interaction as an \emph{interaction session}.
+We refer to each ongoing interaction as an \emph{interaction session}.
 
 We study interaction sessions that advance through periodic updates, each processing new input and generating output as needed.
 For example, Moshi operates on 80\,ms audio frames, while Thinking Machines Lab's TML-Interaction-Small organizes input and output into 200\,ms \emph{time-aligned micro-turns}~\cite{defossez2024moshi,thinkingmachines2026interactionmodels}.
-The session's history persists across these updates.
+Each session retains its history across updates.
 
 To reuse history across updates, the server caches attention keys and values (KV), whose footprint grows with the retained context.
-Using published parameters for MiniCPM-o 4.5, we estimate a BF16 KV footprint of about 1.2\,GiB in the language backbone for a ten-minute audio conversation~\cite{cui2026minicpmo45,openbmb2026minicpmconfig}.
-This estimate assumes full retention of continuous input and output streams, contributing ten audio positions and four generated text tokens per second, respectively.
-It excludes prompt and control tokens and state in other modules.
+For MiniCPM-o 4.5, retaining ten minutes of continuous input and output at ten encoded audio positions and four generated text tokens per second requires an estimated 1.2\,GiB of BF16 backbone KV~\cite{cui2026minicpmo45,openbmb2026minicpmconfig}.
 % 2 (K and V) * 36 layers * 8 KV heads * 128 dimensions * 2 bytes = 144 KiB/position.
 % 600 s * (10 input audio positions/s + 4 output text tokens/s) * 144 KiB = 1.153564453125 GiB.
 % This counts backbone KV for both streams, excluding control/prompt tokens and other modules.
 
-Keeping all retained KV on the GPU, which we call \emph{full residency}, consumes memory even during intervals when the session does not access it (Figure~\ref{fig:motivation}).
-As histories grow across concurrent sessions, this state can exhaust GPU KV capacity before their combined computation uses up the time available in each period.
-We target this regime, where reusing the space occupied by idle KV could allow the server to accommodate more sessions.
+Under \emph{full residency}, the KV for each session's retained history stays on the GPU, occupying memory even when the session is not accessing it (Figure~\ref{fig:motivation}).
+As histories grow across concurrent sessions, their combined KV footprint can exhaust GPU KV capacity while their computation still fits within each period.
+We target this regime, where reclaiming the GPU space occupied by idle KV could allow the server to accommodate more sessions.
 
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/figure-intro.pdf}
   \caption{Historical KV remains allocated between updates under full residency.
-  In this schematic example, each update encodes and prefills new input and may decode output for playback.
+  Each update encodes and prefills new input and may decode output for playback.
   Retained input and output extend the history, increasing the KV footprint toward the GPU capacity limit.
   The timeline and memory growth are illustrative.}
   \label{fig:motivation}
@@ -35,31 +33,30 @@ We target this regime, where reusing the space occupied by idle KV could allow t
 
 Offloading idle KV to host memory makes its GPU space available to other sessions.
 InferCept, for example, chooses among retaining, swapping, and recomputing KV for requests paused by external interactions~\cite{abhyankar2024infercept}.
-In periodic service, the evicted state is needed again for the next update.
-We use the start of the next period as each update's soft deadline.
-If restoration begins only when an update is released, computation that needs the evicted state must wait for the transfer, potentially causing a deadline miss (Figure~\ref{fig:comparison}(a)).
+For periodic interaction sessions, the next update's scheduled release time is known in advance.
+Each update has a soft deadline at the start of the following period.
+If restoration starts only when an update is released, computation that depends on the evicted state must wait for the transfer, which can cause a deadline miss (Figure~\ref{fig:comparison}(a)).
 
-Periodicity provides an opportunity to avoid this delay: the next update's scheduled release time is known in advance.
-We call the start of each period a \emph{tick} and use it as the target for completing restoration.
+This timing information allows the server to restore KV before it is needed.
+We call the start of each period a \emph{tick}; restoration targets the next tick.
 By keeping idle KV in host memory and restoring it before the next tick, the server can reuse the same GPU space across sessions.
 We refer to this reuse as \emph{memory multiplexing}.
 
-Scheduling restoration requires both transfer time and GPU space.
-Restorations compete for shared transfer bandwidth, and the full GPU destination for each restoration must be allocated before copying begins.
-Restoring too early occupies space that other sessions could use; starting too late risks missing the next tick.
+Restoration scheduling must account for both transfer time and GPU space.
+Restorations share transfer bandwidth and require GPU memory for their destination buffers.
+Restoring too early occupies space that other sessions could use; starting too late risks leaving KV unavailable at the next tick.
 Larger evictions free more space but require more data to be transferred back.
 The server must therefore coordinate how much KV to evict from each session, when to restore it, and when to schedule each session's computation.
+The schematic in Figure~\ref{fig:comparison} assumes that each restoration's full destination is allocated before copying begins and counts that space in the memory curves from allocation onward.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/figure-comparison.pdf}
-  \caption{Restoration timing affects both computation and GPU memory use.
-  (a) On-demand restoration delays dependent computation until the required KV is available.
-  (b) Staggering sessions allows space released by one session to accommodate another's restoration before its next tick.
-  The upper curves show total GPU memory allocated to KV, including the full destination of each restoration as soon as it is allocated.
-  Hatching denotes host-to-device (H2D) copies, dotted outlines denote evicted state, and gray denotes idle resident KV.
-  The pale curve in (b) shows the allocation under full residency.
-  Both panels are schematic.}
+  \caption{On-demand and scheduled KV restoration (schematic).
+  (a) On-demand restoration delays computation.
+  (b) Staggered sessions restore KV before their next ticks and reuse GPU space.
+  Curves show allocated KV memory; the pale curve shows full residency.
+  Hatching marks host-to-device (H2D) transfers, dotted outlines evicted KV, and gray idle resident KV.}
   \label{fig:comparison}
   \Description{Panel a shows computation waiting for on-demand restoration.
   Panel b shows staggered sessions reusing GPU space through eviction and restoration before their next ticks.
@@ -68,13 +65,15 @@ The server must therefore coordinate how much KV to evict from each session, whe
 \end{figure}
 
 We present \systemname, a serving system that multiplexes GPU memory across periodic interaction sessions through \emph{cyclic KV restoration}.
-\systemname assigns each session a \emph{phase}, or release offset within the period, to spread execution and restoration demand over time.
+Within the timing flexibility allowed by the application, \systemname assigns each session a \emph{phase}, or release offset within the period, to spread H2D restoration demand over time.
+This keeps the link busy over more of the period, allowing more KV to be restored per period and supporting larger evictions.
 After a session completes an update, \systemname evicts part of its idle KV and schedules restoration to complete before the next tick.
 The plan coordinates phases, eviction amounts, and restoration times so that space released by one session can accommodate another's restoration (Figure~\ref{fig:comparison}(b)).
-The goal is to serve more concurrent sessions while preserving their retained histories and meeting the same soft deadline targets.
+This coordination expands effective KV capacity to serve more concurrent sessions under the same history and soft deadline requirements.
 
-\systemname plans KV demand at each session's configured maximum context length, which input and generation must respect.
-The recurring schedule accounts for computation, transfers, and GPU allocation, while runtime operations cover only the history actually retained.
-It reuses this plan as histories grow within their limits and revises it when sessions join or leave.
+To reuse a schedule as histories grow, \systemname plans for the KV required at each session's configured maximum context length.
+The total retained context, including new input and generated output, must stay within this limit.
+The recurring schedule accounts for computation, transfers, and GPU allocation, while runtime operations act on the history actually retained.
+\systemname reuses this plan as histories grow within their limits and revises it when sessions join or leave.
 
 \placeholder{Final contributions and measured results: identify the configurations where KV capacity limits concurrency while compute time remains; establish the benefit attributable to coordinating phases, eviction amounts, and restoration timing; report concurrency and deadline-miss rates against full residency and on-demand restoration under matched service objectives.}

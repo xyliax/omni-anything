@@ -12,11 +12,14 @@
 
 - 作者最新说明优先于旧文档。冲突先澄清并更新对应 owner；不能用旧实现限制未定的论文设计，也不能将作者的设计说明当成实现证明。
 - prototype、measured path、模型、模态、输出、硬件及拓扑不自动成为最终论文范围；experiment 矩阵未冻结时保持变量与证据边界。外部模型可作有来源的具体例子，不据例子冻结 scope。
+- 跨模型估算中的外部型号按例子检查：须有参数来源和估算限定，保留不利组合；范围回归检查应区分这种引用与将当前模型栈写成项目边界的表述，不能以引用为由豁免后者。
 - 假设、设计要求、实现与结果分开。仅将根 `AGENTS.md` 定义的 research mechanism 写成贡献；数字注明来源性质与配置，项目测量通过 `EVIDENCE-*` 追溯，外部推导引用原始参数。
 - 用简明专业的正文解释行为、原因和证据。作者备忘、审核规则、旧命名和实现待办不进入正文。术语以 `docs/problem.md#terminology` 为准，tick 表示周期起点，deadline 表示期望完成时刻；slot 与 manager 不自动构成贡献。
+- Abstract 与 Introduction 直接呈现问题、关键取舍和核心贡献；系统介绍用 “We present …”，避免 “the design of”“the goal is”等防御性限定。细化的组件操作、实现成熟度和局限在后文对应章节交代，摘要优先保留机制与价值的因果关系。
+- 首次介绍组件时，通过作者设计动作或系统使用方式明确其归属，并串联目的与作用；避免连续以 “The planner / manager / engine …” 罗列尚未引入的组件。
 - review 稿保持双盲。不改模板、字号、行距、栏距或 caption 字号压缩篇幅。
 - TeX 一句一行，空行表示段落。先对齐问题、设计与评估，再扩写正文。
 - 作者维护 Draw.io 图件；agent 可读取核对，修改须遵循作者授权。`figures/` 只放 `.drawio` 和导出 PDF，不另建画图指南。导出使用 `drawio -x -f pdf --crop -p <页码> -o <out.pdf> figures/figure.drawio` 后执行 `pdfcrop --margins 1 <out.pdf> <out.pdf>`，用 `pdffonts` 检查字体嵌入。
-- 实质 AI 使用记入 `planning/ai-use-log.md`，只记录日期、工具、工作内容和作者复核责任。该记录供披露，不是设计记忆或当前待办；不得默认整份读取。
+- 不创建、恢复或维护 AI 使用日志。
 
 从本目录运行 `make check`，再按根 `AGENTS.md` 的改动类型运行 pytest。venue 规则和模板来源分别维护于 `planning/submission-checklist.md` 与 `vendor/acmart/UPSTREAM.md`；变更时同步核对。

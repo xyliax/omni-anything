@@ -29,7 +29,7 @@
 1. 用双工交互的发展、代表模型及其能力引出 interaction session，再过渡到 time-aligned 的周期更新与历史延续；避免重复摘要开头。
 2. 给出第一个可追溯的资源量级，解释历史驻留与周期计算的差异。模型参数推导与实测分开标注。
 3. 用少量代表工作解释已有方法的取舍；完整文献分类留给 Related Work。
-4. 引出 phase、恢复窗口与峰值空间的耦合，给出设计需要解决的具体困难。
+4. 围绕 [H2D 持续服务与容量收益的因果关系](system.md#offset-resource-rationale)，引出 phase、恢复窗口与峰值空间的耦合。
 5. 介绍系统如何回应这些困难，避免把实现接口列为贡献。
 6. 给出经过验证的结果和贡献；结果未就绪时保留明确占位。
 
@@ -40,7 +40,7 @@
 <a id="abstract-outline"></a>
 ## 摘要
 
-按应用与资源问题、关键困难、设计、结果顺序写。结果句只能使用正式测量；不保留倍率模板，不把待设计的联合规划或主动重算写成已完成贡献。
+按应用与资源问题、[核心容量机制](system.md#design-goals)、设计、结果顺序写。结果句只能使用正式测量；不保留倍率模板，不把待设计的联合规划或主动重算写成已完成贡献。
 
 <a id="figure-plan"></a>
 ## 图件
@@ -52,8 +52,9 @@
 | 图 1 | 周期计算、空闲区间与历史 KV 增长 | 作者图件已接入 Intro；`eurosys2027/figures/figure.drawio` 第二页及 `figure-intro.pdf`。当前整页宽度下图中文字仍偏小，需在源图调整 |
 | 图 2 | phase 与恢复时机对传输和峰值驻留的影响 | 已接入 Intro，单栏；`figure.drawio` 第三页及 `figure-comparison.pdf` |
 | 动机测量 | 容量、计算与进度的联合观察 | 复用实验一容量边界附近的数据 |
-| 跨硬件容量边界表 | 固定模型最大上下文，按全驻留内存上限形成完整 batch，比较显存带宽、主干计算时间和周期占比 | Background 已填显式效率假设下的解析估算，来源、逐阶段计账及敏感性见[表内估算及预测协议](experiments.md#cross-hardware-projections)；周期占比仅覆盖主干计算，完整管线与实际 batching 仍需标定和独立验证 |
-| 设计总览 | 架构与跨周期驻留流程；语义见 [System](system.md#logical-architecture) | 作者现有[导出 PDF](../eurosys2027/figures/figure-design.pdf) 已接入 System Design；正文解释逐 session 恢复与独立就绪。源图及导出内容未修改；整页宽度下接口及状态文字偏小，需作者在源图调整，并核对后端位置标签 |
+| 跨硬件容量边界表 | 固定模型最大上下文，按全驻留内存上限形成完整 batch，比较显存带宽、主干执行时间和周期占比 | Background 已填显式效率假设下的解析估算，来源、逐阶段计账及敏感性见[表内估算及预测协议](experiments.md#cross-hardware-projections)；周期占比仅覆盖主干执行，完整管线与实际 batching 仍需标定和独立验证 |
+| 跨模型周期占比矩阵 | 在容量边界处改变模型几何与周期工作量，检查主干余量的覆盖与边界 | Background 接在容量估算说明后；参数、逐格 batch、公开实测代理核查与限制见[跨模型协议](experiments.md#cross-model-projections)。主表统一使用显式效率假设，敏感性保留超过周期的组合，不据解析矩阵声称普遍余量 |
+| 设计总览 | 架构与跨周期驻留流程；语义见 [System](system.md#logical-architecture) | 作者现有[导出 PDF](../eurosys2027/figures/figure-design.pdf) 已接入 System Design；正文解释逐 session 恢复与独立就绪，caption 说明右侧恢复序列如何分散 H2D 需求。源图及导出内容未修改；整页宽度下接口及状态文字偏小，需作者在源图调整 |
 | 评估图 | 容量与代价曲线、动态到达时间轨迹、phase 与恢复时机的成对比较 | 依照[已确认实验](experiments.md#evaluation-questions)生成；结果仍待测量 |
 
 <a id="material-dependencies"></a>

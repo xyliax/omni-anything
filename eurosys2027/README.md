@@ -18,7 +18,6 @@ make check
 | `references.bib` | 引用 |
 | `figures/` | 作者维护的 Draw.io 和导出 PDF |
 | `planning/submission-checklist.md` | 投稿规则与最终检查 |
-| `planning/ai-use-log.md` | AI 使用披露记录，仅按需读取 |
 | `scripts/` | 编译与格式检查 |
 | `vendor/acmart/` | 锁定模板与来源 |
 

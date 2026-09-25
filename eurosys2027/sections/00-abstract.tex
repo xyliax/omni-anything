@@ -1,11 +1,12 @@
 \begin{abstract}
-Serving full-duplex interaction models requires maintaining ongoing sessions in which input and output can overlap.
-In periodic service, each update processes new input and generates output as needed, while historical key--value (KV) state persists between updates.
-As contexts grow, keeping this state on the GPU can exhaust memory while the combined work of admitted sessions still leaves time within each period.
-Offloading idle KV frees capacity, but restoring it only when the next update arrives can delay computation and cause deadline misses.
-The periodic schedule makes the next update time known in advance, allowing restoration to be planned before demand.
-We present \systemname, a serving system for multiplexing GPU memory across periodic interaction sessions.
-Through cyclic KV restoration, \systemname reuses space released by idle sessions to prepare other sessions for their next updates.
-It coordinates these restorations with session execution, accounting for both shared transfer capacity and GPU memory availability.
+Full-duplex interaction models process new input while generating output in ongoing sessions.
+For sessions that process time-aligned micro-turns at regular intervals, growing historical key--value (KV) state can exhaust GPU memory even when their combined execution takes only part of each period.
+KV offloading frees GPU memory, but on-demand restoration stalls computation and risks missing recurring update deadlines.
+We present \systemname, a serving system that multiplexes GPU memory across periodic interaction sessions through cyclic KV restoration.
+Its residency planner staggers session phases and coordinates partial eviction budgets and restoration times to spread host-to-device (H2D) demand across each period.
+Keeping the H2D link busy for longer allows more KV blocks to be restored per cycle and more GPU space to be reclaimed.
+\systemname executes this plan through a session manager that coordinates periodic updates and KV preparation.
+We pair a KV memory manager that maintains valid copies and manages GPU space with an asynchronous KV transfer engine for incremental backups and scheduled restores.
+This coordination expands effective KV capacity to support more concurrent sessions under the same history and periodic deadline requirements.
 \placeholder{Measured session capacity and deadline-miss rates under matched service objectives and generation work, with workload and observation duration.}
 \end{abstract}

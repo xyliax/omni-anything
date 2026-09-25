@@ -3,6 +3,7 @@
 
 \systemname turns the idle intervals identified in Section~\ref{sec:problem} into a recurring schedule for sharing GPU KV capacity.
 The schedule couples three decisions: when each session's update is released, how much of its KV to evict, and when to restore that state.
+By spreading restoration demand across the period, \systemname keeps the H2D link active for longer, increasing the KV volume that can be restored each cycle and hence the amount that can be evicted.
 Restoration targets the next tick so that the following update can use its period for computation.
 Meeting this target removes a source of waiting; meeting the update's soft deadline also requires sufficient execution time after the tick.
 
@@ -27,7 +28,7 @@ Thus, the planner selects the residency schedule, while the other components enf
   The planner sets the residency schedule; the session manager follows it, and the memory manager and transfer engine perform safe reclamation and copying.
   Thin blue arrows show incremental device-to-host (D2H) backing during computation; thick purple arrows show scheduled H2D restoration.
   Solid, hatched, and empty KV blocks indicate valid state, allocated restoration targets awaiting completion, and missing state without an allocation.
-  On the right, successive groups restore KV while others compute or wait; white gaps indicate no H2D transfer.
+  On the right, restorations for groups C, D, A, and B spread H2D demand over time to sustain link activity; white gaps indicate no H2D transfer.
   Group states and durations are schematic, and a group need not execute as one batch.}
   \label{fig:design_overview}
   \Description{Four management components coordinate an inference backend and GPU KV for session groups A through D.
@@ -61,8 +62,9 @@ Uniform spacing distributes release times without guaranteeing equal transfer de
 
 \paragraph{Trading batching efficiency for memory reuse.}
 Aligning every session to the same phase makes more work available for batching, but also concentrates demand for resident KV and restoration.
-Staggering groups distributes that demand and lets their eviction intervals supply space for one another.
-It can reduce batch sizes and increase total execution cost through additional model iterations and weight accesses.
+Staggering groups spreads restoration demand over a longer part of the period, making more H2D service available for restoring evicted KV.
+Their eviction intervals supply space for one another, turning the additional restoration service into GPU memory reuse.
+Staggering can reduce batch sizes and increase total execution cost through additional model iterations and weight accesses.
 Assigning multiple sessions to each slot retains opportunities for batching.
 For $N$ sessions in roughly balanced groups, each phase releases about $N/S$ sessions, although actual batches depend on the backend and current readiness.
 

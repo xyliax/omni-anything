@@ -153,25 +153,27 @@ Background Table 1 使用 MiniCPM-o 4.5 的公开最大上下文，先计算各�
 - `q` 为当前 forward 中每会话新处理的位置数：prefill 用 `q=10`，每次 decode 用 `q=1`。body FLOPs 为 `2*N*q*P_body`；head 只计算末位置 logits，为 `2*N*P_head`；attention 两次矩阵乘 FLOPs 近似 `4*N*q*z*a*d*L_max`。
 - 同批共享矩阵权重，每次 forward 的权重读取为 `W_body+W_head`，不是 `N*(W_body+W_head)`。不同会话各自的历史仍须读取，attention 字节近似 `N*K`。假设优化后的 GQA kernel 复用共享 KV heads，短增量 prefill 的十个 query 复用一次历史读取；额外读取需通过敏感性或实测修正。
 
-对 body、head、attention **分别**取 `max(bytes/B_eff, FLOPs/F_eff)`，再相加；不能对整个网络只取一次 max 并假设不同阶段完全重叠。`B_eff=eta_B*B_GPU`、`F_eff=eta_F*F_GPU`。本表中心场景取 **`eta_B=0.50, eta_F=0.25`**；这两个数是统一的估算假设，不是设备实测效率、置信区间或新增系统参数。带宽采用十进制 TB/s；算力采用 dense BF16/FP32 累加参考，禁止混用稀疏翻倍值、FP8/FP4 AI TOPS。
+对 body、head、attention **分别**取 `max(bytes/B_eff, FLOPs/F_eff)`，再相加；不能对整个网络只取一次 max 并假设不同阶段完全重叠。`B_eff=eta_B*B_GPU`、`F_eff=eta_F*F_GPU`。两张表的主场景统一取 **`eta_B=0.80, eta_F=0.25`**，作为显式效率假设；这两个数不是设备实测效率、经公开数据标定的参数、置信区间或新增系统参数。外部内核及模型利用率的定义与适用条件见[带宽效率参考](references/periodic-model-cost-sources.md#显存带宽效率的外部参考)。较低带宽效率仍在敏感性中报告；提高带宽效率不等于提高算力效率。带宽采用十进制 TB/s；算力采用 dense BF16/FP32 累加参考，禁止混用稀疏翻倍值、FP8/FP4 AI TOPS。
+
+高效 attention 内核的显存带宽利用量级及其实现依赖见[外部参考](references/periodic-model-cost-sources.md#显存带宽效率的外部参考)；该来源支持高效率场景的合理性，不替代目标配置标定。
 
 `F_GPU` 依次为 A100 SXM 312、H100 SXM 989.5、RTX PRO 6000 Server 约 240、H200 SXM 989.5、MI300X 1307.4 TFLOP/s。RTX 的约 240 是按官方 FP32 120 TFLOP/s 和同类 GB202 架构公开的 dense BF16/FP32-accumulation 与 FP32 约 2:1 比例推导的参考，不是该 SKU 已明确公布或实测的 BF16 峰值；不把官网未区分累加精度的 1 PFLOP 数字直接代入。不同软件内核是否达到假设效率须独立标定，跨厂商解析比较不表示原型已在这些设备运行。
 
 令 `t(q)` 为上述三个部分的时间和，则 `t_prefill=t(10)`、`t_decode=4*t(1)`、`t_PD=t_prefill+t_decode`，周期占比为 `t_PD/T`，剩余预算为 `T-t_PD`。未显式建模的 activation 流量、KV 增量写入、norm/softmax/采样、kernel launch、输入编码、语音生成和调度等成本不因此变成零；剩余预算须覆盖它们及状态恢复，不能直接称为实测 GPU idle 或完整周期 compute slack。
 
-| GPU（名义容量） | 显存带宽（TB/s） | 内存会话上限 = batch | 计算时间（ms） | 周期占比 |
+| GPU（名义容量） | 显存带宽（TB/s） | 内存会话上限 = batch | 主干执行时间（ms） | 周期占比 |
 | --- | ---: | ---: | ---: | ---: |
-| A100 SXM（80GB） | 2.04 | 10 | 375 | 37.5% |
-| H100 SXM（80GB） | 3.35 | 10 | 225 | 22.5% |
-| RTX PRO 6000 Blackwell Server（96GB） | 1.60 | 12 | 559 | 55.9% |
-| H200 SXM（141GB） | 4.80 | 20 | 289 | 28.9% |
-| MI300X（192GB） | 5.30 | 29 | 366 | 36.6% |
+| A100 SXM（80GB） | 2.04 | 10 | 241 | 24.1% |
+| H100 SXM（80GB） | 3.35 | 10 | 141 | 14.1% |
+| RTX PRO 6000 Blackwell Server（96GB） | 1.60 | 12 | 360 | 36.0% |
+| H200 SXM（141GB） | 4.80 | 20 | 185 | 18.5% |
+| MI300X（192GB） | 5.30 | 29 | 233 | 23.3% |
 
-计算时间合并主干 prefill 和四次 decode，不重复列合计或剩余时间。显示带宽保留两位小数、时间取整到 ms、占比保留一位小数；计算仍使用原始参数，各列从未舍入值独立取整。GPU 容量的上限与计算承载能力是不同量：`N_mem` 仅来自空间；即使中心场景全部 `t_PD<T`，也未证明所有卡在真实完整管线中均先受容量限制。
+主干执行时间合并 prefill 和四次 decode，包含模型化的矩阵计算与显存访问成本，不是纯 FLOPs 计算时间；不重复列合计或剩余时间。显示带宽保留两位小数、时间取整到 ms、占比保留一位小数；计算仍使用原始参数，各列从未舍入值独立取整。GPU 容量的上限与计算承载能力是不同量：`N_mem` 仅来自空间；即使主场景全部 `t_PD<T`，也未证明所有卡在真实完整管线中均先受容量限制。
 
-**RTX 行的原因核算。** 该行使用 96GB RTX PRO 6000 Blackwell Server，不是 RTX 6000 Ada。中心场景的有效显存带宽为 `0.5*1597=798.5 GB/s`；batch 为 12，而 A100/H100 行为 10。单次 decode 的共享矩阵权重加独立历史 KV 约为 `W+12*K=87.6 GB`，三个分项均受带宽约束，因此一次 batch decode 约需 `87.6/798.5=109.7 ms`；四次 decode 加 prefill 得 `438.9+120.1≈559 ms`。其中五次历史 KV 读取约占 454 ms，即总估计的 81%；batching 平摊权重读取，不能平摊不同会话的历史。把 RTX 的算力参考提高至 480 或 1,000 TFLOP/s 时，总估计仅降至约 549 ms；固定相同 batch 10 时，原参考下约为 479 ms。该核算说明本场景主要受显存流量影响，不构成设备实测排名；各卡在自身容量上限运行，工作量不同。
+**RTX 行的原因核算。** 该行使用 96GB RTX PRO 6000 Blackwell Server，不是 RTX 6000 Ada。主场景的有效显存带宽为 `0.8*1597=1277.6 GB/s`；batch 为 12，而 A100/H100 行为 10。单次 decode 的共享矩阵权重加独立历史 KV 约为 `W+12*K=87.6 GB`，三个分项均受带宽约束，因此一次 batch decode 约需 `87.6/1277.6=68.6 ms`；四次 decode 加 prefill 得 `274.3+85.5≈360 ms`。其中五次历史 KV 读取约占 284 ms，即总估计的 79%；batching 平摊权重读取，不能平摊不同会话的历史。把 RTX 的算力参考提高至 480 或 1,000 TFLOP/s 时，总估计分别降至约 346 或 343 ms；固定相同 batch 10 时，原参考下约为 308 ms。该核算说明本场景主要受显存流量影响，不构成设备实测排名；各卡在自身容量上限运行，工作量不同。
 
-**敏感性。** 固定容量和工作量，将 `(eta_B,eta_F)` 从较快的 `(0.70,0.40)` 改到较慢的 `(0.40,0.15)`，五行的 `t_PD` 范围分别约为 `266–476 / 161–282 / 397–710 / 205–366 / 260–463 ms`。这些是假设变化，不是测量误差条；实际值也可能超出范围。保持中心效率但将每个 attention 阶段 KV 读取流量加倍，五行变成约 `671 / 406 / 1013 / 540 / 697 ms`，RTX 行会超过周期，说明 KV 复用假设必须验证。`R=18–22 GiB` 时，应重新取整 batch；辅助 TTS 缓存若使用窗口而非最大全注意力，也须按匹配配置重新计算，不能只保留有利结果。
+**敏感性。** 固定容量和工作量，将 `(eta_B,eta_F)` 从较快的 `(0.80,0.40)` 改到较慢的 `(0.40,0.15)`，五行的 `t_PD` 范围分别约为 `234–476 / 141–282 / 349–710 / 180–365 / 229–463 ms`。这些是假设变化，不是测量误差条；实际值也可能超出范围。下方代码还在 `eta_F=0.25` 下报告 70% 和 50% 带宽效率。保持主场景效率但将每个 attention 阶段 KV 读取流量加倍，五行变成约 `426 / 254 / 643 / 342 / 440 ms`；若同时降至 50% 带宽效率，RTX 行约为 1.01 s，会超过周期，说明效率与 KV 复用假设都必须验证。`R=18–22 GiB` 时，应重新取整 batch；辅助 TTS 缓存若使用窗口而非最大全注意力，也须按匹配配置重新计算，不能只保留有利结果。
 
 以下标准库代码复算表内数值及敏感性，不运行模型、不产生性能证据：
 
@@ -197,7 +199,7 @@ devices = [
     ("MI300X", 192, 5.300, 1307.4),
 ]
 
-def estimate(n, bandwidth, compute, eta_b=0.50, eta_f=0.25, kv_reads=1):
+def estimate(n, bandwidth, compute, eta_b=0.80, eta_f=0.25, kv_reads=1):
     B, F = eta_b*bandwidth*1e12, eta_f*compute*1e12
     def phase(q):
         dense = max(2*n*q*body/F, 2*body/B)
@@ -211,15 +213,124 @@ for name, capacity, bandwidth, compute in devices:
     n = floor((capacity-reserve)*GiB/(main_kv+speech_kv))
     prefill, decode = estimate(n, bandwidth, compute)
     total = prefill + decode
-    faster = sum(estimate(n, bandwidth, compute, 0.70, 0.40))
+    faster = sum(estimate(n, bandwidth, compute, 0.80, 0.40))
     slower = sum(estimate(n, bandwidth, compute, 0.40, 0.15))
+    bw70 = sum(estimate(n, bandwidth, compute, 0.70, 0.25))
+    bw50 = sum(estimate(n, bandwidth, compute, 0.50, 0.25))
     double_kv = sum(estimate(n, bandwidth, compute, kv_reads=2))
-    print(name, n, *(round(x, 1) for x in
+    double_kv_bw50 = sum(estimate(n, bandwidth, compute, 0.50, 0.25, kv_reads=2))
+    print(name, "batch", n, "prefill, decode, total ms, cycle %, remaining ms;"
+          " faster, slower, BW70, BW50, double KV, double KV BW50 ms",
+          *(round(x, 1) for x in
           (prefill, decode, total, total/10, 1000-total,
-           faster, slower, double_kv)))
+           faster, slower, bw70, bw50, double_kv, double_kv_bw50)))
 ```
 
 **后续标定协议。** 用实际可分配显存和非 KV/辅助 KV 分配替换容量假设；在相同上下文、输入位置数、decode forward 数及 batch 下测 body、attention 和整段 prefill/decode，再加入其余模型和服务阶段。对独立配置验证效率、流量复用及瓶颈预测。窗口策略、分组/phase 或批处理方式变化后重新计账。解析估计、标定预测和实测结果分开标注；该表不冻结实验模型、平台或论文研究范围。
+
+<a id="cross-model-projections"></a>
+### 跨模型周期占比与公开实测核查
+
+Background Table 2 扩展前表的容量计算和分阶段 roofline，行沿用同一组 GPU，列使用不同模型主干。每格先用模型自身的配置上下文计算 KV，再以该卡可容纳的会话上限形成 batch；括号报告 batch，主值为估算周期占比。参数和外部实测见[来源记录](references/periodic-model-cost-sources.md)。所有数字仍是**未标定的主干解析估算**，没有转换成完整多模态管线或部署准入保证。
+
+**模型与工作量。** MiniCPM-o 完全沿用前节。Qwen2.5-Omni 使用 Thinker 的配置上下文 32768；每秒 25 个编码后音频位置来自报告中的 40 ms/位置，四次文本 decode 和一秒更新则是本表的受控工作量假设，不是模型原生双工协议或生成上界。预填充按增量执行、复用已有 KV，真实后端能否保留同语义前缀须验证。Moshi 使用原生每 80 ms 一次 temporal Transformer forward，保留配置中的 3000 个时间位置；多 codebook 不乘成多次 temporal forward。每种模型均只计长期历史所在主干：Qwen Talker、Moshi depth Transformer、各模型输入编码与波形输出不计入时间，但容量预留包含其权重与下述辅助 KV。
+
+| 模型 | 主干上下文 | 周期（ms） | 每周期主干工作 | 主干 KV（GiB/会话） | 辅助 KV（GiB/会话） | 非逐会话 KV 预留 R（GiB） |
+| --- | ---: | ---: | --- | ---: | ---: | ---: |
+| MiniCPM-o 4.5 | 40960 | 1000 | 10 位置增量 prefill + 4 次 decode | 5.625 | 0.234375 | 20 |
+| Qwen2.5-Omni-3B | 32768 | 1000 | 25 位置增量 prefill + 4 次 decode | 1.125 | 0.375 | 16 |
+| Qwen2.5-Omni-7B | 32768 | 1000 | 25 位置增量 prefill + 4 次 decode | 1.75 | 1.5 | 28 |
+| Moshi 7B | 3000 | 80 | 1 次 temporal forward | 1.46484375 | 0.0078125 | 20 |
+
+此参数表保留复算所需精度，论文表内占比只保留一位小数。Qwen 的 R 分别高于其存储 dtype 下约 11.15/20.83 GiB 的完整权重；Moshi 的 R 另覆盖主 LM 之外的 Mimi 权重等。剩余工作区、非 KV 辅助状态和运行时预算仍为场景假设，不是实测容量。Qwen 两个模块分别预留其配置最大 KV，Moshi 另预留 8 MiB 的 Mimi/depth KV；这些不代表所有缓存必然同时到顶。容量近似与 Table 1 相同，将名义 GB 标签作为 GiB 预算。末次更新须留出新位置空间，不能在已到最大上下文后继续增长而越界。
+
+统一沿用前表的 `eta_B=0.80, eta_F=0.25` 假设，对所有模型和 GPU 使用相同效率。主表报告这一场景，较低效率的结果见敏感性；公开实测对照也使用相同主场景参数重新计算，不将这一选择称为经实测标定。
+
+| GPU（同 Table 1 的 SKU） | MiniCPM-o 4.5 | Qwen2.5-Omni-3B | Qwen2.5-Omni-7B | Moshi 7B |
+| --- | ---: | ---: | ---: | ---: |
+| A100 SXM 80GB | 24.1% (10) | 34.5% (42) | 24.3% (16) | 58.5% (40) |
+| H100 SXM 80GB | 14.1% (10) | 15.0% (42) | 10.9% (16) | 35.6% (40) |
+| RTX PRO 6000 Blackwell Server 96GB | 36.0% (12) | 55.9% (53) | 38.1% (20) | 92.7% (51) |
+| H200 SXM 141GB | 18.5% (20) | 24.1% (83) | 17.2% (34) | 47.5% (82) |
+| MI300X 192GB | 23.3% (29) | 27.9% (117) | 20.2% (50) | 59.7% (116) |
+
+**解释口径。** 表用于检查假设场景中余量是否跨组合出现，同时在敏感性中保留不成立的组合。小主干或较少 KV heads 可容纳更多会话，并不自动缩短容量上限处的 batch 时间。Qwen 大量辅助 KV 预留也会降低 batch 和主干占比，不能被解释为完整模型的吞吐优势。主表所有主干占比均低于 100%，但 Moshi 的高更新频率仍提供边界例子：RTX 主场景约需 74.2 ms，仅余约 5.8 ms 给未计入阶段；92.7% 不能称为“一小部分”。跨模型主干估计不能证明所有硬件/模型与完整管线都存在余量，更不能通过删去不利模型来获得该结论。
+
+沿用前表的效率敏感性 `(eta_B,eta_F)=(0.80,0.40)` 至 `(0.40,0.15)`，RTX 上 Qwen 3B 的占比约从 43.0% 到 100.0%，Moshi 约从 91.6% 到 183.2%。固定 `eta_F=0.25`，将带宽效率降至 70% 或 50%，RTX 上 Moshi 分别约为 104.7% 或 146.6%。接近周期的估计对假设敏感；全矩阵敏感性由下方代码复算，不把这些区间当成实测误差界。
+
+**公开实测对照。** 先复算外部 benchmark 的实际工作量，再比较，不能把单会话短上下文延迟直接乘成表内数据。
+
+1. Qwen 官方 BF16、A100 80GB、batch 1 测试包括初始 prefill 和 2048 个输出。取其 Qwen2.5-3B/7B-Instruct 作为相同相关矩阵/KV 几何的 Thinker 代理；不是 Omni 管线实测。初始 prefill 的因果 attention 使用平均长度 `(P+1)/2`，再逐位置累加 2047 次 decode。源未说明 A100 形态，分别使用 PCIe 1.935 TB/s 和 SXM 2.039 TB/s。预填充的 activation、重复读取和运行时仍未显式计入，此对照只能检查一阶模型的量级。
+
+| 代理模型 | 输入 / 输出位置 | 估算吞吐范围（tok/s） | 官方 vLLM 实测（tok/s） | 估算相对实测偏差 |
+| --- | --- | ---: | ---: | --- |
+| Qwen2.5-3B-Instruct | 1 / 2048 | 249.3–262.7 | 127.61 | +95.4% 至 +105.9% |
+| Qwen2.5-3B-Instruct | 30720 / 2048 | 149.7–155.4 | 105.88 | +41.4% 至 +46.7% |
+| Qwen2.5-7B-Instruct | 1 / 2048 | 109.0–114.9 | 84.28 | +29.4% 至 +36.3% |
+| Qwen2.5-7B-Instruct | 30720 / 2048 | 71.4–74.2 | 70.33 | +1.6% 至 +5.5% |
+
+范围来自两种 A100 SKU，不是置信区间。中间输入长度 6144/14336 也复算并保留在下方代码输出中；八个模型/长度点、两种 SKU 的吞吐高估约为 1.6%–105.9%，短上下文 3B 的预测约为实测的两倍。当前代理对照不能将 80% 标定为本表配置已达到的效率。该偏差也不能作为 Table 2 每格的误差界：最大 batch、增量前缀复用、其他 GPU 与后端都未匹配。官方同页的 Transformers 速度更低，在上述四个端点约比该估算慢 2.7–8.5 倍，表明后端效率足以改变余量，不能只引用 vLLM 来声称普遍成立。
+
+2. MiniCPM-o 的 RTX 4090 F16 公开值为约 38 ms/token。假设 batch 1、短历史，并按同一 80% 有效带宽估计矩阵读取，约为 `15.135 GB/(0.8*1008 GB/s)=19 ms/token`，约为公开值的一半。公开 batch/上下文不全，且这里只估计矩阵读取，不能称为同配置误差测量，也不能把它用作最大上下文校准或高效率假设的实测支持。
+3. Moshi 的 L4 最低约 200 ms 是含算法延迟的整体交互延迟，不能等同 80 ms 更新的 GPU 服务时间。本轮未找到可直接校验其最大保留窗口、容量上限 batch 的公开主干计时，因此该列明确保留为未校验边界估计。
+
+以下标准库代码**接在前节 Table 1 的代码后运行**，复用其 `devices`，计算 Table 2、效率敏感性和外部吞吐对照；不运行模型或生成性能证据：
+
+```python
+# name, layers, hidden, intermediate, query heads, KV heads, head dim,
+# vocabulary, retained context, reserve GiB, auxiliary KV GiB, prefill, decode, period s
+models = [
+    ("MiniCPM-o 4.5", 36, 4096, 12288, 32, 8, 128, 151748,
+     40960, 20, 0.234375, 10, 4, 1.0),
+    ("Qwen2.5-Omni-3B", 36, 2048, 11008, 16, 2, 128, 151936,
+     32768, 16, 0.375, 25, 4, 1.0),
+    ("Qwen2.5-Omni-7B", 28, 3584, 18944, 28, 4, 128, 152064,
+     32768, 28, 1.5, 25, 4, 1.0),
+    ("Moshi 7B", 32, 4096, 11264, 32, 32, 128, 32000,
+     3000, 20, 8/1024, 0, 1, 0.080),
+]
+
+def model_geometry(model):
+    _, z, h, i, a, v, d, V, *_ = model
+    return z*(2*h*a*d + 2*h*v*d + 3*h*i), h*V, 4*z*v*d
+
+def model_phase(model, n, q, length, bw, tf, eta_b=0.80, eta_f=0.25):
+    body_params, head_params, kv_per_position = model_geometry(model)
+    _, z, h, i, a, v, d, *_ = model
+    B, F = eta_b*bw*1e12, eta_f*tf*1e12
+    return (max(2*n*q*body_params/F, 2*body_params/B)
+            + max(2*n*head_params/F, 2*head_params/B)
+            + max(4*n*q*z*a*d*length/F, n*kv_per_position*length/B))
+
+for gpu, capacity, bw, tf in devices:
+    for model in models:
+        name, *_, L, R, auxiliary, p, d, T = model
+        K = model_geometry(model)[2]*L
+        n = floor((capacity-R)*GiB/(K + auxiliary*GiB))
+        values = []
+        for eta_b, eta_f in [(0.80, 0.25), (0.80, 0.40), (0.40, 0.15),
+                             (0.70, 0.25), (0.50, 0.25)]:
+            prefill_s = model_phase(model, n, p, L, bw, tf, eta_b, eta_f) if p else 0
+            decode_s = d*model_phase(model, n, 1, L, bw, tf, eta_b, eta_f)
+            values.append(100*(prefill_s + decode_s)/T)
+        print(gpu, name, "batch", n, "cycle %: main, faster, slower, BW70, BW50",
+              *(round(x, 1) for x in values))
+
+observed_vllm = [[127.61, 123.15, 117.35, 105.88],
+                 [84.28, 80.70, 77.69, 70.33]]
+for model, measured in zip(models[1:3], observed_vllm):
+    for prompt, observed in zip([1, 6144, 14336, 30720], measured):
+        for bw in [1.935, 2.039]:  # A100 PCIe and SXM; published SKU unspecified
+            elapsed = model_phase(model, 1, prompt, (prompt+1)/2, bw, 312)
+            elapsed += sum(model_phase(model, 1, 1, prompt+j, bw, 312)
+                           for j in range(1, 2048))
+            predicted = 2048/elapsed
+            print(model[0], prompt, bw, "predicted/observed tok/s",
+                  round(predicted, 2), observed,
+                  "relative speed error %", round(100*(predicted/observed-1), 1))
+```
+
+进一步验证应在表内每个 `N_mem`、最大保留长度和周期工作量下，分别测主干与完整管线，记录真实可分配容量、辅助状态、batch 执行和端到端完成时间。未达到周期的配置保留，并检查减小 batch 后是计算还是容量先限制承载；不得为维持预设结论改动周期或删去失败格子。
 
 <a id="single-gpu-selection"></a>
 ### 平台选择与容量估算

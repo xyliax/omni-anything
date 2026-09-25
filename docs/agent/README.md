@@ -28,4 +28,4 @@
 | [change-impact.json](change-impact.json) | 改动需同步的文档和检查 |
 | [evidence.json](evidence.json) | 按 `EVIDENCE-*` 定位 exact run、hash 和 provenance |
 
-历史材料只按目标 ID 或具体问题读取：`records/` 与 `legacy-experiment-log.md` 保留实验历史，后者已冻结；论文 AI 使用记录只供披露。`docs/papers/` 与 `docs/references/` 是外部资料，不加入默认 read-set，不以其旧比较结论约束新设计。新记录按 [records/README.md](records/README.md) 创建。
+历史材料只按目标 ID 或具体问题读取：`records/` 与 `legacy-experiment-log.md` 保留实验历史，后者已冻结。`docs/papers/` 与 `docs/references/` 是外部资料，不加入默认 read-set，不以其旧比较结论约束新设计。新记录按 [records/README.md](records/README.md) 创建。

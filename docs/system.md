@@ -5,6 +5,8 @@
 
 Pilarius 的目标是通过安排会话 phase、部分 KV 逐出和下一周期前的恢复，降低 GPU 峰值驻留并扩展可承载会话数。本文描述设计及其约束，具体预算算法仍待确定。已验证的内容见[已有证据](findings.md#current-state)。
 
+核心因果关系是：错开会话 phase，将 H2D 恢复需求分散到周期内更长的时间范围，使链路持续服务更多 KV blocks；每周期能够及时恢复更多 KV，才支持更大的逐出量，并通过跨会话空间复用扩展 effective KV capacity。与其他会话计算重叠是可能的执行现象，不是这里的容量机制或优化目标。具体资源取舍见[phase 的资源依据](#offset-resource-rationale)。
+
 <a id="logical-architecture"></a>
 Pilarius 位于推理引擎之上，负责跨周期的会话推进与 KV 驻留管理。当前设计图将 planner、session manager、KV memory manager 和 KV transfer engine 画为 Pilarius 内的四个逻辑组件，并单独呈现下层 inference backend。组件边界描述职责，不规定进程数、通信协议或已有同名代码模块。
 
@@ -67,7 +69,7 @@ Inference backend 以可替换的职责边界呈现；具体运行时与当前�
 <a id="research-mechanisms"></a>
 | 设计组成 | 预期作用 | 待验证问题 |
 | --- | --- | --- |
-| 均匀 phase 分配 | 分散恢复需求与活跃驻留 | 能否降低峰值，批处理代价多大 |
+| 均匀 phase 分配 | 分散 H2D 恢复需求，延长链路可持续工作的时间，支持更多 KV 的周期恢复与逐出 | 能否把增加的恢复服务转化为峰值驻留下降，批处理代价多大 |
 | 按预算部分逐出 | 在恢复能力允许的范围内回收空间 | 释放字节与空闲时长如何转化为容量收益 |
 | 时间与空间约束下的提前恢复 | 在下一 tick 前准备 KV，控制提前占用 | 共享链路、增长和抖动下是否仍可及时完成 |
 
@@ -328,6 +330,8 @@ phase assignment 可通过 session-to-slot assignment 具体实现，将会话�
 候选搜索、成本估计与恢复安排仍属[联合规划待决项](#open-design-decisions)。最大上下文约束只限定状态规模，周期完成表现仍由实验测量，不由该上限单独保证。
 
 <a id="offset-resource-rationale"></a>
+错开 phase 的直接目的是延长 H2D 链路在每周期内的有效工作时间，避免恢复需求挤在短时段而留下长时间空档。Planner 联合安排各组的恢复时机与逐出预算，session manager 按计划推进，memory manager 准备有效源与可用目标，transfer engine 持续执行具备条件的复制。更多有效恢复服务支持更多 KV 被逐出后及时搬回；GPU 峰值收益还取决于这些状态真正离开 GPU 的时长及跨会话空间复用，关系见[资源分析](problem.md#bandwidth-memory-bound)。
+
 在会话同质、每次恢复及时获得空间、传输耗时等于相邻 phase 间隔的理想条件下，相同恢复量可以使传输首尾衔接。异质状态、不同完成时刻及资源竞争会破坏这些条件。各会话逐出量可以不同，但共享预算相互耦合；不能宣称均匀 phase 自动保证满带宽或最小峰值驻留。
 
 phase 的权限由应用允许的时间安排给出。首次对齐等待、推迟提交和切块变化带来的等待均需计量，不能用提交后的延迟隐藏输入积压。
