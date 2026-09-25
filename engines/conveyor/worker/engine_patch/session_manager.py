@@ -6,6 +6,7 @@ owns plans and timers; neither module uses a model step to advance a copy.
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -20,6 +21,7 @@ class SessionPlan:
     eviction_ranges: tuple[tuple[int, int], ...] = ()  # logical, half-open
     max_evict_blocks: int | None = None
     group: int | None = None
+    plan_version: int = 0
 
     def __post_init__(self):
         if not all(math.isfinite(v) for v in (self.period_s, self.next_tick, self.restore_lead_s)):
@@ -55,6 +57,16 @@ class ManagedSession:
     restore_inflight: bool = False
     cancelled: bool = False
     pending_work: str | None = None
+    missing_tick: float | None = None
+    restoration_requested: bool = False
+    retained_table: list = field(default_factory=list)
+    cached_blocks: int = 0
+    retained_hashes: tuple = ()
+    retained_computed_tokens: int = 0
+
+    @property
+    def restoration_tick(self):
+        return self.plan.next_tick if self.missing_tick is None else self.missing_tick
 
 
 class SessionManager:
@@ -74,6 +86,8 @@ class SessionManager:
         self.stopping = threading.Event()
         self.error = None
         self.thread = None
+        self.restoration_paused = False
+        self.restore_policy = os.environ.get('OMNI_RESTORE_POLICY', 'pre_tick')
 
     def start(self):
         self.thread = threading.Thread(target=self._run, name="session-manager", daemon=True)
@@ -121,7 +135,7 @@ class SessionManager:
             review = getattr(self.adapter, 'review_plan', None)
             if review is not None:
                 review()
-            for session in sorted(self.sessions.values(), key=lambda s: s.plan.next_tick - s.plan.restore_lead_s):
+            for session in sorted(self.sessions.values(), key=lambda s: s.restoration_tick - s.plan.restore_lead_s):
                 if session.activity != "idle" or session.restore_inflight or session.pending_work is not None:
                     continue
                 plan = session.plan
@@ -131,8 +145,13 @@ class SessionManager:
                     if now < plan.next_tick - plan.restore_lead_s:
                         if self.adapter.evict(session):
                             session.evicted_generation = session.idle_generation
-                if session.host_pins and now >= plan.next_tick - plan.restore_lead_s:
-                    self.adapter.restore(session)  # capacity refusal retains host pins
+                if self.restore_policy == 'pre_tick' and session.host_pins and now >= session.restoration_tick - plan.restore_lead_s:
+                    if self.restoration_paused:
+                        continue
+                    if not self.adapter.restore(session):
+                        # A blocked complete destination must not be bypassed
+                        # by later sessions holding a smaller partial working set.
+                        break
 
     def check_health(self):
         if self.error is not None:

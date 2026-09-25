@@ -404,6 +404,345 @@
         }
       },
       "distribution": "Local artifacts on the original producing machine; excluded from Git source distribution. Transfer the complete run and verify hashes for remote reanalysis."
+    },
+    "RUN-CONTROLLED-CALIBRATION-01": {
+      "root": "results/baseline",
+      "run_id": "20260925_083654_calibrate-resident-n3",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "386d6f1921eb09cf2af35713c4013f207d9ae80b6e367e77ee54b899c64a512d",
+      "status_sha256": "0bfab46189ddbeaafbf759e560842d0aba781d6af3296544ace9e6c0474e7e19",
+      "artifact_sha256": {
+        "client.json": "8bfb504009e6d891b2861bda564e3478624d90b1b226b5511d74c397da61d898",
+        "client.txt": "9e1fe04145d4d40505e55e630e3cbf941b35b71e994161d00209fe0a44fb152d",
+        "gateway.log": "d891fc4b989a6238d9603d414776478fc78b8d03b0f4d25ca74e1404cd3787d6",
+        "gateway_frames.jsonl": "72e964f7a9c29001ca2dec766159aa4a9e0cbd3cfeac286324902796b0d4727e",
+        "gateway_ticks.log": "25269a8140cca4f19ac09f46a135d175f45cda4855f8bcea25be1b233b1c5e0b",
+        "gpu.csv": "ad357d9dcef981066fdf7ad5d553e4f45e40aadd3215acaab08242c5a90dec19",
+        "kv.log": "26107fad59af0764daffe1ce173e1cfbb8621e24f4a7a89670ddb945c4669c6f",
+        "manifest.json": "386d6f1921eb09cf2af35713c4013f207d9ae80b6e367e77ee54b899c64a512d",
+        "replay_metrics.json": "a6d0e18bcb64d012ec8e63163ae1a904d71d1758f2f869e5891da31f8ccaedfc",
+        "service_events.jsonl": "1fb6485d9dd25a1f13dfb1ed4a7d1f420719d2eec741e2e952fc9e3480544175",
+        "source.patch": "b1b1d19e3e3aed475921502f0be06dc092c6dfe83d55bc4b089499be4c6561b0",
+        "worker.log": "0fb046f3df1fac29026d657dbf2c82c2409b5113b4e85e66d14c6945077a1ad0"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-02": {
+      "root": "results/baseline",
+      "run_id": "20260925_083846_calibrate-resident-n4",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "45c3190755c21eb295b70bb3ea17541173e7bcc32c3e184268bfd2a2cd61f37d",
+      "status_sha256": "b1b02d37de66ee77e002564eb20b14f570dd4cc490b7d777fac9e8aa99d05b81",
+      "artifact_sha256": {
+        "client.json": "57482bde3af72b1fcdaf81834cb2f38ccff944b3b86e3091bdd4ffeaadb58206",
+        "client.txt": "641c82f3950c0f77cad916941076ac15e57e5a3d28af5d48972b5c6d33b56f15",
+        "gateway.log": "1b1bac3ee1fdb1aa0e774c8a2f82e34b37a3ae5b61c3e59ad32fd127b033aeab",
+        "gateway_frames.jsonl": "89caae62cc5b583e4251e3456c6f9d0959a760b4cc82478dc861381bccb7cbef",
+        "gateway_ticks.log": "5dddf40a9e791b4e3c18f3fb1c43557d7c27b64842620f086ae78b59cf572df3",
+        "gpu.csv": "2ca8dcd5ebb1c25f13a421672737f791a2c7f2ca25fd7c4b51e7478a3ac66db2",
+        "kv.log": "4c906a212771967f9a205b724cec4910359cb7ac1530dff448a93d9653473fcc",
+        "manifest.json": "45c3190755c21eb295b70bb3ea17541173e7bcc32c3e184268bfd2a2cd61f37d",
+        "replay_metrics.json": "a941d532ca8e3dc92ecc82c450e5009b4c897f39e18419c59ecf513d5579353b",
+        "service_events.jsonl": "e3d38be682e7b0f8cf7042e129bcc5381f3cf3864d861a38aafc2dc201b4ca92",
+        "source.patch": "1f72046548e9c32aab9972fde9848a8b017ed2f35fd5614d1f1ed5e5541f06f2",
+        "worker.log": "389d1f1aae591d108741b1f3242f3b9905f88847cb8795efcbdf944263eb939a"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-03": {
+      "root": "results/baseline",
+      "run_id": "20260925_092759_calibrate-v3-qwen25_omni-resident-n3",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "234fbe0bc0f6070c0a90c36832d45883931062e4462388c1ca51ce42c570c594",
+      "status_sha256": "ff2c39fb44ce5231606c38659fac4c3258e3555060a5aaa6a287359b0b828a44",
+      "artifact_sha256": {
+        "client.json": "4d58e95cc85a2fa39a79687ef8c42b5bcba6f63d61c094831ca094a23293a9df",
+        "client.txt": "9c1afa982aaa421b22900bb72f1eab638e9de55bfd197fc5238dab5196c37e9c",
+        "gateway.log": "cabba517b42c5e9e3ffb991b64921afcc4ea0b84587bce1524c86608f3a152d3",
+        "gateway_frames.jsonl": "476d1fb02ccacdfffa3f7b89b0eb243c05cf30da5831412c5974cd8f029fd666",
+        "gateway_ticks.log": "0632f9e4c148bb00ef4e09c79ea5b16b48cb0bfeabc544f97a379e76acc33d20",
+        "gpu.csv": "38482af3285dbe20ac975feca0216dac8edc408a86ff91e893da8c854e979af0",
+        "kv.log": "35f43303ffd62834b1df35fef24d7843799eaaab24be2dea36d5acc0a385e8f4",
+        "manifest.json": "234fbe0bc0f6070c0a90c36832d45883931062e4462388c1ca51ce42c570c594",
+        "replay_metrics.json": "8912bf17b72f4d94bf29fda20470bff3f48600bf830ebda642083bb330f6f62b",
+        "service_events.jsonl": "a3c5474436193013bde6230382238d056819ab0762f9feb9a11c677939f08d85",
+        "source.patch": "dc057614f0e9660aab589eebec2ab5b90c6bf845846e007334c09e7cb88903b1",
+        "worker.log": "10a32aac3d685070abe5436517a6415a02cda8ad1b6c033ca9d645d2946139d4"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-04": {
+      "root": "results/baseline",
+      "run_id": "20260925_092917_calibrate-v3-qwen25_omni-resident-n4",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "f1682c62ac037e22ba7ea359b7a03f6b6e3625b5cc987adc3042620a00a299a3",
+      "status_sha256": "684a090b5f5bcb393b5f4c1d6fa8e376a7ca4d0fafde6821c3980ce2fd3e250e",
+      "artifact_sha256": {
+        "client.json": "0ef78d46614a9bb23095c9c0848e353901ae33064b633874dc09a5afc8e49540",
+        "client.txt": "215e05decb5cbccd673a1be463a7a929cb82d2f89d185b15e0add060d7461ff2",
+        "gateway.log": "9ab3914e59f2ee6ae0847517ec0e7dde0842b40c6e7b9a0f3ca90fa6ea73f031",
+        "gateway_frames.jsonl": "1dfac8a60115887717cb2a79abb6a7997b15eb563de2d92e92fc5d3749f73def",
+        "gateway_ticks.log": "2cc29688aa7ba1d0a8dcc099c4e62ec02cba60cbfbe177e751c65244ef82c163",
+        "gpu.csv": "25234b89cbc60dc4ab6341e606f2e65d3fc35e13691f123b3203dfb08a8efe62",
+        "kv.log": "2026e0da8f98e691c67ab5f401caecc7b4bc7eb616dc710f09c31df79f38587e",
+        "manifest.json": "f1682c62ac037e22ba7ea359b7a03f6b6e3625b5cc987adc3042620a00a299a3",
+        "replay_metrics.json": "c7306a197ee3841140f13eb85d5766ec7047ff1253916e7d89537fe09b90fe3f",
+        "service_events.jsonl": "e2b7177a4f9b4e55f9eb65d61737983ce21e2ed8f0f1526ce738e7f01717ea85",
+        "source.patch": "4b305acc8776f311eb9697190559bf5d9bd6d9760bb259d89e1e721126a70400",
+        "worker.log": "5f24fe73b6bcaa3e71f4ef2bdbee44c6bad1be457244e21322ef4a02403843c6"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-05": {
+      "root": "results/baseline",
+      "run_id": "20260925_093558_calibrate-final-minicpm_o45-aligned-n3",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "b5f295e30298964093906c948f9724e442ca8a60bc6c267692c22cab54c47827",
+      "status_sha256": "329252ea3353bb219eab1695bf07755463bf5eacc49e17dbb6845a3b95dc62a5",
+      "artifact_sha256": {
+        "client.json": "ed4670271d83d11f4a0e114cabdd0ab8532eb63c619465e18bdbdae2ef383176",
+        "client.txt": "4ab17244163565fe61d4734b3fe08d229cfe2dd30ccd0c964a28321cf7db457c",
+        "gateway.log": "95317499e992179df632ff9bb897f88d5119b741fc2ea65c381335b7fe00c720",
+        "gateway_frames.jsonl": "1e3c1bf42641ba74959150a33c29eced9a1b955990dca9b9038c06402fbe54fc",
+        "gateway_ticks.log": "5f3d71699d0fe0b06f283bf3d09384c9a2e7786115d52e3eec1249178d1c4d58",
+        "gpu.csv": "318c4f4c52c943df4ee32a0c9146abfe1bf835925900dc777e0fbf8f74276f20",
+        "kv.log": "da34eae1587af84d4e9e05f2f3f8aff7adc4e71ac253d6bfa98974a28a3bd95e",
+        "manifest.json": "b5f295e30298964093906c948f9724e442ca8a60bc6c267692c22cab54c47827",
+        "replay_metrics.json": "739e09a9ee9ae681b1693b278a18b9c0537d75b45eb5f9ca1e89088647db50dc",
+        "service_events.jsonl": "071f2dcd3b1032f3f5229283cd5738ec787e3d8e89ac732e22bb826ea3e7aaa2",
+        "source.patch": "be2406646d0bbe8d936591d9a5e67792bd61fe22b70ca0274e5a457752f26a7d",
+        "worker.log": "88415358a44b1245eb6c2658e1fc9348eae8ae39ab9c4ff9bc2be53a5189afb8"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-06": {
+      "root": "results/baseline",
+      "run_id": "20260925_093748_calibrate-final-qwen25_omni-aligned-n2",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "a9ad7774101709a897cfcda71ec9c3eeaae682c102ec016e07dd1501501a5516",
+      "status_sha256": "9644e1d10b0e06aedfe8fb08ad5677845b20535185d77e3c8f49fbc54c2719f8",
+      "artifact_sha256": {
+        "client.json": "7aa76fa75618f1a4d05c4433067c47f0b1c440a883081be34a7c9ce3096df393",
+        "client.txt": "72c8d9a947d70f0854c3b3e09023f1a276ac45d37375ab55f3c33161064d87d3",
+        "gateway.log": "f4cabd2ef1960815d303493b07d7a54d4d07195bcb8521e1dab9ca32c74ddee2",
+        "gateway_frames.jsonl": "7bf034b1175bcea75b795c39c119ebc4be17da95ce4eb4fc7bc69320aaab2840",
+        "gateway_ticks.log": "7fa906184a8b7f78d81609c59ff0a6edf27741051770a0612e0438c10a0204ff",
+        "gpu.csv": "65a35aa7c017f4942fe1ad8b3c35bd688e236d098f4ac6086b59abf01b4c4255",
+        "kv.log": "14ec1bbb3770a5beffdfabf3cac60a628d09feb0cb4dc577bfe057516f38af39",
+        "manifest.json": "a9ad7774101709a897cfcda71ec9c3eeaae682c102ec016e07dd1501501a5516",
+        "replay_metrics.json": "003b5a92c8e5a75cc3b9dcb953b276702e24595854698401ee8527edc9fedd22",
+        "service_events.jsonl": "5834374235179492711966f9480a19aea5c5cfb4c859373c9e78b1a0755ecd7c",
+        "source.patch": "7047396b4df454a07d72857d4aa59cf9474bae0ce317e9879e5aef215a6c48c4",
+        "worker.log": "fa357e610687e9d6616b5015643eadb0bba8d983865d9973021f4cfd808761c3"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-07": {
+      "root": "results/conveyor",
+      "run_id": "20260925_092321_calibrate-v3-minicpm_o45-demand-n12",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "1aacfaeae3158f059de4f21a382160647b2b13e600089b737dd48561f3f233f2",
+      "status_sha256": "25c701bbe57a1d1945cfcb02453d93dd7a8ef12fbd581beec26b602cb25dbffc",
+      "artifact_sha256": {
+        "client.json": "9d1216b22e479c3cc46accfd576377d1d4c3cb18996861d9d454b4c97121b8cf",
+        "client.txt": "bc2049f0c942ced7e96943cad063e0f3ced2db919e7bfb23ffe8232d52f7ebf1",
+        "gateway.log": "bebb99e9204f4ed7ea083aa645e6779018a6402fb2deb8163efe66a488d0aca6",
+        "gateway_frames.jsonl": "a8fcb5c431367736f8392020a42bc774f36d38069f7df939e2e10cad2a6b0a10",
+        "gateway_ticks.log": "b0176c22aad0414a8c764487bdf34d28f435a537c613a1b4b594ef270eae9fda",
+        "gpu.csv": "0f643eaafa6ab9d6e07bb268114c09f67d5cb7af61b4b6aec8540bac94490fdd",
+        "kv.log": "e7ca3eda24515bf45a699cc1a4d7f8908af09d9a135fc2a82dfb79ecb9453104",
+        "kv_events.log": "7145d8a4d46f25f21838a4ed69c3256fd9fbe3a3bf70b560eb1e8bff0fc98bf2",
+        "manifest.json": "1aacfaeae3158f059de4f21a382160647b2b13e600089b737dd48561f3f233f2",
+        "replay_metrics.json": "1fcef2e1964de6f5f4538b2798b4285159aa20395317d356bac5f9ccecae6eec",
+        "service_events.jsonl": "6db7e3e8c00b5510ae094c44f0677df34d8723c1bc55309cdc86caba11b7c056",
+        "source.patch": "8e82552933d5653bb778cabd2b3f42a5de3ed156155cd5be6f4af693a0d3c16d",
+        "transfer_events.jsonl": "e88f9e8c241b057843b37759e12d4cea45abf7af7778d9836e31dec6d00b4e5a",
+        "worker.log": "27dff2ea00eabb9dbd13372da4e89446e72d0314769e682d75f2cf5d4f3235fd"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-08": {
+      "root": "results/conveyor",
+      "run_id": "20260925_092515_calibrate-v3-qwen25_omni-demand-n6",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "9d5f6e5a6957d0bd0feeb3944099cbf66a421f0b49b73e762d5d34905a017cac",
+      "status_sha256": "b6232503df08ad3e3bea276527f9551d5bbf37f7f317379bf626f39c75582033",
+      "artifact_sha256": {
+        "client.json": "aeb2678d3da58db6ac85dc536b77fc96230d4f3bc46d13a3efc59a56c047e7f7",
+        "client.txt": "59963cebb4728a78df805ef38aed35c096daa4bf3342c5eb6867048eb2643c7c",
+        "gateway.log": "a6d480684b054e4e031916a468b79a8ac76c3469f0f94fd2b15257b4edc04508",
+        "gateway_frames.jsonl": "c4629d54aa66df74d0b76aec3826085f8132d35d40c62c4ae4e7990335652004",
+        "gateway_ticks.log": "8e5ab9c442fbfb183a630c533c8f80dce1a25882851d64bd87fed683e0be4a8a",
+        "gpu.csv": "58cb95dc0bcd3e18ef5ddaddb0114b8eec1f0409a4b33c32df088e320f35c068",
+        "kv.log": "972c1074e2bb11139e59099cd4860a17ced47c9a69c0326b5d2952fe81d15543",
+        "kv_events.log": "e32bd30e2c26095fc53ac3acc0d6ecdb14f18044f26570aea08a6203008c6f4b",
+        "manifest.json": "9d5f6e5a6957d0bd0feeb3944099cbf66a421f0b49b73e762d5d34905a017cac",
+        "replay_metrics.json": "f65c1cd761b305946ce6a8d44e355b577a2211ba20eefb6b6d0be407e1f7aab7",
+        "service_events.jsonl": "39da368bb6dca6486bc53d9e96962a7b6a46bf9dda197e5f6dfcb70d6ec0d313",
+        "source.patch": "8e82552933d5653bb778cabd2b3f42a5de3ed156155cd5be6f4af693a0d3c16d",
+        "transfer_events.jsonl": "97284e8c9ad98158720968867566f63b1b979ecb14096007771d68d9ff91c261",
+        "worker.log": "6a61106d8c295505d1298f6741c6c371fd22dd7bae254aa8f2812716e263ffce"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-09": {
+      "root": "results/conveyor",
+      "run_id": "20260925_093203_calibrate-final-minicpm_o45-planned-n8",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "842e76187d40d0c4c0e3d6ce38da6a768c892c1d02764d38d44848fe161ea9f1",
+      "status_sha256": "732ff7ddaa88caad1d0b052fd113c107b3098e3fb5eff2ef0ccc607619c44d28",
+      "artifact_sha256": {
+        "client.json": "ea1804509393b280516490f4b62e249d669b02a34cd28f04d0506d48f89a1987",
+        "client.txt": "6e395167b411bd6d519507199bbb5ab534ee2fec284fa4f7a23c2a705df363d0",
+        "gateway.log": "aa810fc400319478506efcf6c988e140be14e0b37bbb0bff307627037e7c35fd",
+        "gateway_frames.jsonl": "0f64423bb6e393f13b8192cfd126aa6f4ba93cd1ce8cda477ede7bd6aa67a41b",
+        "gateway_ticks.log": "d433fd08cf471d226777c7cde7c9f95ef85c8f09d2a9c21dfeeb51986d9f094d",
+        "gpu.csv": "7614a1c113e48689098772af3f37aebd6cf87763eb09a0cc6fcab9ea1244c4f8",
+        "kv.log": "9916ea4c4123301195565cedc641a916d7cf7d5ef1820fa7a7160df2a2351048",
+        "kv_events.log": "8cfbb922a440dca89828b85053162f22b2b58835621ba0382c515433c4bc08eb",
+        "manifest.json": "842e76187d40d0c4c0e3d6ce38da6a768c892c1d02764d38d44848fe161ea9f1",
+        "replay_metrics.json": "11dc3516b1de7771963b7d88a1eeb7ec1f9bc560401981997288dd07503b70c8",
+        "service_events.jsonl": "62da438d3ee1024ca5b3b1183abc5d70176c162ca7cc00110149867eebd80b7f",
+        "source.patch": "be2406646d0bbe8d936591d9a5e67792bd61fe22b70ca0274e5a457752f26a7d",
+        "transfer_events.jsonl": "2f448239dce1dfe317adec7f85d20db19270818d967fcbdb14ecc1cb9292db75",
+        "worker.log": "eec69d990199c6b2fd56847fc76b52b71622f72fa29f5e495b53c1229ae565d5"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-10": {
+      "root": "results/conveyor",
+      "run_id": "20260925_093355_calibrate-final-minicpm_o45-demand-n13",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "6dadcf79b50eec5a4fc82c5cecf6abd98ee84ba7cf7bd9b2cf966eed4961d711",
+      "status_sha256": "d530518cfc6801fae5b5e812d9e7511f02ca8b4f9b8077733e90aca38b94695a",
+      "artifact_sha256": {
+        "client.json": "759469de857ca0c3df36bb7b655cc9e43396301af313a4f5cae8cf4a1902c922",
+        "client.txt": "3e6102854cedd7d4221d62de3dc87abead241b21fd6c0f83870024413ddbb54d",
+        "gateway.log": "0345c76ff0d1631cc329f3d90d296d532e4e4a38715605a17bfac139163dbef5",
+        "gateway_frames.jsonl": "a453b2aa503af49553bfdf97a04fffb232d39afa2191c6489c65335efa86be2e",
+        "gateway_ticks.log": "68ffd15acbe8fd5f0d0002652882f7f0a90a55cc3cce057a090355b00e1ef406",
+        "gpu.csv": "e4bbed1244d01acfc4c02a8f3098fa0093eb7b41a00be94854249c1cb9064537",
+        "kv.log": "4bd059e847c652d85b333b1ec996d7326ba97f01c07ae41f85977c4ada7fdefa",
+        "kv_events.log": "9b75830132f70ba18d2efdbf41f36e9b706d7ebd04eab5a6807622ff33660953",
+        "manifest.json": "6dadcf79b50eec5a4fc82c5cecf6abd98ee84ba7cf7bd9b2cf966eed4961d711",
+        "replay_metrics.json": "b54031ef6aba87d5df86a1b38f7f37bf3b4e46a1ab551bdcb4d183d85e67cbc8",
+        "service_events.jsonl": "a867e5ce027347b441cbc75fc389e0e8256cb17009822e1d7d137cc04cc3f8ee",
+        "source.patch": "be2406646d0bbe8d936591d9a5e67792bd61fe22b70ca0274e5a457752f26a7d",
+        "transfer_events.jsonl": "d2647d14f6979f984bc50fef9529096f54392404728cfbe353950b87955c9cbe",
+        "worker.log": "e57e52129ad9e1f433845764a95423a3066b18530f42481fb5982aaca7836e23"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-11": {
+      "root": "results/conveyor",
+      "run_id": "20260925_094024_calibrate-final-qwen25_omni-demand-n10",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "788e5ea0143a4dd5892ee8d41bdf2a5d1d878f7079e99120b82cdd5b51f477a7",
+      "status_sha256": "cac6b3f0f028b115c1684c6551fbf37bd0c8dc8c0625779729e9a6a5c55a61b6",
+      "artifact_sha256": {
+        "client.json": "9b114a493df13b5bf94a157c6596f0bd924ed87dd50cf7ce43fd336e198737a6",
+        "client.txt": "673d1f8aa5460d3d374b19f5db6c6997da733ff629fe51634b8c23b6866a3ff1",
+        "gateway.log": "a46cdef0ee7736fb424df2aac674ec80b8371ddb382ec47c3baf1e72f993e38f",
+        "gateway_frames.jsonl": "0c1e8ae4fce84bbd6523783ab1ee6e8f0902ddac847caa33972bf58c9264a1e1",
+        "gateway_ticks.log": "297f1b07aff898c7fc4ddb069a1298934142581c98589f1933793b3e487d3e65",
+        "gpu.csv": "3f7e4764ffa525ce02c651f6595da7f83a4c1ba76a3033d7b6564f9128cc0102",
+        "kv.log": "0172c58939881faaf0c873a76522fd74d41012d5210a8a704ac4a89478cb168b",
+        "kv_events.log": "815854374a3a419ac357c6e259f909f00467d05df08e7abd6a1471100dd470ff",
+        "manifest.json": "788e5ea0143a4dd5892ee8d41bdf2a5d1d878f7079e99120b82cdd5b51f477a7",
+        "replay_metrics.json": "77c2cd05f9ee443fdf8906bf3b18a2160b12f9e9ec7c0de04580faf197314b0b",
+        "service_events.jsonl": "abd5d4e5137347bf61372d8b56d788517ccfcf681f1b22480d41288678490c83",
+        "source.patch": "7047396b4df454a07d72857d4aa59cf9474bae0ce317e9879e5aef215a6c48c4",
+        "transfer_events.jsonl": "76bc823baf3fa4a0393422e926708ed453b00112ac12b8891e87414c8bc6a72c",
+        "worker.log": "9ac49654b083fcf401833d230ac21f238c46b40fbf93b3f79e461728308c2a4d"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-12": {
+      "root": "results/conveyor",
+      "run_id": "20260925_094144_calibrate-final-qwen25_omni-planned-n6",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "55cc8757d657abac7a757cc5244840e198d44fa51eea53968c120a78105b4e08",
+      "status_sha256": "be2364a68642e6c97a05efb6df572ec8e9e23768d347ff304e82605d3557d81c",
+      "artifact_sha256": {
+        "client.json": "0a321545688650a14fe10178715ed2d555308a643d0006280a0bfca3b45fe4e6",
+        "client.txt": "403d1cbf01114e8609c198174dd08051517c335552e015f690e72b577e53b28b",
+        "gateway.log": "42699480f2e29269a7e1e99ffb21a3d6467da886e85fc53a0d792c8a46eacc59",
+        "gateway_frames.jsonl": "e650e9bc05be814a0b17b4f693cc4c078b61910abd298e1983ee4521459fa4fd",
+        "gateway_ticks.log": "de2ea59ea3a0e562bcad65309ddcb7a935cc8b91155a807da70d0ccef2eeab65",
+        "gpu.csv": "ff720dad581769ea605bd6e5db5493ce95191184e540539a343c65f822223c60",
+        "kv.log": "5ea6a26ee095128e220b683c6d8927bc1645a382f7c92cac46faf3a98de09202",
+        "kv_events.log": "687aec8223e211ff69917ff3513458d35b75c4e57ee6c2846a7dbdad32d7114e",
+        "manifest.json": "55cc8757d657abac7a757cc5244840e198d44fa51eea53968c120a78105b4e08",
+        "replay_metrics.json": "48e13ab34be6130b771a91dd6bba57e2ccf3a6006a0f6c4bc04ad129137c01eb",
+        "service_events.jsonl": "b627d7b20999b408df87de5ce0d05880585e11a9d579520db549b1f2abda0078",
+        "source.patch": "7047396b4df454a07d72857d4aa59cf9474bae0ce317e9879e5aef215a6c48c4",
+        "transfer_events.jsonl": "6d1cd72b4cf39337e1f86f883ebe7729113b60b7bc0f86e268c80a54c274a79f",
+        "worker.log": "7b2a7a47c6f70deb046850374de636e98dcd997a156bbcc40163a6f2b799751c"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-13": {
+      "root": "results/conveyor",
+      "run_id": "20260925_094621_calibrate-final-qwen25_omni-demand-n11",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "7ccc969a3757ac02875f57ffd22151f809805e5781de9ccc9c37d9b9504b0d28",
+      "status_sha256": "24fa8fb6d2158a811b48d5d13c9bfe072b85aaca890e8f76e0eb942efb0761e4",
+      "artifact_sha256": {
+        "client.json": "835ff35fc2a9816cd7b254bfb92418c08054387520d911ee645241d0f04f4d98",
+        "client.txt": "ef7dad42ff48a19822ce1fb68bd5bbe4c5a2fb346baa749164c0534b81f2cf0e",
+        "gateway.log": "06e461a8ef07858c69acd0a65724d381c30f74c2dce82ee0b6b41e82058011e8",
+        "gateway_frames.jsonl": "86dcaf7d017e0279eb5e7c3365fa0c1e113795d97ad6eeab7500724bbba15fb7",
+        "gateway_ticks.log": "7d157e7c78354dfdff50b454f1b87a6163d84457ea049bd5317c0bf669a87fc0",
+        "gpu.csv": "a47b4531f915c420435f609d1b73109e160fa54e3ac7ae7bfebaf58be73dbbe6",
+        "kv.log": "92c988338d1a38503e27fe6c80ffa3b49a1a76235c90268bf83ec2f231935216",
+        "kv_events.log": "c4c5ee52f6b7f1f3302d19a34e2f9b96a9176a7f8509a06967c0d5d180651f41",
+        "manifest.json": "7ccc969a3757ac02875f57ffd22151f809805e5781de9ccc9c37d9b9504b0d28",
+        "replay_metrics.json": "4779cf88a7b2c1a0eed6f64077d48a170d9b96e4af93dbc12fe9170ef5f5e28b",
+        "service_events.jsonl": "ba81a0dbc81a6765960c261ac9f6b3c2065134961cb4ad31993faa4c20109cd9",
+        "source.patch": "f8bf6006abf87fe2e331cf0db64935637b146e6acb6c6d66a56bb44615b03513",
+        "transfer_events.jsonl": "dacbeebc974543a17e03094c3cdb4ba2f8b760f8028f01fd5ff4b336f8fe9d19",
+        "worker.log": "d53966fa93f9b9c545433172f3618bcae7ca8dbd73e31ed058223de3cd2ad4e7"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-14": {
+      "root": "results/conveyor/aggregates",
+      "run_id": "20260925_093919_cost-calibration",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "81389f715b8b8302fb53776e2d19cb1b843234a28262b7aa7cb3ef9ee22aeaeb",
+      "status_sha256": "31846363674b275129175c44b07bdb54b338eb881b0c5b3a511fd25aa4a1630e",
+      "artifact_sha256": {
+        "costs.json": "c2d5ea1b0677ba190bc272601da67c74cb2dc8e7fd335b3e8f8402a228a2cdd4",
+        "manifest.json": "81389f715b8b8302fb53776e2d19cb1b843234a28262b7aa7cb3ef9ee22aeaeb"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
+    },
+    "RUN-CONTROLLED-CALIBRATION-15": {
+      "root": "results/conveyor/aggregates",
+      "run_id": "20260925_094144_qwen-costs",
+      "availability": "retained",
+      "distribution": "local-only",
+      "manifest_sha256": "a8b723bf6c04b68272ff997d5b80180187cbb8e009994965f059a2e5a6c07156",
+      "status_sha256": "3ee985fd33e52241108bcc75fa24d617166603e414c73b05ed74d80028bcd257",
+      "artifact_sha256": {
+        "costs.json": "aa8b211434e741c1fcb45b0a1316db80d68d83d5008148a32fb967ca6f37b097",
+        "manifest.json": "a8b723bf6c04b68272ff997d5b80180187cbb8e009994965f059a2e5a6c07156"
+      },
+      "source_reconstruction": "Diagnostic run retains manifest commit and source.patch; cost aggregates retain exact input hashes. Formal eligibility is not asserted."
     }
   },
   "role_definitions": {
@@ -1267,6 +1606,133 @@
       ],
       "reproducibility": "Successful raw artifacts, reconstruction patch and current user presentation retained; hashes, patch applicability and browser loading verified.",
       "interpretation_limits": "Selected per-period text workload on one shared GPU; no native speech-output, formal capacity or throughput claim."
+    },
+    {
+      "id": "EVIDENCE-OPEN-LOOP-IMPLEMENTATION",
+      "role": "source-audit",
+      "supports": [
+        "FINDING-T7"
+      ],
+      "sources": [
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/residency_planner.py"
+        },
+        {
+          "kind": "source",
+          "path": "engines/conveyor/worker/engine_patch/manager_adapter.py"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/conveyor/replay_client.py"
+        },
+        {
+          "kind": "source",
+          "path": "experiments/conveyor/evaluate.py"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-open-loop-implementation.json"
+        }
+      ],
+      "reproducibility": "Current source and required CPU tests; frozen experiment plans and formal measurements remain separate.",
+      "interpretation_limits": "Implementation and protocol only; not a performance result or lifetime guarantee."
+    },
+    {
+      "id": "EVIDENCE-PHYSICAL-TABLE-CHECK",
+      "role": "historical-record",
+      "supports": [
+        "FINDING-T7"
+      ],
+      "sources": [
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-open-loop-implementation.json"
+        },
+        {
+          "kind": "source",
+          "path": "tests/test_session_manager_gpu.py"
+        },
+        {
+          "kind": "source",
+          "path": "tests/test_session_manager.py"
+        }
+      ],
+      "reproducibility": "Completed agent diagnostic raw removed under retention policy. The record retains observations; reusable physical-copy and logical-table regressions remain in source.",
+      "interpretation_limits": "Intrusive byte checks synchronize the GPU and cannot supply performance costs. Multi-session run had incomplete work under the checking overhead."
+    },
+    {
+      "id": "EVIDENCE-CONTROLLED-CALIBRATION",
+      "role": "diagnostic",
+      "supports": [],
+      "sources": [
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-01"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-02"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-03"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-04"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-05"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-06"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-07"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-08"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-09"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-10"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-11"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-12"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-13"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-14"
+        },
+        {
+          "kind": "run",
+          "ref": "RUN-CONTROLLED-CALIBRATION-15"
+        },
+        {
+          "kind": "record",
+          "path": "docs/agent/records/2026-09-25-controlled-calibration.json"
+        }
+      ],
+      "reproducibility": "Retained local raw and calibrated cost aggregates were terminal-status and hash verified; dirty GPU runs retain reconstruction patches.",
+      "interpretation_limits": "Calibration seed only; finite controlled-pool audio-input/fixed-text-output path. No formal repeated-performance, full-device, long-context, or model-quality claim."
     }
   ]
 }

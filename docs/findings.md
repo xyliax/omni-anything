@@ -3,7 +3,7 @@
 <a id="current-state"></a>
 ## 当前状态与证据范围
 
-已有材料包括历史诊断、源码检查、前处理修复（FINDING-E5）、copy 提交修复（FINDING-T2）、容量工具链功能验证（FINDING-T3）、长程分组验证（FINDING-T4）、全业务 GPU 观测（FINDING-T5）和第二模型按所选周期预算的执行验证（FINDING-T6），尚无公平比较下的正式性能主结果。下表给出其支持范围；设计见[系统设计](system.md)。 当前代码仍有有限前瞻准入、排队和固定 cohort 的历史工具路径；远端最新设计要求的最大上下文规划、计划版本切换及开放到达拒绝协议尚未全部对齐。已有诊断不表示本轮三组正式实验已可完整执行。
+已有材料包括历史诊断、源码检查、前处理修复（FINDING-E5）、copy 提交修复（FINDING-T2）、容量工具链功能验证（FINDING-T3）、长程分组验证（FINDING-T4）、全业务 GPU 观测（FINDING-T5）和第二模型按所选周期预算的执行验证（FINDING-T6），尚无公平比较下的正式性能主结果。下表给出其支持范围；设计见[系统设计](system.md)。 本轮已实现保守最大上下文候选检查、计划版本切换、开放到达拒绝及匹配控制入口，见 FINDING-T7；历史有限前瞻和 FIFO 路径单独保留。三组正式重复实验尚未完成，当前校准不能升级为性能主结果。
 
 | 候选机制 | 已有依据 | 仍需完成的证据 |
 | --- | --- | --- |
@@ -62,6 +62,7 @@
 | <a id="finding-h2"></a>FINDING-H2 | 所审 RPC 延迟、成功字段和消费计数具有实现相关语义，不能代表当前输入的完整模型工作或应用 QoE；定义统一由 [测量语义](experiments.md#measurement-semantics) 持有 | `EVIDENCE-H2-METRICS` |
 | <a id="finding-c1"></a>FINDING-C1 | 所审引擎接口未显式接收应用时间要求，不能由迭代事件推断应用周期或未来 deadline；该判断限于本仓路径，核验入口见 [动态边](agent/dynamic-edges.json) | `EVIDENCE-LEGACY-BASELINE`（历史接口诊断） |
 | <a id="finding-t1"></a>FINDING-T1 | 可重建诊断验证了独立 manager/copy 线程的执行路径及 GPU copy 关联；捕获的 KV memcpy 字节与实际提交量一致，CPU 控制窗口与设备活动时长不同。多层不连续块的独立 GPU 往返测试逐元素一致；这些验证不等于完整模型语义、deadline 或容量收益证明 | `EVIDENCE-COPY-SUBMISSION-FIX`、`EVIDENCE-WHOLE-RUN-PROFILE`；当前设备观测见 FINDING-T5；早期诊断保留为历史记录 |
+| <a id="finding-t7"></a>FINDING-T7 | 保守最大上下文策略、共同源时钟回放、三种恢复触发和完整物理块表恢复已接入；自动化保留拒绝、超期与未完成。短时物理字节和逻辑位置检查支持继续执行评估，不以输出 token 完全一致作为搬运正确性的独立门槛；侵入式检查不能用作性能依据，正式重复与长期高压覆盖仍待完成 | `EVIDENCE-OPEN-LOOP-IMPLEMENTATION`、`EVIDENCE-PHYSICAL-TABLE-CHECK` |
 
 **公平性与比较资格**
 

@@ -24,7 +24,7 @@ python -m experiments.conveyor --session-manager --retained-prefix-blocks 128 --
 
 速查：release offsets 看 `gateway_ticks.log` 的间距与 `late_ms`；partial eviction 看 `E` 行、`host_backed` 和 residency；prefetch 看 `L/R trigger=prefetch`；输出缓冲看 `output_backlog` 是否持续增长。实际交付少于 cap 是诊断事实，不自动构成 correctness failure。
 
-## Finite Cohort
+## Legacy Finite Cohort
 
 `--admission-profile /path/profile.json --cohort-manifest /path/cohort.json` 与 `--session-manager --retained-prefix-blocks 1` 一起使用；JSON 语义与未完成的评估内容见 `docs/experiments.md#finite-cohort-runner`。`--duration` 是整个 cohort 的 watchdog；offered session 数来自 manifest，准入并发上限属于 profile，两者不同。当前禁止 initial-context 全员 barrier。客户端在 admission 后才播放，结束后等待最后输出及清理确认，不以音频发送完毕作为成功。
 
@@ -46,4 +46,16 @@ python -m experiments.conveyor.capacity --profile costs.json --slo slo.json --co
 
 每周期输出预算由 `experiments/shared/workload.py` 按 model preset 选择；worker、gateway 和 manifest 必须使用同一选值，容量配对的两种系统也必须一致。数值与选择依据见 `docs/experiments.md#candidate-model-integration`，禁止在 runner 中重新固定为默认模型预算。
 
+## Exogenous Schedule
+
+`python -m experiments.conveyor.schedule --seed 11 --arrival-rate 0.1 --session-duration 60 --arrival-window 120 --period 2 --audio /data/conversation.wav --output /tmp/arrival-schedule.json` 生成独立于系统的动态输入时间表，拒绝覆盖文件。WAV 必须是 mono PCM16/16 kHz 且足够长；素材 hash、sample offset、seed 和时间参数均保存。
+
+使用 `--open-loop --cohort-manifest <schedule>` 选择 `replay_client.py`，支持 `--phase-policy natural|assigned`。旧 `cohort_client.py` 的准入后播放不接受该格式。原定 source clock、rejection 和 completion 在 `client.json` 保存；`replay_metrics.json` 由共享 trace 层生成，超期与未完成是结果而非仪器错误。协议由 `docs/experiments.md#open-loop-runner` 持有。
+
 `python -m experiments.conveyor.check --gpu 0 --model-preset all` 是新机器功能检查入口，先核验 runtime、模型文件与物理 KV 往返，再执行两个模型的多成员组；成功调试目录自动清理，摘要在 `.build/checks/`。它不标定 admission profile，也不声称已实现本轮最大上下文规划及开放到达协议。
+
+成本 profile 的 `planning_mode=maximum_context` 使用真实后端上限，要求 assigned/pre_tick；`static_limit` 用于独立校准的回载基线和固定会话集消融，不借用主动 phase 预测的容量信用。`--restore-policy on_demand|after_submit|pre_tick` 选择恢复触发时机。禁止将未标定功能检查的 profile 用作容量证据。
+
+录音素材：`python -m experiments.conveyor.material --archive /data/dev-clean.tar.gz --output /data/speech-streams` 校验官方 archive 后构建不循环的同 speaker 流，保存逐 clip hash 与转换 provenance；输出目录必须不存在。固定队列时间表由 `schedule.generate_fixed_schedule` 生成。素材选择和连接录音的解释由实验 owner 持有。
+
+`python -m experiments.conveyor.evaluate prepare --spec <spec.json> --output <new-dir>` 冻结矩阵，随后 `run <new-dir>/plan.json` 顺序执行并保留检查点；formal 要求同一 clean commit。分析与成本提取只调用共享 `infra.trace.evaluation` 和 `infra.trace.calibration`。`--verify-copies` 逐层检查实际复制内容，会同步 GPU，只供诊断，不能用于 formal 性能。

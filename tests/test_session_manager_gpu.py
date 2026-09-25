@@ -29,7 +29,9 @@ class DeviceRoundtripTests(unittest.TestCase):
         torch.cuda.synchronize()  # establish confirmed compute before D2H
         worker = SimpleNamespace(device=torch.device("cuda:0"), gpu_kv_caches=gpu, cpu_kv_caches=host)
         observed = []
-        service = CopyService(CudaCopyBackend(worker), lambda event, **fields: observed.append((event, fields)))
+        backend = CudaCopyBackend(worker)
+        backend.verify_copies = True
+        service = CopyService(backend, lambda event, **fields: observed.append((event, fields)))
         self.addCleanup(service.close)
         source, backing, target = [1, 3, 7], [0, 4, 9], [2, 5, 10]
         stored = threading.Event()
@@ -51,6 +53,8 @@ class DeviceRoundtripTests(unittest.TestCase):
         submits = [fields for event, fields in observed if event == "submitted"]
         expected_bytes = len(source) * sum(v[0].numel() * v.element_size() for v in expected.values())
         self.assertEqual([r["bytes"] for r in submits], [expected_bytes, expected_bytes])
+        self.assertEqual([fields['checked_bytes'] for event, fields in observed if event == 'integrity_checked'],
+                         [expected_bytes, expected_bytes])
 
 
 if __name__ == "__main__":

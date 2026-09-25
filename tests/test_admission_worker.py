@@ -80,6 +80,34 @@ class WorkerLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(output, {})
         self.eng._ensure.assert_not_called()
 
+    async def test_demand_restore_starts_only_after_preprocessing(self):
+        prepare = AsyncMock()
+        gate = self.worker.InputGate(prepare, 'on_demand')
+        await asyncio.sleep(0)
+        prepare.assert_not_awaited()
+        await gate.ready()
+        prepare.assert_awaited_once()
+
+    async def test_context_cap_includes_retained_history_input_and_generation(self):
+        check = self.worker.checked_context_size
+        self.assertEqual(check(0, 100, 8, 256), 107)
+        self.assertEqual(check(107, 141, 8, 256), 255)
+        with self.assertRaisesRegex(ValueError, 'maximum context exceeded'):
+            check(107, 142, 8, 256)
+
+    async def test_submit_restore_overlaps_preprocessing_but_enqueue_waits(self):
+        entered, finished = asyncio.Event(), asyncio.Event()
+        async def prepare():
+            entered.set()
+            await finished.wait()
+        gate = self.worker.InputGate(prepare, 'after_submit')
+        await entered.wait()
+        task = asyncio.create_task(gate.ready())
+        await asyncio.sleep(0)
+        self.assertFalse(task.done())
+        finished.set()
+        await task
+
     async def test_short_terminal_fragment_is_preserved_with_bounded_silence(self):
         import numpy as np
         tail = np.arange(160, dtype=np.float32)

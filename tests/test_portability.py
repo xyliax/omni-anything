@@ -7,11 +7,33 @@ from unittest.mock import patch
 
 from experiments.baseline.config import BaselineConfig
 from experiments.conveyor.config import ConveyorConfig
-from infra.env.verify import driver_issues
+from infra.env.verify import driver_issues, cuda_toolkit_environment
 from infra.run.probes import model_cache_root, model_snapshot_issues, resolve_model_snapshot
 
 
 class PortabilityTests(unittest.TestCase):
+    def test_driver_only_host_uses_selected_venv_compiler_for_both_workers(self):
+        from experiments.baseline.runner import worker_environment as baseline_env
+        from experiments.conveyor.runner import worker_environment as conveyor_env
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            python = root / 'custom venv/bin/python'
+            python.parent.mkdir(parents=True)
+            python.symlink_to('/usr/bin/python3')
+            toolkit = python.parent.parent / 'lib/python3.12/site-packages/nvidia/cu13'
+            (toolkit / 'bin').mkdir(parents=True)
+            (toolkit / 'bin/nvcc').touch()
+            original = {'CUDA_HOME': '/unrelated/cuda', 'PATH': '/usr/bin'}
+            env = cuda_toolkit_environment(python, original)
+            self.assertEqual(env['CUDA_HOME'], str(toolkit))
+            self.assertEqual(env['CUDA_PATH'], str(toolkit))
+            self.assertEqual(env['PATH'].split(os.pathsep)[0], str(toolkit / 'bin'))
+            self.assertIn(str(python.parent), env['PATH'].split(os.pathsep))
+            self.assertEqual(original['CUDA_HOME'], '/unrelated/cuda')
+            with patch.dict(os.environ, {'OMNI_WORKER_PYTHON': str(python)}):
+                for config, build in ((BaselineConfig(), baseline_env), (ConveyorConfig(), conveyor_env)):
+                    self.assertEqual(build(config, root)['CUDA_HOME'], str(toolkit))
+
     def test_single_gpu_default_and_custom_venv_reach_both_runners(self):
         with patch.dict(os.environ, {'OMNI_WORKER_PYTHON': '/mounted disk/runtime/bin/python'}):
             for config in (BaselineConfig(), ConveyorConfig()):

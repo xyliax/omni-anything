@@ -89,6 +89,19 @@ with the model presets in `experiments/shared/model.py`
 when the pinned snapshot is not cached); `--download-models` imports the selected preset and
 fetches its pinned snapshot. The default preset preserves the existing Qwen path.
 
+Both worker runners expose the selected environment's wheel-provided CUDA toolkit through
+`infra.env.verify.cuda_toolkit_environment`: `CUDA_HOME`, `CUDA_PATH` and the compiler `PATH`
+point to that venv's `nvidia/cu13` directory. This is required for FlashInfer JIT on hosts that
+only have a driver. The venv `bin` directory also supplies `ninja` when the shell is not activated.
+BF16 execution and KV memcpy alone do not test compiler discovery.
+Keep the venv interpreter symlink unresolved so a custom runtime selects its own toolkit.
+
+The compiler, CRT, NVVM and CCCL wheels are constrained by the CUDA toolkit extra in
+`requirements.in`. This corrects the previous lock's mixed compiler/header minor versions;
+the CUDA runtime and model/runtime packages remain pinned. Fresh installs must compile a
+FlashInfer sampling kernel before being considered ready for model serving. Do not disable
+CCCL's toolkit compatibility check to work around a mismatched installation.
+
 ## Adding a Profile
 
 Add a profile only when its consumer is implemented. A profile must provide a complete hashed lock,
@@ -119,3 +132,5 @@ re-audit every item against the new source:
    after a vLLM or Transformers change.
 
 Hardware portability is conditional on this profile: Linux/NVIDIA CUDA driver and the locked vLLM private API contract. GPU identity is probed at launch; tensor-derived copy geometry is not tied to a card name. Changing hardware requires fresh compute/transfer cost calibration and KV pool limits; an old admission profile is not a cross-device SLO guarantee. MiniCPM uses an additional pinned model preset on the same environment; native vLLM-Omni audio-output integration remains a distinct workload/runtime task.
+
+完整 hash lock 使用 `--no-deps --require-hashes` 安装，避免已安装 extras 的元数据被 resolver 当成无 hash 的新输入；安装后仍须 `pip check` 检查完整依赖闭包。FlashInfer JIT 检查同时覆盖 wheel nvcc 和所选 venv 的 ninja。

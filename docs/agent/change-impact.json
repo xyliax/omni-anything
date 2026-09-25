@@ -175,7 +175,10 @@
         "engines/conveyor/worker/engine_patch/residency_planner.py",
         "engines/conveyor/gateway/session_manager*",
         "experiments/conveyor/cohort_client.py",
-        "engines/conveyor/worker/stream_server.py"
+        "engines/conveyor/worker/stream_server.py",
+        "experiments/conveyor/schedule.py",
+        "experiments/conveyor/replay_client.py",
+        "engines/conveyor/gateway/replay*"
       ],
       "inspect": [
         "docs/system.md#conservative-admission",
@@ -190,7 +193,9 @@
         "tests/test_admission_worker.py",
         "tests/test_cohort_client.py",
         "tests/test_admission_gateway.py",
-        "tests/test_run_validation.py"
+        "tests/test_run_validation.py",
+        "tests/test_arrival_schedule.py",
+        "tests/test_replay_metrics.py"
       ]
     },
     {
@@ -200,7 +205,8 @@
         "infra/trace/collectors/service_events.py",
         "engines/conveyor/gateway/service_events.go",
         "experiments/conveyor/capacity.py",
-        "engines/conveyor/worker/engine_patch/resident_adapter.py"
+        "engines/conveyor/worker/engine_patch/resident_adapter.py",
+        "infra/trace/replay.py"
       ],
       "inspect": [
         "docs/experiments.md#stable-concurrency-runner",
@@ -211,7 +217,8 @@
         "tests/test_service_metrics.py",
         "tests/test_configs.py",
         "tests/test_admission_worker.py",
-        "tests/test_admission_gateway.py"
+        "tests/test_admission_gateway.py",
+        "tests/test_replay_metrics.py"
       ]
     },
     {
@@ -295,6 +302,27 @@
         "tests/test_configs.py",
         "tests/test_run.py",
         "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "IMPACT-EVALUATION-MATRIX",
+      "when": [
+        "experiments/conveyor/evaluate.py",
+        "infra/trace/evaluation.py",
+        "infra/trace/calibration.py",
+        "infra/trace/collectors/kv_integrity.py"
+      ],
+      "inspect": [
+        "docs/experiments.md",
+        "docs/agent/contracts.json",
+        "docs/agent/system-map.json",
+        "infra/trace/AGENTS.md"
+      ],
+      "verify": [
+        "tests/test_evaluation_plan.py",
+        "tests/test_replay_metrics.py",
+        "tests/test_session_manager.py",
+        "tests/test_evaluation_report.py"
       ]
     }
   ]

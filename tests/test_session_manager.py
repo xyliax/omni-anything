@@ -68,6 +68,8 @@ class PhysicalReferenceTests(unittest.TestCase):
         a.native = SimpleNamespace(fa_gidx=0)
         a.block_size, a.hold, a.min_free = 16, False, 0
         a.observer, a.copies, a.manager = Mock(), Mock(), Mock()
+        a.manager.restoration_paused = False
+        a.manager.restore_policy = 'pre_tick'
         a.closed_sessions = set()
         a.planner = None
         self.request = SimpleNamespace(request_id="s1e1", status="idle",
@@ -80,12 +82,21 @@ class PhysicalReferenceTests(unittest.TestCase):
         a.gpu.touch([a.gpu.blocks[3]])
         self.owned = list(range(6))
         self.kvm = Mock()
+        self.native_table = SimpleNamespace(req_to_blocks={'s1e1': list(a.gpu.blocks[:6])},
+                                            num_cached_block={'s1e1': 6})
+        self.kvm.coordinator.single_type_managers = [self.native_table]
         self.kvm.usage = .6
         self.kvm.get_block_ids.side_effect = lambda _: (self.owned[:],)
         def free(_):
             a.gpu.free_blocks([a.gpu.blocks[i] for i in self.owned])
             self.owned.clear()
+            self.native_table.req_to_blocks.pop('s1e1', None)
+            self.native_table.num_cached_block.pop('s1e1', None)
         self.kvm.free.side_effect = free
+        def evict_hashes(ids):
+            for bid in ids:
+                a.gpu.blocks[bid]._block_hash = None
+        self.kvm.evict_blocks.side_effect = evict_hashes
         a.scheduler = SimpleNamespace(requests={"s1e1": self.request}, kv_cache_manager=self.kvm)
         self.session = ManagedSession("s1e1", SessionPlan(2, 12, .2, 2), activity="idle")
         a.manager.sessions = {'s1e1': self.session}
@@ -101,6 +112,35 @@ class PhysicalReferenceTests(unittest.TestCase):
         self.assertEqual([b.block_id for b in self.session.resident_pins], [0, 1, 2, 3])
         self.assertEqual([b.ref_cnt for b in self.adapter.gpu.blocks[:6]], [1, 1, 1, 2, 0, 0])
         self.assertTrue(self.request._omni_kv_evicted)
+
+    def test_plan_transition_defers_allocation_without_losing_host_pins(self):
+        self.adapter.evict(self.session)
+        before = list(self.session.host_pins)
+        self.adapter.manager.restoration_paused = True
+        self.assertFalse(self.adapter.restore(self.session))
+        self.assertEqual(self.session.host_pins, before)
+        self.adapter.copies.submit.assert_not_called()
+        self.adapter.manager.restoration_paused = False
+        self.assertTrue(self.adapter.restore(self.session))
+
+    def test_late_input_plan_does_not_move_the_missing_history_deadline(self):
+        from dataclasses import replace
+        self.adapter.evict(self.session)
+        self.session.plan = replace(self.session.plan, next_tick=14)
+        self.assertEqual(self.session.restoration_tick, 12)
+        self.adapter.restore(self.session)
+        self.adapter.copies.submit.call_args.args[-1]()
+        self.assertEqual(self.session.restoration_tick, 14)
+
+    def test_demand_cannot_bypass_earlier_requested_complete_destination(self):
+        self.adapter.evict(self.session)
+        self.session.restoration_requested = True
+        other = ManagedSession('s2e1', SessionPlan(2, 14, .2, 1), activity='idle',
+                               host_pins=[(6, self.adapter.cpu.blocks[6])], restoration_requested=True)
+        self.adapter.manager.sessions['s2e1'] = other
+        self.adapter.manager.restore_policy = 'on_demand'
+        self.assertFalse(self.adapter.restore(other))
+        self.adapter.copies.submit.assert_not_called()
 
     def test_range_budget_and_unfinished_block_boundary(self):
         self.request.num_computed_tokens = 95  # block 5 is not complete
@@ -176,7 +216,35 @@ class PhysicalReferenceTests(unittest.TestCase):
         manager = SessionManager(self.adapter)
         manager.sessions['s1e1'] = self.session
         manager.on_resume('s1e1')
-        self.assertTrue(self.session.resident_pins, 'input ingestion is too early to release reservations')
+        self.assertFalse(self.session.resident_pins)
+        self.assertEqual(len(self.native_table.req_to_blocks['s1e1']), 6)
+        self.assertTrue(all(block.ref_cnt >= 1 for block in self.native_table.req_to_blocks['s1e1']))
+        self.assertEqual(self.request.num_computed_tokens, 96)
+        self.assertFalse(self.request._omni_kv_evicted)
+
+    def test_unfinished_tail_is_retained_and_rebound_without_recomputation(self):
+        self.request.num_computed_tokens = 95
+        self.native_table.num_cached_block['s1e1'] = 5
+        self.adapter.gpu.blocks[5]._block_hash = None
+        self.adapter.evict(self.session)
+        self.assertIs(self.session.retained_table[5], self.adapter.gpu.blocks[5])
+        self.assertEqual(self.adapter.gpu.blocks[5].ref_cnt, 1)
+        self.adapter.prepare_input('s1e1', 'frame-1')
+        self.adapter.copies.submit.call_args.args[-1]()
+        self.assertTrue(self.adapter.prepare_input('s1e1', 'frame-1')['ready'])
+        self.assertIs(self.native_table.req_to_blocks['s1e1'][5], self.adapter.gpu.blocks[5])
+        self.assertEqual(self.native_table.num_cached_block['s1e1'], 5)
+        self.assertEqual(self.request.num_computed_tokens, 95)
+
+    def test_restored_bytes_in_wrong_logical_position_are_rejected(self):
+        self.adapter.evict(self.session)
+        self.adapter.prepare_input('s1e1', 'frame-1')
+        self.adapter.copies.submit.call_args.args[-1]()
+        table = self.session.retained_table
+        table[4], table[5] = table[5], table[4]
+        with self.assertRaisesRegex(RuntimeError, 'logical KV history changed'):
+            self.adapter.prepare_input('s1e1', 'frame-1')
+        self.assertNotIn('s1e1', self.native_table.req_to_blocks)
 
     def test_closing_reservation_waits_for_copy_callback_and_rejects_late_input(self):
         self.adapter.planner = Mock()
@@ -303,6 +371,22 @@ class SessionManagerTests(unittest.TestCase):
 
 
 class CopyServiceTests(unittest.TestCase):
+    def test_integrity_failure_retains_pins_and_never_publishes(self):
+        backend = Mock(verify_copies=True)
+        backend.last_submit = {}
+        backend.launch.return_value = (object(), 4096)
+        backend.finished.return_value = True
+        backend.elapsed_ms.return_value = .2
+        backend.verify.side_effect = RuntimeError('physical KV bytes differ')
+        callback, observer = Mock(), Mock()
+        service = CopyService(backend, observer)
+        service.submit('H2D', [1], [4], ['session'], callback)
+        with self.assertRaisesRegex(RuntimeError, 'copy service failed'):
+            service.close()
+        callback.assert_not_called()
+        self.assertEqual(service.pending_requests(), {'session'})
+        self.assertNotIn('published', [call.args[0] for call in observer.call_args_list])
+
     def test_completes_while_no_model_step_is_called(self):
         device_done = threading.Event()
         published = threading.Event()

@@ -139,7 +139,7 @@
     },
     {
       "id": "CONTRACT-MAXIMUM-CONTEXT-PLANNING",
-      "rule": "design requirement, not verified implementation: plan capacity using each session's existing model/backend maximum context configuration, accounting for retained input and generation positions; runtime must not exceed this limit or silently shorten reference history to continue; planning at maximum context does not require simultaneous full GPU residency or allocation of nonexistent KV; reuse the plan as contexts grow within the limit, without a growth predictor, planning horizon, workload declarations, miss-tolerance parameters or a custom service-failure policy; measure periodic completion and overruns under the evaluated workload rather than infer timing guarantees from the context cap",
+      "rule": "Implementation: MaximumContextPlanner charges the live backend maximum context and complete destination intervals without growth prediction or horizon renewal; conservative calibrated costs, stable phases and fixed ceilings. Open-loop frontend checks retained input plus generation before backend enqueue; no truncation to continue. Cost calibration and measured capacity remain separate from CPU feasibility tests.",
       "owners": [
         "docs/problem.md#service-objective",
         "docs/system.md#maximum-context-planning",
@@ -147,7 +147,10 @@
         "docs/system.md#planning-updates",
         "docs/experiments.md#service-and-capacity-metrics"
       ],
-      "verification": []
+      "verification": [
+        "tests/test_residency_planner.py",
+        "tests/test_admission_worker.py"
+      ]
     },
     {
       "id": "CONTRACT-RESOURCE-FEASIBILITY",
@@ -164,7 +167,7 @@
     },
     {
       "id": "CONTRACT-CYCLIC-RESTORATION",
-      "rule": "design requirement, not implementation status: phase assignment spreads restoration demand across the period to extend useful H2D link activity, support more KV restoration and eviction per cycle, and expand effective KV capacity through GPU space reuse; transfer overlap with computation in other sessions is not the capacity mechanism; the planner selects the residency arrangement and the session manager controls its runtime H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility; session groups are scheduling objects, and a group schedule retains per-session history and per-block safety conditions without requiring an atomic group transfer; selected execution policy: allocate each session restoration destination in full, count every complete queued or in-flight destination immediately, preserve planned allocation and copy order without partial destination holding or allocation bypass, and publish per-session readiness without a group execution barrier; these are design choices awaiting implementation and validation; design boundary: session groups organize residency scheduling, while the inference backend owns execution scheduling and model computation, including batching when used; continuous batching is not a required backend policy; backend replacement requires compatible execution-event and KV-state operations and is not a claim of existing multi-backend support; proactive cyclic KV recomputation is reserved for future work as a planner decision extension, with replay-capable backend execution and joint resource feasibility required before claiming support",
+      "rule": "design requirement, not implementation status: phase assignment spreads restoration demand across the period to extend useful H2D link activity, support more KV restoration and eviction per cycle, and expand effective KV capacity through GPU space reuse; transfer overlap with computation in other sessions is not the capacity mechanism; the planner selects the residency arrangement and the session manager controls its runtime H2D scheduling; restoration needs both a scheduled transfer window and sufficient space for full destination preallocation; per-session eviction amounts share memory, transfer and compute budgets; uniform slots do not prove admission feasibility; session groups are scheduling objects, and a group schedule retains per-session history and per-block safety conditions without requiring an atomic group transfer; selected execution policy: allocate each session restoration destination in full, count every complete queued or in-flight destination immediately, preserve planned allocation and copy order without partial destination holding or allocation bypass, and publish per-session readiness without a group execution barrier; the current managed path implements complete per-session allocation, stable ordering and versioned H2D-drained transitions; unit tests cover reference lifetime and no allocation bypass, while measured capacity remains a separate evidence obligation; design boundary: session groups organize residency scheduling, while the inference backend owns execution scheduling and model computation, including batching when used; continuous batching is not a required backend policy; backend replacement requires compatible execution-event and KV-state operations and is not a claim of existing multi-backend support; proactive cyclic KV recomputation is reserved for future work as a planner decision extension, with replay-capable backend execution and joint resource feasibility required before claiming support",
       "owners": [
         "docs/system.md#kv-prefetching",
         "docs/system.md#release-offset-scheduling",
@@ -178,23 +181,30 @@
     },
     {
       "id": "CONTRACT-RESIDENCY-PLAN-REVISION",
-      "rule": "selected design policy, not verified implementation: plan at maximum context and revise on session arrivals or departures, without horizon renewal; preserve admitted phases and the slot grid; pause new restoration allocation and settle already allocated H2D operations before activating a versioned candidate after rechecking actual allocations and live execution/D2H references; replace only unstarted operations and settle old completion events by operation identity; reject infeasible new admissions, wait for resource events when restoration allocation is blocked, and use existing execution and copy error paths without adding a service-degradation policy",
+      "rule": "Implemented conservative membership changes pause new H2D allocation, wait for allocated H2D to settle, recheck current physical allocation under the adapter lock and publish a monotonically versioned plan. Existing phases and ceilings are unchanged; arbitrary budget/phase replacement remains unsupported. Departure reserves credit until request and copy cleanup complete.",
       "owners": [
         "docs/system.md#planning-updates",
         "docs/system.md#implementation-handoff"
       ],
-      "verification": []
+      "verification": [
+        "tests/test_residency_planner.py",
+        "tests/test_session_manager.py"
+      ]
     },
     {
       "id": "CONTRACT-EVALUATION-REPLAY",
-      "rule": "confirmed protocol, not implemented capability: use the three experiments owned by docs/experiments.md; pair systems on identical exogenous session schedules, input segments and timestamps; derive natural phases from fractional session arrival times without global tick rounding; generate arrivals independently of service completion, fix session duration, record planned and actual sends, do not retry rejected sessions or expose future departures to the planner; preserve original ticks after phase assignment and measure initial alignment and input-to-result delay; report admitted/rejected sessions and on-time/late/unfinished model work together; matched implementation ablations change one policy at a time",
+      "rule": "Open-loop replay preserves immutable source samples, fractional arrival phases and original deadlines. Reject infeasible arrivals once, distinguish a pending plan transition from rejection, and never expose future departures to the planner. Report offered/admitted/rejected and on-time/late/unfinished model work, original-source delay, alignment and planned/actual sends. Dynamic and fixed schedules hash recorded audio and keep input and arrival randomness separate; the legacy post-admission cohort client is a separate diagnostic path.",
       "owners": [
         "docs/experiments.md#evaluation-questions",
         "docs/experiments.md#dynamic-arrival-experiment",
         "docs/experiments.md#ablation-matrix",
         "docs/experiments.md#measurement-semantics"
       ],
-      "verification": []
+      "verification": [
+        "tests/test_arrival_schedule.py",
+        "tests/test_replay_metrics.py",
+        "tests/test_admission_gateway.py"
+      ]
     },
     {
       "id": "CONTRACT-KV-LOAD-OBSERVATION",
@@ -236,7 +246,7 @@
       "id": "CONTRACT-CONSERVATIVE-ADMISSION",
       "rule": "Legacy diagnostic implementation; not the current maximum-context planning/open-loop evaluation contract. Implemented conservative candidate policy: existing phases and eviction budgets stay fixed; a free slot is insufficient; explicit finite-horizon compute, bidirectional copy, full-destination GPU allocation, host capacity and growth estimates must pass before admission. Profile calibration and general joint optimization remain separate work. Reviews publish risk, not lifetime guarantees. Runtime memory-saving credit is capped by confirmed recoverable non-shared backing; new sessions get no speculative credit, while transfer service still reserves the maximum future restoration budget.",
       "owners": [
-        "docs/system.md#conservative-admission",
+        "engines/conveyor/worker/engine_patch/residency_planner.py",
         "engines/conveyor/worker/engine_patch/residency_planner.py"
       ],
       "verification": [
@@ -245,7 +255,7 @@
     },
     {
       "id": "CONTRACT-SESSION-LIFECYCLE",
-      "rule": "FIFO waits before model input; session.end drains final input and capped output; completion requires frontend final output and backend request/copy cleanup. Admission credit is retained during closing and cleanup failure. Late input/plan cannot resurrect a closed identity. Readiness reservations remain pinned until backend execution references are acquired.",
+      "rule": "Legacy cohorts queue before playback; open-loop cohorts preserve source time and reject infeasible arrivals once. session.end drains final input and capped output; completion needs final frontend output and backend request/copy cleanup. Closing retains admission credit, duplicate/late operations cannot resurrect identity, and readiness pins survive until execution references are acquired.",
       "owners": [
         "engines/conveyor/AGENTS.md",
         "docs/system.md#conservative-admission"
@@ -253,12 +263,13 @@
       "verification": [
         "tests/test_admission_worker.py",
         "tests/test_session_manager.py",
-        "engines/conveyor/gateway/session_manager_test.go"
+        "engines/conveyor/gateway/session_manager_test.go",
+        "engines/conveyor/gateway/replay_test.go"
       ]
     },
     {
       "id": "CONTRACT-COHORT-COMPLETION",
-      "rule": "Every offered manifest identity must complete exactly once; sending audio, socket disconnect and RPC return are not completion. Admission waiting and post-admission audio time remain distinct. Synthetic inputs are labelled. Per-cycle SLO uses the independent input-identity/completion collector. Fixed-cap drain does not establish arbitrary variable-length model support.",
+      "rule": "Legacy finite cohort diagnostic only: Every offered manifest identity must complete exactly once; sending audio, socket disconnect and RPC return are not completion. Admission waiting and post-admission audio time remain distinct. Synthetic inputs are labelled. Per-cycle SLO uses the independent input-identity/completion collector. Fixed-cap drain does not establish arbitrary variable-length model support.",
       "owners": [
         "docs/experiments.md#finite-cohort-runner"
       ],
@@ -341,7 +352,7 @@
     },
     {
       "id": "CONTRACT-RUNTIME-PORTABILITY",
-      "rule": "Keep the hashed runtime profile and selected model revisions unchanged across machines. Default to GPU zero, allow a worker-venv override and Hugging Face cache environment variables; verify the actual driver, BF16 execution, model shards, physical KV roundtrip and multi-session lifecycle before experiments. Machine checks with uncalibrated costs do not establish H100 capacity or conformance to the latest planning protocol.",
+      "rule": "The hashed runtime profile pins a consistent CUDA compiler/CRT/NVVM/CCCL family and model revisions. Worker environment exposes the selected venv ninja and wheel-provided CUDA toolkit. Machine checks verify BF16, FlashInfer sampling JIT, complete model shards, physical KV roundtrip and multi-session lifecycle. Functional checks with uncalibrated costs do not establish capacity.",
       "owners": [
         "infra/env/AGENTS.md",
         "experiments/shared/platform.py",
@@ -351,6 +362,31 @@
         "tests/test_portability.py",
         "tests/test_session_manager_gpu.py",
         "experiments/conveyor/check.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-PHYSICAL-COPY-INTEGRITY",
+      "rule": "Optional intrusive diagnostics compare all copied physical KV bytes after observed device completion and before publishing or releasing pins; mismatch fails the copy service and retains uncertain references. This synchronizes the GPU and cannot be used for formal performance.",
+      "owners": [
+        "engines/conveyor/worker/engine_patch/copy_service.py",
+        "infra/trace/collectors/kv_integrity.py",
+        "experiments/conveyor/config.py"
+      ],
+      "verification": [
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "CONTRACT-RESTORED-PHYSICAL-TABLE",
+      "rule": "Managed eviction preserves unselected blocks including the unfinished tail. Full restoration must preserve every saved logical block hash and computed-token frontier before pins transfer into the original backend block table. No computation or readiness publication with missing blocks; no suffix recomputation from prefix-cache re-entry. Cancellation retains in-flight references.",
+      "owners": [
+        "engines/conveyor/worker/engine_patch/manager_adapter.py",
+        "engines/conveyor/worker/engine_patch/session_manager.py"
+      ],
+      "verification": [
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
       ]
     }
   ],

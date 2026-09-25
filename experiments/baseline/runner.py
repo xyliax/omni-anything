@@ -7,6 +7,8 @@ terminal verdict) is ``infra/run/workflow.py`` and is shared by every experiment
 
 from __future__ import annotations
 
+from infra.env.verify import cuda_toolkit_environment
+
 import json
 import os
 from pathlib import Path
@@ -60,7 +62,7 @@ def worker_command(config: BaselineConfig, ready_file: Path) -> list[str]:
 
 
 def worker_environment(config: BaselineConfig, run_dir: Path) -> dict[str, str]:
-    env = os.environ.copy()
+    env = cuda_toolkit_environment(config.worker_python)
     env.update({
         "CUDA_VISIBLE_DEVICES": str(config.gpu),
         "HF_HUB_OFFLINE": "1",

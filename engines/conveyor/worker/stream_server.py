@@ -51,6 +51,38 @@ _pev = perreq_logger()
 
 
 _INGEST_POOL = None
+_INPUT_GATES = {}  # frontend event-loop only; exact (external request, frame)
+
+
+def checked_context_size(retained, input_tokens, output_tokens, maximum):
+    """Check the complete append before handing it to the resumable backend."""
+    total = retained + input_tokens + output_tokens
+    if total > maximum:
+        raise ValueError(f'maximum context exceeded: {total} > {maximum}')
+    # The pinned backend keeps computed output tokens, excluding the final
+    # sampled-but-uncomputed token, when resuming the next segment.
+    return total - 1
+
+
+class InputGate:
+    """Overlap restoration with CPU preprocessing, or trigger on actual demand.
+
+    Submission, history readiness, and backend enqueue remain distinct events.
+    The submitting coroutine keeps its session lock until enqueue is confirmed.
+    """
+    def __init__(self, prepare, policy):
+        self.prepare = prepare
+        self.task = asyncio.create_task(prepare()) if policy != 'on_demand' else None
+        self.done = asyncio.get_running_loop().create_future()
+
+    async def ready(self):
+        if self.task is None:
+            self.task = asyncio.create_task(self.prepare())
+        await self.task
+
+    def close(self):
+        if self.task is not None and not self.task.done():
+            self.task.cancel()
 
 def _patch_parallel_ingest(workers=8, model_family="qwen25_omni"):
     """Replace AsyncLLM._add_streaming_input_request with a copy whose per-chunk
@@ -100,6 +132,7 @@ def _patch_parallel_ingest(workers=8, model_family="qwen25_omni"):
             sid = request_id[1:request_id.index("e")] if request_id.startswith("s") else request_id
             cancelled = False
             frame = -int(bool(os.environ.get('OMNI_SERVICE_PRELOAD')))
+            retained = 0
             try:
                 async for input_chunk in input_stream:
                     frame += 1
@@ -123,16 +156,28 @@ def _patch_parallel_ingest(workers=8, model_family="qwen25_omni"):
                     req = await loop.run_in_executor(_INGEST_POOL, _timed)
                     _pev("IR", sid)
                     req.external_req_id = request_id
+                    if os.environ.get('OMNI_INPUT_GATES'):
+                        retained = checked_context_size(retained, len(req.prompt_token_ids or ()),
+                                                        sp.max_tokens, self.model_config.max_model_len)
                     if req.prompt_embeds is not None:
                         raise ValueError("prompt_embeds not supported for streaming inputs")
                     prompt_text, _, _ = extract_prompt_components(
                         self.model_config, input_chunk.prompt)
+                    gate = _INPUT_GATES.get((request_id, frame))
+                    if gate is not None:
+                        service_event('preprocessing_complete', sid, frame)
+                        await gate.ready()
                     await self._add_request(req, prompt_text, None, 0, queue)
                     service_event('engine_input', sid, frame)
+                    if gate is not None and not gate.done.done():
+                        gate.done.set_result(None)
                     _pev("IA", sid)
             except (asyncio.CancelledError, GeneratorExit):
                 cancelled = True
             except Exception as error:
+                for (identity, _), gate in list(_INPUT_GATES.items()):
+                    if identity == request_id and not gate.done.done():
+                        gate.done.set_exception(error)
                 queue.put(InputStreamError(error))
             finally:
                 queue._input_stream_task = None
@@ -396,6 +441,7 @@ class StreamingEngine:
     async def _managed_push(self, sid, st, arr, sr, cadence):
         task = asyncio.current_task()
         st.pushes.add(task)
+        gate, gate_key = None, None
         try:
             async with st.push_lock:
                 if st.closing:
@@ -405,6 +451,21 @@ class StreamingEngine:
                     "session_plan", f"s{sid}e1", period_s, next_tick,
                     float(os.environ["OMNI_RESTORE_LEAD_S"]),
                     int(os.environ["OMNI_RETAINED_PREFIX_BLOCKS"]))
+                if os.environ.get('OMNI_INPUT_GATES'):
+                    async def prepare():
+                        while not st.closing:
+                            result = await self.engine.engine_core.call_utility_async(
+                                'session_ready', f's{sid}e1', str(next_tick))
+                            if result['ready']:
+                                return
+                            await asyncio.sleep(.001)
+                        raise asyncio.CancelledError()
+                    gate_key = (f's{sid}e1', st.frame + 1)
+                    gate = InputGate(prepare, os.environ.get('OMNI_RESTORE_POLICY', 'pre_tick'))
+                    _INPUT_GATES[gate_key] = gate
+                    await st.queue.put((arr, sr))
+                    await gate.done
+                    return
                 if os.environ.get('OMNI_ADMISSION_PROFILE') or os.environ.get('OMNI_RESIDENT_ONLY'):
                     while not st.closing:
                         result = await self.engine.engine_core.call_utility_async(
@@ -419,6 +480,9 @@ class StreamingEngine:
             log.error("session %s ended: %s", sid, st.error)
             st.done = True
         finally:
+            if gate is not None:
+                gate.close()
+                _INPUT_GATES.pop(gate_key, None)
             st.pushes.discard(task)
 
     async def _prefetch_after_push(self, sid: int):
@@ -500,12 +564,12 @@ class StreamingEngine:
         if st is not None:
             st.done = True
 
-    def admit(self, sid, period_s, slots, epoch):
+    def admit(self, sid, period_s, slots, epoch, source_start=None):
         if sid in self.closed_sessions:
             raise ValueError('closed session identity')
         future = asyncio.run_coroutine_threadsafe(
             self.engine.engine_core.call_utility_async(
-                'session_admit', f's{sid}e1', period_s, slots, epoch), self.loop)
+                'session_admit', f's{sid}e1', period_s, slots, epoch, source_start), self.loop)
         return future.result(timeout=8)
 
     def num_unfinished(self) -> int:
@@ -558,7 +622,8 @@ class Servicer(pb_grpc.InferenceServicer):
                         sid,
                         int(metadata['x-pilarius-period-ns']) / 1e9,
                         int(metadata['x-pilarius-slots']),
-                        int(metadata['x-pilarius-epoch-ns']) / 1e9)
+                        int(metadata['x-pilarius-epoch-ns']) / 1e9,
+                        int(metadata['x-pilarius-source-start-ns']) / 1e9 if 'x-pilarius-source-start-ns' in metadata else None)
                     context.send_initial_metadata((('x-pilarius-admission', json.dumps(result)),))
                     return pb.StepResponse()
                 with self.lock:

@@ -24,6 +24,25 @@ EXPECTED_PACKAGES = {
 }
 
 
+def cuda_toolkit_environment(python: Path, environment=None) -> dict[str, str]:
+    """Expose the locked wheel toolkit to JIT users on driver-only hosts.
+
+    Use the invoked venv path, not its resolved interpreter symlink. A system
+    interpreter without this wheel layout retains its supplied environment.
+    """
+    env = dict(os.environ if environment is None else environment)
+    prefix = Path(python).absolute().parent.parent
+    # Direct venv Python invocation does not activate console scripts such as ninja.
+    env['PATH'] = os.pathsep.join(filter(None, (str(prefix / 'bin'), env.get('PATH', ''))))
+    roots = sorted(prefix.glob('lib/python*/site-packages/nvidia/cu13'))
+    for root in roots:
+        if (root / 'bin/nvcc').is_file():
+            env['CUDA_HOME'] = env['CUDA_PATH'] = str(root)
+            env['PATH'] = os.pathsep.join(filter(None, (str(root / 'bin'), env.get('PATH', ''))))
+            break
+    return env
+
+
 def capture(command: list[str], *, cwd: Path | None = None) -> str:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=True)
     return result.stdout.strip()
@@ -65,8 +84,10 @@ cuda_layout = {"roots": [str(p) for p in roots], "valid": False}
 if roots:
     root = roots[0]
     cuda_layout.update(lib64_exists=(root / "lib64").exists(),
-                       libcudart_link_exists=(root / "lib" / "libcudart.so").exists())
-    cuda_layout["valid"] = cuda_layout["lib64_exists"] and cuda_layout["libcudart_link_exists"]
+                       libcudart_link_exists=(root / "lib" / "libcudart.so").exists(),
+                       nvcc_exists=(root / "bin" / "nvcc").is_file())
+    cuda_layout["valid"] = all(cuda_layout[name] for name in
+                             ("lib64_exists", "libcudart_link_exists", "nvcc_exists"))
 
 print(json.dumps({"python": platform.python_version(), "executable": sys.executable,
                   "packages": versions, "cuda_runtime": cuda_runtime,
@@ -94,7 +115,7 @@ def runtime_issues(software: dict[str, Any]) -> list[str]:
     if not software.get("fix1", {}).get("marked"):
         issues.append("vLLM METRONOME FIX 1 marker was not found")
     if not software.get("cuda_layout", {}).get("valid"):
-        issues.append("CUDA 13 wheel compatibility links are missing; rerun infra/env/setup.sh")
+        issues.append("CUDA 13 wheel toolkit or compatibility links are missing; rerun infra/env/setup.sh")
     return issues
 
 
@@ -126,13 +147,20 @@ a = torch.ones((32, 32), device='cuda', dtype=torch.bfloat16)
 b = a @ a
 torch.cuda.synchronize()
 assert torch.equal(b.cpu(), torch.full((32, 32), 32, dtype=torch.bfloat16))
+from flashinfer.sampling import top_k_top_p_sampling_from_logits
+logits = torch.zeros((2, 32), device='cuda', dtype=torch.float32)
+logits[:, 3] = 100
+sampled = top_k_top_p_sampling_from_logits(logits, top_k=1, top_p=1.0)
+torch.cuda.synchronize()
+assert torch.equal(sampled.cpu(), torch.full((2,), 3, dtype=sampled.dtype))
 print(json.dumps(dict(capability=torch.cuda.get_device_capability(),
-                     torch_arch_list=torch.cuda.get_arch_list(), bf16_execution=True)))
+                     torch_arch_list=torch.cuda.get_arch_list(), bf16_execution=True,
+                     flashinfer_sampling=True)))
 '''
-        env = {**os.environ, 'CUDA_VISIBLE_DEVICES': uuid}
+        env = {**cuda_toolkit_environment(python), 'CUDA_VISIBLE_DEVICES': uuid}
         result = subprocess.run([str(python), '-c', script], env=env,
                                 capture_output=True, text=True, timeout=120, check=True)
-        report.update(json.loads(result.stdout))
+        report.update(json.loads(result.stdout.strip().splitlines()[-1]))
         return report
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         detail = getattr(exc, 'stderr', '') or str(exc)

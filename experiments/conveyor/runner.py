@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from infra.run.artifacts import RunStore, make_run_id, scan_client_health, scan_worker_fatal
+from infra.env.verify import cuda_toolkit_environment
 from infra.run.probes import resolve_model_snapshot
 from infra.run.workflow import Launch, RunPlan, execute
 from infra.trace.collect import (
@@ -80,14 +81,16 @@ def worker_command(config: ConveyorConfig, ready_file: Path) -> list[str]:
 
 
 def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
-    env = os.environ.copy()
+    env = cuda_toolkit_environment(config.worker_python)
     for key in ("OMNI_SESSION_MANAGER", "OMNI_GPU_ACTIVITY", "OMNI_GPU_TRACE_SECONDS",
                 "OMNI_TRANSFER_EVENTS", "OMNI_PREFETCH", "OMNI_RETAINED_PREFIX_BLOCKS",
                 "OMNI_HOLD_KV_EVICTION", "OMNI_KV_EVICTION", "OMNI_ADMISSION_PROFILE",
-                'OMNI_SERVICE_EVENTS', 'OMNI_SERVICE_PRELOAD', 'OMNI_RESIDENT_ONLY', 'OMNI_RESIDENT_LIMIT'):
+                'OMNI_SERVICE_EVENTS', 'OMNI_SERVICE_PRELOAD', 'OMNI_RESIDENT_ONLY', 'OMNI_RESIDENT_LIMIT',
+                'OMNI_RESTORE_POLICY', 'OMNI_INPUT_GATES'):
         env.pop(key, None)
     env.update({
         'OMNI_COPY_SUBMISSION': config.copy_submission,
+        'OMNI_VERIFY_COPIES': '1' if config.verify_copies else '0',
         "CUDA_VISIBLE_DEVICES": str(config.gpu),
         "HF_HUB_OFFLINE": "1",
         "VLLM_NO_USAGE_STATS": "1",
@@ -110,6 +113,7 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         )
     if config.session_manager:
         env["OMNI_SESSION_MANAGER"] = "1"
+        env['OMNI_RESTORE_POLICY'] = config.restore_policy
         env["OMNI_RESTORE_LEAD_S"] = str(config.restore_lead_s)
         env["OMNI_PREFETCH_MIN_FREE"] = str(config.prefetch_min_free)
         apply_transfer_observation(env, run_dir)
@@ -117,6 +121,8 @@ def worker_environment(config: ConveyorConfig, run_dir: Path) -> dict[str, str]:
         env['OMNI_ADMISSION_PROFILE'] = str(Path(config.admission_profile).resolve())
     if config.cohort_manifest:
         env['OMNI_SERVICE_EVENTS'] = str(run_dir / 'service_events.jsonl')
+        if config.open_loop:
+            env['OMNI_INPUT_GATES'] = '1'
     if config.resident_control:
         env['OMNI_RESIDENT_ONLY'] = '1'
         env['OMNI_RESIDENT_LIMIT'] = str(config.resident_limit)
@@ -168,6 +174,8 @@ def gateway_command(config: ConveyorConfig) -> list[str]:
     ]
     if config.cohort_manifest:
         cmd.append('--admission')
+    if config.open_loop:
+        cmd += ['--open-loop', '--phase-policy', config.phase_policy]
     return cmd
 
 
@@ -181,6 +189,13 @@ def gateway_environment(run_dir: Path, config=None) -> dict[str, str]:
 
 
 def client_command(config: ConveyorConfig, run_id: str) -> list[str]:
+    if config.open_loop:
+        return [str(config.worker_python), '-u',
+                str(config.root / 'experiments/conveyor/replay_client.py'),
+                '--manifest', str(Path(config.cohort_manifest).resolve()),
+                '--uri', f'ws://127.0.0.1:{platform.GATEWAY_PORT}',
+                '--output', str(config.output_root / run_id / '.cohort-client.json'),
+                '--timeout', str(config.duration_s)]
     if config.cohort_manifest:
         return [str(config.worker_python), '-u',
                 str(config.root / 'experiments/conveyor/cohort_client.py'),
@@ -320,7 +335,7 @@ def collect_issues(store: RunStore) -> list[str]:
         engine = manifest_config.get("engine", {})
         if not isinstance(engine, dict):
             engine = {}
-        if engine.get("prefetch", "off") != "off" or engine.get("session_manager"):
+        if engine.get("prefetch", "off") != "off" or (engine.get("session_manager") and engine.get('restore_policy') != 'on_demand'):
             prefetched = 0
             with kv_events_log.open(encoding="utf-8", errors="replace") as handle:
                 for line in handle:
@@ -352,7 +367,7 @@ def collect_issues(store: RunStore) -> list[str]:
     if not isinstance(admission, dict):
         issues.append('invalid admission manifest configuration')
         admission = {}
-    if admission.get('cohort'):
+    if admission.get('cohort') and not manifest_config.get('client', {}).get('open_loop'):
         try:
             cohort = json.loads(store.file('client.json').read_text())
             expected = {row['id'] for row in admission['cohort']}
@@ -372,6 +387,11 @@ def collect_issues(store: RunStore) -> list[str]:
         store.write_json('service_metrics.json', metrics)
         if metrics['verdict'] != 'pass':
             issues.append('service SLO ' + metrics['verdict'] + ': ' + '; '.join(metrics['reasons']))
+    if manifest_config.get('client', {}).get('open_loop'):
+        from infra.trace.replay import evaluate_run
+        metrics = evaluate_run(store.path, manifest_config)
+        store.write_json('replay_metrics.json', metrics)
+        issues.extend(metrics['invalid_reasons'])
     return issues
 
 

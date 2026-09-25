@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-OPEN-LOOP-IMPLEMENTATION",
+  "date": "2026-09-25",
+  "question": "Can the conservative maximum-context policy and three matched systems execute an exogenous input protocol while preserving physical KV history?",
+  "configuration_profile": "docs/experiments.md#open-loop-runner; selected MiniCPM-o 4.5 audio-input/fixed-text-output path; diagnostic 2048-token context limit and 1 GiB KV pool; no final paper scope restriction.",
+  "change": "Implemented maximum-context feasibility, versioned H2D-drained membership changes, independent source-clock replay, one-shot rejection, three restoration triggers, physical GPU/host observations, and a frozen matrix/report workflow. Managed restoration preserves the unfinished tail and rebinds the complete logical block table without prefix-cache suffix recomputation.",
+  "result": "CPU regression: 154 passed, 4 skipped, 43 subtests at this checkpoint. Single-session intrusive GPU validation completed all work and verified 91 transfers. Eight-session intrusive validation checked 545 transfers without byte mismatch or logical-table error, but synchronized checks caused lateness and incomplete work; it is not a performance result or complete stress proof. Counts include warmup transfers. Diagnostic raw has been removed after its checking purpose; calibration raw remains separate.",
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-OPEN-LOOP-IMPLEMENTATION",
+    "EVIDENCE-PHYSICAL-TABLE-CHECK"
+  ],
+  "affects_findings": [
+    "FINDING-T7"
+  ],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Full repeated capacity, dynamic-arrival and ablation matrix remains to execute.",
+    "Finite small-pool runs do not establish long-context or full-device capacity.",
+    "Exact output-token identity is diagnostic only; acceptance checks KV contents, logical position, history coverage and readiness."
+  ]
+}

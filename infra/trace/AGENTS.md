@@ -32,3 +32,7 @@ python -m infra.trace.profile <run-dir> --variant named-streams
 ```
 
 `python -m infra.trace.groups <run>` 从 admission、eviction 与 copy-control 原始事件生成只写一次的 `derived/group_windows.json`；分别报告组成员、预算超量、发布时间超窗、planner review 与无法关联的 H2D。排队到发布是 CPU 控制窗口，不称作 DMA 时间。
+
+开放回放使用 `replay.py`，分别报告 offered/admitted 工作、拒绝与未完成；clock/identity/budget 违规才是测量 invalid。`gpu_allocation` 是 GPU BlockPool 取得/释放引用后的逐操作物理计数，包含完整在途目的分配；无引用可回收缓存不计 allocated。它不是旧 `residency.log` 的 request-list 快照。`preprocessing_to_engine_enqueue_ms` 包含 readiness 与控制交接，不称作纯 DMA。
+
+`calibration.py` 提取独立校准成本；`evaluation.py` 校验矩阵所有 run hash 后聚合和导图。`collectors/kv_integrity.py` 是显式启用的侵入式物理 KV 检查，由 copy service 在发布前调用，不参与性能测量。`host_backing` 计数确认有效的主机缓存块，含可回收的旧会话缓存，不等于活跃引用计数。

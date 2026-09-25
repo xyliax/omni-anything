@@ -17,7 +17,7 @@ import omni_evict
 from omni_state import external_id
 from session_manager import SessionManager, SessionPlan
 from copy_service import CopyService, CudaCopyBackend
-from residency_planner import AdmissionProfile, ResidencyPlanner
+from residency_planner import MaximumContextCosts, MaximumContextPlanner, ResidencyPlanner, read_cost_profile
 from infra.trace.collectors.gpu_activity import TransferObserver
 
 _worker = None
@@ -41,7 +41,7 @@ class VllmKVMemoryManager:
         self.planner = None
         self.closed_sessions = set()
         profile = os.environ.get("OMNI_ADMISSION_PROFILE")
-        self.admission_profile = AdmissionProfile.read(profile) if profile else None
+        self.admission_profile = read_cost_profile(profile) if profile else None
         self.next_review = 0.0
         self.manager.start()
 
@@ -58,6 +58,7 @@ class VllmKVMemoryManager:
         if session.host_pins:
             self.cpu.free_blocks([block for _, block in session.host_pins])
             session.host_pins = []
+        session.retained_table = []
 
     def evict(self, session):
         from vllm.v1.request import RequestStatus
@@ -84,7 +85,14 @@ class VllmKVMemoryManager:
         if not selected:
             return False
         selected_ids = {block.block_id for _, block, _ in selected}
-        kept = [self.gpu.blocks[bid] for bid in owned[:complete] if bid not in selected_ids]
+        # Preserve the unfinished final block as well. Prefix-cache re-entry
+        # would discard it and recompute a historical suffix, changing the
+        # floating-point execution even for an isolated deterministic stream.
+        kept = [self.gpu.blocks[bid] for bid in owned if bid not in selected_ids]
+        table = [self.gpu.blocks[bid] if bid not in selected_ids else None for bid in owned]
+        cache_manager = kvm.coordinator.single_type_managers[0]
+        cached = cache_manager.num_cached_block.get(request.request_id, 0)
+        retained_hashes = tuple(self.gpu.blocks[bid].block_hash for bid in owned[:cached])
         sources = [block for _, _, block in selected]
         self.gpu.touch(kept)
         self.cpu.touch(sources)  # valid backing survives host LRU until resume/restore
@@ -93,7 +101,12 @@ class VllmKVMemoryManager:
         request._omni_kv_evicted = True
         kvm.evict_blocks(selected_ids)
         session.resident_pins = kept
+        session.retained_table = table
+        session.cached_blocks = cached
+        session.retained_hashes = retained_hashes
+        session.retained_computed_tokens = request.num_computed_tokens
         session.host_pins = [(i, block) for i, _, block in selected]
+        session.missing_tick = session.plan.next_tick
         omni_evict.log_kv_event(
             f"{time.time():.6f} E req={request.request_id} owned_before={len(owned)} "
             f"evicted={len(selected)} host_backed={len(selected)} "
@@ -106,7 +119,19 @@ class VllmKVMemoryManager:
         return True
 
     def restore(self, session):
-        sources = sorted((block for _, block in session.host_pins), key=lambda b: b.block_id)
+        if self.manager.restoration_paused:
+            return False
+        # Demand overtaking must not bypass an earlier eligible complete
+        # destination. All entry points use the same allocation order.
+        now = time.monotonic()
+        policy = getattr(self.manager, 'restore_policy', 'pre_tick')
+        candidates = [s for s in self.manager.sessions.values() if s.host_pins and not s.restore_inflight
+                      and (s is session or s.restoration_requested or
+                           (policy == 'pre_tick' and now >= s.restoration_tick-s.plan.restore_lead_s))]
+        if candidates and min(candidates, key=lambda s: s.restoration_tick-s.plan.restore_lead_s) is not session:
+            return False
+        source_entries = sorted(session.host_pins, key=lambda row: row[1].block_id)
+        sources = [block for _, block in source_entries]
         if self.gpu.get_num_free_blocks() - len(sources) < self.min_free * len(self.gpu.blocks):
             return False
         # Fresh destinations have no logical assignment yet. The allocator's
@@ -121,13 +146,16 @@ class VllmKVMemoryManager:
         session.restore_inflight = True
         request = omni_evict._resolve(self.scheduler, session.request_id)
         live_id = request.request_id if request is not None else session.request_id
-        planned_tick = session.plan.next_tick
+        planned_tick = session.restoration_tick
+        trigger = 'demand' if os.environ.get('OMNI_RESTORE_POLICY') == 'on_demand' else 'prefetch'
         self.observer('restore_scheduled', request=live_id, group=session.plan.group,
                       blocks=len(sources), ceiling_blocks=session.plan.max_evict_blocks,
+                      plan_version=session.plan.plan_version,
+                      restore_policy=os.environ.get('OMNI_RESTORE_POLICY', 'pre_tick'),
                       deadline_epoch=time.time() + planned_tick - time.monotonic())
         omni_evict.log_kv_event(
             f"{time.time():.6f} L req={live_id} cpu_tok={len(sources) * self.block_size} "
-            f"gpu_tok={len(session.resident_pins) * self.block_size} trigger=prefetch\n")
+            f"gpu_tok={len(session.resident_pins) * self.block_size} trigger={trigger}\n")
 
         def completed():
             with self.lock:
@@ -136,16 +164,20 @@ class VllmKVMemoryManager:
                         self.gpu.cached_block_hash_to_block.insert(block.block_hash, block)
                 if not session.cancelled and session.activity == "idle":
                     session.resident_pins.extend(targets)  # keep ready KV until admission
+                    for (index, _), target in zip(source_entries, targets):
+                        session.retained_table[index] = target
                 else:
                     self.gpu.free_blocks(targets)
                 self.cpu.free_blocks(sources)
                 session.restore_inflight = False
+                session.missing_tick = None
+                session.restoration_requested = False
                 lateness = time.monotonic() - planned_tick
                 if lateness > 0 and not session.cancelled:
                     self.observer('restore_deadline_miss', request=live_id, group=session.plan.group,
                                   lateness_ms=lateness * 1000,
                                   reason='completion exceeded planned restore window')
-                omni_evict.log_kv_event(f"{time.time():.6f} R req={live_id} trigger=prefetch\n")
+                omni_evict.log_kv_event(f"{time.time():.6f} R req={live_id} trigger={trigger}\n")
                 self.manager.wake.set()
 
         self.copies.submit("H2D", [b.block_id for b in sources], [b.block_id for b in targets],
@@ -196,7 +228,7 @@ class VllmKVMemoryManager:
         self.copies.close()
         self.observer.close()
 
-    def admit(self, request_id, period_s, slots, epoch):
+    def admit(self, request_id, period_s, slots, epoch, source_start=None):
         """Plan without allocating; actual pools remain the state authority."""
         with self.lock:
             self.check_health()
@@ -212,24 +244,44 @@ class VllmKVMemoryManager:
                     gpu_reserve_blocks=max(self.admission_profile.gpu_reserve_blocks,
                                            math.ceil(self.min_free * len(self.gpu.blocks)), 1),
                     host_reserve_blocks=max(self.admission_profile.host_reserve_blocks, 1))
-                self.planner = ResidencyPlanner(
+                maximum_context = isinstance(effective, MaximumContextCosts)
+                planner_type = MaximumContextPlanner if maximum_context else ResidencyPlanner
+                extra = dict(max_context_blocks=math.ceil(self.scheduler.max_model_len / self.block_size)) if maximum_context else {}
+                self.planner = planner_type(
                     effective, period_s=period_s, slots=slots, epoch=epoch,
                     restore_lead_s=float(os.environ['OMNI_RESTORE_LEAD_S']),
                     retained_prefix_blocks=int(os.environ['OMNI_RETAINED_PREFIX_BLOCKS']),
-                    gpu_blocks=len(self.gpu.blocks), host_blocks=len(self.cpu.blocks))
+                    gpu_blocks=len(self.gpu.blocks), host_blocks=len(self.cpu.blocks), **extra)
             if (period_s, slots, epoch) != (self.planner.period_s, self.planner.slots, self.planner.epoch):
                 raise ValueError("cannot replace a live admission grid")
+            maximum_context = isinstance(self.planner, MaximumContextPlanner)
+            if maximum_context:
+                self.manager.restoration_paused = True
+                if self.copies.pending_copies('H2D'):
+                    return dict(admitted=False, pending=True, reason='plan_transition')
             current = {external_id(r.request_id): (r.num_tokens + self.block_size - 1) // self.block_size
                        for r in self.scheduler.requests.values()}
-            result = self.planner.try_admit(
-                request_id, now=time.time(), current_blocks=current,
-                used_gpu_blocks=len(self.gpu.blocks) - self.gpu.get_num_free_blocks(),
-                recoverable_blocks=self.recoverable_snapshot())
+            try:
+                result = self.planner.try_admit(
+                    request_id, now=time.time(), current_blocks=current,
+                    used_gpu_blocks=len(self.gpu.blocks) - self.gpu.get_num_free_blocks(),
+                    source_start=source_start,
+                    recoverable_blocks=None if maximum_context else self.recoverable_snapshot())
+            finally:
+                self.manager.restoration_paused = False
+                self.manager.wake.set()
             if result.get('admitted'):
                 self.observer('admitted', request=request_id, **result)
+                if maximum_context:
+                    for session in self.manager.sessions.values():
+                        session.plan = replace(session.plan, plan_version=self.planner.generation)
+                    self.observer('plan_activated', version=self.planner.generation,
+                                  members=list(self.planner.plans), trigger='admission')
             return result
 
     def review_plan(self):
+        if isinstance(self.planner, MaximumContextPlanner):
+            return  # membership events revise this plan; context growth does not
         if self.planner is None or time.monotonic() < self.next_review:
             return
         self.next_review = time.monotonic() + self.admission_profile.horizon_s / 2
@@ -272,8 +324,20 @@ class VllmKVMemoryManager:
             copying = any(external_id(rid) == request_id for rid in self.copies.pending_requests())
             if active or copying:
                 return {'released': False, 'reason': 'execution_or_copy_in_flight'}
+            maximum_context = isinstance(self.planner, MaximumContextPlanner)
+            if maximum_context:
+                self.manager.restoration_paused = True
+                if self.copies.pending_copies('H2D'):
+                    return {'released': False, 'reason': 'plan_transition'}
             if self.planner is not None:
                 self.planner.release(request_id)
+            if maximum_context:
+                for session in self.manager.sessions.values():
+                    session.plan = replace(session.plan, plan_version=self.planner.generation)
+                self.observer('plan_activated', version=self.planner.generation,
+                              members=list(self.planner.plans), trigger='departure')
+                self.manager.restoration_paused = False
+                self.manager.wake.set()
             self.observer('session_released', request=request_id)
             return {'released': True}
 
@@ -298,13 +362,28 @@ class VllmKVMemoryManager:
                 # At the tick a missing dependency is urgent even if the next
                 # periodic plan has already been installed. Never duplicate
                 # an in-flight restore or treat its allocation as readiness.
+                session.restoration_requested = True
                 self.restore(session)
                 return {'ready': False, 'reason': 'restore_required'}
             if request is not None and getattr(request, '_omni_kv_evicted', False):
-                complete = request.num_computed_tokens // self.block_size
-                for block_hash in request.block_hashes[:complete]:
-                    if not self.gpu.get_cached_block(block_hash, [self.native.fa_gidx]):
-                        return {'ready': False, 'reason': 'gpu_coverage_gap'}
+                # Transfer the complete physical table back to the backend.
+                # No refcount changes: manager pins become request ownership.
+                # Keeping num_computed_tokens preserves the resident path's
+                # exact history and avoids incidental tail recomputation.
+                table = session.retained_table
+                if not table or any(block is None or block.ref_cnt < 1 for block in table):
+                    raise RuntimeError('incomplete physical table at input readiness')
+                if (tuple(block.block_hash for block in table[:session.cached_blocks]) != session.retained_hashes
+                        or request.num_computed_tokens != session.retained_computed_tokens):
+                    raise RuntimeError('logical KV history changed during restoration')
+                native = self.scheduler.kv_cache_manager.coordinator.single_type_managers[0]
+                if native.req_to_blocks.get(request.request_id):
+                    raise RuntimeError('request already owns a physical table')
+                native.req_to_blocks[request.request_id] = table
+                native.num_cached_block[request.request_id] = session.cached_blocks
+                session.resident_pins = []
+                session.retained_table = []
+                request._omni_kv_evicted = False
             session.pending_work = work_id
             return {'ready': True}
 
@@ -406,18 +485,20 @@ def apply():
             group = assigned.slot
             phase = assigned.first_tick
             cycles = (float(next_tick_epoch) - phase) / assigned.period_s
-            if abs(cycles - round(cycles)) > 1e-5 or float(period_s) != assigned.period_s:
+            static = getattr(_adapter.planner.profile, 'admission_policy', None) == 'static_limit'
+            if (not static and abs(cycles - round(cycles)) > 1e-5) or float(period_s) != assigned.period_s:
                 raise ValueError('input cadence disagrees with admission phase')
         plan = SessionPlan(float(period_s), time.monotonic() + float(next_tick_epoch) - time.time(),
                            float(restore_lead_s), int(retained_prefix_blocks),
                            tuple(tuple(map(int, pair)) for pair in (eviction_ranges or ())),
-                           max_evict_blocks, group)
+                           max_evict_blocks, group,
+                           _adapter.planner.generation if _adapter.planner is not None else 0)
         self.session_manager.set_plan(request_id, plan)
         return {"planned": True}
     EngineCore.session_plan = session_plan
 
-    def session_admit(self, request_id, period_s, slots, epoch):
-        return _adapter.admit(request_id, float(period_s), int(slots), float(epoch))
+    def session_admit(self, request_id, period_s, slots, epoch, source_start=None):
+        return _adapter.admit(request_id, float(period_s), int(slots), float(epoch), source_start)
     EngineCore.session_admit = session_admit
 
     def session_release(self, request_id):

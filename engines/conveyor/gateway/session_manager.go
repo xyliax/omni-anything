@@ -113,6 +113,15 @@ func (m *GatewaySessionManager) advance() bool {
 		return false
 	}
 	if !admitted {
+		if *openLoop && reason != "plan_transition" {
+			m.mu.Lock()
+			m.waiting = m.waiting[1:]
+			m.mu.Unlock()
+			s.send(map[string]any{"type": "session.rejected", "reason": reason})
+			serviceEvent("session_rejected", s.id, 0, map[string]any{"reason": reason})
+			m.close(s)
+			return true
+		}
 		s.mu.Lock()
 		changed := s.blockedReason != reason
 		s.blockedReason = reason
@@ -130,6 +139,10 @@ func (m *GatewaySessionManager) advance() bool {
 	if alive {
 		s.slot = slot
 		s.admitted = true
+		if *openLoop {
+			s.firstRelease = firstRelease(s.sourceStart, m.epoch, slot)
+			s.drainTick = s.firstRelease
+		}
 	}
 	s.mu.Unlock()
 	// If disconnect raced this RPC, close() already queued backend cleanup.
@@ -137,6 +150,7 @@ func (m *GatewaySessionManager) advance() bool {
 		log.Printf("session admitted sid=%d slot=%d", s.id, slot)
 		s.send(map[string]any{"type": "session.admitted", "slot": slot,
 			"epoch_ns": m.epoch.UnixNano(), "period_ns": int64(*periodMS) * int64(time.Millisecond), "slots": *slots,
+			"first_release_ns": s.firstRelease.UnixNano(), "phase_policy": *phasePolicy,
 			"wait_ms": float64(time.Since(s.connectedAt).Microseconds()) / 1000})
 	}
 	return true
@@ -170,6 +184,9 @@ func (m *GatewaySessionManager) requestAdmission(s *Session) (bool, int, string,
 		"x-pilarius-period-ns", fmt.Sprint((time.Duration(*periodMS)*time.Millisecond).Nanoseconds()),
 		"x-pilarius-slots", fmt.Sprint(*slots),
 		"x-pilarius-epoch-ns", fmt.Sprint(m.epoch.UnixNano())))
+	if *openLoop {
+		ctx = metadata.AppendToOutgoingContext(ctx, "x-pilarius-source-start-ns", fmt.Sprint(s.sourceStart.UnixNano()))
+	}
 	var header metadata.MD
 	_, err := client.Step(ctx, &pb.StepRequest{Sessions: []*pb.SessionInput{{Sid: s.id}}}, grpc.Header(&header))
 	if err != nil {

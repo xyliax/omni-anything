@@ -24,7 +24,7 @@ def apply():
     def find(self, rid):
         return next((r for key, r in self.scheduler.requests.items() if external_id(key) == rid), None)
 
-    def admit(self, rid, period, slots, epoch):
+    def admit(self, rid, period, slots, epoch, source_start=None):
         if not hasattr(self, '_resident_slots'):
             self._resident_slots, self._resident_pending, self._resident_closed = {}, {}, set()
         if rid in self._resident_closed:

@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'engines/conveyor/worker/engine_patch'))
-from residency_planner import AdmissionProfile, ResidencyPlanner
+from residency_planner import AdmissionProfile, ResidencyPlanner, MaximumContextCosts, MaximumContextPlanner
 
 
 def profile(**changes):
@@ -148,3 +148,79 @@ class PlannerTests(unittest.TestCase):
             planner(restore_lead_s=.6)
         with self.assertRaises(ValueError):
             planner(profile(horizon_s=1))
+
+
+class MaximumContextPlannerTests(unittest.TestCase):
+    def planner(self, **changes):
+        costs = MaximumContextCosts(compute_s=.1, backup_s=.02, max_evict_blocks=40,
+            h2d_blocks_per_s=1000, transfer_overhead_s=.001, safety_s=.01,
+            gpu_reserve_blocks=1, host_reserve_blocks=1, max_sessions=8)
+        args = dict(max_context_blocks=100, period_s=2, slots=4, epoch=0,
+                    restore_lead_s=.2, retained_prefix_blocks=2, gpu_blocks=281, host_blocks=1000)
+        args.update(changes)
+        return MaximumContextPlanner(costs, **args)
+
+    def test_maximum_histories_fit_cyclically_without_a_growth_forecast(self):
+        p = self.planner()
+        for i in range(4):
+            result = p.try_admit(str(i), now=0, current_blocks={})
+            self.assertTrue(result['admitted'], result)
+            self.assertIsNone(result['plan']['forecast_until'])
+        self.assertEqual(result['forecast']['gpu_peak_blocks'], 281)
+        self.assertEqual(result['forecast']['host_blocks'], 401)
+        self.assertGreater(4 * 100, p.gpu_blocks)
+        # Short histories do not permit a fifth lifetime reservation.
+        self.assertFalse(p.try_admit('fifth', now=0, current_blocks={})['admitted'])
+        before = dict(p.plans)
+        reason, full = p.check(list(p.plans.values()), now=20, current_blocks={str(i):100 for i in range(4)})
+        self.assertIsNone(reason)
+        self.assertEqual(full['gpu_peak_blocks'], result['forecast']['gpu_peak_blocks'])
+        self.assertEqual(p.plans, before)
+
+    def test_actual_pressure_and_context_limit_are_independent_checks(self):
+        p = self.planner()
+        self.assertTrue(p.try_admit('a', now=0, current_blocks={})['admitted'])
+        self.assertEqual(p.check(list(p.plans.values()), now=0,
+            current_blocks={'a':101})[0], 'maximum_context_exceeded')
+        self.assertEqual(p.check(list(p.plans.values()), now=0,
+            current_blocks={}, used_gpu_blocks=281)[0], 'current_gpu_pressure')
+
+    def test_release_changes_version_without_moving_remaining_phases(self):
+        p = self.planner()
+        p.try_admit('a', now=0, current_blocks={})
+        p.try_admit('b', now=0, current_blocks={})
+        other = p.plans['b']
+        version = p.generation
+        p.release('a')
+        self.assertGreater(p.generation, version)
+        self.assertEqual(p.plans['b'], other)
+        p.release('a')
+        self.assertEqual(p.generation, version+1)
+
+    def test_host_limit_uses_maximum_not_current_short_history(self):
+        p = self.planner(host_blocks=100)
+        result = p.try_admit('a', now=0, current_blocks={'a':1})
+        self.assertFalse(result['admitted'])
+        self.assertIn('host_capacity', result['reason'])
+
+    def test_tie_break_reduces_alignment_without_changing_existing_phases(self):
+        p = self.planner(gpu_blocks=1000)
+        first = p.try_admit('a', now=.61, source_start=.61, current_blocks={})
+        self.assertEqual(first['plan']['slot'], 2)  # earliest equally loaded future phase is 1s
+        saved = p.plans['a']
+        second = p.try_admit('b', now=.64, source_start=.64, current_blocks={})
+        self.assertEqual(second['plan']['slot'], 3)
+        self.assertEqual(p.plans['a'], saved)
+
+    def test_calibrated_group_cost_is_shared_but_unknown_size_falls_back(self):
+        from dataclasses import replace
+        p = self.planner(gpu_blocks=1000)
+        p.profile = replace(p.profile, compute_s=.3, compute_by_group={'2': .35})
+        # Two members in a .5s interval fit only with the independently
+        # calibrated group cost; no per-member multiplication of that cost.
+        for i in range(8):
+            self.assertTrue(p.try_admit(str(i), now=0, current_blocks={})['admitted'])
+        p.profile = replace(p.profile, max_sessions=12)
+        ninth = p.try_admit('ninth', now=0, current_blocks={})
+        self.assertFalse(ninth['admitted'])
+        self.assertIn('compute_window', ninth['reason'])

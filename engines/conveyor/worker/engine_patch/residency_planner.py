@@ -27,6 +27,7 @@ class AdmissionProfile:
     host_reserve_blocks: int
     max_sessions: int
 
+
     def __post_init__(self):
         for name in ('horizon_s', 'compute_s', 'h2d_blocks_per_s', 'd2h_blocks_per_s'):
             value = getattr(self, name)
@@ -60,7 +61,7 @@ class ResidencyPlan:
     retained_prefix_blocks: int
     max_evict_blocks: int
     generation: int
-    forecast_until: float
+    forecast_until: float | None
 
     def wire(self):
         return {**asdict(self), 'group': self.slot,
@@ -103,7 +104,11 @@ class ResidencyPlanner:
         self.last_review = {'feasible': reason is None, 'reason': reason, 'forecast': forecast}
         return self.last_review
 
-    def try_admit(self, request_id, *, now, current_blocks, used_gpu_blocks=0, recoverable_blocks=None):
+    def plan_valid_until(self, now):
+        return now + self.profile.horizon_s
+
+    def try_admit(self, request_id, *, now, current_blocks, used_gpu_blocks=0, recoverable_blocks=None,
+                  source_start=None):
         if request_id in self.plans:
             return {'admitted': True, 'plan': self.plans[request_id].wire()}
         if len(self.plans) >= self.profile.max_sessions:
@@ -111,13 +116,17 @@ class ResidencyPlanner:
         failures = []
         # Least populated first; stable slot number breaks ties. Feasibility,
         # not the load count, decides whether a candidate may be installed.
-        order = sorted(range(self.slots), key=lambda s: (sum(p.slot == s for p in self.plans.values()), s))
+        def rank(slot):
+            population = sum(p.slot == slot for p in self.plans.values())
+            delay = 0 if source_start is None else (self.epoch + slot*self.period_s/self.slots - source_start) % self.period_s
+            return population, delay, slot
+        order = sorted(range(self.slots), key=rank)
         for slot in order:
             phase = self.epoch + slot * self.period_s / self.slots
             first = phase + max(0, math.ceil((now - phase) / self.period_s)) * self.period_s
             plan = ResidencyPlan(request_id, slot, now, first, self.period_s, self.lead,
                                  self.retained, self.profile.max_evict_blocks,
-                                 self.generation + 1, now + self.profile.horizon_s)
+                                 self.generation + 1, self.plan_valid_until(now))
             plans = [*self.plans.values(), plan]
             reason, forecast = self.check(plans, now=now, current_blocks=current_blocks,
                                           used_gpu_blocks=used_gpu_blocks, recoverable_blocks=recoverable_blocks)
@@ -226,3 +235,148 @@ class ResidencyPlanner:
 
     def release(self, request_id):
         self.plans.pop(request_id, None)
+
+
+@dataclass(frozen=True)
+class MaximumContextCosts:
+    """Calibrated workload costs; context size comes from the live backend.
+
+    Per-member compute and incremental backup are serialized conservatively.
+    These estimates are checked against measurements, not a hard SLO promise.
+    No growth predictor, planning horizon or tolerated-miss parameter is used.
+    """
+    compute_s: float
+    backup_s: float
+    max_evict_blocks: int
+    h2d_blocks_per_s: float
+    transfer_overhead_s: float
+    safety_s: float
+    gpu_reserve_blocks: int
+    host_reserve_blocks: int
+    max_sessions: int
+    admission_policy: str = 'maximum_context'
+    compute_by_group: dict[str, float] | None = None
+
+    def __post_init__(self):
+        for name in ('compute_s', 'backup_s', 'h2d_blocks_per_s'):
+            if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
+                raise ValueError(f'{name} must be finite and positive')
+        for name in ('transfer_overhead_s', 'safety_s'):
+            if not math.isfinite(getattr(self, name)) or getattr(self, name) < 0:
+                raise ValueError(f'{name} must be finite and nonnegative')
+        for name in ('max_evict_blocks', 'gpu_reserve_blocks', 'host_reserve_blocks', 'max_sessions'):
+            if type(getattr(self, name)) is not int or getattr(self, name) < 0:
+                raise ValueError(f'{name} must be a nonnegative integer')
+        if not self.max_sessions:
+            raise ValueError('max_sessions must be positive')
+        if self.admission_policy not in ('maximum_context', 'static_limit'):
+            raise ValueError('invalid admission policy')
+        for count, cost in (self.compute_by_group or {}).items():
+            if str(int(count)) != count or int(count) < 1 or not math.isfinite(cost) or cost <= 0:
+                raise ValueError('positive calibrated group size and service cost required')
+
+
+def read_cost_profile(path):
+    values = json.loads(Path(path).read_text())
+    mode = values.pop('planning_mode', 'finite_horizon')
+    values.pop('calibration', None)  # provenance stays in the run manifest
+    if mode in ('maximum_context', 'static_limit'):
+        return MaximumContextCosts(**values, admission_policy=mode)
+    if mode == 'finite_horizon':
+        return AdmissionProfile(**values)
+    raise ValueError(f'unknown planning_mode: {mode}')
+
+
+class MaximumContextPlanner(ResidencyPlanner):
+    """A reusable maximum-context envelope on a fixed, stable phase grid.
+
+    Search the least populated slots with one fixed per-session eviction
+    ceiling. Charge complete restoration destinations before each tick and
+    credit release only after compute plus backing. All maximum histories
+    are charged to host; current short contexts never raise admission limits.
+    Runtime coverage/refcount checks still own actual eviction and allocation.
+    """
+    def __init__(self, profile, *, max_context_blocks, period_s, slots, epoch,
+                 restore_lead_s, retained_prefix_blocks, gpu_blocks, host_blocks):
+        if not math.isfinite(period_s) or period_s <= 0 or type(slots) is not int or slots < 1:
+            raise ValueError('positive period and integer slot count required')
+        if (not math.isfinite(epoch) or not math.isfinite(restore_lead_s)
+                or not 0 < restore_lead_s <= period_s / slots):
+            raise ValueError('finite grid and restore lead inside slot interval required')
+        if type(max_context_blocks) is not int or max_context_blocks < 1:
+            raise ValueError('positive backend maximum context in blocks required')
+        if retained_prefix_blocks < 1 or min(gpu_blocks, host_blocks) <= 0:
+            raise ValueError('positive retention and physical pool capacities required')
+        # Keep at least the protected prefix and one potentially incomplete
+        # tail block resident even at the maximum context boundary.
+        if profile.max_evict_blocks > max(0, max_context_blocks - retained_prefix_blocks - 1):
+            raise ValueError('eviction ceiling exceeds complete maximum-context history')
+        self.profile = profile
+        self.maximum_context_blocks = max_context_blocks
+        self.period_s, self.slots, self.epoch = period_s, slots, epoch
+        self.lead, self.retained = restore_lead_s, retained_prefix_blocks
+        self.gpu_blocks, self.host_blocks = gpu_blocks, host_blocks
+        self.plans, self.generation, self.last_review = {}, 0, None
+
+    def plan_valid_until(self, now):
+        return None  # reusable until membership changes, not a rolling lease
+
+    def check(self, plans, *, now, current_blocks, used_gpu_blocks=0, recoverable_blocks=None):
+        p, maximum = self.profile, self.maximum_context_blocks
+        if any(current_blocks.get(x.request_id, 0) > maximum for x in plans):
+            return 'maximum_context_exceeded', {}
+        host = len(plans) * maximum + p.host_reserve_blocks
+        if host > self.host_blocks:
+            return 'host_capacity', {}
+        if used_gpu_blocks + p.gpu_reserve_blocks > self.gpu_blocks:
+            return 'current_gpu_pressure', {}
+        if p.admission_policy == 'static_limit':
+            # A matched control uses an independently calibrated count limit.
+            # It does not borrow the assigned-phase planner's memory credit.
+            return None, dict(planning_mode='static_limit', maximum_context_blocks=maximum,
+                              host_blocks=host, calibrated_limit=p.max_sessions)
+        groups, intervals, group_forecasts = {}, [], []
+        for plan in plans:
+            groups.setdefault(plan.slot, []).append(plan)
+        for slot, members in groups.items():
+            count = len(members)
+            compute = (p.compute_by_group or {}).get(str(count), count*p.compute_s)
+            busy = compute + count*p.backup_s + p.safety_s
+            if compute + p.safety_s > self.period_s / self.slots:
+                return 'compute_window', {}
+            if busy > self.period_s / self.slots:
+                return 'backing_window', {}
+            evicted = sum(x.max_evict_blocks for x in members)
+            if evicted and busy + self.lead >= self.period_s:
+                return 'idle_window', {}
+            overhead = sum(p.transfer_overhead_s for x in members if x.max_evict_blocks)
+            if evicted / p.h2d_blocks_per_s + overhead + p.safety_s > self.lead:
+                return 'restore_window', {}
+            group_forecasts.append(dict(group=slot, members=[x.request_id for x in members],
+                restore_lead_s=self.lead, assigned_ceiling_blocks=evicted,
+                window_capacity_blocks=max(0, math.floor((self.lead - p.safety_s - overhead)
+                                                         * p.h2d_blocks_per_s))))
+            phase = (self.epoch + slot * self.period_s / self.slots - now) % self.period_s
+            for cycle in (-1, 0, 1):
+                start, end = phase + cycle * self.period_s - self.lead, phase + cycle * self.period_s + busy
+                if end >= 0 and start <= self.period_s:
+                    intervals.append((max(0., start), min(self.period_s, end), evicted))
+        base = p.gpu_reserve_blocks + sum(maximum - x.max_evict_blocks for x in plans)
+        at_now = base + sum(amount for start, end, amount in intervals if start == 0)
+        # Existing allocations or copy pins may exceed the expected phase
+        # envelope. Reserve that excess throughout the candidate cycle.
+        allocated = at_now + max(0, used_gpu_blocks + p.gpu_reserve_blocks - at_now)
+        peak = allocated
+        events = [(time, delta) for start, end, amount in intervals
+                  for time, delta in ([(start, amount)] if start > 0 else []) + [(end, -amount)]]
+        for _, delta in sorted(events, key=lambda event: (event[0], -event[1])):
+            allocated += delta
+            peak = max(peak, allocated)
+        forecast = dict(planning_mode='maximum_context', maximum_context_blocks=maximum,
+                        gpu_peak_blocks=peak, host_blocks=host, groups=group_forecasts,
+                        plan_version=self.generation + 1)
+        return ('gpu_capacity' if peak > self.gpu_blocks else None), forecast
+
+    def release(self, request_id):
+        if self.plans.pop(request_id, None) is not None:
+            self.generation += 1

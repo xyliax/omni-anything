@@ -303,7 +303,10 @@
         "AdmissionProfile",
         "ResidencyPlanner.try_admit",
         "ResidencyPlanner.revalidate",
-        "ResidencyPlanner.release"
+        "ResidencyPlanner.release",
+        "MaximumContextCosts",
+        "MaximumContextPlanner.check",
+        "read_cost_profile"
       ]
     },
     {
@@ -426,6 +429,91 @@
         "main",
         "check_config",
         "audit_run"
+      ]
+    },
+    {
+      "id": "exogenous-schedule-generator",
+      "kind": "cli",
+      "path": "experiments/conveyor/schedule.py",
+      "entrypoints": [
+        "audio_asset",
+        "generate_schedule",
+        "main",
+        "generate_fixed_schedule",
+        "read_schedule"
+      ]
+    },
+    {
+      "id": "open-loop-replay-client",
+      "kind": "load-generator",
+      "path": "experiments/conveyor/replay_client.py",
+      "entrypoints": [
+        "serve_one",
+        "run",
+        "main"
+      ]
+    },
+    {
+      "id": "source-clock-gateway",
+      "kind": "input-scheduler",
+      "path": "engines/conveyor/gateway/replay.go",
+      "entrypoints": [
+        "firstRelease",
+        "replayDue",
+        "replayLoop"
+      ]
+    },
+    {
+      "id": "replay-metrics",
+      "kind": "analysis",
+      "path": "infra/trace/replay.py",
+      "entrypoints": [
+        "evaluate",
+        "evaluate_run"
+      ]
+    },
+    {
+      "id": "speech-material-builder",
+      "kind": "input-material",
+      "path": "experiments/conveyor/material.py",
+      "entrypoints": [
+        "build",
+        "main"
+      ]
+    },
+    {
+      "id": "evaluation-matrix",
+      "kind": "process-orchestrator",
+      "path": "experiments/conveyor/evaluate.py",
+      "entrypoints": [
+        "prepare",
+        "execute_plan"
+      ]
+    },
+    {
+      "id": "evaluation-report",
+      "kind": "trace-analysis",
+      "path": "infra/trace/evaluation.py",
+      "entrypoints": [
+        "aggregate",
+        "load_point",
+        "plot"
+      ]
+    },
+    {
+      "id": "cost-calibration",
+      "kind": "trace-analysis",
+      "path": "infra/trace/calibration.py",
+      "entrypoints": [
+        "measure"
+      ]
+    },
+    {
+      "id": "physical-kv-integrity",
+      "kind": "diagnostic-collector",
+      "path": "infra/trace/collectors/kv_integrity.py",
+      "entrypoints": [
+        "verify_copy"
       ]
     }
   ]

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "record_id": "RECORD-2026-09-25-CONTROLLED-CALIBRATION",
+  "date": "2026-09-25",
+  "question": "Which conservative profiles and independently measured baseline limits can be frozen for the first controlled evaluation?",
+  "configuration_profile": "docs/experiments.md#open-loop-runner; calibration seed 1729, bounded KV pools and 2048-token backend limit; future evaluation seeds 11, 22, 33.",
+  "change": "Separated calibration from evaluation, matched restore/eviction settings within each model, measured grouped engine service and complete restore publication windows with safety margins, and froze independently calibrated static admission limits.",
+  "result": {
+    "MiniCPM-o 4.5": {
+      "resident_calibration": "3 complete; unrestricted 4 leaves unfinished work",
+      "on_demand_calibration": "12 complete with 96/96 final-window inputs on time; 13 complete with 85 on time and 19 late",
+      "planned_calibration": "8 complete, 64/64 final-window inputs on time",
+      "static_limits": {
+        "resident": 3,
+        "on_demand": 12
+      }
+    },
+    "Qwen2.5-Omni-7B": {
+      "resident_calibration": "3 complete; unrestricted 4 leaves unfinished work",
+      "on_demand_calibration": "10 complete with 80/80 final-window inputs on time; 11 complete with 78 on time and 10 late",
+      "planned_calibration": "6 complete, 48/48 final-window inputs on time",
+      "static_limits": {
+        "resident": 3,
+        "on_demand": 10
+      }
+    },
+    "interpretation": "Diagnostic measured calibration, not independently repeated capacity claims. Current conservative Pilarius admits fewer sessions than the calibrated on-demand control; matched-concurrency ablations must assess latency benefit separately. All limits apply to the finite configured input histories and observation windows."
+  },
+  "verdict": "diagnostic",
+  "evidence": [
+    "EVIDENCE-CONTROLLED-CALIBRATION"
+  ],
+  "affects_findings": [],
+  "supersedes": [],
+  "remaining_uncertainty": [
+    "Independent-seed repetitions and dynamic arrivals remain to run.",
+    "Observed history is about 2K tokens; longer-history and full-device behavior are not established.",
+    "CPU-observed calibrated costs include queueing/interference and do not constitute hard timing bounds."
+  ]
+}

@@ -83,6 +83,10 @@ class ConveyorConfig:
     resident_limit: int = 1
     capacity_slo: str | None = None
     copy_submission: str = 'optimized'
+    open_loop: bool = False
+    phase_policy: str = 'assigned'
+    restore_policy: str = 'pre_tick'
+    verify_copies: bool = False
 
     @property
     def kv_eviction_enabled(self) -> bool:
@@ -97,8 +101,15 @@ class ConveyorConfig:
 
     def __post_init__(self) -> None:
         if self.cohort_manifest:
-            from .cohort_client import read_manifest
-            object.__setattr__(self, 'sessions', len(read_manifest(self.cohort_manifest)))
+            if self.open_loop:
+                from .schedule import read_schedule
+                data, rows = read_schedule(self.cohort_manifest)
+                if data['configuration']['period_s'] * 1000 != workload.PERIOD_MS:
+                    raise ValueError('input schedule period differs from serving period')
+            else:
+                from .cohort_client import read_manifest
+                rows = read_manifest(self.cohort_manifest)
+            object.__setattr__(self, 'sessions', len(rows))
         if self.gpu_trace:
             object.__setattr__(self, "trace", True)
         if self.label is None:
@@ -139,6 +150,22 @@ class ConveyorConfig:
 
     def validate(self) -> None:
         import math
+        if self.verify_copies and not self.session_manager:
+            raise ValueError('physical copy verification requires Session Manager')
+        if self.phase_policy not in ('assigned', 'natural') or self.restore_policy not in ('pre_tick', 'on_demand', 'after_submit'):
+            raise ValueError('invalid phase or restoration policy')
+        if self.open_loop and (not self.cohort_manifest or self.capacity_slo):
+            raise ValueError('open-loop requires an exogenous schedule and no legacy SLO barrier')
+        if self.phase_policy == 'natural' and not self.open_loop:
+            raise ValueError('natural phases require source-clock replay')
+        if self.restore_policy != 'pre_tick' and not self.session_manager:
+            raise ValueError('restoration controls require the managed KV path')
+        if self.open_loop and self.admission_profile:
+            mode = json.loads(Path(self.admission_profile).read_text()).get('planning_mode')
+            if mode not in ('maximum_context', 'static_limit'):
+                raise ValueError('open-loop does not accept a finite-horizon profile')
+            if mode == 'maximum_context' and (self.phase_policy != 'assigned' or self.restore_policy != 'pre_tick'):
+                raise ValueError('maximum-context grid planner requires assigned phases and pre-tick restore; use calibrated static limits for controls')
         if self.model_preset not in model.PRESETS:
             raise ValueError(f'unknown model preset: {self.model_preset}')
         if not 0 < self.gpu_memory_utilization <= 1 or self.max_model_len < 1 or self.max_num_seqs < 1:
@@ -232,6 +259,8 @@ class ConveyorConfig:
             names.extend(('service_events.jsonl', 'gateway_frames.jsonl'))
         if self.capacity_slo:
             names.append('service_metrics.json')
+        if self.open_loop:
+            names.append('replay_metrics.json')
         if self.gpu_trace:
             names.append("gpu_activity.json")
         return tuple(sorted(names))
@@ -239,7 +268,9 @@ class ConveyorConfig:
     def manifest_config(self) -> dict[str, Any]:
         """Return stable experiment parameters for ``manifest.json``."""
         return {
-            'evaluated_system': 'matched_resident_control' if self.resident_control else 'pilarius',
+            'evaluated_system': ('matched_resident_control' if self.resident_control else
+                'matched_on_demand' if self.restore_policy == 'on_demand' else
+                'matched_after_submit' if self.restore_policy == 'after_submit' else 'pilarius'),
             "worker": WORKER,
             "label": self.label,
             "engine": {
@@ -264,9 +295,11 @@ class ConveyorConfig:
                 "restore_lead_s": self.restore_lead_s,
                 'resident_control': self.resident_control,
                 'copy_submission': self.copy_submission,
+                'restore_policy': self.restore_policy,
+                'phase_policy': self.phase_policy,
                 'resident_limit': self.resident_limit if self.resident_control else None,
             },
-            "client": {"client_shards": self.client_shards},
+            "client": {"client_shards": self.client_shards, 'open_loop': self.open_loop},
             "admission": {
                 "profile": json.loads(Path(self.admission_profile).read_text()) if self.admission_profile else None,
                 "cohort": json.loads(Path(self.cohort_manifest).read_text()) if self.cohort_manifest else None,
@@ -277,6 +310,7 @@ class ConveyorConfig:
             "workload": workload.manifest(
                 self.sessions, self.duration_s, model_preset=self.model_preset),
             "observations": {
+                "verify_copies": self.verify_copies,
                 "trace": self.trace,
                 "gpu_trace": self.gpu_trace,
                 "gpu_trace_scope": "whole_business_run" if self.gpu_trace else "off",

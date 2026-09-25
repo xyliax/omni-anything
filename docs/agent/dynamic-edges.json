@@ -633,7 +633,8 @@
       "source": "engines/conveyor/gateway/session_manager.go",
       "observe": [
         "gateway.log admission and release order",
-        "transfer_events.jsonl admitted/plan_review/session_released"
+        "transfer_events.jsonl admitted/plan_review/session_released",
+        "transfer_events.jsonl plan_activated version"
       ],
       "verify": [
         "tests/test_residency_planner.py",
@@ -648,11 +649,12 @@
         "session-manager",
         "session-manager-adapter"
       ],
-      "binding": "session_plan then session_ready utility; per-session serialized input waits for previous execution and complete GPU history; pins handed off at connector update_state_after_alloc; session_drained also requires frontend final output",
+      "binding": "session_plan then session_ready utility; per-session serialized input waits for previous execution and complete GPU history; pins handed off at connector update_state_after_alloc; session_drained also requires frontend final output; open-loop InputGate serializes each session through actual engine enqueue; on_demand starts readiness after CPU preprocessing, after_submit/pre_tick overlap readiness checks with preprocessing; maximum context checked before enqueue",
       "source": "engines/conveyor/worker/stream_server.py",
       "observe": [
         "per_request.log",
-        "transfer_events.jsonl"
+        "transfer_events.jsonl",
+        "service_events.jsonl preprocessing_complete/engine_input"
       ],
       "verify": [
         "tests/test_session_manager.py",
@@ -683,18 +685,21 @@
       "to": [
         "conveyor-worker",
         "service-completion-collector",
-        "service-slo-analysis"
+        "service-slo-analysis",
+        "replay-metrics"
       ],
       "binding": "x-pilarius-frame-ids metadata; strict input sequence; EngineCore stopped-request ordinal per resumable segment; epoch-clock append-only events; no profiler requirement",
       "source": "engines/conveyor/worker/stream_server.py",
       "observe": [
         "gateway_frames.jsonl",
         "service_events.jsonl",
-        "service_metrics.json"
+        "service_metrics.json",
+        "replay_metrics.json"
       ],
       "verify": [
         "tests/test_service_metrics.py",
-        "tests/test_admission_gateway.py"
+        "tests/test_admission_gateway.py",
+        "tests/test_replay_metrics.py"
       ]
     },
     {
@@ -748,6 +753,74 @@
       "verify": [
         "tests/test_portability.py",
         "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "EDGE-EXOGENOUS-REPLAY",
+      "from": "open-loop-replay-client",
+      "to": [
+        "source-clock-gateway",
+        "gateway-session-manager"
+      ],
+      "binding": "HTTP /clock anchors paired relative schedules; WebSocket source_start_ns is supplied before admission; session.admitted publishes frozen first_release_ns; infeasible arrivals receive session.rejected once, with only plan-transition control retries",
+      "source": "experiments/conveyor/replay_client.py",
+      "observe": [
+        "client.json source_start_ns/sends/first_release_ns",
+        "gateway_frames.jsonl input_release"
+      ],
+      "verify": [
+        "tests/test_admission_gateway.py",
+        "tests/test_replay_metrics.py",
+        "tests/test_arrival_schedule.py"
+      ]
+    },
+    {
+      "id": "EDGE-PHYSICAL-ALLOCATION-OBSERVATION",
+      "from": "service-completion-collector",
+      "to": "vllm-engine-core",
+      "binding": "Scheduler initialization marks its GPU BlockPool; wrapped get_new_blocks/touch/free_blocks emit actual allocated blocks after every mutation including H2D destination preallocation",
+      "source": "infra/trace/collectors/service_events.py",
+      "observe": [
+        "service_events.jsonl gpu_allocation",
+        "replay_metrics.json peak_allocated_gpu_blocks"
+      ],
+      "verify": [
+        "tests/test_replay_metrics.py"
+      ]
+    },
+    {
+      "id": "EDGE-COPY-INTEGRITY",
+      "from": "kv-copy-service",
+      "to": "physical-kv-integrity",
+      "binding": "OMNI_VERIFY_COPIES enables full physical-byte comparison after device completion, before reference release; diagnostic synchronization only",
+      "source": "engines/conveyor/worker/engine_patch/copy_service.py",
+      "why_static_tools_miss": [
+        "environment-selected diagnostic hook"
+      ],
+      "observe": [
+        "manifest.json config.observations.verify_copies",
+        "transfer_events.jsonl integrity_checked and error"
+      ],
+      "verify": [
+        "tests/test_session_manager.py",
+        "tests/test_session_manager_gpu.py"
+      ]
+    },
+    {
+      "id": "EDGE-MANAGER-PHYSICAL-TABLE",
+      "from": "session-manager-adapter",
+      "to": "vllm-engine-core",
+      "binding": "prepare_input transfers a complete restored table and owned references into KVCacheManager.coordinator.single_type_managers[0].req_to_blocks and restores num_cached_block, preserving num_computed_tokens",
+      "source": "engines/conveyor/worker/engine_patch/manager_adapter.py",
+      "why_static_tools_miss": [
+        "private backend state mutation under the shared scheduler lock"
+      ],
+      "observe": [
+        "transfer_events.jsonl",
+        "service_events.jsonl compute_complete context_tokens"
+      ],
+      "verify": [
+        "tests/test_session_manager.py"
       ]
     }
   ]

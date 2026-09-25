@@ -139,7 +139,7 @@ if [[ ! -x "$VENV/bin/python" ]]; then
   }
 fi
 "$VENV/bin/python" -m pip install --upgrade "pip==26.1.0"
-"$VENV/bin/python" -m pip install --require-hashes --only-binary=:all: \
+"$VENV/bin/python" -m pip install --require-hashes --only-binary=:all: --no-deps \
   -r "$PROFILE_DIR/requirements.lock"
 "$VENV/bin/python" -m pip check
 

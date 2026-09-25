@@ -21,6 +21,7 @@ class CopyService:
         self.closing = False
         self.pending_lock = threading.Lock()
         self.pending = Counter()
+        self.pending_directions = Counter()
         self.thread = threading.Thread(target=self._run, name="kv-copy-service", daemon=True)
         self.thread.start()
 
@@ -34,6 +35,7 @@ class CopyService:
         job = (transfer_id, direction, tuple(sources), tuple(targets), tuple(requests), on_done)
         with self.pending_lock:
             self.pending.update(job[4])
+            self.pending_directions[direction] += 1
         self.observer("queued", transfer_id=transfer_id, direction=direction,
                       requests=list(requests), blocks=len(sources),
                       source_blocks=list(sources), target_blocks=list(targets))
@@ -44,6 +46,10 @@ class CopyService:
         """Includes queued copies and callbacks that have not released pins."""
         with self.pending_lock:
             return set(self.pending)
+
+    def pending_copies(self, direction):
+        with self.pending_lock:
+            return self.pending_directions[direction]
 
     def check_health(self):
         if self.error is not None:
@@ -77,11 +83,16 @@ class CopyService:
                         continue
                     self.observer("device_complete_observed", transfer_id=job[0], direction=job[1],
                                   requests=list(job[4]), stream_interval_ms=self.backend.elapsed_ms(handle))
+                    if getattr(self.backend, 'verify_copies', False) is True:
+                        checked = self.backend.verify(job[1], job[2], job[3])
+                        self.observer("integrity_checked", transfer_id=job[0], direction=job[1],
+                                      requests=list(job[4]), checked_bytes=checked)
                     job[5]()
                     self.observer("published", transfer_id=job[0], direction=job[1], requests=list(job[4]))
                     with self.pending_lock:
                         self.pending.subtract(job[4])
                         self.pending += Counter()  # discard zero counts
+                        self.pending_directions[job[1]] -= 1
                 inflight = pending
         except Exception as exc:
             # An uncertain DMA must retain its pins until the engine exits.
@@ -100,6 +111,13 @@ class CudaCopyBackend:
     def __init__(self, worker):
         self.worker = worker
         self.native_control = os.environ.get('OMNI_COPY_SUBMISSION') == 'native'
+        self.verify_copies = os.environ.get('OMNI_VERIFY_COPIES') == '1'
+
+    def verify(self, direction, sources, targets):
+        # Diagnostic only: synchronize and compare every byte while both
+        # source and destination references are still pinned, before publish.
+        from infra.trace.collectors.kv_integrity import verify_copy
+        return verify_copy(self.worker, direction, sources, targets)
 
     def initialize(self):
         import torch

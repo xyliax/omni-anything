@@ -62,7 +62,7 @@
 
 | 待完成项 | 影响的正文 | 材料位置 |
 | --- | --- | --- |
-| 按最大上下文联合规划的具体算法 | Intro 技术支点、Design、贡献列表 | [最大上下文规划](system.md#maximum-context-planning)、[System 未决设计](system.md#open-design-decisions) |
+| 保守最大上下文候选检查及有效性边界的表述 | Intro 技术支点、Design；不将一般最优求解包装为已实现贡献 | [保守策略](system.md#conservative-admission)、[实现与验证状态](findings.md#finding-t7) |
 | 已选恢复与修正策略的实现核验 | Design 的 Backend Integration、评估与图文复核 | [恢复分配决策](system.md#group-restoration-allocation)、[计划修正](system.md#planning-updates)及[验收场景](system.md#implementation-handoff)；设计选择不代表已有实现或结果 |
 | 同上下文上限的会话数、延迟与超期测量 | Evaluation 与结果句 | [测量语义](experiments.md#measurement-semantics) |
 | 共用会话时间表回放与原始输入时钟、真实完成事件对齐 | Evaluation 的动态到达与自然 phase 对照 | [动态到达协议](experiments.md#dynamic-arrival-experiment)、[运行前核验](experiments.md#correctness-and-quality-protocol) |
